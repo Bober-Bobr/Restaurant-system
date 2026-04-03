@@ -1,0 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export const MenuItemCard = ({ item, quantity, onQuantityChange }) => {
+    return (_jsxs("article", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12 }, children: [item.photoUrl && (_jsx("img", { src: item.photoUrl, alt: item.name, style: { width: '100%', height: '150px', objectFit: 'cover', borderRadius: 4, marginBottom: 8 } })), _jsx("h4", { children: item.name }), _jsx("p", { children: item.category.replace('_', ' ').toLowerCase() }), _jsxs("p", { children: ["$", (item.priceCents / 100).toFixed(2)] }), item.description && _jsx("p", { style: { fontSize: '0.9em', color: '#666' }, children: item.description }), _jsxs("label", { children: ["Qty", _jsx("input", { type: "number", min: 0, value: quantity, onChange: (event) => onQuantityChange(Number(event.target.value)) })] })] }));
+};

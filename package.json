@@ -1,0 +1,14 @@
+{
+  "name": "banquet-management-system",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @banquet/api & npm run dev -w @banquet/web",
+    "build": "npm run build -w @banquet/api && npm run build -w @banquet/web",
+    "lint": "npm run lint -w @banquet/api && npm run lint -w @banquet/web"
+  }
+}

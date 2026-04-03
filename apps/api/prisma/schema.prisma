@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum EventType {
+  RESERVATION
+  BANQUET
+  WEDDING
+  PRIVATE_PARTY
+  CORPORATE
+}
+
+enum MenuCategory {
+  HOT_APPETIZERS
+  FIRST_COURSE
+  SECOND_COURSE
+}
+
+enum Region {
+  US
+  CA
+  GB
+  DE
+  FR
+  IT
+  ES
+  RU
+  CN
+  JP
+  KR
+  AU
+  UZ
+  EU
+}
+
+model Event {
+  id              String            @id @default(cuid())
+  customerName    String
+  customerPhone   String?
+  eventDate       DateTime
+  guestCount      Int
+  status          EventStatus       @default(DRAFT)
+  eventType       EventType         @default(RESERVATION)
+  region          Region?
+  hallId          String?
+  tableCategoryId String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  selections      EventMenuSelection[]
+  hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
+  tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([hallId])
+  @@index([tableCategoryId])
+}
+
+model AdminUser {
+  id               String   @id @default(cuid())
+  username         String   @unique
+  passwordHash     String
+  refreshTokenHash String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TableCategory {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  seatingCapacity Int
+  mealPackage    String   @default("")
+  ratePerPerson  Int      @default(0)
+  description    String?
+  photoUrl       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  events         Event[]
+}
+
+model Hall {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  capacity    Int
+  description String?
+  photoUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    MenuCategory
+  priceCents  Int
+  photoUrl    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  selections  EventMenuSelection[]
+
+  @@index([category, isActive])
+}
+
+model EventMenuSelection {
+  id             String   @id @default(cuid())
+  eventId        String
+  menuItemId     String
+  quantity       Int
+  unitPriceCents Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, menuItemId])
+  @@index([eventId])
+}

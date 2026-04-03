@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { EventController } from './event.controller.js';
+const router = Router();
+const controller = new EventController();
+router.get('/', controller.list.bind(controller));
+router.post('/', controller.create.bind(controller));
+router.get('/:eventId', controller.getById.bind(controller));
+router.patch('/:eventId', controller.update.bind(controller));
+router.delete('/:eventId', controller.remove.bind(controller));
+export { router as eventRouter };

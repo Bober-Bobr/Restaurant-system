@@ -1,0 +1,41 @@
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import { adminAuthMiddleware } from './middleware/auth.middleware.js';
+import { errorMiddleware } from './middleware/error.middleware.js';
+import { notFoundMiddleware } from './middleware/notFound.middleware.js';
+import { authRouter } from './modules/auth/auth.routes.js';
+import { eventRouter } from './modules/events/event.routes.js';
+import { exportRouter } from './modules/export/export.routes.js';
+import { menuRouter } from './modules/menu/menu.routes.js';
+import { pricingRouter } from './modules/pricing/pricing.routes.js';
+import { publicApiRouter } from './modules/public/public.routes.js';
+import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
+import { hallRouter } from './modules/hall/hall.routes.js';
+
+export const app = express();
+
+app.use(helmet());
+app.use(cors());
+app.use(express.json({ limit: '1mb' }));
+
+app.get('/health', (_request, response) => {
+  response.json({ status: 'ok' });
+});
+
+app.use('/api/auth', authRouter);
+app.use('/api/public', publicApiRouter);
+
+const protectedApi = express.Router();
+protectedApi.use(adminAuthMiddleware);
+protectedApi.use('/events', eventRouter);
+protectedApi.use('/menu-items', menuRouter);
+protectedApi.use('/pricing', pricingRouter);
+protectedApi.use('/exports', exportRouter);
+protectedApi.use('/table-categories', tableCategoryRouter);
+protectedApi.use('/halls', hallRouter);
+
+app.use('/api', protectedApi);
+
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);

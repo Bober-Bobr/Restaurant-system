@@ -1,0 +1,15 @@
+import type { Request, Response } from 'express';
+import { EventRepository } from '../events/event.repository.js';
+import { eventIdSchema } from '../events/event.schema.js';
+import { PricingService } from './pricing.service.js';
+
+const pricingService = new PricingService(new EventRepository());
+
+export class PricingController {
+  async getPricing(request: Request, response: Response) {
+    const { eventId } = eventIdSchema.parse(request.params);
+    const pricing = await pricingService.calculateEventPricing(eventId);
+
+    response.json(pricing);
+  }
+}
