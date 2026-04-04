@@ -21,7 +21,7 @@ export const eventService = {
     const { data } = await httpClient.post<Event>('/events', payload);
     return data;
   },
-  async update(eventId: string, payload: Partial<{
+  async update(eventId: number, payload: Partial<{
     customerName: string;
     customerPhone?: string;
     eventDate: string;
@@ -37,7 +37,7 @@ export const eventService = {
     return data;
   },
 
-  async remove(eventId: string) {
+  async remove(eventId: number) {
     await httpClient.delete(`/events/${eventId}`);
   }
 };

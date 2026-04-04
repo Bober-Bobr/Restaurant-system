@@ -4,14 +4,20 @@ export class EventService {
     constructor(eventRepository) {
         this.eventRepository = eventRepository;
     }
+    mapEventToExternalId(event) {
+        const { eventNumber, ...rest } = event;
+        return { ...rest, id: eventNumber };
+    }
     async listEvents(params) {
-        return this.eventRepository.list(params);
+        const events = await this.eventRepository.list(params);
+        return events.map((event) => this.mapEventToExternalId(event));
     }
     async createEvent(payload) {
-        return this.eventRepository.create(payload);
+        const event = await this.eventRepository.create(payload);
+        return this.mapEventToExternalId(event);
     }
     async updateEvent(eventId, payload) {
-        const existingEvent = await this.eventRepository.getById(eventId);
+        const existingEvent = await this.eventRepository.getByNumber(eventId);
         if (!existingEvent) {
             throw createHttpError(404, 'Event not found');
         }
@@ -33,20 +39,21 @@ export class EventService {
                 ? { connect: { id: payload.tableCategoryId } }
                 : { disconnect: true };
         }
-        return this.eventRepository.updateById(eventId, updateData);
+        const updatedEvent = await this.eventRepository.updateByNumber(eventId, updateData);
+        return this.mapEventToExternalId(updatedEvent);
     }
     async getEventDetails(eventId) {
-        const event = await this.eventRepository.getById(eventId);
+        const event = await this.eventRepository.getByNumber(eventId);
         if (!event) {
             throw createHttpError(404, 'Event not found');
         }
-        return event;
+        return this.mapEventToExternalId(event);
     }
     async deleteEvent(eventId) {
-        const existingEvent = await this.eventRepository.getById(eventId);
+        const existingEvent = await this.eventRepository.getByNumber(eventId);
         if (!existingEvent) {
             throw createHttpError(404, 'Event not found');
         }
-        await this.eventRepository.deleteById(eventId);
+        await this.eventRepository.deleteByNumber(eventId);
     }
 }

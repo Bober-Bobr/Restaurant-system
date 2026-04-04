@@ -1,5 +1,5 @@
 export type Event = {
-  id: string;
+  id: number;
   customerName: string;
   customerPhone?: string;
   eventDate: string;
@@ -44,7 +44,7 @@ export type MenuItem = {
 };
 
 export type PricingSummary = {
-  eventId: string;
+  eventId: number;
   guestCount: number;
   subtotalCents: number;
   serviceFeeCents: number;

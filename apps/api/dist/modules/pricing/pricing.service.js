@@ -5,7 +5,7 @@ export class PricingService {
         this.eventRepository = eventRepository;
     }
     async calculateEventPricing(eventId) {
-        const event = await this.eventRepository.getById(eventId);
+        const event = await this.eventRepository.getByNumber(eventId);
         if (!event) {
             throw createHttpError(404, 'Event not found');
         }

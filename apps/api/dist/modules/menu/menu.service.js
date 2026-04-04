@@ -31,7 +31,7 @@ export class MenuService {
     }
     async assignMenuItemToEvent(eventId, payload) {
         const [event, menuItem] = await Promise.all([
-            this.eventRepository.getById(eventId),
+            this.eventRepository.getByNumber(eventId),
             this.menuRepository.getById(payload.menuItemId)
         ]);
         if (!event) {
@@ -40,6 +40,6 @@ export class MenuService {
         if (!menuItem || !menuItem.isActive) {
             throw createHttpError(404, 'Menu item not found or inactive');
         }
-        return this.menuRepository.upsertSelection(eventId, payload.menuItemId, payload.quantity, menuItem.priceCents);
+        return this.menuRepository.upsertSelection(event.id, payload.menuItemId, payload.quantity, menuItem.priceCents);
     }
 }

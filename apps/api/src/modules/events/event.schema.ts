@@ -72,5 +72,5 @@ export const updateEventSchema = z
   });
 
 export const eventIdSchema = z.object({
-  eventId: z.string().cuid()
+  eventId: z.coerce.number().int().positive()
 });

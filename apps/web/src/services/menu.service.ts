@@ -21,7 +21,7 @@ export const menuService = {
   async remove(menuItemId: string) {
     await httpClient.delete(`/menu-items/${menuItemId}`);
   },
-  async assignToEvent(eventId: string, menuItemId: string, quantity: number) {
+  async assignToEvent(eventId: number, menuItemId: string, quantity: number) {
     await httpClient.post(`/menu-items/events/${eventId}/selections`, { menuItemId, quantity });
   }
 };

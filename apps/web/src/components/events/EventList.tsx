@@ -2,9 +2,9 @@ import type { Event } from '../../types/domain';
 
 type EventListProps = {
   events: Event[];
-  onDelete?: (eventId: string) => void;
-  onEdit?: (eventId: string) => void;
-  deletingId?: string | null;
+  onDelete?: (eventId: number) => void;
+  onEdit?: (eventId: number) => void;
+  deletingId?: number | null;
 };
 
 export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListProps) => {

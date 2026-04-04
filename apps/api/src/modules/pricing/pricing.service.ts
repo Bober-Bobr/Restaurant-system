@@ -4,8 +4,8 @@ import { EventRepository } from '../events/event.repository.js';
 export class PricingService {
   constructor(private readonly eventRepository: EventRepository) {}
 
-  async calculateEventPricing(eventId: string) {
-    const event = await this.eventRepository.getById(eventId);
+  async calculateEventPricing(eventId: number) {
+    const event = await this.eventRepository.getByNumber(eventId);
 
     if (!event) {
       throw createHttpError(404, 'Event not found');

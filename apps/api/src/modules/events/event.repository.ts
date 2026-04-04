@@ -21,14 +21,26 @@ export class EventRepository {
       orderBy: { eventDate: 'asc' },
       include: {
         hall: true,
-        tableCategory: true
+        tableCategory: true,
+        selections: {
+          include: { menuItem: true }
+        }
       }
     });
   }
 
   async create(payload: CreateEventData) {
+    const lastEvent = await prisma.event.findFirst({
+      orderBy: { eventNumber: 'desc' }
+    });
+
+    const nextEventNumber = lastEvent ? lastEvent.eventNumber + 1 : 1;
+
     return prisma.event.create({
-      data: payload,
+      data: {
+        ...payload,
+        eventNumber: nextEventNumber
+      },
       include: {
         hall: true,
         tableCategory: true,
@@ -39,9 +51,9 @@ export class EventRepository {
     });
   }
 
-  async updateById(eventId: string, payload: Prisma.EventUpdateInput) {
+  async updateByNumber(eventNumber: number, payload: Prisma.EventUpdateInput) {
     return prisma.event.update({
-      where: { id: eventId },
+      where: { eventNumber },
       data: payload,
       include: {
         hall: true,
@@ -53,9 +65,9 @@ export class EventRepository {
     });
   }
 
-  async getById(eventId: string) {
+  async getByNumber(eventNumber: number) {
     return prisma.event.findUnique({
-      where: { id: eventId },
+      where: { eventNumber },
       include: {
         hall: true,
         tableCategory: true,
@@ -66,7 +78,7 @@ export class EventRepository {
     });
   }
 
-  async deleteById(eventId: string) {
-    return prisma.event.delete({ where: { id: eventId } });
+  async deleteByNumber(eventNumber: number) {
+    return prisma.event.delete({ where: { eventNumber } });
   }
 }

@@ -56,9 +56,9 @@ export class MenuService {
     await this.menuRepository.deleteById(menuItemId);
   }
 
-  async assignMenuItemToEvent(eventId: string, payload: { menuItemId: string; quantity: number }) {
+  async assignMenuItemToEvent(eventId: number, payload: { menuItemId: string; quantity: number }) {
     const [event, menuItem] = await Promise.all([
-      this.eventRepository.getById(eventId),
+      this.eventRepository.getByNumber(eventId),
       this.menuRepository.getById(payload.menuItemId)
     ]);
 
@@ -70,6 +70,6 @@ export class MenuService {
       throw createHttpError(404, 'Menu item not found or inactive');
     }
 
-    return this.menuRepository.upsertSelection(eventId, payload.menuItemId, payload.quantity, menuItem.priceCents);
+    return this.menuRepository.upsertSelection(event.id, payload.menuItemId, payload.quantity, menuItem.priceCents);
   }
 }

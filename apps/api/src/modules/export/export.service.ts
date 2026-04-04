@@ -12,8 +12,8 @@ export class ExportService {
     private readonly pricingService: PricingService
   ) {}
 
-  async createEventExcel(eventId: string): Promise<Buffer> {
-    const event = await this.eventRepository.getById(eventId);
+  async createEventExcel(eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }
@@ -48,8 +48,8 @@ export class ExportService {
     return Buffer.from(await workbook.xlsx.writeBuffer());
   }
 
-  async createEventPdf(eventId: string): Promise<Buffer> {
-    const event = await this.eventRepository.getById(eventId);
+  async createEventPdf(eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }

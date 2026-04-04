@@ -233,7 +233,7 @@ export const AdminEventsPage = () => {
   const [hallId, setHallId] = useState('');
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   // Auto-detect region from phone number
   const detectedRegion = detectRegionFromPhone(customerPhone);
@@ -307,7 +307,7 @@ export const AdminEventsPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ eventId, data }: { eventId: string; data: any }) =>
+    mutationFn: ({ eventId, data }: { eventId: number; data: any }) =>
       eventService.update(eventId, data),
     onSuccess: async () => {
       setEditingId(null);
@@ -324,7 +324,7 @@ export const AdminEventsPage = () => {
     }
   });
 
-  const deleteMutation = useMutation<void, Error, string>({
+  const deleteMutation = useMutation<void, Error, number>({
     mutationFn: (eventId) => eventService.remove(eventId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
