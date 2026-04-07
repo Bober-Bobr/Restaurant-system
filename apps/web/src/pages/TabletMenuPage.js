@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { publicMenuService } from '../services/publicMenu.service';
@@ -28,5 +29,14 @@ export const TabletMenuPage = () => {
                     gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))',
                     gap: 12,
                     marginBottom: 20
-                }, children: (menuItems ?? []).map((item) => (_jsx(MenuItemCard, { item: item, quantity: selectedItems[item.id] ?? 0, onQuantityChange: (nextQuantity) => setQuantity(item.id, nextQuantity) }, item.id))) }), _jsxs("section", { style: { borderTop: '1px solid #ddd', paddingTop: 12 }, children: [_jsx("h3", { children: "Real-time estimate" }), _jsxs("p", { children: ["Subtotal: $", (pricing.subtotalCents / 100).toFixed(2)] }), _jsxs("p", { children: ["Service fee: $", (pricing.serviceFeeCents / 100).toFixed(2)] }), _jsxs("p", { children: ["Tax: $", (pricing.taxCents / 100).toFixed(2)] }), _jsxs("strong", { children: ["Total: $", (pricing.totalCents / 100).toFixed(2)] }), guestCount > 1 && (_jsxs("p", { children: ["Per guest: $", (pricing.perGuestCents / 100).toFixed(2)] }))] })] }));
+                }, children: (menuItems ?? []).map((item) => (_jsx(MenuItemCard, { item: item, quantity: selectedItems[item.id] ?? 0, onQuantityChange: (nextQuantity) => setQuantity(item.id, nextQuantity) }, item.id))) }), _jsxs("section", { style: { borderTop: '1px solid #ddd', paddingTop: 12 }, children: [_jsx("h3", { children: "Real-time estimate" }), _jsxs("p", { children: ["Subtotal: $", (pricing.subtotalCents / 100).toFixed(2)] }), _jsxs("p", { children: ["Service fee: $", (pricing.serviceFeeCents / 100).toFixed(2)] }), _jsxs("p", { children: ["Tax: $", (pricing.taxCents / 100).toFixed(2)] }), _jsxs("strong", { children: ["Total: $", (pricing.totalCents / 100).toFixed(2)] }), guestCount > 1 && (_jsxs("p", { children: ["Per guest: $", (pricing.perGuestCents / 100).toFixed(2)] }))] }), _jsx("div", { style: { textAlign: 'center', marginTop: 20 }, children: _jsx(Link, { to: "/tablet/summary", style: {
+                        display: 'inline-block',
+                        padding: '12px 24px',
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        textDecoration: 'none',
+                        borderRadius: 4,
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                    }, children: "View Summary" }) })] }));
 };

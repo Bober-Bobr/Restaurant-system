@@ -5,6 +5,7 @@ import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
+import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 
 export const App = () => {
@@ -19,6 +20,17 @@ export const App = () => {
               <Link to="/login">Admin login</Link>
             </nav>
             <TabletMenuPage />
+          </>
+        }
+      />
+      <Route
+        path="/tablet/summary"
+        element={
+          <>
+            <nav style={{ display: 'flex', gap: 12, padding: 12, borderBottom: '1px solid #ddd' }}>
+              <Link to="/login">Admin login</Link>
+            </nav>
+            <TabletSummaryPage />
           </>
         }
       />

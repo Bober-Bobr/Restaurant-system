@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { publicMenuService } from '../services/publicMenu.service';
@@ -138,6 +139,24 @@ export const TabletMenuPage = () => {
           <p>Per guest: ${(pricing.perGuestCents / 100).toFixed(2)}</p>
         )}
       </section>
+
+      <div style={{ textAlign: 'center', marginTop: 20 }}>
+        <Link
+          to="/tablet/summary"
+          style={{
+            display: 'inline-block',
+            padding: '12px 24px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: 4,
+            fontSize: 16,
+            fontWeight: 'bold'
+          }}
+        >
+          View Summary
+        </Link>
+      </div>
     </main>
   );
 };
