@@ -5,6 +5,7 @@ import { publicMenuService } from '../services/publicMenu.service';
 import { publicHallService } from '../services/publicHall.service';
 import { publicTableCategoryService } from '../services/publicTableCategory.service';
 import { useTabletStore } from '../store/tablet.store';
+import logo from '../assets/logo.png';
 
 export const TabletMenuPage = () => {
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, setQuantity, setHall, setTableCategory, setGuestCount } = useTabletStore();
@@ -30,7 +31,14 @@ export const TabletMenuPage = () => {
 
   return (
     <main style={{ padding: 20 }}>
-      <h1>Client Menu Selection</h1>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <img
+          src={logo}
+          alt="Restaurant logo"
+          style={{ width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' }}
+        />
+        <h1>Client Menu Selection</h1>
+      </div>
 
       {/* Room and Table Settings */}
       <section style={{ marginBottom: 20, padding: 16, border: '1px solid #ddd', borderRadius: 8 }}>

@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/logo.png';
 export const AdminLayout = () => {
     const navigate = useNavigate();
     const accessToken = useAuthStore((state) => state.accessToken);
@@ -25,7 +26,7 @@ export const AdminLayout = () => {
                     borderBottom: '1px solid #e0e0e0',
                     alignItems: 'center',
                     background: '#fafafa'
-                }, children: [_jsx("div", { style: { fontWeight: 600, fontSize: 14, color: '#333' }, children: "\uD83C\uDF7D\uFE0F Banquet" }), _jsx(Link, { to: "/", style: {
+                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 10 }, children: [_jsx("img", { src: logo, alt: "Restaurant logo", style: { height: 40, width: 40, objectFit: 'contain', borderRadius: 8 } }), _jsx("div", { style: { fontWeight: 600, fontSize: 14, color: '#333' }, children: "Banquet Admin" })] }), _jsx(Link, { to: "/", style: {
                             color: '#2196F3',
                             textDecoration: 'none',
                             fontSize: 14,

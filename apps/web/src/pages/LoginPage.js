@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/logo.png';
 const formatRequestError = (error) => {
     if (axios.isAxiosError(error)) {
         const body = error.response?.data;
@@ -87,7 +88,7 @@ export const LoginPage = () => {
             registerMutation.mutate();
         }
     };
-    return (_jsxs("main", { style: { maxWidth: 480, margin: '32px auto', padding: 20 }, children: [_jsxs("div", { style: { textAlign: 'center', marginBottom: 32 }, children: [_jsx("h1", { style: { marginBottom: 8 }, children: "\uD83C\uDF7D\uFE0F Banquet Admin" }), _jsx("p", { style: { color: '#666', fontSize: 14 }, children: "Sign in to manage events and menu" })] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }, children: [_jsx("button", { type: "button", onClick: () => {
+    return (_jsxs("main", { style: { maxWidth: 480, margin: '32px auto', padding: 20 }, children: [_jsxs("div", { style: { textAlign: 'center', marginBottom: 32 }, children: [_jsx("img", { src: logo, alt: "Restaurant logo", style: { width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' } }), _jsx("h1", { style: { marginBottom: 8 }, children: "Banquet Admin" }), _jsx("p", { style: { color: '#666', fontSize: 14 }, children: "Sign in to manage events and menu" })] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }, children: [_jsx("button", { type: "button", onClick: () => {
                             setTab('login');
                             setPassword('');
                         }, disabled: tab === 'login', style: {

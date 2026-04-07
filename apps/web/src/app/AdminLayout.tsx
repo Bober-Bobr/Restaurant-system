@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/logo.png';
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
@@ -33,7 +34,14 @@ export const AdminLayout = () => {
           background: '#fafafa'
         }}
       >
-        <div style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>🍽️ Banquet</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+            src={logo}
+            alt="Restaurant logo"
+            style={{ height: 40, width: 40, objectFit: 'contain', borderRadius: 8 }}
+          />
+          <div style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Banquet Admin</div>
+        </div>
         <Link
           to="/"
           style={{

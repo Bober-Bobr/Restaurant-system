@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import logo from '../assets/logo.png';
 
 const formatRequestError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -96,7 +97,12 @@ export const LoginPage = () => {
   return (
     <main style={{ maxWidth: 480, margin: '32px auto', padding: 20 }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ marginBottom: 8 }}>🍽️ Banquet Admin</h1>
+        <img
+          src={logo}
+          alt="Restaurant logo"
+          style={{ width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' }}
+        />
+        <h1 style={{ marginBottom: 8 }}>Banquet Admin</h1>
         <p style={{ color: '#666', fontSize: 14 }}>Sign in to manage events and menu</p>
       </div>
 
