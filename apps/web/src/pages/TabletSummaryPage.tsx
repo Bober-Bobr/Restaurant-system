@@ -8,13 +8,15 @@ import { publicTableCategoryService } from '../services/publicTableCategory.serv
 import { useTabletStore } from '../store/tablet.store';
 import { httpClient } from '../services/http';
 import logo from '../assets/logo.png';
+import { defaultLocale, Locale, locales, translate } from '../utils/translate';
 
 export const TabletSummaryPage = () => {
   const navigate = useNavigate();
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount } = useTabletStore();
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale } = useTabletStore();
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
   const { data: menuItems } = useQuery({
     queryKey: ['menu-items', 'public'],
@@ -68,7 +70,9 @@ export const TabletSummaryPage = () => {
         guestCount,
         selectedItems,
         menuItems: menuItems || [],
-        pricing
+        pricing,
+        locale,
+        restaurantName: 'Madinabek'
       }, { responseType: 'blob' });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -93,7 +97,9 @@ export const TabletSummaryPage = () => {
         guestCount,
         selectedItems,
         menuItems: menuItems || [],
-        pricing
+        pricing,
+        locale,
+        restaurantName: 'Madinabek'
       }, { responseType: 'blob' });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -110,37 +116,55 @@ export const TabletSummaryPage = () => {
 
   return (
     <main style={{ padding: 20, maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <img
-          src={logo}
-          alt="Restaurant logo"
-          style={{ width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' }}
-        />
-        <h1>Selection Summary</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <img
+            src={logo}
+            alt="Restaurant logo"
+            style={{ width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' }}
+          />
+          <h1>{t('selection_summary')}</h1>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <label style={{ fontSize: 14, fontWeight: 600 }}>
+            {t('language')}:
+            <select
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as Locale)}
+              style={{ marginLeft: 8, padding: 6, borderRadius: 4, border: '1px solid #ccc' }}
+            >
+              {locales.map((localeOption) => (
+                <option key={localeOption} value={localeOption}>
+                  {t(localeOption === 'en' ? 'english' : localeOption === 'ru' ? 'russian' : 'uzbek')}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gap: 24 }}>
         {/* Customer Details */}
         <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#fafafa' }}>
-          <h2>Customer Details</h2>
+          <h2>{t('customer_details')}</h2>
           <div style={{ display: 'grid', gap: 12 }}>
             <label>
-              <span style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>Name:</span>
+              <span style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>{t('customer_name')}:</span>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder={t('customer_name')}
                 style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
               />
             </label>
             <label>
-              <span style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>Phone:</span>
+              <span style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>{t('customer_phone')}:</span>
               <input
                 type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="Enter your phone number"
+                placeholder={t('customer_phone')}
                 style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
               />
             </label>
@@ -149,19 +173,19 @@ export const TabletSummaryPage = () => {
 
         {/* Event Details */}
         <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#fafafa' }}>
-          <h2>Event Details</h2>
+          <h2>{t('event_details')}</h2>
           <div style={{ display: 'grid', gap: 8 }}>
-            <p><strong>Hall:</strong> {selectedHall?.name || 'Not selected'}</p>
-            <p><strong>Table Category:</strong> {selectedTableCategory?.name || 'Not selected'}</p>
-            <p><strong>Guest Count:</strong> {guestCount}</p>
+            <p><strong>{t('hall')}:</strong> {selectedHall?.name || 'Not selected'}</p>
+            <p><strong>{t('table_category')}:</strong> {selectedTableCategory?.name || 'Not selected'}</p>
+            <p><strong>{t('guest_count')}:</strong> {guestCount}</p>
           </div>
         </section>
 
         {/* Selected Menu Items */}
         <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#fafafa' }}>
-          <h2>Selected Dishes</h2>
+          <h2>{t('selected_dishes')}</h2>
           {selectedMenuItems.length === 0 ? (
-            <p>No items selected.</p>
+            <p>{t('selection_summary')}</p>
           ) : (
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {selectedMenuItems.map((item) => (
@@ -176,14 +200,14 @@ export const TabletSummaryPage = () => {
 
         {/* Pricing */}
         <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#fafafa' }}>
-          <h2>Pricing</h2>
+          <h2>{t('pricing')}</h2>
           <div style={{ display: 'grid', gap: 8 }}>
-            <p>Subtotal: ${(pricing.subtotalCents / 100).toFixed(2)}</p>
-            <p>Service Fee: ${(pricing.serviceFeeCents / 100).toFixed(2)}</p>
-            <p>Tax: ${(pricing.taxCents / 100).toFixed(2)}</p>
-            <p><strong>Total: ${(pricing.totalCents / 100).toFixed(2)}</strong></p>
+            <p>{t('subtotal')}: ${(pricing.subtotalCents / 100).toFixed(2)}</p>
+            <p>{t('service_fee')}: ${(pricing.serviceFeeCents / 100).toFixed(2)}</p>
+            <p>{t('tax')}: ${(pricing.taxCents / 100).toFixed(2)}</p>
+            <p><strong>{t('total')}: ${(pricing.totalCents / 100).toFixed(2)}</strong></p>
             {guestCount > 1 && (
-              <p>Price per Person: ${(pricing.perGuestCents / 100).toFixed(2)}</p>
+              <p>{t('price_per_person')}: ${(pricing.perGuestCents / 100).toFixed(2)}</p>
             )}
           </div>
         </section>
@@ -194,26 +218,26 @@ export const TabletSummaryPage = () => {
             onClick={() => navigate('/tablet')}
             style={{ padding: '12px 24px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
           >
-            Edit Selection
+            {t('edit_selection')}
           </button>
           <button
             onClick={() => confirmMutation.mutate()}
             disabled={confirmMutation.isPending || !customerName || !customerPhone}
             style={{ padding: '12px 24px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', opacity: confirmMutation.isPending || !customerName || !customerPhone ? 0.5 : 1 }}
           >
-            {confirmMutation.isPending ? 'Confirming...' : 'Confirm'}
+            {confirmMutation.isPending ? t('confirm') + '...' : t('confirm')}
           </button>
           <button
             onClick={downloadPdf}
             style={{ padding: '12px 24px', backgroundColor: '#FF9800', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
           >
-            Download PDF
+            {t('download_pdf')}
           </button>
           <button
             onClick={downloadExcel}
             style={{ padding: '12px 24px', backgroundColor: '#9C27B0', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer' }}
           >
-            Download Excel
+            {t('download_excel')}
           </button>
         </div>
       </div>

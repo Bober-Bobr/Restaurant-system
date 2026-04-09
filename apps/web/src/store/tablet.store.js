@@ -1,9 +1,11 @@
 import { create } from 'zustand';
+import { defaultLocale } from '../utils/translate';
 export const useTabletStore = create((set) => ({
     selectedItems: {},
     selectedHallId: undefined,
     selectedTableCategoryId: undefined,
     guestCount: 1,
+    locale: defaultLocale,
     setQuantity: (menuItemId, quantity) => {
         set((state) => ({
             selectedItems: {
@@ -21,12 +23,16 @@ export const useTabletStore = create((set) => ({
     setGuestCount: (count) => {
         set({ guestCount: Math.max(count, 1) });
     },
+    setLocale: (locale) => {
+        set({ locale });
+    },
     reset: () => {
         set({
             selectedItems: {},
             selectedHallId: undefined,
             selectedTableCategoryId: undefined,
-            guestCount: 1
+            guestCount: 1,
+            locale: defaultLocale
         });
     }
 }));

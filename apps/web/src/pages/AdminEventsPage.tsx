@@ -4,6 +4,8 @@ import { EventList } from '../components/events/EventList';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { useAdminStore } from '../store/admin.store';
+import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 
 const parsePositiveInt = (value: string): number | null => {
@@ -18,6 +20,8 @@ const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET',
 
 export const AdminEventsPage = () => {
   const queryClient = useQueryClient();
+  const { locale } = useAdminStore();
+  const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const { data: events, isLoading, isError } = useQuery({
     queryKey: ['events'],
     queryFn: () => eventService.list()
@@ -133,10 +137,10 @@ export const AdminEventsPage = () => {
 
   return (
     <main style={{ padding: 20 }}>
-      <h1>Banquet Events</h1>
+      <h1>{t('banquet_events')}</h1>
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{editingId ? 'Edit existing event' : 'Create new event'}</h3>
+        <h3>{editingId ? t('edit_existing_event') : t('create_new_event')}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -167,11 +171,11 @@ export const AdminEventsPage = () => {
           style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
-            Customer name
+            {t('customer_name')}
             <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Phone Number
+            {t('phone_number')}
             <input
               type="tel"
               placeholder="e.g., +7 999 123 45 67"
@@ -180,7 +184,7 @@ export const AdminEventsPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Event date/time
+            {t('event_date_time')}
             <input
               type="datetime-local"
               value={eventDateLocal}
@@ -188,7 +192,7 @@ export const AdminEventsPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Guests
+            {t('guests')}
             <input
               type="number"
               min={1}
@@ -199,7 +203,7 @@ export const AdminEventsPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Event Type
+            {t('event_type')}
             <select value={eventType} onChange={(e) => setEventType(e.target.value as NonNullable<Event['eventType']>)}>
               {eventTypes.map((type) => (
                 <option key={type} value={type}>
@@ -209,7 +213,7 @@ export const AdminEventsPage = () => {
             </select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Status
+            {t('status')}
             <select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
               <option value="DRAFT">DRAFT</option>
               <option value="CONFIRMED">CONFIRMED</option>
@@ -217,9 +221,9 @@ export const AdminEventsPage = () => {
             </select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Hall (Optional)
+            {t('hall_optional')}
             <select value={hallId} onChange={(e) => setHallId(e.target.value)}>
-              <option value="">-- Select a hall --</option>
+              <option value="">{t('select_hall')}</option>
               {halls?.map((hall) => (
                 <option key={hall.id} value={hall.id}>
                   {hall.name} (Cap: {hall.capacity})
@@ -228,9 +232,9 @@ export const AdminEventsPage = () => {
             </select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Table category (Optional)
+            {t('table_category_optional')}
             <select value={tableCategoryId} onChange={(e) => setTableCategoryId(e.target.value)}>
-              <option value="">-- Select a table category --</option>
+              <option value="">{t('choose_table_category')}</option>
               {tableCategories?.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name} - {category.mealPackage} ({category.seatingCapacity} seats, {Number(category.ratePerPerson / 100).toFixed(2)} per person)
@@ -239,18 +243,18 @@ export const AdminEventsPage = () => {
             </select>
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-            Notes
+            {t('notes')}
             <input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
             <button type="submit" disabled={editingId ? !canSave : !canSubmit}>
               {editingId
                 ? updateMutation.isPending
-                  ? 'Updating...'
-                  : 'Update event'
+                  ? t('updating')
+                  : t('update_event')
                 : createMutation.isPending
-                ? 'Creating...'
-                : 'Create event'}
+                ? t('creating')
+                : t('create_event')}
             </button>
             {editingId ? (
               <button
@@ -268,7 +272,7 @@ export const AdminEventsPage = () => {
                   setNotes('');
                 }}
               >
-                Cancel
+                {t('cancel')}
               </button>
             ) : null}
             {validation.errors.length > 0 ? (
@@ -289,8 +293,8 @@ export const AdminEventsPage = () => {
         </form>
       </section>
 
-      {isLoading ? <p>Loading events...</p> : null}
-      {isError ? <p>Failed to load events.</p> : null}
+      {isLoading ? <p>{t('loading_events')}</p> : null}
+      {isError ? <p>{t('failed_load_events')}</p> : null}
       {events ? (
         <EventList
           events={events}

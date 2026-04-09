@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import type { MenuItem } from '../types/domain';
 import { menuService } from '../services/menu.service';
+import { useAdminStore } from '../store/admin.store';
+import { translate, type TranslationKey } from '../utils/translate';
 
 const parsePriceToCents = (value: string): number | null => {
   const normalized = value.replace(',', '.').trim();
@@ -15,6 +17,7 @@ const formatCents = (cents: number): string => (cents / 100).toFixed(2);
 
 export const AdminMenuPage = () => {
   const queryClient = useQueryClient();
+  const { locale } = useAdminStore();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['menu-items', 'admin', 'all'],
@@ -78,10 +81,10 @@ export const AdminMenuPage = () => {
 
   return (
     <main style={{ padding: 20 }}>
-      <h1>Menu management</h1>
+      <h1>{translate('menu_management', locale)}</h1>
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>Create menu item</h3>
+        <h3>{translate('create_menu_item', locale)}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -91,47 +94,48 @@ export const AdminMenuPage = () => {
           style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
-            Name
+            {translate('name', locale)}
             <input value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Category
+            {translate('category', locale)}
             <select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
-              <option value="HOT_APPETIZERS">Hot Appetizers</option>
-              <option value="FIRST_COURSE">First Course</option>
-              <option value="SECOND_COURSE">Second Course</option>
+              <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
+              <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
+              <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
             </select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Price (e.g. 6.50)
+            {translate('price', locale)} (e.g. 6.50)
             <input value={price} onChange={(e) => setPrice(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Photo URL (optional)
+            {translate('photo_url', locale)} (optional)
             <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
           </label>
           <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
-            Description
+            {translate('description', locale)}
             <input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
 
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
             <button type="submit" disabled={!canCreate || createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create item'}
+              {createMutation.isPending ? translate('creating', locale) : translate('create', locale)}
             </button>
             {createMutation.isError ? <span style={{ color: '#b00020' }}>Failed to create item.</span> : null}
           </div>
         </form>
       </section>
 
-      {isLoading ? <p>Loading menu...</p> : null}
-      {isError ? <p>Failed to load menu.</p> : null}
+      {isLoading ? <p>{translate('loading_menu', locale)}</p> : null}
+      {isError ? <p>{translate('failed_load_menu', locale)}</p> : null}
 
       <section style={{ display: 'grid', gap: 8 }}>
         {(data ?? []).map((item) => (
           <MenuItemRow
             key={item.id}
             item={item}
+            locale={locale}
             onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
             isSaving={updateMutation.isPending}
             onDelete={() => deleteMutation.mutate(item.id)}
@@ -145,13 +149,14 @@ export const AdminMenuPage = () => {
 
 type MenuItemRowProps = {
   item: MenuItem;
+  locale: 'en' | 'ru' | 'uz';
   onPatch: (patch: Partial<MenuItem>) => void;
   isSaving: boolean;
   onDelete: () => void;
   isDeleting: boolean;
 };
 
-const MenuItemRow = ({ item, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
   const [localName, setLocalName] = useState(item.name);
   const [localCategory, setLocalCategory] = useState<MenuItem['category']>(item.category);
   const [localDescription, setLocalDescription] = useState(item.description ?? '');
@@ -170,28 +175,28 @@ const MenuItemRow = ({ item, onPatch, isSaving, onDelete, isDeleting }: MenuItem
     <article style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 100px', gap: 12, alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 6 }}>
-          Name
+          {translate('name', locale)}
           <input value={localName} onChange={(e) => setLocalName(e.target.value)} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
-          Category
+          {translate('category', locale)}
           <select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])}>
-            <option value="HOT_APPETIZERS">Hot Appetizers</option>
-            <option value="FIRST_COURSE">First Course</option>
-            <option value="SECOND_COURSE">Second Course</option>
+            <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
+            <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
+            <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
           </select>
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
-          Price
+          {translate('price', locale)}
           <input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
-          Photo URL
+          {translate('photo_url', locale)}
           <input value={localPhotoUrl} onChange={(e) => setLocalPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
         </label>
       </div>
       <label style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-        Description
+        {translate('description', locale)}
         <input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} />
       </label>
 
@@ -210,18 +215,18 @@ const MenuItemRow = ({ item, onPatch, isSaving, onDelete, isDeleting }: MenuItem
             });
           }}
         >
-          Save
+          {translate('update', locale)}
         </button>
         <button
           type="button"
           disabled={isSaving || isDeleting}
           onClick={() => {
-            if (window.confirm(`Delete dish “${item.name}”? This removes it from all events.`)) {
+            if (window.confirm(`Delete dish "${item.name}"? This removes it from all events.`)) {
               onDelete();
             }
           }}
         >
-          {isDeleting ? 'Deleting…' : 'Delete'}
+          {isDeleting ? translate('deleting', locale) : translate('delete', locale)}
         </button>
         <span style={{ color: '#666' }}>Current: ${formatCents(item.priceCents)}</span>
       </div>

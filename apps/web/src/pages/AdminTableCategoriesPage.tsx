@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { useAdminStore } from '../store/admin.store';
+import { translate } from '../utils/translate';
 import type { TableCategory } from '../types/domain';
 
 const parsePositiveInt = (value: string): number | null => {
@@ -13,6 +15,8 @@ const parsePositiveInt = (value: string): number | null => {
 
 export const AdminTableCategoriesPage = () => {
   const queryClient = useQueryClient();
+  const { locale } = useAdminStore();
+  const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const { data: categories, isLoading, isError } = useQuery({
     queryKey: ['tableCategories'],
     queryFn: () => tableCategoryService.list()
@@ -147,10 +151,10 @@ export const AdminTableCategoriesPage = () => {
 
   return (
     <main style={{ padding: 20 }}>
-      <h1>Table Categories</h1>
+      <h1>{t('table_categories_management')}</h1>
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>Create new table category</h3>
+        <h3>{t('create_table_category')}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -160,11 +164,11 @@ export const AdminTableCategoriesPage = () => {
           style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
-            Name
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., 2-person table" />
+            {t('name')}
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Seating Capacity
+            {t('seating_capacity')}
             <input
               type="number"
               min={1}
@@ -175,44 +179,44 @@ export const AdminTableCategoriesPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Meal Package
+            {t('meal_package')}
             <input value={mealPackage} onChange={(e) => setMealPackage(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Rate Per Person (e.g. 10.00)
+            {t('rate_per_person')}
             <input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            Photo URL (Optional)
-            <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+            {t('photo_url_optional')}
+            <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-            Description (Optional)
+            {t('description_optional')}
             <input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
             <button type="submit" disabled={!canSubmit}>
-              {createMutation.isPending ? 'Creating...' : 'Create category'}
+              {createMutation.isPending ? t('creating') : t('create_category')}
             </button>
             {validation.errors.length > 0 ? (
               <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>
             ) : null}
             {createMutation.isError ? (
               <span style={{ color: '#b00020' }}>
-                {createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create category.'}
+                {createMutation.error instanceof Error ? createMutation.error.message : t('failed_to_create_category')}
               </span>
             ) : null}
           </div>
         </form>
       </section>
 
-      {isLoading ? <p>Loading table categories...</p> : null}
-      {isError ? <p>Failed to load table categories.</p> : null}
+      {isLoading ? <p>{t('loading_table_categories')}</p> : null}
+      {isError ? <p>{t('failed_to_load_table_categories')}</p> : null}
       {categories && (
         <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
-          <h3>All Categories</h3>
+          <h3>{t('all_categories')}</h3>
           {categories.length === 0 ? (
-            <p>No table categories yet.</p>
+            <p>{t('no_table_categories_yet')}</p>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
               {categories.map((category) => (
@@ -230,11 +234,11 @@ export const AdminTableCategoriesPage = () => {
                   {editingId === category.id ? (
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Name
+                        {t('name')}
                         <input value={editName} onChange={(e) => setEditName(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Capacity
+                        {t('capacity')}
                         <input
                           type="number"
                           min={1}
@@ -244,23 +248,23 @@ export const AdminTableCategoriesPage = () => {
                         />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Meal Package
+                        {t('meal_package')}
                         <input value={editMealPackage} onChange={(e) => setEditMealPackage(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Rate ($)
+                        {t('rate_dollar')}
                         <input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Description
+                        {t('description')}
                         <input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Photo URL
-                        <input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+                        {t('photo_url')}
+                        <input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
-                        Active
+                        {t('active')}
                         <input
                           type="checkbox"
                           checked={editIsActive}
@@ -273,13 +277,13 @@ export const AdminTableCategoriesPage = () => {
                           disabled={!canSaveEdit}
                           style={{ background: '#007bff', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
-                          {updateMutation.isPending ? 'Saving...' : 'Save'}
+                          {updateMutation.isPending ? t('saving') : t('save')}
                         </button>
                         <button
                           onClick={cancelEdit}
                           style={{ background: '#6c757d', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
-                          Cancel
+                          {t('cancel')}
                         </button>
                       </div>
                       {editValidation.errors.length > 0 && (
@@ -301,9 +305,9 @@ export const AdminTableCategoriesPage = () => {
                         <div>
                           <strong>{category.name}</strong>
                           <p style={{ margin: '4px 0 0', fontSize: '0.9em', color: '#666' }}>
-                            Capacity: {category.seatingCapacity}, Meal: {category.mealPackage}, Rate: ${(category.ratePerPerson / 100).toFixed(2)}
+                            {t('capacity')}: {category.seatingCapacity}, {t('meal')}: {category.mealPackage}, {t('rate')}: ${(category.ratePerPerson / 100).toFixed(2)}
                             {category.description ? ` - ${category.description}` : ''}
-                            {!category.isActive && ' (Inactive)'}
+                            {!category.isActive && ` (${t('inactive')})`}
                           </p>
                         </div>
                       </div>
@@ -312,14 +316,14 @@ export const AdminTableCategoriesPage = () => {
                           onClick={() => startEditing(category)}
                           style={{ background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
-                          Edit
+                          {t('edit')}
                         </button>
                         <button
                           onClick={() => deleteMutation.mutate(category.id)}
                           disabled={deleteMutation.isPending}
                           style={{ background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
-                          Delete
+                          {t('delete')}
                         </button>
                       </div>
                     </>
