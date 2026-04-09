@@ -4,6 +4,9 @@ import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import type { TableCategory } from '../types/domain';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Button } from '../components/ui/button';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -165,11 +168,11 @@ export const AdminTableCategoriesPage = () => {
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {t('name')}
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('seating_capacity')}
-            <input
+            <Input
               type="number"
               min={1}
               max={1000}
@@ -180,24 +183,24 @@ export const AdminTableCategoriesPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('meal_package')}
-            <input value={mealPackage} onChange={(e) => setMealPackage(e.target.value)} />
+            <Input value={mealPackage} onChange={(e) => setMealPackage(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('rate_per_person')}
-            <input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
+            <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('photo_url_optional')}
-            <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
-            <input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" disabled={!canSubmit}>
+            <Button type="submit" disabled={!canSubmit}>
               {createMutation.isPending ? t('creating') : t('create_category')}
-            </button>
+            </Button>
             {validation.errors.length > 0 ? (
               <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>
             ) : null}
@@ -235,11 +238,11 @@ export const AdminTableCategoriesPage = () => {
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('name')}
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('capacity')}
-                        <input
+                        <Input
                           type="number"
                           min={1}
                           max={1000}
@@ -249,19 +252,19 @@ export const AdminTableCategoriesPage = () => {
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('meal_package')}
-                        <input value={editMealPackage} onChange={(e) => setEditMealPackage(e.target.value)} />
+                        <Input value={editMealPackage} onChange={(e) => setEditMealPackage(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('rate_dollar')}
-                        <input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
+                        <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('description')}
-                        <input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                        <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('photo_url')}
-                        <input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+                        <Input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('active')}
@@ -272,19 +275,18 @@ export const AdminTableCategoriesPage = () => {
                         />
                       </label>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button
+                        <Button
                           onClick={saveEdit}
                           disabled={!canSaveEdit}
-                          style={{ background: '#007bff', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
                           {updateMutation.isPending ? t('saving') : t('save')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="secondary"
                           onClick={cancelEdit}
-                          style={{ background: '#6c757d', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
                           {t('cancel')}
-                        </button>
+                        </Button>
                       </div>
                       {editValidation.errors.length > 0 && (
                         <div style={{ gridColumn: '1 / -1', color: '#b00020', fontSize: '0.9em' }}>

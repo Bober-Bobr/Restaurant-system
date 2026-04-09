@@ -3,6 +3,9 @@ import { useMemo, useState } from 'react';
 import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Button } from '../components/ui/button';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -144,11 +147,11 @@ export const AdminHallsPage = () => {
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {t('name')}
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('hall_name_placeholder')} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('hall_name_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('hall_capacity')}
-            <input
+            <Input
               type="number"
               min={1}
               max={5000}
@@ -159,16 +162,16 @@ export const AdminHallsPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('photo_url_optional')}
-            <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
-            <input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" disabled={!canSubmit}>
+            <Button type="submit" disabled={!canSubmit}>
               {createMutation.isPending ? t('creating') : t('create_hall_button')}
-            </button>
+            </Button>
             {validation.errors.length > 0 ? (
               <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>
             ) : null}
@@ -206,11 +209,11 @@ export const AdminHallsPage = () => {
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('name')}
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('hall_capacity')}
-                        <input
+                        <Input
                           type="number"
                           min={1}
                           max={5000}
@@ -220,11 +223,11 @@ export const AdminHallsPage = () => {
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('hall_description')}
-                        <input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                        <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('hall_photo_url')}
-                        <input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+                        <Input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
                       </label>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('hall_active')}
@@ -235,19 +238,18 @@ export const AdminHallsPage = () => {
                         />
                       </label>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button
+                        <Button
                           onClick={saveEdit}
                           disabled={!canSaveEdit}
-                          style={{ background: '#007bff', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
                           {updateMutation.isPending ? t('saving') : t('save')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="secondary"
                           onClick={cancelEdit}
-                          style={{ background: '#6c757d', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
                         >
                           {t('cancel')}
-                        </button>
+                        </Button>
                       </div>
                       {editValidation.errors.length > 0 && (
                         <div style={{ gridColumn: '1 / -1', color: '#b00020', fontSize: '0.9em' }}>

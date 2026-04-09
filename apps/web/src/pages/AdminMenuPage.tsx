@@ -4,6 +4,9 @@ import type { MenuItem } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate, type TranslationKey } from '../utils/translate';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Button } from '../components/ui/button';
 
 const parsePriceToCents = (value: string): number | null => {
   const normalized = value.replace(',', '.').trim();
@@ -95,33 +98,33 @@ export const AdminMenuPage = () => {
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('name', locale)}
-            <input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('category', locale)}
-            <select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
+            <Select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
               <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
               <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
               <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
-            </select>
+            </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('price', locale)} (e.g. 6.50)
-            <input value={price} onChange={(e) => setPrice(e.target.value)} />
+            <Input value={price} onChange={(e) => setPrice(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('photo_url', locale)} (optional)
-            <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
           </label>
           <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
             {translate('description', locale)}
-            <input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
 
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" disabled={!canCreate || createMutation.isPending}>
+            <Button type="submit" disabled={!canCreate || createMutation.isPending}>
               {createMutation.isPending ? translate('creating', locale) : translate('create', locale)}
-            </button>
+            </Button>
             {createMutation.isError ? <span style={{ color: '#b00020' }}>Failed to create item.</span> : null}
           </div>
         </form>
@@ -176,28 +179,28 @@ const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }: 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 100px', gap: 12, alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('name', locale)}
-          <input value={localName} onChange={(e) => setLocalName(e.target.value)} />
+          <Input value={localName} onChange={(e) => setLocalName(e.target.value)} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('category', locale)}
-          <select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])}>
+          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])}>
             <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
             <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
             <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
-          </select>
+          </Select>
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('price', locale)}
-          <input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} />
+          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('photo_url', locale)}
-          <input value={localPhotoUrl} onChange={(e) => setLocalPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+          <Input value={localPhotoUrl} onChange={(e) => setLocalPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
         </label>
       </div>
       <label style={{ display: 'grid', gap: 6, marginTop: 10 }}>
         {translate('description', locale)}
-        <input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} />
+        <Input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} />
       </label>
 
       <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

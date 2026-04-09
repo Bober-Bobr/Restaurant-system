@@ -7,6 +7,9 @@ import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Button } from '../components/ui/button';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -172,11 +175,11 @@ export const AdminEventsPage = () => {
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {t('customer_name')}
-            <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+            <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('phone_number')}
-            <input
+            <Input
               type="tel"
               placeholder="e.g., +7 999 123 45 67"
               value={customerPhone}
@@ -185,7 +188,7 @@ export const AdminEventsPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('event_date_time')}
-            <input
+            <Input
               type="datetime-local"
               value={eventDateLocal}
               onChange={(e) => setEventDateLocal(e.target.value)}
@@ -193,7 +196,7 @@ export const AdminEventsPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('guests')}
-            <input
+            <Input
               type="number"
               min={1}
               max={5000}
@@ -204,50 +207,50 @@ export const AdminEventsPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('event_type')}
-            <select value={eventType} onChange={(e) => setEventType(e.target.value as NonNullable<Event['eventType']>)}>
+            <Select value={eventType} onChange={(e) => setEventType(e.target.value as NonNullable<Event['eventType']>)}>
               {eventTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('status')}
-            <select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
+            <Select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
               <option value="DRAFT">DRAFT</option>
               <option value="CONFIRMED">CONFIRMED</option>
               <option value="CANCELLED">CANCELLED</option>
-            </select>
+            </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('hall_optional')}
-            <select value={hallId} onChange={(e) => setHallId(e.target.value)}>
+            <Select value={hallId} onChange={(e) => setHallId(e.target.value)}>
               <option value="">{t('select_hall')}</option>
               {halls?.map((hall) => (
                 <option key={hall.id} value={hall.id}>
                   {hall.name} (Cap: {hall.capacity})
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('table_category_optional')}
-            <select value={tableCategoryId} onChange={(e) => setTableCategoryId(e.target.value)}>
+            <Select value={tableCategoryId} onChange={(e) => setTableCategoryId(e.target.value)}>
               <option value="">{t('choose_table_category')}</option>
               {tableCategories?.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name} - {category.mealPackage} ({category.seatingCapacity} seats, {Number(category.ratePerPerson / 100).toFixed(2)} per person)
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('notes')}
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button type="submit" disabled={editingId ? !canSave : !canSubmit}>
+            <Button type="submit" disabled={editingId ? !canSave : !canSubmit}>
               {editingId
                 ? updateMutation.isPending
                   ? t('updating')
@@ -255,9 +258,10 @@ export const AdminEventsPage = () => {
                 : createMutation.isPending
                 ? t('creating')
                 : t('create_event')}
-            </button>
+            </Button>
             {editingId ? (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 onClick={() => {
                   setEditingId(null);
@@ -273,7 +277,7 @@ export const AdminEventsPage = () => {
                 }}
               >
                 {t('cancel')}
-              </button>
+              </Button>
             ) : null}
             {validation.errors.length > 0 ? (
               <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>
