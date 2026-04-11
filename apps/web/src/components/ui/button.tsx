@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-type ButtonVariant = 'default' | 'secondary' | 'accent' | 'destructive';
+type ButtonVariant = 'default' | 'secondary' | 'accent' | 'destructive' | 'ghost' | 'outline';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
@@ -12,7 +12,9 @@ const variantClasses: Record<ButtonVariant, string> = {
   default: 'bg-slate-900 text-white hover:bg-slate-800',
   secondary: 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50',
   accent: 'bg-accent text-white hover:bg-violet-600',
-  destructive: 'bg-red-600 text-white hover:bg-red-700'
+  destructive: 'bg-red-600 text-white hover:bg-red-700',
+  ghost: 'text-slate-700 hover:bg-slate-100',
+  outline: 'border border-slate-200 text-slate-900 hover:bg-slate-50'
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {

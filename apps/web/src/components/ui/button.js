@@ -5,7 +5,9 @@ const variantClasses = {
     default: 'bg-slate-900 text-white hover:bg-slate-800',
     secondary: 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50',
     accent: 'bg-accent text-white hover:bg-violet-600',
-    destructive: 'bg-red-600 text-white hover:bg-red-700'
+    destructive: 'bg-red-600 text-white hover:bg-red-700',
+    ghost: 'text-slate-700 hover:bg-slate-100',
+    outline: 'border border-slate-200 text-slate-900 hover:bg-slate-50'
 };
 const sizeClasses = {
     default: 'h-11 px-5 py-2.5 text-sm',

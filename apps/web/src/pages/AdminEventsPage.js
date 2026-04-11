@@ -19,6 +19,27 @@ const parsePositiveInt = (value) => {
         return null;
     return parsed;
 };
+// Binary search function for finding event by ID
+const binarySearchEventById = (events, targetId) => {
+    // Sort events by ID for binary search
+    const sortedEvents = [...events].sort((a, b) => a.id - b.id);
+    let left = 0;
+    let right = sortedEvents.length - 1;
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const midEvent = sortedEvents[mid];
+        if (midEvent.id === targetId) {
+            return midEvent;
+        }
+        else if (midEvent.id < targetId) {
+            left = mid + 1;
+        }
+        else {
+            right = mid - 1;
+        }
+    }
+    return null; // Event not found
+};
 const eventTypes = ['RESERVATION', 'BANQUET', 'WEDDING', 'PRIVATE_PARTY', 'CORPORATE'];
 export const AdminEventsPage = () => {
     const queryClient = useQueryClient();
@@ -46,6 +67,10 @@ export const AdminEventsPage = () => {
     const [tableCategoryId, setTableCategoryId] = useState('');
     const [notes, setNotes] = useState('');
     const [editingId, setEditingId] = useState(null);
+    // Search functionality
+    const [searchId, setSearchId] = useState('');
+    const [searchResult, setSearchResult] = useState(null);
+    const [searchError, setSearchError] = useState(null);
     const validation = useMemo(() => {
         const errors = [];
         if (customerName.trim().length < 2)
@@ -122,6 +147,29 @@ export const AdminEventsPage = () => {
             await queryClient.invalidateQueries({ queryKey: ['events'] });
         }
     });
+    // Search handler
+    const handleSearch = () => {
+        if (!events) {
+            setSearchError(t('no_events_loaded'));
+            setSearchResult(null);
+            return;
+        }
+        const targetId = parsePositiveInt(searchId);
+        if (targetId === null) {
+            setSearchError(t('enter_event_id'));
+            setSearchResult(null);
+            return;
+        }
+        const result = binarySearchEventById(events, targetId);
+        if (result) {
+            setSearchResult(result);
+            setSearchError(null);
+        }
+        else {
+            setSearchResult(null);
+            setSearchError(t('event_not_found', { id: targetId }));
+        }
+    };
     const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
     const canSave = validation.errors.length === 0 && !updateMutation.isPending;
     return (_jsxs("main", { style: { padding: 20 }, children: [_jsx("h1", { children: t('banquet_events') }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }, children: [_jsx("h3", { children: editingId ? t('edit_existing_event') : t('create_new_event') }), _jsxs("form", { onSubmit: (event) => {
@@ -169,7 +217,30 @@ export const AdminEventsPage = () => {
                                             setHallId('');
                                             setTableCategoryId('');
                                             setNotes('');
-                                        }, children: t('cancel') })) : null, validation.errors.length > 0 ? (_jsx("span", { style: { color: '#b00020' }, children: validation.errors[0] })) : null, editingId ? (updateMutation.isError ? (_jsx("span", { style: { color: '#b00020' }, children: updateMutation.error instanceof Error ? updateMutation.error.message : 'Failed to update event.' })) : null) : createMutation.isError ? (_jsx("span", { style: { color: '#b00020' }, children: createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create event.' })) : null] })] })] }), isLoading ? _jsx("p", { children: t('loading_events') }) : null, isError ? _jsx("p", { children: t('failed_load_events') }) : null, events ? (_jsx(EventList, { events: events, onEdit: (eventId) => {
+                                        }, children: t('cancel') })) : null, validation.errors.length > 0 ? (_jsx("span", { style: { color: '#b00020' }, children: validation.errors[0] })) : null, editingId ? (updateMutation.isError ? (_jsx("span", { style: { color: '#b00020' }, children: updateMutation.error instanceof Error ? updateMutation.error.message : 'Failed to update event.' })) : null) : createMutation.isError ? (_jsx("span", { style: { color: '#b00020' }, children: createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create event.' })) : null] })] })] }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }, children: [_jsx("h3", { children: t('search_event_by_id') }), _jsxs("div", { style: { display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }, children: [_jsxs("label", { style: { display: 'flex', flexDirection: 'column', gap: 6 }, children: [t('enter_event_id'), ":", _jsx(Input, { type: "number", min: "1", value: searchId, onChange: (e) => setSearchId(e.target.value), placeholder: t('enter_event_id') })] }), _jsx(Button, { type: "button", onClick: handleSearch, disabled: !events || isLoading, style: { alignSelf: 'end' }, children: t('search_olog_n') })] }), searchError && _jsx("p", { style: { color: '#b00020' }, children: searchError }), searchResult && (_jsxs("div", { style: { border: '1px solid #ccc', borderRadius: 4, padding: 8, backgroundColor: '#f9f9f9' }, children: [_jsxs("h4", { children: [t('search_result'), ":"] }), _jsxs("p", { children: [_jsx("strong", { children: "ID:" }), " ", searchResult.id] }), _jsxs("p", { children: [_jsxs("strong", { children: [t('customer_name'), ":"] }), " ", searchResult.customerName] }), _jsxs("p", { children: [_jsxs("strong", { children: [t('event_date_time'), ":"] }), " ", new Date(searchResult.eventDate).toLocaleDateString()] }), _jsxs("p", { children: [_jsxs("strong", { children: [t('guests'), ":"] }), " ", searchResult.guestCount] }), _jsxs("p", { children: [_jsxs("strong", { children: [t('status'), ":"] }), " ", searchResult.status] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }, children: [_jsx(Button, { variant: "outline", size: "sm", onClick: () => {
+                                            setEditingId(searchResult.id);
+                                            setCustomerName(searchResult.customerName);
+                                            setCustomerPhone(searchResult.customerPhone ?? '');
+                                            const eventDate = new Date(searchResult.eventDate);
+                                            const localISO = new Date(eventDate.getTime() - eventDate.getTimezoneOffset() * 60000)
+                                                .toISOString()
+                                                .slice(0, 16);
+                                            setEventDateLocal(localISO);
+                                            setGuestCountText(searchResult.guestCount.toString());
+                                            setEventType(searchResult.eventType ?? 'RESERVATION');
+                                            setStatus(searchResult.status);
+                                            setHallId(searchResult.hallId ?? '');
+                                            setTableCategoryId(searchResult.tableCategoryId ?? '');
+                                            setNotes(searchResult.notes ?? '');
+                                            // Scroll to form
+                                            document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
+                                        }, children: t('edit') }), _jsx(Button, { variant: "destructive", size: "sm", onClick: () => {
+                                            if (window.confirm(`Delete reservation for ${searchResult.customerName}?`)) {
+                                                deleteMutation.mutate(searchResult.id);
+                                                setSearchResult(null);
+                                                setSearchId('');
+                                            }
+                                        }, disabled: deleteMutation.isPending, children: deleteMutation.isPending ? t('deleting') : t('delete') })] })] }))] }), isLoading ? _jsx("p", { children: t('loading_events') }) : null, isError ? _jsx("p", { children: t('failed_load_events') }) : null, events ? (_jsx(EventList, { events: events, onEdit: (eventId) => {
                     const event = events.find((item) => item.id === eventId);
                     if (!event)
                         return;

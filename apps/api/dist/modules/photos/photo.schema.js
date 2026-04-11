@@ -1,0 +1,3 @@
+import { z } from 'zod';
+// Simplified schema validation for photo categories
+export const photoCategorySchema = z.enum(['menu', 'hall', 'table']);

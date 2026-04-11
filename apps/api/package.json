@@ -21,6 +21,7 @@
     "helmet": "latest",
     "http-errors": "latest",
     "jsonwebtoken": "latest",
+    "multer": "latest",
     "pdfkit": "latest",
     "zod": "latest"
   },
@@ -28,6 +29,7 @@
     "@types/cors": "latest",
     "@types/express": "latest",
     "@types/jsonwebtoken": "latest",
+    "@types/multer": "latest",
     "@types/node": "latest",
     "@types/pdfkit": "latest",
     "prisma": "^6.16.0",

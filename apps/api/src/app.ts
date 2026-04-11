@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import path from 'path';
 import { adminAuthMiddleware } from './middleware/auth.middleware.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
@@ -12,12 +13,19 @@ import { pricingRouter } from './modules/pricing/pricing.routes.js';
 import { publicApiRouter } from './modules/public/public.routes.js';
 import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
 import { hallRouter } from './modules/hall/hall.routes.js';
+import { photoRoutes } from './modules/photos/photo.routes.js';
 
 export const app = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+
+// Serve uploaded photos statically with absolute path
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads'), {
+  maxAge: '1y',
+  etag: false
+}));
 
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
@@ -34,6 +42,7 @@ protectedApi.use('/pricing', pricingRouter);
 protectedApi.use('/exports', exportRouter);
 protectedApi.use('/table-categories', tableCategoryRouter);
 protectedApi.use('/halls', hallRouter);
+protectedApi.use('/photos', photoRoutes);
 
 app.use('/api', protectedApi);
 

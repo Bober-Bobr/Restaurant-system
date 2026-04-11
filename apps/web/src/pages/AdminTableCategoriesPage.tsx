@@ -7,6 +7,7 @@ import type { TableCategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
+import { PhotoSelector } from '../components/ui/photo-selector';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -189,9 +190,13 @@ export const AdminTableCategoriesPage = () => {
             {t('rate_per_person')}
             <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            {t('photo_url_optional')}
-            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+          <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
+            <PhotoSelector
+              category="table"
+              selectedPhotoUrl={photoUrl || undefined}
+              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              placeholder={t('select_table_photo')}
+            />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
@@ -235,37 +240,45 @@ export const AdminTableCategoriesPage = () => {
                   }}
                 >
                   {editingId === category.id ? (
-                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('name')}
-                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('capacity')}
-                        <Input
-                          type="number"
-                          min={1}
-                          max={1000}
-                          value={editSeatingCapacityText}
-                          onChange={(e) => setEditSeatingCapacityText(e.target.value)}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('name')}
+                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('capacity')}
+                          <Input
+                            type="number"
+                            min={1}
+                            max={1000}
+                            value={editSeatingCapacityText}
+                            onChange={(e) => setEditSeatingCapacityText(e.target.value)}
+                          />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('meal_package')}
+                          <Input value={editMealPackage} onChange={(e) => setEditMealPackage(e.target.value)} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('rate_dollar')}
+                          <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('description')}
+                          <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <PhotoSelector
+                          category="table"
+                          selectedPhotoUrl={editPhotoUrl || undefined}
+                          onPhotoSelect={(url) => setEditPhotoUrl(url || '')}
+                          placeholder={t('select_table_photo')}
                         />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('meal_package')}
-                        <Input value={editMealPackage} onChange={(e) => setEditMealPackage(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('rate_dollar')}
-                        <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('description')}
-                        <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('photo_url')}
-                        <Input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
-                      </label>
+                      </div>
                       <label style={{ display: 'grid', gap: 4 }}>
                         {t('active')}
                         <input

@@ -19,6 +19,30 @@ const parsePositiveInt = (value: string): number | null => {
   return parsed;
 };
 
+// Binary search function for finding event by ID
+const binarySearchEventById = (events: Event[], targetId: number): Event | null => {
+  // Sort events by ID for binary search
+  const sortedEvents = [...events].sort((a, b) => a.id - b.id);
+
+  let left = 0;
+  let right = sortedEvents.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const midEvent = sortedEvents[mid];
+
+    if (midEvent.id === targetId) {
+      return midEvent;
+    } else if (midEvent.id < targetId) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  return null; // Event not found
+};
+
 const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'PRIVATE_PARTY', 'CORPORATE'];
 
 export const AdminEventsPage = () => {
@@ -50,6 +74,11 @@ export const AdminEventsPage = () => {
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Search functionality
+  const [searchId, setSearchId] = useState('');
+  const [searchResult, setSearchResult] = useState<Event | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const validation = useMemo(() => {
     const errors: string[] = [];
@@ -134,6 +163,31 @@ export const AdminEventsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
+
+  // Search handler
+  const handleSearch = () => {
+    if (!events) {
+      setSearchError(t('no_events_loaded'));
+      setSearchResult(null);
+      return;
+    }
+
+    const targetId = parsePositiveInt(searchId);
+    if (targetId === null) {
+      setSearchError(t('enter_event_id'));
+      setSearchResult(null);
+      return;
+    }
+
+    const result = binarySearchEventById(events, targetId);
+    if (result) {
+      setSearchResult(result);
+      setSearchError(null);
+    } else {
+      setSearchResult(null);
+      setSearchError(t('event_not_found', { id: targetId }));
+    }
+  };
 
   const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
   const canSave = validation.errors.length === 0 && !updateMutation.isPending;
@@ -295,6 +349,82 @@ export const AdminEventsPage = () => {
             ) : null}
           </div>
         </form>
+      </section>
+
+      {/* Search Section */}
+      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+        <h3>{t('search_event_by_id')}</h3>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {t('enter_event_id')}:
+            <Input
+              type="number"
+              min="1"
+              value={searchId}
+              onChange={(e) => setSearchId(e.target.value)}
+              placeholder={t('enter_event_id')}
+            />
+          </label>
+          <Button
+            type="button"
+            onClick={handleSearch}
+            disabled={!events || isLoading}
+            style={{ alignSelf: 'end' }}
+          >
+            {t('search_olog_n')}
+          </Button>
+        </div>
+        {searchError && <p style={{ color: '#b00020' }}>{searchError}</p>}
+        {searchResult && (
+          <div style={{ border: '1px solid #ccc', borderRadius: 4, padding: 8, backgroundColor: '#f9f9f9' }}>
+            <h4>{t('search_result')}:</h4>
+            <p><strong>ID:</strong> {searchResult.id}</p>
+            <p><strong>{t('customer_name')}:</strong> {searchResult.customerName}</p>
+            <p><strong>{t('event_date_time')}:</strong> {new Date(searchResult.eventDate).toLocaleDateString()}</p>
+            <p><strong>{t('guests')}:</strong> {searchResult.guestCount}</p>
+            <p><strong>{t('status')}:</strong> {searchResult.status}</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingId(searchResult.id);
+                  setCustomerName(searchResult.customerName);
+                  setCustomerPhone(searchResult.customerPhone ?? '');
+                  const eventDate = new Date(searchResult.eventDate);
+                  const localISO = new Date(eventDate.getTime() - eventDate.getTimezoneOffset() * 60000)
+                    .toISOString()
+                    .slice(0, 16);
+                  setEventDateLocal(localISO);
+                  setGuestCountText(searchResult.guestCount.toString());
+                  setEventType(searchResult.eventType ?? 'RESERVATION');
+                  setStatus(searchResult.status);
+                  setHallId(searchResult.hallId ?? '');
+                  setTableCategoryId(searchResult.tableCategoryId ?? '');
+                  setNotes(searchResult.notes ?? '');
+                  // Scroll to form
+                  document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                {t('edit')}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm(`Delete reservation for ${searchResult.customerName}?`)) {
+                    deleteMutation.mutate(searchResult.id);
+                    setSearchResult(null);
+                    setSearchId('');
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? t('deleting') : t('delete')}
+              </Button>
+            </div>
+          </div>
+        )}
       </section>
 
       {isLoading ? <p>{t('loading_events')}</p> : null}

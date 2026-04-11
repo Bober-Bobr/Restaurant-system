@@ -45,6 +45,7 @@ export const AdminLayout = () => {
             <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
             <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
             <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
+            <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
             <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to="/tablet">
               {t('tablet')}
             </Link>

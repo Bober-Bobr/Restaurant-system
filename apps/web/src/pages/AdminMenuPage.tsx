@@ -7,6 +7,7 @@ import { translate, type TranslationKey } from '../utils/translate';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
+import { PhotoSelector } from '../components/ui/photo-selector';
 
 const parsePriceToCents = (value: string): number | null => {
   const normalized = value.replace(',', '.').trim();
@@ -112,9 +113,13 @@ export const AdminMenuPage = () => {
             {translate('price', locale)} (e.g. 6.50)
             <Input value={price} onChange={(e) => setPrice(e.target.value)} />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            {translate('photo_url', locale)} (optional)
-            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
+          <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
+            <PhotoSelector
+              category="menu"
+              selectedPhotoUrl={photoUrl || undefined}
+              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              placeholder={translate('select_menu_photo', locale)}
+            />
           </label>
           <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
             {translate('description', locale)}
@@ -176,7 +181,7 @@ const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }: 
 
   return (
     <article style={{ border: '1px solid #eee', borderRadius: 8, padding: 12 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr 100px', gap: 12, alignItems: 'end' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('name', locale)}
           <Input value={localName} onChange={(e) => setLocalName(e.target.value)} />
@@ -193,11 +198,17 @@ const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }: 
           {translate('price', locale)}
           <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} />
         </label>
-        <label style={{ display: 'grid', gap: 6 }}>
-          {translate('photo_url', locale)}
-          <Input value={localPhotoUrl} onChange={(e) => setLocalPhotoUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
-        </label>
       </div>
+
+      <div style={{ marginTop: 12 }}>
+        <PhotoSelector
+          category="menu"
+          selectedPhotoUrl={localPhotoUrl || undefined}
+          onPhotoSelect={(url) => setLocalPhotoUrl(url || '')}
+          placeholder={translate('select_menu_photo', locale)}
+        />
+      </div>
+
       <label style={{ display: 'grid', gap: 6, marginTop: 10 }}>
         {translate('description', locale)}
         <Input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} />

@@ -1,4 +1,5 @@
 import type { Event } from '../../types/domain';
+import { Button } from '../ui/button';
 
 type EventListProps = {
   events: Event[];
@@ -33,15 +34,22 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
             <td>{event.guestCount}</td>
             <td>{event.status}</td>
             {(onEdit || onDelete) ? (
-              <td style={{ display: 'flex', gap: 8 }}>
+              <td style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {onEdit ? (
-                  <button type="button" onClick={() => onEdit(event.id)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(event.id)}
+                  >
                     Edit
-                  </button>
+                  </Button>
                 ) : null}
                 {onDelete ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="destructive"
+                    size="sm"
                     disabled={deletingId === event.id}
                     onClick={() => {
                       if (window.confirm(`Delete reservation for ${event.customerName}?`)) {
@@ -50,7 +58,7 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                     }}
                   >
                     {deletingId === event.id ? 'Deleting…' : 'Delete'}
-                  </button>
+                  </Button>
                 ) : null}
               </td>
             ) : null}

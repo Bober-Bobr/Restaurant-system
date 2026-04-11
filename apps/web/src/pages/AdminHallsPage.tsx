@@ -6,6 +6,7 @@ import { translate } from '../utils/translate';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
+import { PhotoSelector } from '../components/ui/photo-selector';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -160,9 +161,13 @@ export const AdminHallsPage = () => {
               onChange={(e) => setCapacityText(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            {t('photo_url_optional')}
-            <Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
+          <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
+            <PhotoSelector
+              category="hall"
+              selectedPhotoUrl={photoUrl || undefined}
+              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              placeholder={t('select_hall_photo')}
+            />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
@@ -206,37 +211,43 @@ export const AdminHallsPage = () => {
                   }}
                 >
                   {editingId === hall.id ? (
-                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('name')}
-                        <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('hall_capacity')}
-                        <Input
-                          type="number"
-                          min={1}
-                          max={5000}
-                          value={editCapacityText}
-                          onChange={(e) => setEditCapacityText(e.target.value)}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('name')}
+                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('hall_capacity')}
+                          <Input
+                            type="number"
+                            min={1}
+                            max={5000}
+                            value={editCapacityText}
+                            onChange={(e) => setEditCapacityText(e.target.value)}
+                          />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('hall_description')}
+                          <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('hall_active')}
+                          <input
+                            type="checkbox"
+                            checked={editIsActive}
+                            onChange={(e) => setEditIsActive(e.target.checked)}
+                          />
+                        </label>
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <PhotoSelector
+                          category="hall"
+                          selectedPhotoUrl={editPhotoUrl || undefined}
+                          onPhotoSelect={(url) => setEditPhotoUrl(url || '')}
+                          placeholder={t('select_hall_photo')}
                         />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('hall_description')}
-                        <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('hall_photo_url')}
-                        <Input value={editPhotoUrl} onChange={(e) => setEditPhotoUrl(e.target.value)} placeholder={t('photo_url_placeholder')} />
-                      </label>
-                      <label style={{ display: 'grid', gap: 4 }}>
-                        {t('hall_active')}
-                        <input
-                          type="checkbox"
-                          checked={editIsActive}
-                          onChange={(e) => setEditIsActive(e.target.checked)}
-                        />
-                      </label>
+                      </div>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <Button
                           onClick={saveEdit}

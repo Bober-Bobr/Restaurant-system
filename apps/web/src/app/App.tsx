@@ -3,6 +3,7 @@ import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminMenuPage } from '../pages/AdminMenuPage';
 import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
+import { AdminPhotosPage } from '../pages/AdminPhotosPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
@@ -39,6 +40,7 @@ export const App = () => {
         <Route path="/admin/menu" element={<AdminMenuPage />} />
         <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />
         <Route path="/admin/halls" element={<AdminHallsPage />} />
+        <Route path="/admin/photos" element={<AdminPhotosPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
