@@ -5,7 +5,7 @@ export const createMenuItemSchema = z.object({
     description: z.string().max(500).optional(),
     category: z.nativeEnum(MenuCategory),
     priceCents: z.number().int().positive().max(10000000),
-    photoUrl: z.string().url().optional(),
+    photoUrl: z.string().min(1).optional(),
     isActive: z.boolean().optional()
 });
 export const updateMenuItemSchema = createMenuItemSchema.partial();

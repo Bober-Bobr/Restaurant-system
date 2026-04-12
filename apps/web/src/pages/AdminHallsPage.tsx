@@ -162,14 +162,14 @@ export const AdminHallsPage = () => {
               onChange={(e) => setCapacityText(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
+          <div style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             <PhotoSelector
               category="hall"
               selectedPhotoUrl={photoUrl || undefined}
               onPhotoSelect={(url) => setPhotoUrl(url || '')}
               placeholder={t('select_hall_photo')}
             />
-          </label>
+          </div>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />

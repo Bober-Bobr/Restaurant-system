@@ -113,14 +113,14 @@ export const AdminMenuPage = () => {
             {translate('price', locale)} (e.g. 6.50)
             <Input value={price} onChange={(e) => setPrice(e.target.value)} />
           </label>
-          <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
+          <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
             <PhotoSelector
               category="menu"
               selectedPhotoUrl={photoUrl || undefined}
               onPhotoSelect={(url) => setPhotoUrl(url || '')}
               placeholder={translate('select_menu_photo', locale)}
             />
-          </label>
+          </div>
           <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
             {translate('description', locale)}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />

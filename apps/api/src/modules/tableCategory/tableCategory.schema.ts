@@ -6,7 +6,7 @@ export const createTableCategorySchema = z.object({
   mealPackage: z.string().min(1).max(200),
   ratePerPerson: z.number().int().nonnegative().max(100000),
   description: z.string().max(500).optional(),
-  photoUrl: z.string().url().optional(),
+  photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional()
 });
 
