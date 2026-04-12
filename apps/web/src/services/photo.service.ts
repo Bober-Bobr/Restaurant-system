@@ -11,11 +11,9 @@ export class PhotoService {
       formData.append('files', file);
     });
 
-    const response = await httpClient.post<{ urls: string[] }>(`/photos/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Do NOT set Content-Type manually — the browser must auto-generate the
+    // multipart boundary. Overriding it strips the boundary and breaks multer.
+    const response = await httpClient.post<{ urls: string[] }>(`/photos/upload`, formData);
 
     return response.data.urls;
   }

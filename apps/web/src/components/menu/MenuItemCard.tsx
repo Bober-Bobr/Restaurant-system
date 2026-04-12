@@ -1,4 +1,5 @@
 import type { MenuItem } from '../../types/domain';
+import { getPhotoUrl } from '../../utils/photoUrl';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
@@ -14,7 +15,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange }: MenuItemCardP
     <Card className="space-y-4 p-4">
       {item.photoUrl ? (
         <img
-          src={item.photoUrl}
+          src={getPhotoUrl(item.photoUrl)}
           alt={item.name}
           className="h-40 w-full rounded-2xl object-cover"
         />

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
+import { getPhotoUrl } from '../utils/photoUrl';
 import type { TableCategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -312,7 +313,7 @@ export const AdminTableCategoriesPage = () => {
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         {category.photoUrl ? (
                           <img
-                            src={category.photoUrl}
+                            src={getPhotoUrl(category.photoUrl)}
                             alt={category.name}
                             style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }}
                           />

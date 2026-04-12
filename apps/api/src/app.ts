@@ -21,8 +21,13 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// Serve uploaded photos statically with absolute path
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads'), {
+// Serve uploaded photos statically with absolute path.
+// Override Helmet's default Cross-Origin-Resource-Policy: same-origin so the
+// frontend (different port) can load images via <img> tags.
+app.use('/uploads', (_req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.resolve(process.cwd(), 'uploads'), {
   maxAge: '1y',
   etag: false
 }));

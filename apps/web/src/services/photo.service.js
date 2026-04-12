@@ -6,11 +6,9 @@ export class PhotoService {
         files.forEach(file => {
             formData.append('files', file);
         });
-        const response = await httpClient.post(`/photos/upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        // Do NOT set Content-Type manually — the browser must auto-generate the
+        // multipart boundary. Overriding it strips the boundary and breaks multer.
+        const response = await httpClient.post(`/photos/upload`, formData);
         return response.data.urls;
     }
     async listPhotos(category) {

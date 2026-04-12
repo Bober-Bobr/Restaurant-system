@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { photoService, type PhotoCategory } from '../../services/photo.service';
 import { useAdminStore } from '../../store/admin.store';
 import { translate } from '../../utils/translate';
+import { getPhotoUrl } from '../../utils/photoUrl';
 import { Button } from './button';
 
 interface PhotoSelectorProps {
@@ -127,7 +128,7 @@ export const PhotoSelector = ({
         <div className="border-2 border-blue-300 rounded-lg p-2 bg-blue-50">
           <div className="flex items-center gap-2">
             <img
-              src={selectedPhotoUrl}
+              src={getPhotoUrl(selectedPhotoUrl)}
               alt="Selected"
               className="w-16 h-16 object-cover rounded"
             />
@@ -170,7 +171,7 @@ export const PhotoSelector = ({
               onClick={() => handlePhotoClick(photoUrl)}
             >
               <img
-                src={photoUrl}
+                src={getPhotoUrl(photoUrl)}
                 alt=""
                 className="w-full h-20 object-cover"
               />

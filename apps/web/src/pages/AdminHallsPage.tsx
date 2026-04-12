@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
+import { getPhotoUrl } from '../utils/photoUrl';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
@@ -273,7 +274,7 @@ export const AdminHallsPage = () => {
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         {hall.photoUrl ? (
                           <img
-                            src={hall.photoUrl}
+                            src={getPhotoUrl(hall.photoUrl)}
                             alt={hall.name}
                             style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }}
                           />

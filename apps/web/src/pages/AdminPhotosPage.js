@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { photoService } from '../services/photo.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
+import { getPhotoUrl } from '../utils/photoUrl';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 export const AdminPhotosPage = () => {
@@ -11,7 +12,6 @@ export const AdminPhotosPage = () => {
     const { locale } = useAdminStore();
     const fileInputRef = useRef(null);
     const [category, setCategory] = useState('menu');
-    const [isUploading, setIsUploading] = useState(false);
     const t = (key) => translate(key, locale);
     const { data: photos = [], isLoading, isError } = useQuery({
         queryKey: ['photos', category],
@@ -21,13 +21,8 @@ export const AdminPhotosPage = () => {
         mutationFn: (files) => photoService.uploadPhotos(category, files),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['photos', category] });
-            setIsUploading(false);
-            if (fileInputRef.current) {
+            if (fileInputRef.current)
                 fileInputRef.current.value = '';
-            }
-        },
-        onError: () => {
-            setIsUploading(false);
         }
     });
     const deleteMutation = useMutation({
@@ -40,7 +35,6 @@ export const AdminPhotosPage = () => {
         const files = Array.from(event.target.files || []);
         if (files.length === 0)
             return;
-        setIsUploading(true);
         try {
             await uploadMutation.mutateAsync(files);
         }
@@ -48,7 +42,7 @@ export const AdminPhotosPage = () => {
             console.error('Failed to upload photos:', error);
         }
     };
-    const handleDeletePhoto = async (photoUrl) => {
+    const handleDelete = async (photoUrl) => {
         const filename = photoUrl.split('/').pop();
         if (filename && confirm(t('confirm_delete_photo'))) {
             try {
@@ -66,17 +60,9 @@ export const AdminPhotosPage = () => {
             case 'table': return t('table_photos');
         }
     };
-    return (_jsxs("main", { style: { padding: 20 }, children: [_jsx("h1", { children: t('photo_management') }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }, children: [_jsx("h3", { children: t('upload_photos') }), _jsxs("div", { style: { display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, alignItems: 'end' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('photo_category'), _jsxs(Select, { value: category, onChange: (e) => setCategory(e.target.value), children: [_jsx("option", { value: "menu", children: t('menu_photos') }), _jsx("option", { value: "hall", children: t('hall_photos') }), _jsx("option", { value: "table", children: t('table_photos') })] })] }), _jsx(Button, { type: "button", onClick: () => fileInputRef.current?.click(), disabled: isUploading, children: isUploading ? t('uploading') : t('select_upload_files') }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: "image/*", onChange: handleFileSelect, className: "hidden" })] }), _jsx("p", { style: { marginTop: 8, fontSize: '0.875rem', color: '#666' }, children: t('upload_photos_help') })] }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12 }, children: [_jsxs("h3", { children: [getCategoryLabel(category), " (", photos.length, ")"] }), isLoading ? (_jsx("p", { children: t('loading_photos') })) : isError ? (_jsx("p", { style: { color: '#b00020' }, children: t('failed_load_photos') })) : photos.length === 0 ? (_jsx("p", { style: { color: '#666' }, children: t('no_photos_uploaded') })) : (_jsx("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }, children: photos.map((photoUrl) => {
-                            const filename = photoUrl.split('/').pop() || '';
-                            return (_jsxs("div", { style: {
-                                    border: '1px solid #eee',
-                                    borderRadius: 8,
-                                    overflow: 'hidden',
-                                    backgroundColor: '#fafafa'
-                                }, children: [_jsx("img", { src: photoUrl, alt: filename, style: {
-                                            width: '100%',
-                                            height: 150,
-                                            objectFit: 'cover'
-                                        } }), _jsxs("div", { style: { padding: 8 }, children: [_jsx("p", { style: { fontSize: '0.75rem', color: '#666', margin: 0, marginBottom: 8, wordBreak: 'break-all', maxHeight: 40, overflow: 'hidden' }, children: filename }), _jsx(Button, { type: "button", variant: "ghost", size: "sm", onClick: () => handleDeletePhoto(photoUrl), disabled: deleteMutation.isPending, style: { width: '100%' }, children: deleteMutation.isPending ? t('deleting') : t('delete') })] })] }, photoUrl));
-                        }) }))] })] }));
+    return (_jsx("main", { className: "px-4 py-6 sm:px-6 lg:px-8", children: _jsxs("div", { className: "mx-auto max-w-6xl space-y-6", children: [_jsx("h1", { className: "page-heading", children: t('photo_management') }), _jsxs("section", { className: "card p-6", children: [_jsx("p", { className: "section-heading mb-4", children: t('upload_photos') }), _jsxs("div", { className: "flex flex-wrap items-end gap-4", children: [_jsxs("div", { className: "space-y-2", children: [_jsx("label", { className: "text-sm font-medium text-slate-700", children: t('photo_category') }), _jsxs(Select, { value: category, onChange: (e) => setCategory(e.target.value), className: "w-48", children: [_jsx("option", { value: "menu", children: t('menu_photos') }), _jsx("option", { value: "hall", children: t('hall_photos') }), _jsx("option", { value: "table", children: t('table_photos') })] })] }), _jsx(Button, { type: "button", onClick: () => fileInputRef.current?.click(), disabled: uploadMutation.isPending, children: uploadMutation.isPending ? t('uploading') : t('select_upload_files') }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: "image/*", onChange: handleFileSelect, className: "hidden" })] }), _jsx("p", { className: "mt-3 text-sm text-slate-500", children: t('upload_photos_help') })] }), _jsxs("section", { className: "card p-6", children: [_jsxs("p", { className: "section-heading mb-4", children: [getCategoryLabel(category), _jsxs("span", { className: "ml-2 text-base font-normal text-slate-500", children: ["(", photos.length, ")"] })] }), isLoading ? (_jsx("div", { className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5", children: Array.from({ length: 10 }).map((_, i) => (_jsx("div", { className: "aspect-square animate-pulse rounded-2xl bg-slate-100" }, i))) })) : isError ? (_jsx("p", { className: "text-sm text-red-600", children: t('failed_load_photos') })) : photos.length === 0 ? (_jsxs("div", { className: "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 py-16 text-slate-400", children: [_jsx("svg", { className: "mb-3 h-10 w-10", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: _jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5, d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }), _jsx("p", { className: "text-sm", children: t('no_photos_uploaded') })] })) : (_jsx("div", { className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5", children: photos.map((photoUrl) => {
+                                const filename = photoUrl.split('/').pop() ?? '';
+                                const isDeleting = deleteMutation.isPending && deleteMutation.variables === filename;
+                                return (_jsxs("div", { className: "group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-shadow hover:shadow-md", children: [_jsx("div", { className: "aspect-square", children: _jsx("img", { src: getPhotoUrl(photoUrl), alt: filename, className: "h-full w-full object-cover" }) }), _jsxs("div", { className: "p-3", children: [_jsx("p", { className: "truncate text-xs text-slate-500", title: filename, children: filename }), _jsx("button", { type: "button", onClick: () => handleDelete(photoUrl), disabled: isDeleting || deleteMutation.isPending, className: "mt-2 w-full rounded-xl border border-red-200 bg-white py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50", children: isDeleting ? t('deleting') : t('delete') })] }), _jsx("div", { className: "pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-transparent transition-all group-hover:ring-slate-300" })] }, photoUrl));
+                            }) }))] })] }) }));
 };
