@@ -5,7 +5,7 @@ const resources = {
         banquet_admin: 'Banquet Admin',
         events: 'Events',
         menu: 'Menu',
-        tables: 'Tables',
+        tables: 'Table categories',
         halls: 'Halls',
         tablet: 'Tablet',
         logout: 'Log out',
@@ -159,13 +159,19 @@ const resources = {
         search_olog_n: 'Search',
         event_not_found: 'Event with ID {id} not found',
         search_result: 'Search Result',
-        no_events_loaded: 'No events loaded'
+        no_events_loaded: 'No events loaded',
+        start_new_booking: 'Start New Booking',
+        submitting: 'Submitting...',
+        event_create_error: 'Failed to create event. Please try again.',
+        notes_placeholder: 'Any special requests or comments...',
+        event_date: 'Event Date',
+        event_time: 'Event Time'
     },
     ru: {
         banquet_admin: 'Админ Банкет',
         events: 'События',
         menu: 'Меню',
-        tables: 'Столы',
+        tables: 'Категории столов',
         halls: 'Залы',
         tablet: 'Планшет',
         logout: 'Выйти',
@@ -318,13 +324,19 @@ const resources = {
         search_olog_n: 'Поиск',
         event_not_found: 'Событие с ID {id} не найдено',
         search_result: 'Результат поиска',
-        no_events_loaded: 'События не загружены'
+        no_events_loaded: 'События не загружены',
+        start_new_booking: 'Новое бронирование',
+        submitting: 'Отправка...',
+        event_create_error: 'Не удалось создать событие. Попробуйте ещё раз.',
+        notes_placeholder: 'Особые пожелания или комментарии...',
+        event_date: 'Дата события',
+        event_time: 'Время события'
     },
     uz: {
         banquet_admin: 'Banket Maʼmuri',
         events: 'Tadbirlar',
         menu: 'Menyu',
-        tables: 'Stollar',
+        tables: 'Jadval Toifalari',
         halls: 'Zallar',
         tablet: 'Planshet',
         logout: 'Chiqish',
@@ -477,7 +489,13 @@ const resources = {
         search_olog_n: 'Qidirish',
         event_not_found: '{id} ID li tadbir topilmadi',
         search_result: 'Qidiruv natijasi',
-        no_events_loaded: 'Tadbirlar yuklanmagan'
+        no_events_loaded: 'Tadbirlar yuklanmagan',
+        start_new_booking: 'Yangi bron',
+        submitting: 'Yuborilmoqda...',
+        event_create_error: 'Tadbir yaratib bo\'lmadi. Qayta urinib ko\'ring.',
+        notes_placeholder: 'Maxsus so\'rovlar yoki izohlar...',
+        event_date: 'Tadbir sanasi',
+        event_time: 'Tadbir vaqti'
     }
 };
 export function translate(key, locale = defaultLocale, params) {

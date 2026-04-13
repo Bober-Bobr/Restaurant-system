@@ -1,3 +1,10 @@
+export type EventMenuSelection = {
+  id: string;
+  menuItem: Pick<MenuItem, 'id' | 'name' | 'category'>;
+  quantity: number;
+  unitPriceCents: number;
+};
+
 export type Event = {
   id: number;
   customerName: string;
@@ -10,6 +17,8 @@ export type Event = {
   hallId?: string;
   tableCategoryId?: string;
   hall?: Hall;
+  tableCategory?: TableCategory;
+  selections?: EventMenuSelection[];
   notes?: string;
 };
 

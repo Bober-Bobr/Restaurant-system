@@ -66,7 +66,8 @@ export const AdminEventsPage = () => {
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [eventDateLocal, setEventDateLocal] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
   const [guestCountText, setGuestCountText] = useState('50');
   const [eventType, setEventType] = useState<NonNullable<Event['eventType']>>('RESERVATION');
   const [status, setStatus] = useState<NonNullable<Event['status']>>('DRAFT');
@@ -85,9 +86,11 @@ export const AdminEventsPage = () => {
 
     if (customerName.trim().length < 2) errors.push('Customer name must be at least 2 characters.');
 
-    if (!eventDateLocal) {
-      errors.push('Event date/time is required.');
-    } else if (Number.isNaN(new Date(eventDateLocal).getTime())) {
+    if (!eventDate) {
+      errors.push('Event date is required.');
+    } else if (!eventTime) {
+      errors.push('Event time is required.');
+    } else if (Number.isNaN(new Date(`${eventDate}T${eventTime}`).getTime())) {
       errors.push('Event date/time is invalid.');
     }
 
@@ -100,7 +103,7 @@ export const AdminEventsPage = () => {
     }
 
     return { errors, guestCount };
-  }, [customerName, eventDateLocal, guestCountText, tableCategoryId, tableCategories]);
+  }, [customerName, eventDate, eventTime, guestCountText, tableCategoryId, tableCategories]);
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -108,7 +111,7 @@ export const AdminEventsPage = () => {
         throw new Error(validation.errors[0] ?? 'Invalid form');
       }
 
-      const date = new Date(eventDateLocal);
+      const date = new Date(`${eventDate}T${eventTime}`);
       if (Number.isNaN(date.getTime())) {
         throw new Error('Invalid event date/time');
       }
@@ -128,7 +131,8 @@ export const AdminEventsPage = () => {
     onSuccess: async () => {
       setCustomerName('');
       setCustomerPhone('');
-      setEventDateLocal('');
+      setEventDate('');
+      setEventTime('');
       setGuestCountText('50');
       setStatus('DRAFT');
       setEventType('RESERVATION');
@@ -146,7 +150,8 @@ export const AdminEventsPage = () => {
       setEditingId(null);
       setCustomerName('');
       setCustomerPhone('');
-      setEventDateLocal('');
+      setEventDate('');
+      setEventTime('');
       setGuestCountText('50');
       setStatus('DRAFT');
       setEventType('RESERVATION');
@@ -201,8 +206,8 @@ export const AdminEventsPage = () => {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            const date = new Date(eventDateLocal);
-            if (!eventDateLocal || Number.isNaN(date.getTime())) return;
+            const date = new Date(`${eventDate}T${eventTime}`);
+            if (!eventDate || !eventTime || Number.isNaN(date.getTime())) return;
 
             if (editingId) {
               if (!canSave || updateMutation.isPending) return;
@@ -241,11 +246,19 @@ export const AdminEventsPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
-            {t('event_date_time')}
+            {t('event_date')}
             <Input
-              type="datetime-local"
-              value={eventDateLocal}
-              onChange={(e) => setEventDateLocal(e.target.value)}
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+          </label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            {t('event_time')}
+            <Input
+              type="time"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -321,7 +334,8 @@ export const AdminEventsPage = () => {
                   setEditingId(null);
                   setCustomerName('');
                   setCustomerPhone('');
-                  setEventDateLocal('');
+                  setEventDate('');
+      setEventTime('');
                   setGuestCountText('50');
                   setStatus('DRAFT');
                   setEventType('RESERVATION');
@@ -375,56 +389,121 @@ export const AdminEventsPage = () => {
           </Button>
         </div>
         {searchError && <p style={{ color: '#b00020' }}>{searchError}</p>}
-        {searchResult && (
-          <div style={{ border: '1px solid #ccc', borderRadius: 4, padding: 8, backgroundColor: '#f9f9f9' }}>
-            <h4>{t('search_result')}:</h4>
-            <p><strong>ID:</strong> {searchResult.id}</p>
-            <p><strong>{t('customer_name')}:</strong> {searchResult.customerName}</p>
-            <p><strong>{t('event_date_time')}:</strong> {new Date(searchResult.eventDate).toLocaleDateString()}</p>
-            <p><strong>{t('guests')}:</strong> {searchResult.guestCount}</p>
-            <p><strong>{t('status')}:</strong> {searchResult.status}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setEditingId(searchResult.id);
-                  setCustomerName(searchResult.customerName);
-                  setCustomerPhone(searchResult.customerPhone ?? '');
-                  const eventDate = new Date(searchResult.eventDate);
-                  const localISO = new Date(eventDate.getTime() - eventDate.getTimezoneOffset() * 60000)
-                    .toISOString()
-                    .slice(0, 16);
-                  setEventDateLocal(localISO);
-                  setGuestCountText(searchResult.guestCount.toString());
-                  setEventType(searchResult.eventType ?? 'RESERVATION');
-                  setStatus(searchResult.status);
-                  setHallId(searchResult.hallId ?? '');
-                  setTableCategoryId(searchResult.tableCategoryId ?? '');
-                  setNotes(searchResult.notes ?? '');
-                  // Scroll to form
-                  document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                {t('edit')}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  if (window.confirm(`Delete reservation for ${searchResult.customerName}?`)) {
-                    deleteMutation.mutate(searchResult.id);
-                    setSearchResult(null);
-                    setSearchId('');
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? t('deleting') : t('delete')}
-              </Button>
+        {searchResult && (() => {
+          const d = new Date(searchResult.eventDate);
+          const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+          const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          const eventTypeLabels: Record<string, string> = {
+            RESERVATION: 'Reservation', BANQUET: 'Banquet', WEDDING: 'Wedding',
+            PRIVATE_PARTY: 'Private Party', CORPORATE: 'Corporate'
+          };
+          const statusColors: Record<string, string> = {
+            DRAFT: '#64748b', CONFIRMED: '#059669', CANCELLED: '#dc2626'
+          };
+          const dishTypes  = searchResult.selections?.length ?? 0;
+          const totalPcs   = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
+
+          return (
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: 16, backgroundColor: '#f8fafc' }}>
+              <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#475569' }}>{t('search_result')}</h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 24px' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>ID</p>
+                  <p style={{ margin: '2px 0 0', fontFamily: 'monospace', color: '#475569' }}>#{searchResult.id}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('customer_name')}</p>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a' }}>{searchResult.customerName}</p>
+                  {searchResult.customerPhone && (
+                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{searchResult.customerPhone}</p>
+                  )}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('status')}</p>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: statusColors[searchResult.status] ?? '#475569' }}>{searchResult.status}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('event_date_time')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{dateStr}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{timeStr}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('event_type')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>
+                    {searchResult.eventType ? (eventTypeLabels[searchResult.eventType] ?? searchResult.eventType) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('guests')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.guestCount}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('hall_optional')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.hall?.name ?? '—'}</p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('table_category_optional')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.tableCategory?.name ?? '—'}</p>
+                  {searchResult.tableCategory && (
+                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{searchResult.tableCategory.mealPackage}</p>
+                  )}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Menu</p>
+                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>
+                    {dishTypes > 0 ? `${dishTypes} dish${dishTypes !== 1 ? 'es' : ''}, ${totalPcs} pcs` : '—'}
+                  </p>
+                </div>
+                {searchResult.notes && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('notes')}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#475569' }}>{searchResult.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingId(searchResult.id);
+                    setCustomerName(searchResult.customerName);
+                    setCustomerPhone(searchResult.customerPhone ?? '');
+                    const srDate = new Date(searchResult.eventDate);
+                    const srLocal = new Date(srDate.getTime() - srDate.getTimezoneOffset() * 60000).toISOString();
+                    setEventDate(srLocal.slice(0, 10));
+                    setEventTime(srLocal.slice(11, 16));
+                    setGuestCountText(searchResult.guestCount.toString());
+                    setEventType(searchResult.eventType ?? 'RESERVATION');
+                    setStatus(searchResult.status);
+                    setHallId(searchResult.hallId ?? '');
+                    setTableCategoryId(searchResult.tableCategoryId ?? '');
+                    setNotes(searchResult.notes ?? '');
+                    document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  {t('edit')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm(`Delete reservation for ${searchResult.customerName}?`)) {
+                      deleteMutation.mutate(searchResult.id);
+                      setSearchResult(null);
+                      setSearchId('');
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? t('deleting') : t('delete')}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </section>
 
       {isLoading ? <p>{t('loading_events')}</p> : null}
@@ -439,11 +518,10 @@ export const AdminEventsPage = () => {
             setEditingId(event.id);
             setCustomerName(event.customerName);
             setCustomerPhone(event.customerPhone ?? '');
-            const eventDate = new Date(event.eventDate);
-            const localISO = new Date(eventDate.getTime() - eventDate.getTimezoneOffset() * 60000)
-              .toISOString()
-              .slice(0, 16);
-            setEventDateLocal(localISO);
+            const evDate = new Date(event.eventDate);
+            const evLocal = new Date(evDate.getTime() - evDate.getTimezoneOffset() * 60000).toISOString();
+            setEventDate(evLocal.slice(0, 10));
+            setEventTime(evLocal.slice(11, 16));
             setGuestCountText(event.guestCount.toString());
             setEventType(event.eventType ?? 'RESERVATION');
             setStatus(event.status);
