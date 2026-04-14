@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { MenuItem } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
-import { translate, type TranslationKey } from '../utils/translate';
+import { translate } from '../utils/translate';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
@@ -104,9 +104,14 @@ export const AdminMenuPage = () => {
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('category', locale)}
             <Select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
+              <option value="COLD_APPETIZERS">{translate('cold_appetizers', locale)}</option>
               <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
+              <option value="SALADS">{translate('salads', locale)}</option>
               <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
               <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
+              <option value="DRINKS">{translate('drinks', locale)}</option>
+              <option value="SWEETS">{translate('sweets', locale)}</option>
+              <option value="FRUITS">{translate('fruits', locale)}</option>
             </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -189,9 +194,13 @@ const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }: 
         <label style={{ display: 'grid', gap: 6 }}>
           {translate('category', locale)}
           <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])}>
+            <option value="COLD_APPETIZERS">{translate('cold_appetizers', locale)}</option>
             <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
+            <option value="SALADS">{translate('salads', locale)}</option>
             <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
             <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
+            <option value="DRINKS">{translate('drinks', locale)}</option>
+            <option value="SWEETS">{translate('sweets', locale)}</option>
           </Select>
         </label>
         <label style={{ display: 'grid', gap: 6 }}>

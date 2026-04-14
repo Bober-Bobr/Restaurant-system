@@ -3,8 +3,7 @@ import { prisma } from '../../db/prisma.js';
 
 export type CreateTableCategoryData = {
   name: string;
-  seatingCapacity: number;
-  mealPackage: string;
+  includedCategories: string;
   ratePerPerson: number;
   description?: string;
   photoUrl?: string;

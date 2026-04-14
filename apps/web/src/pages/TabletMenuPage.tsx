@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { Button } from '../components/ui/button';
@@ -8,7 +8,47 @@ import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
+import type { MenuItem } from '../types/domain';
 import logo from '../assets/logo.png';
+
+type MenuCategory = MenuItem['category'];
+
+const CATEGORY_ORDER: Record<MenuCategory, number> = {
+  COLD_APPETIZERS: 0,
+  HOT_APPETIZERS: 1,
+  SALADS: 2,
+  FIRST_COURSE: 3,
+  SECOND_COURSE: 4,
+  DRINKS: 5,
+  SWEETS: 6,
+  FRUITS: 7,
+};
+
+function quickSort(items: MenuItem[]): MenuItem[] {
+  if (items.length <= 1) return items;
+  const pivot = items[Math.floor(items.length / 2)];
+  const left: MenuItem[] = [], equal: MenuItem[] = [], right: MenuItem[] = [];
+  for (const item of items) {
+    const cmp =
+      (CATEGORY_ORDER[item.category] ?? 99) - (CATEGORY_ORDER[pivot.category] ?? 99) ||
+      item.name.localeCompare(pivot.name);
+    if (cmp < 0) left.push(item);
+    else if (cmp > 0) right.push(item);
+    else equal.push(item);
+  }
+  return [...quickSort(left), ...equal, ...quickSort(right)];
+}
+
+const CATEGORIES: MenuCategory[] = [
+  'COLD_APPETIZERS',
+  'HOT_APPETIZERS',
+  'SALADS',
+  'FIRST_COURSE',
+  'SECOND_COURSE',
+  'DRINKS',
+  'SWEETS',
+  'FRUITS',
+];
 
 export const TabletMenuPage = () => {
   const navigate = useNavigate();
@@ -20,11 +60,17 @@ export const TabletMenuPage = () => {
   const error = usePublicDataStore((state) => state.error);
   const loadPublicData = usePublicDataStore((state) => state.loadPublicData);
 
+  const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
+
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
   useEffect(() => {
     loadPublicData();
   }, [loadPublicData]);
+
+  const sortedAndFiltered = quickSort(
+    (menuItems ?? []).filter((item) => activeCategory === null || item.category === activeCategory)
+  );
 
   const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
   const pricing = usePriceCalculator(menuItems ?? [], selectedItems, selectedTableCategory, guestCount);
@@ -82,7 +128,7 @@ export const TabletMenuPage = () => {
                     <option value="">{t('choose_table_category')}</option>
                     {tableCategories.filter((tc) => tc.isActive).map((tableCategory) => (
                       <option key={tableCategory.id} value={tableCategory.id}>
-                        {tableCategory.name} • {tableCategory.mealPackage}
+                        {tableCategory.name}
                       </option>
                     ))}
                   </Select>
@@ -117,6 +163,35 @@ export const TabletMenuPage = () => {
                 </div>
               </div>
 
+              {/* Category filter bar */}
+              <div className="mb-5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActiveCategory(null)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    activeCategory === null
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {t('filter_all')}
+                </button>
+                {CATEGORIES.filter((cat) =>
+                  (menuItems ?? []).some((item) => item.category === cat)
+                ).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                      activeCategory === cat
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+                  </button>
+                ))}
+              </div>
+
               {isLoading ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {Array.from({ length: 6 }).map((_, idx) => (
@@ -127,9 +202,9 @@ export const TabletMenuPage = () => {
                 <div className="rounded-3xl bg-rose-50 p-6 text-sm text-rose-700">
                   {error}
                 </div>
-              ) : menuItems && menuItems.length > 0 ? (
+              ) : sortedAndFiltered.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {menuItems.map((item) => (
+                  {sortedAndFiltered.map((item) => (
                     <MenuItemCard
                       key={item.id}
                       item={item}

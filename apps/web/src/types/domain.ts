@@ -34,8 +34,7 @@ export type Hall = {
 export type TableCategory = {
   id: string;
   name: string;
-  seatingCapacity: number;
-  mealPackage: string;
+  includedCategories: string;
   ratePerPerson: number;
   description?: string;
   photoUrl?: string;
@@ -46,7 +45,7 @@ export type MenuItem = {
   id: string;
   name: string;
   description?: string;
-  category: 'HOT_APPETIZERS' | 'FIRST_COURSE' | 'SECOND_COURSE';
+  category: 'COLD_APPETIZERS' | 'HOT_APPETIZERS' | 'SALADS' | 'FIRST_COURSE' | 'SECOND_COURSE' | 'DRINKS' | 'SWEETS' | 'FRUITS';
   priceCents: number;
   photoUrl?: string;
   isActive: boolean;

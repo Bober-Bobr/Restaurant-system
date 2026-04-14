@@ -8,8 +8,7 @@ export const tableCategoryService = {
   },
   async create(payload: {
     name: string;
-    seatingCapacity: number;
-    mealPackage: string;
+    includedCategories: string;
     ratePerPerson: number;
     description?: string;
     photoUrl?: string;

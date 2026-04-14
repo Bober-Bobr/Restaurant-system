@@ -22,9 +22,14 @@ enum EventType {
 }
 
 enum MenuCategory {
+  COLD_APPETIZERS
   HOT_APPETIZERS
+  SALADS
   FIRST_COURSE
   SECOND_COURSE
+  DRINKS
+  SWEETS
+  FRUITS
 }
 
 enum Region {
@@ -77,17 +82,16 @@ model AdminUser {
 }
 
 model TableCategory {
-  id             String   @id @default(cuid())
-  name           String   @unique
-  seatingCapacity Int
-  mealPackage    String   @default("")
-  ratePerPerson  Int      @default(0)
-  description    String?
-  photoUrl       String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  events         Event[]
+  id                 String   @id @default(cuid())
+  name               String   @unique
+  includedCategories String   @default("")
+  ratePerPerson      Int      @default(0)
+  description        String?
+  photoUrl           String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  events             Event[]
 }
 
 model Hall {
