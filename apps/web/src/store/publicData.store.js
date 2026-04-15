@@ -10,7 +10,7 @@ export const usePublicDataStore = create((set, get) => ({
     error: undefined,
     isLoaded: false,
     loadPublicData: async () => {
-        if (get().isLoaded || get().isLoading)
+        if (get().isLoading)
             return;
         set({ isLoading: true, error: undefined });
         try {

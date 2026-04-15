@@ -31,6 +31,11 @@ export type Hall = {
   isActive: boolean;
 };
 
+export type TableCategoryPackageItem = {
+  id: string;
+  menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'category' | 'priceCents' | 'photoUrl'>;
+};
+
 export type TableCategory = {
   id: string;
   name: string;
@@ -39,6 +44,7 @@ export type TableCategory = {
   description?: string;
   photoUrl?: string;
   isActive: boolean;
+  packageItems?: TableCategoryPackageItem[];
 };
 
 export type MenuItem = {

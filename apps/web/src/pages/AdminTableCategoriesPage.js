@@ -2,43 +2,104 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
-const FOOD_PACKAGE_OPTIONS = [
+const FOOD_PACKAGE_CATEGORIES = [
     'COLD_APPETIZERS',
     'SALADS',
     'DRINKS',
     'SWEETS',
     'FRUITS',
 ];
+const CATEGORY_LABEL_KEY = {
+    COLD_APPETIZERS: 'cold_appetizers',
+    HOT_APPETIZERS: 'hot_appetizers',
+    SALADS: 'salads',
+    FIRST_COURSE: 'first_course',
+    SECOND_COURSE: 'second_course',
+    DRINKS: 'drinks',
+    SWEETS: 'sweets',
+    FRUITS: 'fruits',
+};
 const parseCats = (raw) => raw
     .split(',')
     .map((s) => s.trim())
-    .filter((s) => FOOD_PACKAGE_OPTIONS.includes(s));
+    .filter((s) => FOOD_PACKAGE_CATEGORIES.includes(s));
 const serializeCats = (cats) => cats.join(',');
-function FoodPackageCheckboxes({ selected, onChange, locale, }) {
+// ── Food package section ───────────────────────────────────────────────────
+function FoodPackageSection({ selectedCats, onCatsChange, selectedItemIds, onItemIdsChange, allMenuItems, locale, }) {
     const t = (key) => translate(key, locale);
-    const toggle = (cat) => {
-        if (selected.includes(cat)) {
-            onChange(selected.filter((c) => c !== cat));
+    // Group active menu items by category (only the 5 package categories)
+    const grouped = FOOD_PACKAGE_CATEGORIES.reduce((acc, cat) => {
+        acc[cat] = allMenuItems.filter((item) => item.isActive && item.category === cat);
+        return acc;
+    }, {});
+    // Checking a category → select all its dishes; unchecking → deselect all its dishes
+    const toggleCat = (cat) => {
+        const catItemIds = grouped[cat].map((item) => item.id);
+        if (selectedCats.includes(cat)) {
+            onCatsChange(selectedCats.filter((c) => c !== cat));
+            onItemIdsChange(selectedItemIds.filter((id) => !catItemIds.includes(id)));
         }
         else {
-            onChange([...selected, cat]);
+            onCatsChange([...selectedCats, cat]);
+            const toAdd = catItemIds.filter((id) => !selectedItemIds.includes(id));
+            onItemIdsChange([...selectedItemIds, ...toAdd]);
         }
     };
-    const labels = {
-        COLD_APPETIZERS: 'cold_appetizers',
-        SALADS: 'salads',
-        DRINKS: 'drinks',
-        SWEETS: 'sweets',
-        FRUITS: 'fruits',
+    // Selecting a dish → auto-check its category; deselecting last dish in a category → auto-uncheck category
+    const toggleItem = (id, cat) => {
+        if (selectedItemIds.includes(id)) {
+            const next = selectedItemIds.filter((i) => i !== id);
+            onItemIdsChange(next);
+            // If no dishes from this category remain selected, uncheck the category
+            const remainsInCat = grouped[cat].some((item) => next.includes(item.id));
+            if (!remainsInCat) {
+                onCatsChange(selectedCats.filter((c) => c !== cat));
+            }
+        }
+        else {
+            onItemIdsChange([...selectedItemIds, id]);
+            // Auto-check the category when its first dish is selected
+            if (!selectedCats.includes(cat)) {
+                onCatsChange([...selectedCats, cat]);
+            }
+        }
     };
-    return (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 10 }, children: FOOD_PACKAGE_OPTIONS.map((cat) => (_jsxs("label", { style: { display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9em' }, children: [_jsx("input", { type: "checkbox", checked: selected.includes(cat), onChange: () => toggle(cat) }), t(labels[cat])] }, cat))) }));
+    return (_jsxs("div", { style: { display: 'grid', gap: 12 }, children: [_jsx("span", { style: { fontSize: '0.9em', fontWeight: 600 }, children: t('food_package') }), FOOD_PACKAGE_CATEGORIES.map((cat) => (_jsxs("div", { style: {
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                }, children: [_jsxs("label", { style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '8px 12px',
+                            background: selectedCats.includes(cat) ? '#f0fdf4' : '#f8fafc',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: '0.9em',
+                            borderBottom: grouped[cat].length > 0 ? '1px solid #e2e8f0' : 'none',
+                        }, children: [_jsx("input", { type: "checkbox", checked: selectedCats.includes(cat), onChange: () => toggleCat(cat) }), t(CATEGORY_LABEL_KEY[cat]), _jsxs("span", { style: { marginLeft: 'auto', fontSize: '0.8em', color: '#94a3b8', fontWeight: 400 }, children: [grouped[cat].length, " ", grouped[cat].length === 1 ? 'dish' : 'dishes'] })] }), grouped[cat].length > 0 && (_jsx("div", { style: { padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }, children: grouped[cat].map((item) => (_jsxs("label", { style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '4px 10px',
+                                borderRadius: 20,
+                                border: `1px solid ${selectedItemIds.includes(item.id) ? '#22c55e' : '#cbd5e1'}`,
+                                background: selectedItemIds.includes(item.id) ? '#f0fdf4' : 'white',
+                                cursor: 'pointer',
+                                fontSize: '0.85em',
+                                userSelect: 'none',
+                                transition: 'all 0.15s',
+                            }, children: [_jsx("input", { type: "checkbox", style: { display: 'none' }, checked: selectedItemIds.includes(item.id), onChange: () => toggleItem(item.id, cat) }), item.name, _jsxs("span", { style: { color: '#94a3b8' }, children: ["$", (item.priceCents / 100).toFixed(2)] })] }, item.id))) }))] }, cat)))] }));
 }
+// ── Page ───────────────────────────────────────────────────────────────────
 export const AdminTableCategoriesPage = () => {
     const queryClient = useQueryClient();
     const { locale } = useAdminStore();
@@ -47,16 +108,22 @@ export const AdminTableCategoriesPage = () => {
         queryKey: ['tableCategories'],
         queryFn: () => tableCategoryService.list(),
     });
-    // Create form state
+    const { data: allMenuItems = [] } = useQuery({
+        queryKey: ['menu-items', 'admin', 'all'],
+        queryFn: () => menuService.listAllForAdmin(),
+    });
+    // ── Create form state ──────────────────────────────────────────────────
     const [name, setName] = useState('');
     const [selectedCats, setSelectedCats] = useState([]);
+    const [selectedItemIds, setSelectedItemIds] = useState([]);
     const [ratePerPersonText, setRatePerPersonText] = useState('0');
     const [description, setDescription] = useState('');
     const [photoUrl, setPhotoUrl] = useState('');
-    // Edit state
+    // ── Edit state ─────────────────────────────────────────────────────────
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
     const [editSelectedCats, setEditSelectedCats] = useState([]);
+    const [editSelectedItemIds, setEditSelectedItemIds] = useState([]);
     const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
     const [editDescription, setEditDescription] = useState('');
     const [editPhotoUrl, setEditPhotoUrl] = useState('');
@@ -67,8 +134,8 @@ export const AdminTableCategoriesPage = () => {
             errors.push('Name is required.');
         if (name.trim().length > 100)
             errors.push('Name must be 100 characters or less.');
-        const ratePerPerson = Number(ratePerPersonText);
-        if (!Number.isFinite(ratePerPerson) || ratePerPerson < 0)
+        const rate = Number(ratePerPersonText);
+        if (!Number.isFinite(rate) || rate < 0)
             errors.push('Rate per person must be a non-negative number.');
         return { errors };
     }, [name, ratePerPersonText]);
@@ -78,8 +145,8 @@ export const AdminTableCategoriesPage = () => {
             errors.push('Name is required.');
         if (editName.trim().length > 100)
             errors.push('Name must be 100 characters or less.');
-        const ratePerPerson = Number(editRatePerPersonText);
-        if (!Number.isFinite(ratePerPerson) || ratePerPerson < 0)
+        const rate = Number(editRatePerPersonText);
+        if (!Number.isFinite(rate) || rate < 0)
             errors.push('Rate per person must be a non-negative number.');
         return { errors };
     }, [editName, editRatePerPersonText]);
@@ -90,6 +157,7 @@ export const AdminTableCategoriesPage = () => {
             return tableCategoryService.create({
                 name: name.trim(),
                 includedCategories: serializeCats(selectedCats),
+                menuItemIds: selectedItemIds,
                 ratePerPerson: Math.round(Number(ratePerPersonText) * 100),
                 description: description.trim() || undefined,
                 photoUrl: photoUrl.trim() || undefined,
@@ -99,6 +167,7 @@ export const AdminTableCategoriesPage = () => {
         onSuccess: async () => {
             setName('');
             setSelectedCats([]);
+            setSelectedItemIds([]);
             setRatePerPersonText('0');
             setDescription('');
             setPhotoUrl('');
@@ -122,6 +191,7 @@ export const AdminTableCategoriesPage = () => {
         setEditingId(category.id);
         setEditName(category.name);
         setEditSelectedCats(parseCats(category.includedCategories));
+        setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
         setEditRatePerPersonText((category.ratePerPerson / 100).toFixed(2));
         setEditDescription(category.description || '');
         setEditPhotoUrl(category.photoUrl || '');
@@ -135,6 +205,7 @@ export const AdminTableCategoriesPage = () => {
             data: {
                 name: editName.trim(),
                 includedCategories: serializeCats(editSelectedCats),
+                menuItemIds: editSelectedItemIds,
                 ratePerPerson: Math.round(Number(editRatePerPersonText) * 100),
                 description: editDescription.trim() || undefined,
                 photoUrl: editPhotoUrl.trim() || undefined,
@@ -144,10 +215,18 @@ export const AdminTableCategoriesPage = () => {
     };
     const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
     const canSaveEdit = editValidation.errors.length === 0 && !updateMutation.isPending;
-    return (_jsxs("main", { style: { padding: 20 }, children: [_jsx("h1", { children: t('table_categories_management') }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }, children: [_jsx("h3", { children: t('create_table_category') }), _jsxs("form", { onSubmit: (e) => { e.preventDefault(); if (!canSubmit)
-                            return; createMutation.mutate(); }, style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'end' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('name'), _jsx(Input, { value: name, onChange: (e) => setName(e.target.value), placeholder: t('table_category_name_placeholder') })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('rate_per_person'), _jsx(Input, { value: ratePerPersonText, onChange: (e) => setRatePerPersonText(e.target.value) })] }), _jsxs("div", { style: { gridColumn: '1 / -1', display: 'grid', gap: 6 }, children: [_jsx("span", { style: { fontSize: '0.9em', fontWeight: 500 }, children: t('food_package') }), _jsx(FoodPackageCheckboxes, { selected: selectedCats, onChange: setSelectedCats, locale: locale })] }), _jsx("div", { style: { display: 'grid', gap: 6, gridColumn: '1 / -1' }, children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: photoUrl || undefined, onPhotoSelect: (url) => setPhotoUrl(url || ''), placeholder: t('select_table_photo') }) }), _jsxs("label", { style: { display: 'grid', gap: 6, gridColumn: '1 / -1' }, children: [t('description_optional'), _jsx(Input, { value: description, onChange: (e) => setDescription(e.target.value) })] }), _jsxs("div", { style: { gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }, children: [_jsx(Button, { type: "submit", disabled: !canSubmit, children: createMutation.isPending ? t('creating') : t('create_category') }), validation.errors.length > 0 && (_jsx("span", { style: { color: '#b00020' }, children: validation.errors[0] })), createMutation.isError && (_jsx("span", { style: { color: '#b00020' }, children: createMutation.error instanceof Error ? createMutation.error.message : t('failed_to_create_category') }))] })] })] }), isLoading && _jsx("p", { children: t('loading_table_categories') }), isError && _jsx("p", { children: t('failed_to_load_table_categories') }), categories && (_jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12 }, children: [_jsx("h3", { children: t('all_categories') }), categories.length === 0 ? (_jsx("p", { children: t('no_table_categories_yet') })) : (_jsx("div", { style: { display: 'grid', gap: 12 }, children: categories.map((category) => (_jsx("div", { style: { border: '1px solid #eee', padding: 12, borderRadius: 4 }, children: editingId === category.id ? (_jsxs("div", { children: [_jsxs("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'end', marginBottom: 12 }, children: [_jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('name'), _jsx(Input, { value: editName, onChange: (e) => setEditName(e.target.value) })] }), _jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('rate_dollar'), _jsx(Input, { value: editRatePerPersonText, onChange: (e) => setEditRatePerPersonText(e.target.value) })] })] }), _jsxs("div", { style: { marginBottom: 12, display: 'grid', gap: 6 }, children: [_jsx("span", { style: { fontSize: '0.9em', fontWeight: 500 }, children: t('food_package') }), _jsx(FoodPackageCheckboxes, { selected: editSelectedCats, onChange: setEditSelectedCats, locale: locale })] }), _jsx("div", { style: { marginBottom: 12 }, children: _jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('description'), _jsx(Input, { value: editDescription, onChange: (e) => setEditDescription(e.target.value) })] }) }), _jsx("div", { style: { marginBottom: 12 }, children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: editPhotoUrl || undefined, onPhotoSelect: (url) => setEditPhotoUrl(url || ''), placeholder: t('select_table_photo') }) }), _jsxs("label", { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: '0.9em' }, children: [_jsx("input", { type: "checkbox", checked: editIsActive, onChange: (e) => setEditIsActive(e.target.checked) }), t('active')] }), _jsxs("div", { style: { display: 'flex', gap: 4 }, children: [_jsx(Button, { onClick: saveEdit, disabled: !canSaveEdit, children: updateMutation.isPending ? t('saving') : t('save') }), _jsx(Button, { variant: "secondary", onClick: () => setEditingId(null), children: t('cancel') })] }), editValidation.errors.length > 0 && (_jsx("div", { style: { color: '#b00020', fontSize: '0.9em', marginTop: 6 }, children: editValidation.errors[0] }))] })) : (_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }, children: [_jsxs("div", { style: { display: 'flex', gap: 8, alignItems: 'center' }, children: [category.photoUrl && (_jsx("img", { src: getPhotoUrl(category.photoUrl), alt: category.name, style: { width: 80, height: 60, objectFit: 'cover', borderRadius: 4 } })), _jsxs("div", { children: [_jsx("strong", { children: category.name }), _jsxs("p", { style: { margin: '4px 0 0', fontSize: '0.9em', color: '#666' }, children: [t('rate'), ": $", (category.ratePerPerson / 100).toFixed(2), category.includedCategories
-                                                                ? ` • ${parseCats(category.includedCategories)
-                                                                    .map((c) => translate(c.toLowerCase(), locale))
-                                                                    .join(', ')}`
-                                                                : '', category.description ? ` — ${category.description}` : '', !category.isActive && ` (${t('inactive')})`] })] })] }), _jsxs("div", { style: { display: 'flex', gap: 4 }, children: [_jsx("button", { onClick: () => startEditing(category), style: { background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }, children: t('edit') }), _jsx("button", { onClick: () => deleteMutation.mutate(category.id), disabled: deleteMutation.isPending, style: { background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }, children: t('delete') })] })] })) }, category.id))) }))] }))] }));
+    return (_jsxs("main", { style: { padding: 20 }, children: [_jsx("h1", { children: t('table_categories_management') }), _jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }, children: [_jsx("h3", { style: { marginTop: 0 }, children: t('create_table_category') }), _jsxs("form", { onSubmit: (e) => { e.preventDefault(); if (!canSubmit)
+                            return; createMutation.mutate(); }, style: { display: 'grid', gap: 14 }, children: [_jsxs("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('name'), _jsx(Input, { value: name, onChange: (e) => setName(e.target.value), placeholder: t('table_category_name_placeholder') })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('rate_per_person'), _jsx(Input, { value: ratePerPersonText, onChange: (e) => setRatePerPersonText(e.target.value) })] })] }), _jsx(FoodPackageSection, { selectedCats: selectedCats, onCatsChange: setSelectedCats, selectedItemIds: selectedItemIds, onItemIdsChange: setSelectedItemIds, allMenuItems: allMenuItems, locale: locale }), _jsx("div", { children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: photoUrl || undefined, onPhotoSelect: (url) => setPhotoUrl(url || ''), placeholder: t('select_table_photo') }) }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [t('description_optional'), _jsx(Input, { value: description, onChange: (e) => setDescription(e.target.value) })] }), _jsxs("div", { style: { display: 'flex', gap: 12, alignItems: 'center' }, children: [_jsx(Button, { type: "submit", disabled: !canSubmit, children: createMutation.isPending ? t('creating') : t('create_category') }), validation.errors.length > 0 && _jsx("span", { style: { color: '#b00020' }, children: validation.errors[0] }), createMutation.isError && (_jsx("span", { style: { color: '#b00020' }, children: createMutation.error instanceof Error ? createMutation.error.message : t('failed_to_create_category') }))] })] })] }), isLoading && _jsx("p", { children: t('loading_table_categories') }), isError && _jsx("p", { children: t('failed_to_load_table_categories') }), categories && (_jsxs("section", { style: { border: '1px solid #ddd', borderRadius: 8, padding: 12 }, children: [_jsx("h3", { style: { marginTop: 0 }, children: t('all_categories') }), categories.length === 0 ? (_jsx("p", { children: t('no_table_categories_yet') })) : (_jsx("div", { style: { display: 'grid', gap: 12 }, children: categories.map((category) => (_jsx("div", { style: { border: '1px solid #eee', padding: 12, borderRadius: 6 }, children: editingId === category.id ? (_jsxs("div", { style: { display: 'grid', gap: 14 }, children: [_jsxs("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }, children: [_jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('name'), _jsx(Input, { value: editName, onChange: (e) => setEditName(e.target.value) })] }), _jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('rate_dollar'), _jsx(Input, { value: editRatePerPersonText, onChange: (e) => setEditRatePerPersonText(e.target.value) })] })] }), _jsx(FoodPackageSection, { selectedCats: editSelectedCats, onCatsChange: setEditSelectedCats, selectedItemIds: editSelectedItemIds, onItemIdsChange: setEditSelectedItemIds, allMenuItems: allMenuItems, locale: locale }), _jsxs("label", { style: { display: 'grid', gap: 4 }, children: [t('description'), _jsx(Input, { value: editDescription, onChange: (e) => setEditDescription(e.target.value) })] }), _jsx("div", { children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: editPhotoUrl || undefined, onPhotoSelect: (url) => setEditPhotoUrl(url || ''), placeholder: t('select_table_photo') }) }), _jsxs("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9em' }, children: [_jsx("input", { type: "checkbox", checked: editIsActive, onChange: (e) => setEditIsActive(e.target.checked) }), t('active')] }), _jsxs("div", { style: { display: 'flex', gap: 4 }, children: [_jsx(Button, { onClick: saveEdit, disabled: !canSaveEdit, children: updateMutation.isPending ? t('saving') : t('save') }), _jsx(Button, { variant: "secondary", onClick: () => setEditingId(null), children: t('cancel') })] }), editValidation.errors.length > 0 && (_jsx("div", { style: { color: '#b00020', fontSize: '0.9em' }, children: editValidation.errors[0] }))] })) : (_jsxs("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }, children: [_jsxs("div", { style: { display: 'flex', gap: 10, alignItems: 'flex-start' }, children: [category.photoUrl && (_jsx("img", { src: getPhotoUrl(category.photoUrl), alt: category.name, style: { width: 80, height: 60, objectFit: 'cover', borderRadius: 4, flexShrink: 0 } })), _jsxs("div", { children: [_jsx("strong", { children: category.name }), _jsxs("p", { style: { margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }, children: [t('rate'), ": $", (category.ratePerPerson / 100).toFixed(2), !category.isActive && ` • ${t('inactive')}`] }), parseCats(category.includedCategories).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: parseCats(category.includedCategories).map((cat) => (_jsx("span", { style: {
+                                                                fontSize: '0.75em',
+                                                                padding: '2px 8px',
+                                                                borderRadius: 12,
+                                                                background: '#dbeafe',
+                                                                color: '#1e40af',
+                                                            }, children: t(CATEGORY_LABEL_KEY[cat]) }, cat))) })), (category.packageItems ?? []).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: (category.packageItems ?? []).map((pi) => (_jsx("span", { style: {
+                                                                fontSize: '0.75em',
+                                                                padding: '2px 8px',
+                                                                borderRadius: 12,
+                                                                background: '#dcfce7',
+                                                                color: '#166534',
+                                                            }, children: pi.menuItem.name }, pi.id))) })), category.description && (_jsx("p", { style: { margin: '4px 0 0', fontSize: '0.82em', color: '#94a3b8' }, children: category.description }))] })] }), _jsxs("div", { style: { display: 'flex', gap: 4, flexShrink: 0 }, children: [_jsx("button", { onClick: () => startEditing(category), style: { background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('edit') }), _jsx("button", { onClick: () => deleteMutation.mutate(category.id), disabled: deleteMutation.isPending, style: { background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('delete') })] })] })) }, category.id))) }))] }))] }));
 };

@@ -22,7 +22,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   error: undefined,
   isLoaded: false,
   loadPublicData: async () => {
-    if (get().isLoaded || get().isLoading) return;
+    if (get().isLoading) return;
     set({ isLoading: true, error: undefined });
 
     try {

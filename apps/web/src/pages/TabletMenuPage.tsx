@@ -9,6 +9,7 @@ import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
 import type { MenuItem } from '../types/domain';
+import { getPhotoUrl } from '../utils/photoUrl';
 import logo from '../assets/logo.png';
 
 type MenuCategory = MenuItem['category'];
@@ -39,16 +40,17 @@ function quickSort(items: MenuItem[]): MenuItem[] {
   return [...quickSort(left), ...equal, ...quickSort(right)];
 }
 
-const CATEGORIES: MenuCategory[] = [
+// Shown in the "Additional" section — first/second course handled separately
+const ADDITIONAL_CATEGORIES: MenuCategory[] = [
   'COLD_APPETIZERS',
   'HOT_APPETIZERS',
   'SALADS',
-  'FIRST_COURSE',
-  'SECOND_COURSE',
   'DRINKS',
   'SWEETS',
   'FRUITS',
 ];
+
+const COURSE_CATEGORIES: MenuCategory[] = ['FIRST_COURSE', 'SECOND_COURSE'];
 
 export const TabletMenuPage = () => {
   const navigate = useNavigate();
@@ -69,7 +71,15 @@ export const TabletMenuPage = () => {
   }, [loadPublicData]);
 
   const sortedAndFiltered = quickSort(
-    (menuItems ?? []).filter((item) => activeCategory === null || item.category === activeCategory)
+    (menuItems ?? []).filter(
+      (item) =>
+        ADDITIONAL_CATEGORIES.includes(item.category) &&
+        (activeCategory === null || item.category === activeCategory)
+    )
+  );
+
+  const courseItems = quickSort(
+    (menuItems ?? []).filter((item) => COURSE_CATEGORIES.includes(item.category))
   );
 
   const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
@@ -155,10 +165,92 @@ export const TabletMenuPage = () => {
               )}
             </section>
 
+            {/* ── Included dishes ── */}
+            {selectedTableCategory && (selectedTableCategory.packageItems ?? []).length > 0 && (
+              <section className="card p-6">
+                <div className="mb-5">
+                  <p className="section-heading">{t('included_with_table')}</p>
+                  <p className="mt-1 text-sm text-slate-500">{selectedTableCategory.name}</p>
+                </div>
+
+                {Object.entries(
+                  (selectedTableCategory.packageItems ?? []).reduce<Record<string, typeof selectedTableCategory.packageItems>>(
+                    (acc, pi) => {
+                      const cat = pi!.menuItem.category;
+                      if (!acc[cat]) acc[cat] = [];
+                      acc[cat]!.push(pi!);
+                      return acc;
+                    },
+                    {}
+                  )
+                )
+                  .sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99))
+                  .map(([cat, items]) => (
+                    <div key={cat} className="mb-6 last:mb-0">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {items!.map((pi) => (
+                          <div key={pi!.id} className="flex gap-3 rounded-2xl bg-slate-50 p-3">
+                            {pi!.menuItem.photoUrl ? (
+                              <img
+                                src={getPhotoUrl(pi!.menuItem.photoUrl)}
+                                alt={pi!.menuItem.name}
+                                className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
+                              />
+                            ) : (
+                              <div className="h-16 w-16 flex-shrink-0 rounded-xl bg-slate-200" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 leading-snug">{pi!.menuItem.name}</p>
+                              {pi!.menuItem.description && (
+                                <p className="mt-1 text-xs text-slate-500 line-clamp-2">{pi!.menuItem.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </section>
+            )}
+
+            {/* ── Courses section (shown when table category selected) ── */}
+            {selectedTableCategory && courseItems.length > 0 && (
+              <section className="card p-6">
+                <div className="mb-4">
+                  <p className="section-heading">{t('courses')}</p>
+                  <p className="mt-1 text-sm text-slate-500">{t('browse_menu_items')}</p>
+                </div>
+                {[...COURSE_CATEGORIES].map((cat) => {
+                  const items = courseItems.filter((item) => item.category === cat);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={cat} className="mb-6 last:mb-0">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                        {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+                      </p>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {items.map((item) => (
+                          <MenuItemCard
+                            key={item.id}
+                            item={item}
+                            quantity={selectedItems[item.id] ?? 0}
+                            onQuantityChange={(qty) => setQuantity(item.id, qty)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+            )}
+
             <section className="card p-6">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="section-heading">{t('menu')}</p>
+                  <p className="section-heading">{t('additional')}</p>
                   <p className="mt-1 text-sm text-slate-500">{t('browse_menu_items')}</p>
                 </div>
               </div>
@@ -175,7 +267,7 @@ export const TabletMenuPage = () => {
                 >
                   {t('filter_all')}
                 </button>
-                {CATEGORIES.filter((cat) =>
+                {ADDITIONAL_CATEGORIES.filter((cat) =>
                   (menuItems ?? []).some((item) => item.category === cat)
                 ).map((cat) => (
                   <button

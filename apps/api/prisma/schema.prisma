@@ -82,16 +82,28 @@ model AdminUser {
 }
 
 model TableCategory {
-  id                 String   @id @default(cuid())
-  name               String   @unique
-  includedCategories String   @default("")
-  ratePerPerson      Int      @default(0)
+  id                 String                    @id @default(cuid())
+  name               String                    @unique
+  includedCategories String                    @default("")
+  ratePerPerson      Int                       @default(0)
   description        String?
   photoUrl           String?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  isActive           Boolean                   @default(true)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
   events             Event[]
+  packageItems       TableCategoryMenuItem[]
+}
+
+model TableCategoryMenuItem {
+  id              String        @id @default(cuid())
+  tableCategoryId String
+  menuItemId      String
+  tableCategory   TableCategory @relation(fields: [tableCategoryId], references: [id], onDelete: Cascade)
+  menuItem        MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([tableCategoryId, menuItemId])
+  @@index([tableCategoryId])
 }
 
 model Hall {
@@ -107,16 +119,17 @@ model Hall {
 }
 
 model MenuItem {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  category    MenuCategory
-  priceCents  Int
-  photoUrl    String?
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  selections  EventMenuSelection[]
+  id               String                    @id @default(cuid())
+  name             String
+  description      String?
+  category         MenuCategory
+  priceCents       Int
+  photoUrl         String?
+  isActive         Boolean                   @default(true)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  selections       EventMenuSelection[]
+  packageCategories TableCategoryMenuItem[]
 
   @@index([category, isActive])
 }

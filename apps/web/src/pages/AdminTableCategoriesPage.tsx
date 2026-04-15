@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
-import type { TableCategory } from '../types/domain';
+import type { MenuItem, TableCategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 
-type FoodCategory = 'COLD_APPETIZERS' | 'SALADS' | 'DRINKS' | 'SWEETS' | 'FRUITS';
+type FoodCategory = MenuItem['category'];
 
-const FOOD_PACKAGE_OPTIONS: FoodCategory[] = [
+const FOOD_PACKAGE_CATEGORIES: FoodCategory[] = [
   'COLD_APPETIZERS',
   'SALADS',
   'DRINKS',
@@ -19,56 +20,161 @@ const FOOD_PACKAGE_OPTIONS: FoodCategory[] = [
   'FRUITS',
 ];
 
+const CATEGORY_LABEL_KEY: Record<FoodCategory, Parameters<typeof translate>[0]> = {
+  COLD_APPETIZERS: 'cold_appetizers',
+  HOT_APPETIZERS: 'hot_appetizers',
+  SALADS: 'salads',
+  FIRST_COURSE: 'first_course',
+  SECOND_COURSE: 'second_course',
+  DRINKS: 'drinks',
+  SWEETS: 'sweets',
+  FRUITS: 'fruits',
+};
+
 const parseCats = (raw: string): FoodCategory[] =>
   raw
     .split(',')
-    .map((s) => s.trim())
-    .filter((s): s is FoodCategory => FOOD_PACKAGE_OPTIONS.includes(s as FoodCategory));
+    .map((s) => s.trim() as FoodCategory)
+    .filter((s) => FOOD_PACKAGE_CATEGORIES.includes(s));
 
 const serializeCats = (cats: FoodCategory[]): string => cats.join(',');
 
-function FoodPackageCheckboxes({
-  selected,
-  onChange,
+// ── Food package section ───────────────────────────────────────────────────
+function FoodPackageSection({
+  selectedCats,
+  onCatsChange,
+  selectedItemIds,
+  onItemIdsChange,
+  allMenuItems,
   locale,
 }: {
-  selected: FoodCategory[];
-  onChange: (cats: FoodCategory[]) => void;
+  selectedCats: FoodCategory[];
+  onCatsChange: (cats: FoodCategory[]) => void;
+  selectedItemIds: string[];
+  onItemIdsChange: (ids: string[]) => void;
+  allMenuItems: MenuItem[];
   locale: 'en' | 'ru' | 'uz';
 }) {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-  const toggle = (cat: FoodCategory) => {
-    if (selected.includes(cat)) {
-      onChange(selected.filter((c) => c !== cat));
+
+  // Group active menu items by category (only the 5 package categories)
+  const grouped = FOOD_PACKAGE_CATEGORIES.reduce<Record<FoodCategory, MenuItem[]>>(
+    (acc, cat) => {
+      acc[cat] = allMenuItems.filter((item) => item.isActive && item.category === cat);
+      return acc;
+    },
+    {} as Record<FoodCategory, MenuItem[]>
+  );
+
+  // Checking a category → select all its dishes; unchecking → deselect all its dishes
+  const toggleCat = (cat: FoodCategory) => {
+    const catItemIds = grouped[cat].map((item) => item.id);
+    if (selectedCats.includes(cat)) {
+      onCatsChange(selectedCats.filter((c) => c !== cat));
+      onItemIdsChange(selectedItemIds.filter((id) => !catItemIds.includes(id)));
     } else {
-      onChange([...selected, cat]);
+      onCatsChange([...selectedCats, cat]);
+      const toAdd = catItemIds.filter((id) => !selectedItemIds.includes(id));
+      onItemIdsChange([...selectedItemIds, ...toAdd]);
     }
   };
 
-  const labels: Record<FoodCategory, Parameters<typeof translate>[0]> = {
-    COLD_APPETIZERS: 'cold_appetizers',
-    SALADS: 'salads',
-    DRINKS: 'drinks',
-    SWEETS: 'sweets',
-    FRUITS: 'fruits',
+  // Selecting a dish → auto-check its category; deselecting last dish in a category → auto-uncheck category
+  const toggleItem = (id: string, cat: FoodCategory) => {
+    if (selectedItemIds.includes(id)) {
+      const next = selectedItemIds.filter((i) => i !== id);
+      onItemIdsChange(next);
+      // If no dishes from this category remain selected, uncheck the category
+      const remainsInCat = grouped[cat].some((item) => next.includes(item.id));
+      if (!remainsInCat) {
+        onCatsChange(selectedCats.filter((c) => c !== cat));
+      }
+    } else {
+      onItemIdsChange([...selectedItemIds, id]);
+      // Auto-check the category when its first dish is selected
+      if (!selectedCats.includes(cat)) {
+        onCatsChange([...selectedCats, cat]);
+      }
+    }
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-      {FOOD_PACKAGE_OPTIONS.map((cat) => (
-        <label key={cat} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9em' }}>
-          <input
-            type="checkbox"
-            checked={selected.includes(cat)}
-            onChange={() => toggle(cat)}
-          />
-          {t(labels[cat])}
-        </label>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <span style={{ fontSize: '0.9em', fontWeight: 600 }}>{t('food_package')}</span>
+
+      {FOOD_PACKAGE_CATEGORIES.map((cat) => (
+        <div
+          key={cat}
+          style={{
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Category header with checkbox */}
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 12px',
+              background: selectedCats.includes(cat) ? '#f0fdf4' : '#f8fafc',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '0.9em',
+              borderBottom: grouped[cat].length > 0 ? '1px solid #e2e8f0' : 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={selectedCats.includes(cat)}
+              onChange={() => toggleCat(cat)}
+            />
+            {t(CATEGORY_LABEL_KEY[cat])}
+            <span style={{ marginLeft: 'auto', fontSize: '0.8em', color: '#94a3b8', fontWeight: 400 }}>
+              {grouped[cat].length} {grouped[cat].length === 1 ? 'dish' : 'dishes'}
+            </span>
+          </label>
+
+          {/* Dish list */}
+          {grouped[cat].length > 0 && (
+            <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {grouped[cat].map((item) => (
+                <label
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    borderRadius: 20,
+                    border: `1px solid ${selectedItemIds.includes(item.id) ? '#22c55e' : '#cbd5e1'}`,
+                    background: selectedItemIds.includes(item.id) ? '#f0fdf4' : 'white',
+                    cursor: 'pointer',
+                    fontSize: '0.85em',
+                    userSelect: 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    style={{ display: 'none' }}
+                    checked={selectedItemIds.includes(item.id)}
+                    onChange={() => toggleItem(item.id, cat)}
+                  />
+                  {item.name}
+                  <span style={{ color: '#94a3b8' }}>${(item.priceCents / 100).toFixed(2)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
 }
 
+// ── Page ───────────────────────────────────────────────────────────────────
 export const AdminTableCategoriesPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -79,17 +185,24 @@ export const AdminTableCategoriesPage = () => {
     queryFn: () => tableCategoryService.list(),
   });
 
-  // Create form state
+  const { data: allMenuItems = [] } = useQuery({
+    queryKey: ['menu-items', 'admin', 'all'],
+    queryFn: () => menuService.listAllForAdmin(),
+  });
+
+  // ── Create form state ──────────────────────────────────────────────────
   const [name, setName] = useState('');
   const [selectedCats, setSelectedCats] = useState<FoodCategory[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
   const [description, setDescription] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
 
-  // Edit state
+  // ── Edit state ─────────────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editSelectedCats, setEditSelectedCats] = useState<FoodCategory[]>([]);
+  const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
@@ -99,8 +212,8 @@ export const AdminTableCategoriesPage = () => {
     const errors: string[] = [];
     if (name.trim().length < 1) errors.push('Name is required.');
     if (name.trim().length > 100) errors.push('Name must be 100 characters or less.');
-    const ratePerPerson = Number(ratePerPersonText);
-    if (!Number.isFinite(ratePerPerson) || ratePerPerson < 0) errors.push('Rate per person must be a non-negative number.');
+    const rate = Number(ratePerPersonText);
+    if (!Number.isFinite(rate) || rate < 0) errors.push('Rate per person must be a non-negative number.');
     return { errors };
   }, [name, ratePerPersonText]);
 
@@ -108,8 +221,8 @@ export const AdminTableCategoriesPage = () => {
     const errors: string[] = [];
     if (editName.trim().length < 1) errors.push('Name is required.');
     if (editName.trim().length > 100) errors.push('Name must be 100 characters or less.');
-    const ratePerPerson = Number(editRatePerPersonText);
-    if (!Number.isFinite(ratePerPerson) || ratePerPerson < 0) errors.push('Rate per person must be a non-negative number.');
+    const rate = Number(editRatePerPersonText);
+    if (!Number.isFinite(rate) || rate < 0) errors.push('Rate per person must be a non-negative number.');
     return { errors };
   }, [editName, editRatePerPersonText]);
 
@@ -119,6 +232,7 @@ export const AdminTableCategoriesPage = () => {
       return tableCategoryService.create({
         name: name.trim(),
         includedCategories: serializeCats(selectedCats),
+        menuItemIds: selectedItemIds,
         ratePerPerson: Math.round(Number(ratePerPersonText) * 100),
         description: description.trim() || undefined,
         photoUrl: photoUrl.trim() || undefined,
@@ -128,6 +242,7 @@ export const AdminTableCategoriesPage = () => {
     onSuccess: async () => {
       setName('');
       setSelectedCats([]);
+      setSelectedItemIds([]);
       setRatePerPersonText('0');
       setDescription('');
       setPhotoUrl('');
@@ -136,7 +251,7 @@ export const AdminTableCategoriesPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<TableCategory> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<TableCategory> & { menuItemIds?: string[] } }) =>
       tableCategoryService.update(id, data),
     onSuccess: async () => {
       setEditingId(null);
@@ -155,6 +270,7 @@ export const AdminTableCategoriesPage = () => {
     setEditingId(category.id);
     setEditName(category.name);
     setEditSelectedCats(parseCats(category.includedCategories));
+    setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
     setEditRatePerPersonText((category.ratePerPerson / 100).toFixed(2));
     setEditDescription(category.description || '');
     setEditPhotoUrl(category.photoUrl || '');
@@ -168,6 +284,7 @@ export const AdminTableCategoriesPage = () => {
       data: {
         name: editName.trim(),
         includedCategories: serializeCats(editSelectedCats),
+        menuItemIds: editSelectedItemIds,
         ratePerPerson: Math.round(Number(editRatePerPersonText) * 100),
         description: editDescription.trim() || undefined,
         photoUrl: editPhotoUrl.trim() || undefined,
@@ -183,28 +300,34 @@ export const AdminTableCategoriesPage = () => {
     <main style={{ padding: 20 }}>
       <h1>{t('table_categories_management')}</h1>
 
-      {/* Create form */}
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{t('create_table_category')}</h3>
+      {/* ── Create form ── */}
+      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>{t('create_table_category')}</h3>
         <form
           onSubmit={(e) => { e.preventDefault(); if (!canSubmit) return; createMutation.mutate(); }}
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'end' }}
+          style={{ display: 'grid', gap: 14 }}
         >
-          <label style={{ display: 'grid', gap: 6 }}>
-            {t('name')}
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
-          </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            {t('rate_per_person')}
-            <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
-          </label>
-
-          <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: '0.9em', fontWeight: 500 }}>{t('food_package')}</span>
-            <FoodPackageCheckboxes selected={selectedCats} onChange={setSelectedCats} locale={locale} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('name')}
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
+            </label>
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('rate_per_person')}
+              <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
+            </label>
           </div>
 
-          <div style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
+          <FoodPackageSection
+            selectedCats={selectedCats}
+            onCatsChange={setSelectedCats}
+            selectedItemIds={selectedItemIds}
+            onItemIdsChange={setSelectedItemIds}
+            allMenuItems={allMenuItems}
+            locale={locale}
+          />
+
+          <div>
             <PhotoSelector
               category="table"
               selectedPhotoUrl={photoUrl || undefined}
@@ -212,17 +335,15 @@ export const AdminTableCategoriesPage = () => {
               placeholder={t('select_table_photo')}
             />
           </div>
-          <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
+          <label style={{ display: 'grid', gap: 6 }}>
             {t('description_optional')}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
-          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <Button type="submit" disabled={!canSubmit}>
               {createMutation.isPending ? t('creating') : t('create_category')}
             </Button>
-            {validation.errors.length > 0 && (
-              <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>
-            )}
+            {validation.errors.length > 0 && <span style={{ color: '#b00020' }}>{validation.errors[0]}</span>}
             {createMutation.isError && (
               <span style={{ color: '#b00020' }}>
                 {createMutation.error instanceof Error ? createMutation.error.message : t('failed_to_create_category')}
@@ -235,21 +356,20 @@ export const AdminTableCategoriesPage = () => {
       {isLoading && <p>{t('loading_table_categories')}</p>}
       {isError && <p>{t('failed_to_load_table_categories')}</p>}
 
+      {/* ── List ── */}
       {categories && (
         <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
-          <h3>{t('all_categories')}</h3>
+          <h3 style={{ marginTop: 0 }}>{t('all_categories')}</h3>
           {categories.length === 0 ? (
             <p>{t('no_table_categories_yet')}</p>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
               {categories.map((category) => (
-                <div
-                  key={category.id}
-                  style={{ border: '1px solid #eee', padding: 12, borderRadius: 4 }}
-                >
+                <div key={category.id} style={{ border: '1px solid #eee', padding: 12, borderRadius: 6 }}>
                   {editingId === category.id ? (
-                    <div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'end', marginBottom: 12 }}>
+                    // ── Edit form ──
+                    <div style={{ display: 'grid', gap: 14 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('name')}
                           <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -260,18 +380,20 @@ export const AdminTableCategoriesPage = () => {
                         </label>
                       </div>
 
-                      <div style={{ marginBottom: 12, display: 'grid', gap: 6 }}>
-                        <span style={{ fontSize: '0.9em', fontWeight: 500 }}>{t('food_package')}</span>
-                        <FoodPackageCheckboxes selected={editSelectedCats} onChange={setEditSelectedCats} locale={locale} />
-                      </div>
+                      <FoodPackageSection
+                        selectedCats={editSelectedCats}
+                        onCatsChange={setEditSelectedCats}
+                        selectedItemIds={editSelectedItemIds}
+                        onItemIdsChange={setEditSelectedItemIds}
+                        allMenuItems={allMenuItems}
+                        locale={locale}
+                      />
 
-                      <div style={{ marginBottom: 12 }}>
-                        <label style={{ display: 'grid', gap: 4 }}>
-                          {t('description')}
-                          <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
-                        </label>
-                      </div>
-                      <div style={{ marginBottom: 12 }}>
+                      <label style={{ display: 'grid', gap: 4 }}>
+                        {t('description')}
+                        <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                      </label>
+                      <div>
                         <PhotoSelector
                           category="table"
                           selectedPhotoUrl={editPhotoUrl || undefined}
@@ -279,12 +401,8 @@ export const AdminTableCategoriesPage = () => {
                           placeholder={t('select_table_photo')}
                         />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: '0.9em' }}>
-                        <input
-                          type="checkbox"
-                          checked={editIsActive}
-                          onChange={(e) => setEditIsActive(e.target.checked)}
-                        />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9em' }}>
+                        <input type="checkbox" checked={editIsActive} onChange={(e) => setEditIsActive(e.target.checked)} />
                         {t('active')}
                       </label>
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -296,46 +414,80 @@ export const AdminTableCategoriesPage = () => {
                         </Button>
                       </div>
                       {editValidation.errors.length > 0 && (
-                        <div style={{ color: '#b00020', fontSize: '0.9em', marginTop: 6 }}>
-                          {editValidation.errors[0]}
-                        </div>
+                        <div style={{ color: '#b00020', fontSize: '0.9em' }}>{editValidation.errors[0]}</div>
                       )}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    // ── Read view ──
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                         {category.photoUrl && (
                           <img
                             src={getPhotoUrl(category.photoUrl)}
                             alt={category.name}
-                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }}
+                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
                           />
                         )}
                         <div>
                           <strong>{category.name}</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '0.9em', color: '#666' }}>
+                          <p style={{ margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }}>
                             {t('rate')}: ${(category.ratePerPerson / 100).toFixed(2)}
-                            {category.includedCategories
-                              ? ` • ${parseCats(category.includedCategories)
-                                  .map((c) => translate(c.toLowerCase() as Parameters<typeof translate>[0], locale))
-                                  .join(', ')}`
-                              : ''}
-                            {category.description ? ` — ${category.description}` : ''}
-                            {!category.isActive && ` (${t('inactive')})`}
+                            {!category.isActive && ` • ${t('inactive')}`}
                           </p>
+                          {/* Category badges */}
+                          {parseCats(category.includedCategories).length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                              {parseCats(category.includedCategories).map((cat) => (
+                                <span
+                                  key={cat}
+                                  style={{
+                                    fontSize: '0.75em',
+                                    padding: '2px 8px',
+                                    borderRadius: 12,
+                                    background: '#dbeafe',
+                                    color: '#1e40af',
+                                  }}
+                                >
+                                  {t(CATEGORY_LABEL_KEY[cat])}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Specific dish chips */}
+                          {(category.packageItems ?? []).length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                              {(category.packageItems ?? []).map((pi) => (
+                                <span
+                                  key={pi.id}
+                                  style={{
+                                    fontSize: '0.75em',
+                                    padding: '2px 8px',
+                                    borderRadius: 12,
+                                    background: '#dcfce7',
+                                    color: '#166534',
+                                  }}
+                                >
+                                  {pi.menuItem.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {category.description && (
+                            <p style={{ margin: '4px 0 0', fontSize: '0.82em', color: '#94a3b8' }}>{category.description}</p>
+                          )}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                         <button
                           onClick={() => startEditing(category)}
-                          style={{ background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
+                          style={{ background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }}
                         >
                           {t('edit')}
                         </button>
                         <button
                           onClick={() => deleteMutation.mutate(category.id)}
                           disabled={deleteMutation.isPending}
-                          style={{ background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
+                          style={{ background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }}
                         >
                           {t('delete')}
                         </button>

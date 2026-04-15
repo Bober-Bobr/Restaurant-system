@@ -12,30 +12,46 @@ export class TableCategoryService {
     return this.tableCategoryRepository.count();
   }
 
-  async createTableCategory(payload: CreateTableCategoryData) {
-    const existing = await this.tableCategoryRepository.getByName(payload.name);
+  async createTableCategory(payload: CreateTableCategoryData & { menuItemIds?: string[] }) {
+    const { menuItemIds, ...data } = payload;
+    const existing = await this.tableCategoryRepository.getByName(data.name);
     if (existing) {
       throw createHttpError(409, 'Table category with this name already exists');
     }
 
-    return this.tableCategoryRepository.create(payload);
+    const created = await this.tableCategoryRepository.create(data);
+
+    if (menuItemIds && menuItemIds.length > 0) {
+      return this.tableCategoryRepository.setPackageItems(created.id, menuItemIds);
+    }
+
+    return created;
   }
 
-  async updateTableCategory(id: string, payload: Partial<CreateTableCategoryData>) {
+  async updateTableCategory(id: string, payload: Partial<CreateTableCategoryData> & { menuItemIds?: string[] }) {
+    const { menuItemIds, ...data } = payload;
     const existing = await this.tableCategoryRepository.getById(id);
 
     if (!existing) {
       throw createHttpError(404, 'Table category not found');
     }
 
-    if (payload.name && payload.name !== existing.name) {
-      const nameTaken = await this.tableCategoryRepository.getByName(payload.name);
+    if (data.name && data.name !== existing.name) {
+      const nameTaken = await this.tableCategoryRepository.getByName(data.name);
       if (nameTaken) {
         throw createHttpError(409, 'Table category with this name already exists');
       }
     }
 
-    return this.tableCategoryRepository.updateById(id, payload);
+    if (menuItemIds !== undefined) {
+      await this.tableCategoryRepository.setPackageItems(id, menuItemIds);
+    }
+
+    if (Object.keys(data).length > 0) {
+      return this.tableCategoryRepository.updateById(id, data);
+    }
+
+    return this.tableCategoryRepository.getById(id);
   }
 
   async getTableCategoryDetails(id: string) {
