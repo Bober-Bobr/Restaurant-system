@@ -8,10 +8,22 @@ import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import logo from '../assets/logo.png';
 
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  EMPLOYEE: 'Employee'
+};
+const ROLE_COLORS: Record<string, string> = {
+  OWNER: '#7c3aed',
+  ADMIN: '#2563eb',
+  EMPLOYEE: '#16a34a'
+};
+
 export const AdminLayout = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
+  const role = useAuthStore((state) => state.role);
   const logout = useAuthStore((state) => state.logout);
   const { locale, setLocale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
@@ -36,7 +48,14 @@ export const AdminLayout = () => {
             <img src={logo} alt="Madinabek logo" className="h-11 w-11 rounded-2xl object-cover" />
             <div>
               <p className="text-sm font-semibold text-slate-900">{t('banquet_admin')}</p>
-              <p className="text-xs text-slate-500">{username}</p>
+              <p className="text-xs text-slate-500">
+                {username}
+                {role && (
+                  <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: ROLE_COLORS[role] ?? '#888', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
+                    {ROLE_LABELS[role] ?? role}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
@@ -46,6 +65,9 @@ export const AdminLayout = () => {
             <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
             <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
             <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
+            {(role === 'OWNER' || role === 'ADMIN') && (
+              <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
+            )}
             <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to="/tablet">
               {t('tablet')}
             </Link>

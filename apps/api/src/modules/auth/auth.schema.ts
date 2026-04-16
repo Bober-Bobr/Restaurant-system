@@ -1,3 +1,4 @@
+import { AdminRole } from '@prisma/client';
 import { z } from 'zod';
 
 const passwordSchema = z
@@ -19,7 +20,8 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
-  password: passwordSchema
+  password: passwordSchema,
+  role: z.nativeEnum(AdminRole).optional()
 });
 
 export const loginSchema = z.object({
@@ -29,4 +31,8 @@ export const loginSchema = z.object({
 
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1)
+});
+
+export const updateRoleSchema = z.object({
+  role: z.nativeEnum(AdminRole)
 });

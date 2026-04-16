@@ -1,3 +1,4 @@
+import type { AdminRole } from '../store/auth.store';
 import { httpClient } from './http';
 
 export type AuthResponse = {
@@ -5,6 +6,14 @@ export type AuthResponse = {
   refreshToken: string;
   expiresIn: number;
   username: string;
+  role: AdminRole;
+};
+
+export type AdminUser = {
+  id: string;
+  username: string;
+  role: AdminRole;
+  createdAt: string;
 };
 
 export const authService = {
@@ -12,8 +21,8 @@ export const authService = {
     const { data } = await httpClient.post<AuthResponse>('/auth/login', { username, password });
     return data;
   },
-  async register(username: string, password: string) {
-    const { data } = await httpClient.post<AuthResponse>('/auth/register', { username, password });
+  async register(username: string, password: string, role?: AdminRole) {
+    const { data } = await httpClient.post<AuthResponse>('/auth/register', { username, password, ...(role ? { role } : {}) });
     return data;
   },
   async refresh(refreshToken: string) {
@@ -28,7 +37,18 @@ export const authService = {
     }
   },
   async getMe() {
-    const { data } = await httpClient.get<{ id: string; username: string }>('/auth/me');
+    const { data } = await httpClient.get<{ id: string; username: string; role: AdminRole }>('/auth/me');
+    return data;
+  },
+  async listUsers() {
+    const { data } = await httpClient.get<AdminUser[]>('/auth/users');
+    return data;
+  },
+  async deleteUser(id: string) {
+    await httpClient.delete(`/auth/users/${id}`);
+  },
+  async updateUserRole(id: string, role: AdminRole) {
+    const { data } = await httpClient.patch<AdminUser>(`/auth/users/${id}/role`, { role });
     return data;
   }
 };

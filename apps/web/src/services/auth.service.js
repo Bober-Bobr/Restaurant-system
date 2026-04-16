@@ -4,8 +4,8 @@ export const authService = {
         const { data } = await httpClient.post('/auth/login', { username, password });
         return data;
     },
-    async register(username, password) {
-        const { data } = await httpClient.post('/auth/register', { username, password });
+    async register(username, password, role) {
+        const { data } = await httpClient.post('/auth/register', { username, password, ...(role ? { role } : {}) });
         return data;
     },
     async refresh(refreshToken) {
@@ -22,6 +22,17 @@ export const authService = {
     },
     async getMe() {
         const { data } = await httpClient.get('/auth/me');
+        return data;
+    },
+    async listUsers() {
+        const { data } = await httpClient.get('/auth/users');
+        return data;
+    },
+    async deleteUser(id) {
+        await httpClient.delete(`/auth/users/${id}`);
+    },
+    async updateUserRole(id, role) {
+        const { data } = await httpClient.patch(`/auth/users/${id}/role`, { role });
         return data;
     }
 };

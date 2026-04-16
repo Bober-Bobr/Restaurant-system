@@ -179,7 +179,20 @@ const resources = {
     event_create_error: 'Failed to create event. Please try again.',
     notes_placeholder: 'Any special requests or comments...',
     event_date: 'Event Date',
-    event_time: 'Event Time'
+    event_time: 'Event Time',
+    users: 'Users',
+    users_management: 'Users Management',
+    create_user: 'Create User',
+    user_role: 'Role',
+    role_owner: 'Owner',
+    role_admin: 'Administrator',
+    role_employee: 'Employee',
+    confirm_delete_user: 'Are you sure you want to delete this user?',
+    no_users_yet: 'No users yet.',
+    loading_users: 'Loading users...',
+    failed_load_users: 'Failed to load users.',
+    change_role: 'Change Role',
+    password: 'Password'
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -354,7 +367,20 @@ const resources = {
     event_create_error: 'Не удалось создать событие. Попробуйте ещё раз.',
     notes_placeholder: 'Особые пожелания или комментарии...',
     event_date: 'Дата события',
-    event_time: 'Время события'
+    event_time: 'Время события',
+    users: 'Пользователи',
+    users_management: 'Управление пользователями',
+    create_user: 'Создать пользователя',
+    user_role: 'Роль',
+    role_owner: 'Владелец',
+    role_admin: 'Администратор',
+    role_employee: 'Сотрудник',
+    confirm_delete_user: 'Вы уверены, что хотите удалить этого пользователя?',
+    no_users_yet: 'Пользователей пока нет.',
+    loading_users: 'Загрузка пользователей...',
+    failed_load_users: 'Не удалось загрузить пользователей.',
+    change_role: 'Изменить роль',
+    password: 'Пароль'
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -529,7 +555,20 @@ const resources = {
     event_create_error: 'Tadbir yaratib bo\'lmadi. Qayta urinib ko\'ring.',
     notes_placeholder: 'Maxsus so\'rovlar yoki izohlar...',
     event_date: 'Tadbir sanasi',
-    event_time: 'Tadbir vaqti'
+    event_time: 'Tadbir vaqti',
+    users: 'Foydalanuvchilar',
+    users_management: 'Foydalanuvchilarni boshqarish',
+    create_user: 'Foydalanuvchi yaratish',
+    user_role: 'Rol',
+    role_owner: 'Egasi',
+    role_admin: 'Administrator',
+    role_employee: 'Xodim',
+    confirm_delete_user: 'Siz bu foydalanuvchini o\'chirmoqchimisiz?',
+    no_users_yet: 'Hali foydalanuvchilar yo\'q.',
+    loading_users: 'Foydalanuvchilar yuklanmoqda...',
+    failed_load_users: 'Foydalanuvchilarni yuklab bo\'lmadi.',
+    change_role: 'Rolni o\'zgartirish',
+    password: 'Parol'
   }
 } as const;
 

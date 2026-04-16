@@ -54,14 +54,14 @@ export const LoginPage = () => {
     const loginMutation = useMutation({
         mutationFn: () => authService.login(username.trim(), password),
         onSuccess: (data) => {
-            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn);
+            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
             navigate('/', { replace: true });
         }
     });
     const registerMutation = useMutation({
         mutationFn: () => authService.register(username.trim(), password),
         onSuccess: (data) => {
-            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn);
+            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
             navigate('/', { replace: true });
         }
     });

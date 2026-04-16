@@ -1,14 +1,16 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
-import { loginSchema, registerSchema, refreshTokenSchema } from './auth.schema.js';
+import { loginSchema, refreshTokenSchema, registerSchema, updateRoleSchema } from './auth.schema.js';
 import { AuthService } from './auth.service.js';
 const authService = new AuthService(new AuthRepository());
 export class AuthController {
     async register(request, response) {
         const payload = registerSchema.parse(request.body);
-        const allowOpen = process.env.ALLOW_OPEN_ADMIN_REGISTRATION === 'true';
-        const result = await authService.register(payload.username, payload.password, allowOpen);
+        const result = await authService.register(payload.username, payload.password, {
+            callerRole: request.admin?.role,
+            requestedRole: payload.role
+        });
         response.status(201).json(result);
     }
     async login(request, response) {
@@ -57,7 +59,23 @@ export class AuthController {
         }
         response.json({
             id: admin.id,
-            username: admin.username
+            username: admin.username,
+            role: admin.role
         });
+    }
+    async listUsers(request, response) {
+        const users = await authService.listUsers();
+        response.json(users);
+    }
+    async deleteUser(request, response) {
+        const admin = request.admin;
+        await authService.deleteUser(admin.id, admin.role, String(request.params.id));
+        response.status(204).send();
+    }
+    async updateRole(request, response) {
+        const admin = request.admin;
+        const { role } = updateRoleSchema.parse(request.body);
+        const updated = await authService.updateUserRole(admin.role, String(request.params.id), role);
+        response.json(updated);
     }
 }

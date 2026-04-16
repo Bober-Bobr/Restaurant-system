@@ -1,3 +1,4 @@
+import type { AdminRole } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
@@ -5,6 +6,7 @@ import { env } from '../config/env.js';
 type JwtPayload = {
   sub: string;
   username: string;
+  role?: AdminRole;
   type?: string;
 };
 
@@ -21,7 +23,7 @@ export const adminAuthMiddleware = (request: Request, response: Response, next: 
         response.status(401).json({ message: 'Invalid token type' });
         return;
       }
-      request.admin = { id: decoded.sub, username: decoded.username };
+      request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole };
       next();
       return;
     } catch (error) {
@@ -35,10 +37,42 @@ export const adminAuthMiddleware = (request: Request, response: Response, next: 
   }
 
   if (env.ADMIN_API_KEY && legacyKey === env.ADMIN_API_KEY) {
-    request.admin = { id: 'legacy', username: 'legacy' };
+    request.admin = { id: 'legacy', username: 'legacy', role: 'OWNER' as AdminRole };
     next();
     return;
   }
 
   response.status(401).json({ message: 'Unauthorized' });
 };
+
+export const optionalAuthMiddleware = (request: Request, _response: Response, next: NextFunction): void => {
+  const authorization = request.header('authorization');
+  const bearerToken =
+    authorization?.startsWith('Bearer ') ? authorization.slice('Bearer '.length).trim() : undefined;
+
+  if (bearerToken) {
+    try {
+      const decoded = jwt.verify(bearerToken, env.JWT_SECRET) as JwtPayload;
+      if (!decoded.type || decoded.type === 'access') {
+        request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole };
+      }
+    } catch {
+      // Ignore invalid tokens — request proceeds without admin context
+    }
+  }
+
+  next();
+};
+
+export const requireRole = (...roles: AdminRole[]) =>
+  (request: Request, response: Response, next: NextFunction): void => {
+    if (!request.admin) {
+      response.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+    if (!roles.includes(request.admin.role)) {
+      response.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+    next();
+  };
