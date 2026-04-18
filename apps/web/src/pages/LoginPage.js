@@ -58,7 +58,7 @@ export const LoginPage = () => {
         }
     });
     const registerMutation = useMutation({
-        mutationFn: () => authService.register(username.trim(), password),
+        mutationFn: () => authService.publicRegister(username.trim(), password),
         onSuccess: (data) => {
             setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
             navigate('/', { replace: true });

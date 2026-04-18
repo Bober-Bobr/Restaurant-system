@@ -10,7 +10,7 @@ const exportService = new ExportService(eventRepository, new PricingService(even
 export class ExportController {
   async excel(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
-    const file = await exportService.createEventExcel(eventId);
+    const file = await exportService.createEventExcel(request.restaurantId!, eventId);
 
     response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     response.setHeader('Content-Disposition', `attachment; filename="event-${eventId}.xlsx"`);
@@ -19,7 +19,7 @@ export class ExportController {
 
   async pdf(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
-    const file = await exportService.createEventPdf(eventId);
+    const file = await exportService.createEventPdf(request.restaurantId!, eventId);
 
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', `attachment; filename="event-${eventId}.pdf"`);

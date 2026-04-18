@@ -10,31 +10,28 @@ const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 
-router.get('/menu-items', async (_request, response, next) => {
+router.get('/menu-items', async (request, response, next) => {
   try {
-    const items = await menuRepository.listActive();
-    response.json(items);
-  } catch (error) {
-    next(error);
-  }
+    const restaurantId = String(request.query.restaurantId ?? '');
+    if (!restaurantId) { response.json([]); return; }
+    response.json(await menuRepository.listActive(restaurantId));
+  } catch (error) { next(error); }
 });
 
-router.get('/halls', async (_request, response, next) => {
+router.get('/halls', async (request, response, next) => {
   try {
-    const halls = await hallRepository.listActive();
-    response.json(halls);
-  } catch (error) {
-    next(error);
-  }
+    const restaurantId = String(request.query.restaurantId ?? '');
+    if (!restaurantId) { response.json([]); return; }
+    response.json(await hallRepository.listActive(restaurantId));
+  } catch (error) { next(error); }
 });
 
-router.get('/table-categories', async (_request, response, next) => {
+router.get('/table-categories', async (request, response, next) => {
   try {
-    const tableCategories = await tableCategoryRepository.listActive();
-    response.json(tableCategories);
-  } catch (error) {
-    next(error);
-  }
+    const restaurantId = String(request.query.restaurantId ?? '');
+    if (!restaurantId) { response.json([]); return; }
+    response.json(await tableCategoryRepository.listActive(restaurantId));
+  } catch (error) { next(error); }
 });
 
 router.post('/export/pdf', async (request, response, next) => {
@@ -43,9 +40,7 @@ router.post('/export/pdf', async (request, response, next) => {
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', 'attachment; filename="selection-summary.pdf"');
     response.send(pdfBuffer);
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 });
 
 router.post('/export/excel', async (request, response, next) => {
@@ -54,9 +49,7 @@ router.post('/export/excel', async (request, response, next) => {
     response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     response.setHeader('Content-Disposition', 'attachment; filename="selection-summary.xlsx"');
     response.send(excelBuffer);
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 });
 
 export { router as publicApiRouter };

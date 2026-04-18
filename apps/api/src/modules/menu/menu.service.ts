@@ -9,15 +9,15 @@ export class MenuService {
     private readonly eventRepository: EventRepository
   ) {}
 
-  async listMenuItems() {
-    return this.menuRepository.listActive();
+  async listMenuItems(restaurantId: string) {
+    return this.menuRepository.listActive(restaurantId);
   }
 
-  async listAllMenuItems() {
-    return this.menuRepository.listAll();
+  async listAllMenuItems(restaurantId: string) {
+    return this.menuRepository.listAll(restaurantId);
   }
 
-  async createMenuItem(payload: {
+  async createMenuItem(restaurantId: string, payload: {
     name: string;
     description?: string;
     category: MenuCategory;
@@ -25,50 +25,36 @@ export class MenuService {
     photoUrl?: string;
     isActive?: boolean;
   }) {
-    return this.menuRepository.create(payload);
+    return this.menuRepository.create(restaurantId, payload);
   }
 
-  async updateMenuItem(
-    menuItemId: string,
-    payload: {
-      name?: string;
-      description?: string;
-      category?: MenuCategory;
-      priceCents?: number;
-      photoUrl?: string;
-      isActive?: boolean;
-    }
-  ) {
+  async updateMenuItem(menuItemId: string, payload: {
+    name?: string;
+    description?: string;
+    category?: MenuCategory;
+    priceCents?: number;
+    photoUrl?: string;
+    isActive?: boolean;
+  }) {
     const existingItem = await this.menuRepository.getById(menuItemId);
-    if (!existingItem) {
-      throw createHttpError(404, 'Menu item not found');
-    }
-
+    if (!existingItem) throw createHttpError(404, 'Menu item not found');
     return this.menuRepository.updateById(menuItemId, payload);
   }
 
   async deleteMenuItem(menuItemId: string) {
     const existingItem = await this.menuRepository.getById(menuItemId);
-    if (!existingItem) {
-      throw createHttpError(404, 'Menu item not found');
-    }
-
+    if (!existingItem) throw createHttpError(404, 'Menu item not found');
     await this.menuRepository.deleteById(menuItemId);
   }
 
-  async assignMenuItemToEvent(eventId: number, payload: { menuItemId: string; quantity: number }) {
+  async assignMenuItemToEvent(restaurantId: string, eventId: number, payload: { menuItemId: string; quantity: number }) {
     const [event, menuItem] = await Promise.all([
-      this.eventRepository.getByNumber(eventId),
+      this.eventRepository.getByNumber(restaurantId, eventId),
       this.menuRepository.getById(payload.menuItemId)
     ]);
 
-    if (!event) {
-      throw createHttpError(404, 'Event not found');
-    }
-
-    if (!menuItem || !menuItem.isActive) {
-      throw createHttpError(404, 'Menu item not found or inactive');
-    }
+    if (!event) throw createHttpError(404, 'Event not found');
+    if (!menuItem || !menuItem.isActive) throw createHttpError(404, 'Menu item not found or inactive');
 
     return this.menuRepository.upsertSelection(event.id, payload.menuItemId, payload.quantity, menuItem.priceCents);
   }

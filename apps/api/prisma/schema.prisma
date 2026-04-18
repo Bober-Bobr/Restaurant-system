@@ -17,6 +17,7 @@ enum EventType {
   RESERVATION
   BANQUET
   WEDDING
+  BIRTHDAY
   PRIVATE_PARTY
   CORPORATE
 }
@@ -57,19 +58,23 @@ model Event {
   eventDate       DateTime
   guestCount      Int
   status          EventStatus       @default(DRAFT)
-  eventType       EventType         @default(RESERVATION)
-  region          Region?
-  hallId          String?
-  tableCategoryId String?
-  notes           String?
+  eventType            EventType         @default(RESERVATION)
+  region               Region?
+  hallId               String?
+  tableCategoryId      String?
+  restaurantId         String?
+  notes                String?
+  birthdayPersonName   String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   selections      EventMenuSelection[]
   hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
+  restaurant      Restaurant?       @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   @@index([hallId])
   @@index([tableCategoryId])
+  @@index([restaurantId])
 }
 
 enum AdminRole {
@@ -94,31 +99,40 @@ model AdminUser {
 }
 
 model Restaurant {
-  id        String      @id @default(cuid())
-  name      String
-  address   String?
-  logoUrl   String?
-  ownerId   String
-  owner     AdminUser   @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
-  staff     AdminUser[] @relation("StaffRestaurant")
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id              String          @id @default(cuid())
+  name            String
+  address         String?
+  logoUrl         String?
+  ownerId         String
+  owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
+  staff           AdminUser[]     @relation("StaffRestaurant")
+  events          Event[]
+  menuItems       MenuItem[]
+  tableCategories TableCategory[]
+  halls           Hall[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([ownerId])
 }
 
 model TableCategory {
   id                 String                    @id @default(cuid())
-  name               String                    @unique
+  name               String
   includedCategories String                    @default("")
   ratePerPerson      Int                       @default(0)
   description        String?
   photoUrl           String?
   isActive           Boolean                   @default(true)
+  restaurantId       String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
   events             Event[]
   packageItems       TableCategoryMenuItem[]
+  restaurant         Restaurant?               @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
 }
 
 model TableCategoryMenuItem {
@@ -133,15 +147,20 @@ model TableCategoryMenuItem {
 }
 
 model Hall {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  capacity    Int
-  description String?
-  photoUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  events      Event[]
+  id           String      @id @default(cuid())
+  name         String
+  capacity     Int
+  description  String?
+  photoUrl     String?
+  isActive     Boolean     @default(true)
+  restaurantId String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  events       Event[]
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
 }
 
 model MenuItem {
@@ -152,12 +171,15 @@ model MenuItem {
   priceCents       Int
   photoUrl         String?
   isActive         Boolean                   @default(true)
+  restaurantId     String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
   selections       EventMenuSelection[]
   packageCategories TableCategoryMenuItem[]
+  restaurant       Restaurant?              @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   @@index([category, isActive])
+  @@index([restaurantId])
 }
 
 model EventMenuSelection {

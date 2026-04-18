@@ -12,73 +12,54 @@ export type CreateEventData = {
   hallId?: string;
   tableCategoryId?: string;
   notes?: string;
+  birthdayPersonName?: string;
 };
 
+const eventInclude = {
+  hall: true,
+  tableCategory: true,
+  selections: { include: { menuItem: true } }
+} as const;
+
 export class EventRepository {
-  async list(params: { skip: number; take: number }) {
+  async list(restaurantId: string, params: { skip: number; take: number }) {
     return prisma.event.findMany({
       ...params,
+      where: { restaurantId },
       orderBy: { eventDate: 'asc' },
-      include: {
-        hall: true,
-        tableCategory: true,
-        selections: {
-          include: { menuItem: true }
-        }
-      }
+      include: eventInclude
     });
   }
 
-  async create(payload: CreateEventData) {
+  async create(restaurantId: string, payload: CreateEventData) {
     const lastEvent = await prisma.event.findFirst({
+      where: { restaurantId },
       orderBy: { eventNumber: 'desc' }
     });
-
     const nextEventNumber = lastEvent ? lastEvent.eventNumber + 1 : 1;
-
     return prisma.event.create({
-      data: {
-        ...payload,
-        eventNumber: nextEventNumber
-      },
-      include: {
-        hall: true,
-        tableCategory: true,
-        selections: {
-          include: { menuItem: true }
-        }
-      }
+      data: { ...payload, restaurantId, eventNumber: nextEventNumber },
+      include: eventInclude
     });
   }
 
-  async updateByNumber(eventNumber: number, payload: Prisma.EventUpdateInput) {
-    return prisma.event.update({
-      where: { eventNumber },
-      data: payload,
-      include: {
-        hall: true,
-        tableCategory: true,
-        selections: {
-          include: { menuItem: true }
-        }
-      }
+  async updateByNumber(restaurantId: string, eventNumber: number, payload: Prisma.EventUpdateInput) {
+    return prisma.event.updateMany({
+      where: { eventNumber, restaurantId },
+      data: payload
+    }).then(() =>
+      prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude })
+    );
+  }
+
+  async getByNumber(restaurantId: string, eventNumber: number) {
+    return prisma.event.findFirst({
+      where: { eventNumber, restaurantId },
+      include: eventInclude
     });
   }
 
-  async getByNumber(eventNumber: number) {
-    return prisma.event.findUnique({
-      where: { eventNumber },
-      include: {
-        hall: true,
-        tableCategory: true,
-        selections: {
-          include: { menuItem: true }
-        }
-      }
-    });
-  }
-
-  async deleteByNumber(eventNumber: number) {
-    return prisma.event.delete({ where: { eventNumber } });
+  async deleteByNumber(restaurantId: string, eventNumber: number) {
+    return prisma.event.deleteMany({ where: { eventNumber, restaurantId } });
   }
 }

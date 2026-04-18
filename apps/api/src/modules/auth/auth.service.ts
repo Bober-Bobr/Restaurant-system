@@ -103,6 +103,10 @@ export class AuthService {
     return this.authRepository.listAll();
   }
 
+  async listUsersForOwner(ownerId: string) {
+    return this.authRepository.listByOwner(ownerId);
+  }
+
   async listUsersForRestaurant(restaurantId: string) {
     return this.authRepository.listByRestaurant(restaurantId);
   }

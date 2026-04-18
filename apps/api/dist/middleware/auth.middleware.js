@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { prisma } from '../db/prisma.js';
 export const adminAuthMiddleware = (request, response, next) => {
     const authorization = request.header('authorization');
     const bearerToken = authorization?.startsWith('Bearer ') ? authorization.slice('Bearer '.length).trim() : undefined;
@@ -56,5 +57,27 @@ export const requireRole = (...roles) => (request, response, next) => {
         response.status(403).json({ message: 'Forbidden' });
         return;
     }
+    next();
+};
+export const requireRestaurant = async (request, response, next) => {
+    const admin = request.admin;
+    if (!admin) {
+        response.status(401).json({ message: 'Unauthorized' });
+        return;
+    }
+    if (admin.restaurantId) {
+        request.restaurantId = admin.restaurantId;
+        next();
+        return;
+    }
+    const user = await prisma.adminUser.findUnique({
+        where: { id: admin.id },
+        select: { restaurantId: true }
+    });
+    if (!user?.restaurantId) {
+        response.status(400).json({ message: 'No restaurant assigned to this account' });
+        return;
+    }
+    request.restaurantId = user.restaurantId;
     next();
 };

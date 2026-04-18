@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -54,6 +54,8 @@ const COURSE_CATEGORIES: MenuCategory[] = ['FIRST_COURSE', 'SECOND_COURSE'];
 
 export const TabletMenuPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale } = useTabletStore();
   const menuItems = usePublicDataStore((state) => state.menuItems);
   const halls = usePublicDataStore((state) => state.halls);
@@ -67,8 +69,8 @@ export const TabletMenuPage = () => {
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
   useEffect(() => {
-    loadPublicData();
-  }, [loadPublicData]);
+    if (restaurantId) loadPublicData(restaurantId);
+  }, [loadPublicData, restaurantId]);
 
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(

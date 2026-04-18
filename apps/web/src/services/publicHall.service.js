@@ -4,8 +4,8 @@ const publicHallsUrl = () => {
     return `${apiRoot}/public/halls`;
 };
 export const publicHallService = {
-    async listActive() {
-        const { data } = await axios.get(publicHallsUrl());
+    async listActive(restaurantId) {
+        const { data } = await axios.get(publicHallsUrl(), { params: { restaurantId } });
         return data;
     }
 };

@@ -21,39 +21,36 @@ const packageItemsInclude = {
 } as const;
 
 export class TableCategoryRepository {
-  async list(params: { skip: number; take: number }) {
+  async list(restaurantId: string, params: { skip: number; take: number }) {
     return prisma.tableCategory.findMany({
       ...params,
+      where: { restaurantId },
       orderBy: { name: 'asc' },
       include: packageItemsInclude
     });
   }
 
-  async listActive() {
+  async listActive(restaurantId: string) {
     return prisma.tableCategory.findMany({
-      where: { isActive: true },
+      where: { restaurantId, isActive: true },
       orderBy: { name: 'asc' },
       include: packageItemsInclude
     });
   }
 
-  async count() {
-    return prisma.tableCategory.count();
+  async count(restaurantId: string) {
+    return prisma.tableCategory.count({ where: { restaurantId } });
   }
 
-  async create(payload: CreateTableCategoryData) {
+  async create(restaurantId: string, payload: CreateTableCategoryData) {
     return prisma.tableCategory.create({
-      data: payload,
+      data: { ...payload, restaurantId },
       include: packageItemsInclude
     });
   }
 
   async updateById(id: string, payload: Prisma.TableCategoryUpdateInput) {
-    return prisma.tableCategory.update({
-      where: { id },
-      data: payload,
-      include: packageItemsInclude
-    });
+    return prisma.tableCategory.update({ where: { id }, data: payload, include: packageItemsInclude });
   }
 
   async setPackageItems(tableCategoryId: string, menuItemIds: string[]) {
@@ -63,21 +60,15 @@ export class TableCategoryRepository {
         data: menuItemIds.map((menuItemId) => ({ tableCategoryId, menuItemId }))
       });
     }
-    return prisma.tableCategory.findUnique({
-      where: { id: tableCategoryId },
-      include: packageItemsInclude
-    });
+    return prisma.tableCategory.findUnique({ where: { id: tableCategoryId }, include: packageItemsInclude });
   }
 
   async getById(id: string) {
-    return prisma.tableCategory.findUnique({
-      where: { id },
-      include: packageItemsInclude
-    });
+    return prisma.tableCategory.findUnique({ where: { id }, include: packageItemsInclude });
   }
 
-  async getByName(name: string) {
-    return prisma.tableCategory.findUnique({ where: { name } });
+  async getByName(restaurantId: string, name: string) {
+    return prisma.tableCategory.findFirst({ where: { restaurantId, name } });
   }
 
   async deleteById(id: string) {

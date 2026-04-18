@@ -11,7 +11,7 @@ type PublicDataState = {
   isLoading: boolean;
   error?: string;
   isLoaded: boolean;
-  loadPublicData: () => Promise<void>;
+  loadPublicData: (restaurantId: string) => Promise<void>;
 };
 
 export const usePublicDataStore = create<PublicDataState>((set, get) => ({
@@ -21,15 +21,19 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   isLoading: false,
   error: undefined,
   isLoaded: false,
-  loadPublicData: async () => {
+  loadPublicData: async (restaurantId: string) => {
+    if (!restaurantId) {
+      set({ menuItems: [], halls: [], tableCategories: [], isLoaded: true, isLoading: false });
+      return;
+    }
     if (get().isLoading) return;
     set({ isLoading: true, error: undefined });
 
     try {
       const [menuItems, halls, tableCategories] = await Promise.all([
-        publicMenuService.listActive(),
-        publicHallService.listActive(),
-        publicTableCategoryService.listActive()
+        publicMenuService.listActive(restaurantId),
+        publicHallService.listActive(restaurantId),
+        publicTableCategoryService.listActive(restaurantId)
       ]);
 
       set({

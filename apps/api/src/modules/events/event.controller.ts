@@ -8,45 +8,42 @@ const eventService = new EventService(new EventRepository());
 
 export class EventController {
   async list(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
     const pagination = getPagination(request);
-    const events = await eventService.listEvents(pagination);
-
-    response.json(events);
+    response.json(await eventService.listEvents(restaurantId, pagination));
   }
 
   async create(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
     const payload = createEventSchema.parse(request.body);
-
-    const event = await eventService.createEvent({
+    const event = await eventService.createEvent(restaurantId, {
       ...payload,
       eventDate: new Date(payload.eventDate)
     });
-
     response.status(201).json(event);
   }
 
   async update(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
     const { eventId } = eventIdSchema.parse(request.params);
     const payload = updateEventSchema.parse(request.body);
-
-    const event = await eventService.updateEvent(eventId, {
+    const event = await eventService.updateEvent(restaurantId, eventId, {
       ...payload,
       eventDate: payload.eventDate ? new Date(payload.eventDate) : undefined
     });
-
     response.json(event);
   }
 
   async getById(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
     const { eventId } = eventIdSchema.parse(request.params);
-    const event = await eventService.getEventDetails(eventId);
-
-    response.json(event);
+    response.json(await eventService.getEventDetails(restaurantId, eventId));
   }
 
   async remove(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
     const { eventId } = eventIdSchema.parse(request.params);
-    await eventService.deleteEvent(eventId);
+    await eventService.deleteEvent(restaurantId, eventId);
     response.status(204).send();
   }
 }

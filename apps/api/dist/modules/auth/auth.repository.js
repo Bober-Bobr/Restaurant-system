@@ -10,6 +10,18 @@ export class AuthRepository {
             orderBy: { createdAt: 'asc' }
         });
     }
+    async listByOwner(ownerId) {
+        const restaurants = await prisma.restaurant.findMany({
+            where: { ownerId },
+            select: { id: true }
+        });
+        const restaurantIds = restaurants.map((r) => r.id);
+        return prisma.adminUser.findMany({
+            where: { OR: [{ id: ownerId }, { restaurantId: { in: restaurantIds } }] },
+            select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
+            orderBy: { createdAt: 'asc' }
+        });
+    }
     async listByRestaurant(restaurantId) {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurantId },

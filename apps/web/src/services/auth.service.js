@@ -1,7 +1,13 @@
+import axios from 'axios';
 import { httpClient } from './http';
+const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 export const authService = {
     async login(username, password) {
         const { data } = await httpClient.post('/auth/login', { username, password });
+        return data;
+    },
+    async publicRegister(username, password) {
+        const { data } = await axios.post(`${baseURL}/auth/register`, { username, password });
         return data;
     },
     async register(username, password, role, restaurantId) {

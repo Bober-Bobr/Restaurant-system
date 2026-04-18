@@ -8,29 +8,23 @@ import { MenuService } from './menu.service.js';
 const menuService = new MenuService(new MenuRepository(), new EventRepository());
 
 export class MenuController {
-  async list(_request: Request, response: Response) {
-    const items = await menuService.listMenuItems();
-    response.json(items);
+  async list(request: Request, response: Response) {
+    response.json(await menuService.listMenuItems(request.restaurantId!));
   }
 
-  async listAll(_request: Request, response: Response) {
-    const items = await menuService.listAllMenuItems();
-    response.json(items);
+  async listAll(request: Request, response: Response) {
+    response.json(await menuService.listAllMenuItems(request.restaurantId!));
   }
 
   async create(request: Request, response: Response) {
     const payload = createMenuItemSchema.parse(request.body);
-    const item = await menuService.createMenuItem(payload);
-
-    response.status(201).json(item);
+    response.status(201).json(await menuService.createMenuItem(request.restaurantId!, payload));
   }
 
   async update(request: Request, response: Response) {
     const { menuItemId } = menuItemIdSchema.parse(request.params);
     const payload = updateMenuItemSchema.parse(request.body);
-
-    const item = await menuService.updateMenuItem(menuItemId, payload);
-    response.json(item);
+    response.json(await menuService.updateMenuItem(menuItemId, payload));
   }
 
   async remove(request: Request, response: Response) {
@@ -42,9 +36,7 @@ export class MenuController {
   async assignSelection(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
     const payload = assignSelectionSchema.parse(request.body);
-
-    const selection = await menuService.assignMenuItemToEvent(eventId, payload);
-
+    const selection = await menuService.assignMenuItemToEvent(request.restaurantId!, eventId, payload);
     response.status(201).json(selection);
   }
 }

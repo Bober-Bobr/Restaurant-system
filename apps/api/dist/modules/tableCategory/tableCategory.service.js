@@ -4,35 +4,32 @@ export class TableCategoryService {
     constructor(tableCategoryRepository) {
         this.tableCategoryRepository = tableCategoryRepository;
     }
-    async listTableCategories(params) {
-        return this.tableCategoryRepository.list(params);
+    async listTableCategories(restaurantId, params) {
+        return this.tableCategoryRepository.list(restaurantId, params);
     }
-    async countTableCategories() {
-        return this.tableCategoryRepository.count();
+    async countTableCategories(restaurantId) {
+        return this.tableCategoryRepository.count(restaurantId);
     }
-    async createTableCategory(payload) {
+    async createTableCategory(restaurantId, payload) {
         const { menuItemIds, ...data } = payload;
-        const existing = await this.tableCategoryRepository.getByName(data.name);
-        if (existing) {
+        const existing = await this.tableCategoryRepository.getByName(restaurantId, data.name);
+        if (existing)
             throw createHttpError(409, 'Table category with this name already exists');
-        }
-        const created = await this.tableCategoryRepository.create(data);
+        const created = await this.tableCategoryRepository.create(restaurantId, data);
         if (menuItemIds && menuItemIds.length > 0) {
             return this.tableCategoryRepository.setPackageItems(created.id, menuItemIds);
         }
         return created;
     }
-    async updateTableCategory(id, payload) {
+    async updateTableCategory(restaurantId, id, payload) {
         const { menuItemIds, ...data } = payload;
         const existing = await this.tableCategoryRepository.getById(id);
-        if (!existing) {
+        if (!existing)
             throw createHttpError(404, 'Table category not found');
-        }
         if (data.name && data.name !== existing.name) {
-            const nameTaken = await this.tableCategoryRepository.getByName(data.name);
-            if (nameTaken) {
+            const nameTaken = await this.tableCategoryRepository.getByName(restaurantId, data.name);
+            if (nameTaken)
                 throw createHttpError(409, 'Table category with this name already exists');
-            }
         }
         if (menuItemIds !== undefined) {
             await this.tableCategoryRepository.setPackageItems(id, menuItemIds);
@@ -44,16 +41,14 @@ export class TableCategoryService {
     }
     async getTableCategoryDetails(id) {
         const category = await this.tableCategoryRepository.getById(id);
-        if (!category) {
+        if (!category)
             throw createHttpError(404, 'Table category not found');
-        }
         return category;
     }
     async deleteTableCategory(id) {
         const existing = await this.tableCategoryRepository.getById(id);
-        if (!existing) {
+        if (!existing)
             throw createHttpError(404, 'Table category not found');
-        }
         await this.tableCategoryRepository.deleteById(id);
     }
 }

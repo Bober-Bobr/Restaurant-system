@@ -12,7 +12,8 @@ export type Event = {
   eventDate: string;
   guestCount: number;
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
-  eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'PRIVATE_PARTY' | 'CORPORATE';
+  eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE';
+  birthdayPersonName?: string;
   region?: 'US' | 'CA' | 'GB' | 'DE' | 'FR' | 'IT' | 'ES' | 'RU' | 'CN' | 'JP' | 'KR' | 'AU' | 'UZ' | 'EU';
   hallId?: string;
   tableCategoryId?: string;

@@ -6,40 +6,36 @@ export class MenuService {
         this.menuRepository = menuRepository;
         this.eventRepository = eventRepository;
     }
-    async listMenuItems() {
-        return this.menuRepository.listActive();
+    async listMenuItems(restaurantId) {
+        return this.menuRepository.listActive(restaurantId);
     }
-    async listAllMenuItems() {
-        return this.menuRepository.listAll();
+    async listAllMenuItems(restaurantId) {
+        return this.menuRepository.listAll(restaurantId);
     }
-    async createMenuItem(payload) {
-        return this.menuRepository.create(payload);
+    async createMenuItem(restaurantId, payload) {
+        return this.menuRepository.create(restaurantId, payload);
     }
     async updateMenuItem(menuItemId, payload) {
         const existingItem = await this.menuRepository.getById(menuItemId);
-        if (!existingItem) {
+        if (!existingItem)
             throw createHttpError(404, 'Menu item not found');
-        }
         return this.menuRepository.updateById(menuItemId, payload);
     }
     async deleteMenuItem(menuItemId) {
         const existingItem = await this.menuRepository.getById(menuItemId);
-        if (!existingItem) {
+        if (!existingItem)
             throw createHttpError(404, 'Menu item not found');
-        }
         await this.menuRepository.deleteById(menuItemId);
     }
-    async assignMenuItemToEvent(eventId, payload) {
+    async assignMenuItemToEvent(restaurantId, eventId, payload) {
         const [event, menuItem] = await Promise.all([
-            this.eventRepository.getByNumber(eventId),
+            this.eventRepository.getByNumber(restaurantId, eventId),
             this.menuRepository.getById(payload.menuItemId)
         ]);
-        if (!event) {
+        if (!event)
             throw createHttpError(404, 'Event not found');
-        }
-        if (!menuItem || !menuItem.isActive) {
+        if (!menuItem || !menuItem.isActive)
             throw createHttpError(404, 'Menu item not found or inactive');
-        }
         return this.menuRepository.upsertSelection(event.id, payload.menuItemId, payload.quantity, menuItem.priceCents);
     }
 }

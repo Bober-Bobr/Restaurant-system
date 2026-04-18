@@ -28,7 +28,8 @@ export const createEventSchema = z
     region: z.nativeEnum(Region).optional(),
     hallId: z.string().cuid().optional(),
     tableCategoryId: z.string().cuid().optional(),
-    notes: z.string().max(2000).optional()
+    notes: z.string().max(2000).optional(),
+    birthdayPersonName: z.string().max(120).optional()
 })
     .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {
@@ -52,7 +53,8 @@ export const updateEventSchema = z
     eventType: z.nativeEnum(EventType).optional(),
     region: z.nativeEnum(Region).optional(),
     hallId: z.string().cuid().optional(),
-    notes: z.string().max(2000).optional()
+    notes: z.string().max(2000).optional(),
+    birthdayPersonName: z.string().max(120).optional()
 })
     .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {

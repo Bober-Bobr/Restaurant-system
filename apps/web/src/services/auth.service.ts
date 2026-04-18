@@ -1,5 +1,8 @@
+import axios from 'axios';
 import type { AdminRole } from '../store/auth.store';
 import { httpClient } from './http';
+
+const baseURL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:4000/api';
 
 export type AuthResponse = {
   accessToken: string;
@@ -21,6 +24,10 @@ export type AdminUser = {
 export const authService = {
   async login(username: string, password: string) {
     const { data } = await httpClient.post<AuthResponse>('/auth/login', { username, password });
+    return data;
+  },
+  async publicRegister(username: string, password: string) {
+    const { data } = await axios.post<AuthResponse>(`${baseURL}/auth/register`, { username, password });
     return data;
   },
   async register(username: string, password: string, role?: AdminRole, restaurantId?: string) {

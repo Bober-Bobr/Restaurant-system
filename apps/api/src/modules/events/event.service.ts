@@ -9,22 +9,19 @@ export class EventService {
     return { ...rest, id: eventNumber };
   }
 
-  async listEvents(params: { skip: number; take: number }) {
-    const events = await this.eventRepository.list(params);
+  async listEvents(restaurantId: string, params: { skip: number; take: number }) {
+    const events = await this.eventRepository.list(restaurantId, params);
     return events.map((event) => this.mapEventToExternalId(event));
   }
 
-  async createEvent(payload: CreateEventData) {
-    const event = await this.eventRepository.create(payload);
+  async createEvent(restaurantId: string, payload: CreateEventData) {
+    const event = await this.eventRepository.create(restaurantId, payload);
     return this.mapEventToExternalId(event);
   }
 
-  async updateEvent(eventId: number, payload: Partial<CreateEventData>) {
-    const existingEvent = await this.eventRepository.getByNumber(eventId);
-
-    if (!existingEvent) {
-      throw createHttpError(404, 'Event not found');
-    }
+  async updateEvent(restaurantId: string, eventId: number, payload: Partial<CreateEventData>) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!existingEvent) throw createHttpError(404, 'Event not found');
 
     const updateData: Record<string, any> = {
       customerName: payload.customerName,
@@ -40,34 +37,25 @@ export class EventService {
     if (payload.hallId !== undefined) {
       updateData.hall = payload.hallId ? { connect: { id: payload.hallId } } : { disconnect: true };
     }
-
     if (payload.tableCategoryId !== undefined) {
       updateData.tableCategory = payload.tableCategoryId
         ? { connect: { id: payload.tableCategoryId } }
         : { disconnect: true };
     }
 
-    const updatedEvent = await this.eventRepository.updateByNumber(eventId, updateData);
+    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
     return this.mapEventToExternalId(updatedEvent);
   }
 
-  async getEventDetails(eventId: number) {
-    const event = await this.eventRepository.getByNumber(eventId);
-
-    if (!event) {
-      throw createHttpError(404, 'Event not found');
-    }
-
+  async getEventDetails(restaurantId: string, eventId: number) {
+    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!event) throw createHttpError(404, 'Event not found');
     return this.mapEventToExternalId(event);
   }
 
-  async deleteEvent(eventId: number) {
-    const existingEvent = await this.eventRepository.getByNumber(eventId);
-
-    if (!existingEvent) {
-      throw createHttpError(404, 'Event not found');
-    }
-
-    await this.eventRepository.deleteByNumber(eventId);
+  async deleteEvent(restaurantId: string, eventId: number) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!existingEvent) throw createHttpError(404, 'Event not found');
+    await this.eventRepository.deleteByNumber(restaurantId, eventId);
   }
 }

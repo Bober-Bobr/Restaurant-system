@@ -205,7 +205,15 @@ const resources = {
     loading_users: 'Loading users...',
     failed_load_users: 'Failed to load users.',
     change_role: 'Change Role',
-    password: 'Password'
+    password: 'Password',
+    event_type_reservation: 'Reservation',
+    event_type_banquet: 'Banquet',
+    event_type_wedding: 'Wedding',
+    event_type_birthday: 'Birthday',
+    event_type_private_party: 'Private Party',
+    event_type_corporate: 'Corporate',
+    birthday_person_name: "Birthday Person's Name",
+    birthday_person_name_placeholder: 'First and last name'
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -406,7 +414,15 @@ const resources = {
     loading_users: 'Загрузка пользователей...',
     failed_load_users: 'Не удалось загрузить пользователей.',
     change_role: 'Изменить роль',
-    password: 'Пароль'
+    password: 'Пароль',
+    event_type_reservation: 'Бронирование',
+    event_type_banquet: 'Банкет',
+    event_type_wedding: 'Свадьба',
+    event_type_birthday: 'День рождения',
+    event_type_private_party: 'Частная вечеринка',
+    event_type_corporate: 'Корпоратив',
+    birthday_person_name: 'Имя именинника',
+    birthday_person_name_placeholder: 'Имя и фамилия'
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -607,7 +623,15 @@ const resources = {
     loading_users: 'Foydalanuvchilar yuklanmoqda...',
     failed_load_users: 'Foydalanuvchilarni yuklab bo\'lmadi.',
     change_role: 'Rolni o\'zgartirish',
-    password: 'Parol'
+    password: 'Parol',
+    event_type_reservation: 'Bron',
+    event_type_banquet: 'Banket',
+    event_type_wedding: 'To\'y',
+    event_type_birthday: 'Tug\'ilgan kun',
+    event_type_private_party: 'Xususiy ziyofat',
+    event_type_corporate: 'Korporativ',
+    birthday_person_name: 'Tug\'ilgan kun egasining ismi',
+    birthday_person_name_placeholder: 'Ism va familiya'
   }
 } as const;
 

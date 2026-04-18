@@ -25,6 +25,7 @@ export const AdminLayout = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
   const role = useAuthStore((state) => state.role);
+  const authRestaurantId = useAuthStore((state) => state.restaurantId);
   const logout = useAuthStore((state) => state.logout);
   const { locale, setLocale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
@@ -35,8 +36,9 @@ export const AdminLayout = () => {
     enabled: !!accessToken
   });
 
-  const restaurantLogoSrc = getPhotoUrl(restaurants[0]?.logoUrl);
+  const restaurantLogoSrc = role !== 'OWNER' ? getPhotoUrl(restaurants[0]?.logoUrl) : undefined;
   const restaurantName = restaurants[0]?.name;
+  const tabletRestaurantId = authRestaurantId ?? restaurants[0]?.id ?? '';
 
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
@@ -83,7 +85,7 @@ export const AdminLayout = () => {
                 {role === 'ADMIN' && (
                   <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
                 )}
-                <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to="/tablet">
+                <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
                   {t('tablet')}
                 </Link>
               </>

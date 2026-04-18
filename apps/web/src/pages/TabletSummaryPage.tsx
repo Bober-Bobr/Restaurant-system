@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -11,9 +11,15 @@ import { eventService } from '../services/event.service';
 import { httpClient } from '../services/http';
 import logo from '../assets/logo.png';
 import { Locale, locales, translate } from '../utils/translate';
+import type { Event } from '../types/domain';
+
+type EventType = NonNullable<Event['eventType']>;
+const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
 
 export const TabletSummaryPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
   const menuItems = usePublicDataStore((state) => state.menuItems);
   const halls = usePublicDataStore((state) => state.halls);
@@ -26,6 +32,8 @@ export const TabletSummaryPage = () => {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventNotes, setEventNotes] = useState('');
+  const [eventType, setEventType] = useState<EventType>('RESERVATION');
+  const [birthdayPersonName, setBirthdayPersonName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedEventId, setConfirmedEventId] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -33,8 +41,8 @@ export const TabletSummaryPage = () => {
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
   useEffect(() => {
-    loadPublicData();
-  }, [loadPublicData]);
+    if (restaurantId) loadPublicData(restaurantId);
+  }, [loadPublicData, restaurantId]);
 
   const selectedTableCategory = tableCategories.find((tc) => tc.id === selectedTableCategoryId);
   const selectedHall = halls.find((h) => h.id === selectedHallId);
@@ -58,9 +66,11 @@ export const TabletSummaryPage = () => {
         eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         guestCount,
         status: 'CONFIRMED',
+        eventType,
         hallId: selectedHallId || undefined,
         tableCategoryId: selectedTableCategoryId || undefined,
         notes: eventNotes.trim() || undefined,
+        birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
       });
       setConfirmedEventId(event.id);
       reset();
@@ -136,6 +146,8 @@ export const TabletSummaryPage = () => {
                 setEventDate('');
                 setEventTime('');
                 setEventNotes('');
+                setEventType('RESERVATION');
+                setBirthdayPersonName('');
                 navigate('/tablet');
               }}
             >
@@ -217,6 +229,26 @@ export const TabletSummaryPage = () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
+                  <label className="text-sm font-medium text-slate-700">{t('event_type')}</label>
+                  <Select value={eventType} onChange={(e) => setEventType(e.target.value as EventType)}>
+                    {eventTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {t(`event_type_${type.toLowerCase()}` as Parameters<typeof t>[0])}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {eventType === 'BIRTHDAY' && (
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-slate-700">{t('birthday_person_name')}</label>
+                    <Input
+                      placeholder={t('birthday_person_name_placeholder')}
+                      value={birthdayPersonName}
+                      onChange={(e) => setBirthdayPersonName(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="grid gap-2">
                   <label className="text-sm font-medium text-slate-700">
                     {t('notes')}
                     <span className="ml-1 font-normal text-slate-400">({t('description_optional').toLowerCase()})</span>
@@ -239,6 +271,10 @@ export const TabletSummaryPage = () => {
                 <p className="mt-1 text-sm text-slate-500">{t('overview_of_selection')}</p>
               </div>
               <div className="space-y-3 text-sm text-slate-600">
+                <div className="rounded-3xl bg-slate-50 p-4">{t('event_type')}: <span className="font-medium text-slate-800">{t(`event_type_${eventType.toLowerCase()}` as Parameters<typeof t>[0])}</span></div>
+                {eventType === 'BIRTHDAY' && birthdayPersonName && (
+                  <div className="rounded-3xl bg-slate-50 p-4">{t('birthday_person_name')}: <span className="font-medium text-slate-800">{birthdayPersonName}</span></div>
+                )}
                 <div className="rounded-3xl bg-slate-50 p-4">{t('hall')}: <span className="font-medium text-slate-800">{selectedHall?.name || t('not_selected')}</span></div>
                 <div className="rounded-3xl bg-slate-50 p-4">{t('table_category')}: <span className="font-medium text-slate-800">{selectedTableCategory?.name || t('not_selected')}</span></div>
                 <div className="rounded-3xl bg-slate-50 p-4">{t('guest_count')}: <span className="font-medium text-slate-800">{guestCount}</span></div>

@@ -4,8 +4,8 @@ export class PricingService {
     constructor(eventRepository) {
         this.eventRepository = eventRepository;
     }
-    async calculateEventPricing(eventId) {
-        const event = await this.eventRepository.getByNumber(eventId);
+    async calculateEventPricing(restaurantId, eventId) {
+        const event = await this.eventRepository.getByNumber(restaurantId, eventId);
         if (!event) {
             throw createHttpError(404, 'Event not found');
         }

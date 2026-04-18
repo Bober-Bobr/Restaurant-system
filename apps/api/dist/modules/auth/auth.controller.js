@@ -70,7 +70,7 @@ export class AuthController {
     async listUsers(request, response) {
         const admin = request.admin;
         if (admin.role === AdminRole.OWNER) {
-            response.json(await authService.listUsers());
+            response.json(await authService.listUsersForOwner(admin.id));
             return;
         }
         const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);

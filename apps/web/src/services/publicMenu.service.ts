@@ -7,8 +7,8 @@ const publicMenuUrl = (): string => {
 };
 
 export const publicMenuService = {
-  async listActive(): Promise<MenuItem[]> {
-    const { data } = await axios.get<MenuItem[]>(publicMenuUrl());
+  async listActive(restaurantId: string): Promise<MenuItem[]> {
+    const { data } = await axios.get<MenuItem[]>(publicMenuUrl(), { params: { restaurantId } });
     return data;
   }
 };

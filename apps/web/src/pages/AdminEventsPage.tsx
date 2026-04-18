@@ -43,7 +43,7 @@ const binarySearchEventById = (events: Event[], targetId: number): Event | null 
   return null; // Event not found
 };
 
-const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'PRIVATE_PARTY', 'CORPORATE'];
+const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
 
 export const AdminEventsPage = () => {
   const queryClient = useQueryClient();
@@ -74,6 +74,7 @@ export const AdminEventsPage = () => {
   const [hallId, setHallId] = useState('');
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
+  const [birthdayPersonName, setBirthdayPersonName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
 
   // Search functionality
@@ -125,7 +126,8 @@ export const AdminEventsPage = () => {
         eventType,
         hallId: hallId ? hallId : undefined,
         tableCategoryId: tableCategoryId ? tableCategoryId : undefined,
-        notes: notes.trim() ? notes.trim() : undefined
+        notes: notes.trim() ? notes.trim() : undefined,
+        birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined
       });
     },
     onSuccess: async () => {
@@ -139,6 +141,7 @@ export const AdminEventsPage = () => {
       setHallId('');
       setTableCategoryId('');
       setNotes('');
+      setBirthdayPersonName('');
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -158,6 +161,7 @@ export const AdminEventsPage = () => {
       setHallId('');
       setTableCategoryId('');
       setNotes('');
+      setBirthdayPersonName('');
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -222,7 +226,8 @@ export const AdminEventsPage = () => {
                   eventType,
                   hallId: hallId ? hallId : undefined,
                   tableCategoryId: tableCategoryId ? tableCategoryId : undefined,
-                  notes: notes.trim() ? notes.trim() : undefined
+                  notes: notes.trim() ? notes.trim() : undefined,
+                  birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined
                 }
               });
             } else {
@@ -277,11 +282,21 @@ export const AdminEventsPage = () => {
             <Select value={eventType} onChange={(e) => setEventType(e.target.value as NonNullable<Event['eventType']>)}>
               {eventTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {t(`event_type_${type.toLowerCase()}` as Parameters<typeof t>[0])}
                 </option>
               ))}
             </Select>
           </label>
+          {eventType === 'BIRTHDAY' && (
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('birthday_person_name')}
+              <Input
+                placeholder={t('birthday_person_name_placeholder')}
+                value={birthdayPersonName}
+                onChange={(e) => setBirthdayPersonName(e.target.value)}
+              />
+            </label>
+          )}
           <label style={{ display: 'grid', gap: 6 }}>
             {t('status')}
             <Select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
@@ -335,13 +350,14 @@ export const AdminEventsPage = () => {
                   setCustomerName('');
                   setCustomerPhone('');
                   setEventDate('');
-      setEventTime('');
+                  setEventTime('');
                   setGuestCountText('50');
                   setStatus('DRAFT');
                   setEventType('RESERVATION');
                   setHallId('');
                   setTableCategoryId('');
                   setNotes('');
+                  setBirthdayPersonName('');
                 }}
               >
                 {t('cancel')}
@@ -394,8 +410,9 @@ export const AdminEventsPage = () => {
           const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
           const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
           const eventTypeLabels: Record<string, string> = {
-            RESERVATION: 'Reservation', BANQUET: 'Banquet', WEDDING: 'Wedding',
-            PRIVATE_PARTY: 'Private Party', CORPORATE: 'Corporate'
+            RESERVATION: t('event_type_reservation'), BANQUET: t('event_type_banquet'),
+            WEDDING: t('event_type_wedding'), BIRTHDAY: t('event_type_birthday'),
+            PRIVATE_PARTY: t('event_type_private_party'), CORPORATE: t('event_type_corporate')
           };
           const statusColors: Record<string, string> = {
             DRAFT: '#64748b', CONFIRMED: '#059669', CANCELLED: '#dc2626'
@@ -455,6 +472,12 @@ export const AdminEventsPage = () => {
                     {dishTypes > 0 ? `${dishTypes} dish${dishTypes !== 1 ? 'es' : ''}, ${totalPcs} pcs` : '—'}
                   </p>
                 </div>
+                {searchResult.eventType === 'BIRTHDAY' && searchResult.birthdayPersonName && (
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('birthday_person_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.birthdayPersonName}</p>
+                  </div>
+                )}
                 {searchResult.notes && (
                   <div style={{ gridColumn: '1 / -1' }}>
                     <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('notes')}</p>
@@ -481,6 +504,7 @@ export const AdminEventsPage = () => {
                     setHallId(searchResult.hallId ?? '');
                     setTableCategoryId(searchResult.tableCategoryId ?? '');
                     setNotes(searchResult.notes ?? '');
+                    setBirthdayPersonName(searchResult.birthdayPersonName ?? '');
                     document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
@@ -528,6 +552,7 @@ export const AdminEventsPage = () => {
             setHallId(event.hallId ?? '');
             setTableCategoryId(event.tableCategoryId ?? '');
             setNotes(event.notes ?? '');
+            setBirthdayPersonName(event.birthdayPersonName ?? '');
           }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}

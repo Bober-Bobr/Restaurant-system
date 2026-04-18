@@ -8,28 +8,40 @@ const router = Router();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
-router.get('/menu-items', async (_request, response, next) => {
+router.get('/menu-items', async (request, response, next) => {
     try {
-        const items = await menuRepository.listActive();
-        response.json(items);
+        const restaurantId = String(request.query.restaurantId ?? '');
+        if (!restaurantId) {
+            response.json([]);
+            return;
+        }
+        response.json(await menuRepository.listActive(restaurantId));
     }
     catch (error) {
         next(error);
     }
 });
-router.get('/halls', async (_request, response, next) => {
+router.get('/halls', async (request, response, next) => {
     try {
-        const halls = await hallRepository.listActive();
-        response.json(halls);
+        const restaurantId = String(request.query.restaurantId ?? '');
+        if (!restaurantId) {
+            response.json([]);
+            return;
+        }
+        response.json(await hallRepository.listActive(restaurantId));
     }
     catch (error) {
         next(error);
     }
 });
-router.get('/table-categories', async (_request, response, next) => {
+router.get('/table-categories', async (request, response, next) => {
     try {
-        const tableCategories = await tableCategoryRepository.listActive();
-        response.json(tableCategories);
+        const restaurantId = String(request.query.restaurantId ?? '');
+        if (!restaurantId) {
+            response.json([]);
+            return;
+        }
+        response.json(await tableCategoryRepository.listActive(restaurantId));
     }
     catch (error) {
         next(error);

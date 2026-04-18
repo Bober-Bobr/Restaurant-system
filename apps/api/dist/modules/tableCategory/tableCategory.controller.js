@@ -6,24 +6,20 @@ const tableCategoryService = new TableCategoryService(new TableCategoryRepositor
 export class TableCategoryController {
     async list(request, response) {
         const pagination = getPagination(request);
-        const categories = await tableCategoryService.listTableCategories(pagination);
-        response.json(categories);
+        response.json(await tableCategoryService.listTableCategories(request.restaurantId, pagination));
     }
     async create(request, response) {
         const payload = createTableCategorySchema.parse(request.body);
-        const category = await tableCategoryService.createTableCategory(payload);
-        response.status(201).json(category);
+        response.status(201).json(await tableCategoryService.createTableCategory(request.restaurantId, payload));
     }
     async update(request, response) {
         const { id } = tableCategoryIdSchema.parse(request.params);
         const payload = updateTableCategorySchema.parse(request.body);
-        const category = await tableCategoryService.updateTableCategory(id, payload);
-        response.json(category);
+        response.json(await tableCategoryService.updateTableCategory(request.restaurantId, id, payload));
     }
     async getById(request, response) {
         const { id } = tableCategoryIdSchema.parse(request.params);
-        const category = await tableCategoryService.getTableCategoryDetails(id);
-        response.json(category);
+        response.json(await tableCategoryService.getTableCategoryDetails(id));
     }
     async remove(request, response) {
         const { id } = tableCategoryIdSchema.parse(request.params);

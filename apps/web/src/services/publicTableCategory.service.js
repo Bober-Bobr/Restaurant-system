@@ -4,8 +4,8 @@ const publicTableCategoriesUrl = () => {
     return `${apiRoot}/public/table-categories`;
 };
 export const publicTableCategoryService = {
-    async listActive() {
-        const { data } = await axios.get(publicTableCategoriesUrl());
+    async listActive(restaurantId) {
+        const { data } = await axios.get(publicTableCategoriesUrl(), { params: { restaurantId } });
         return data;
     }
 };

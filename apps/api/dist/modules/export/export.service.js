@@ -9,12 +9,12 @@ export class ExportService {
         this.eventRepository = eventRepository;
         this.pricingService = pricingService;
     }
-    async createEventExcel(eventId) {
-        const event = await this.eventRepository.getByNumber(eventId);
+    async createEventExcel(restaurantId, eventId) {
+        const event = await this.eventRepository.getByNumber(restaurantId, eventId);
         if (!event) {
             throw createHttpError(404, 'Event not found');
         }
-        const pricing = await this.pricingService.calculateEventPricing(eventId);
+        const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Banquet Summary');
         sheet.columns = [
@@ -38,12 +38,12 @@ export class ExportService {
         sheet.addRow({ item: 'Grand Total', total: formatMoney(pricing.totalCents) });
         return Buffer.from(await workbook.xlsx.writeBuffer());
     }
-    async createEventPdf(eventId) {
-        const event = await this.eventRepository.getByNumber(eventId);
+    async createEventPdf(restaurantId, eventId) {
+        const event = await this.eventRepository.getByNumber(restaurantId, eventId);
         if (!event) {
             throw createHttpError(404, 'Event not found');
         }
-        const pricing = await this.pricingService.calculateEventPricing(eventId);
+        const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
         const pdf = new PDFDocument({ margin: 40 });
         const chunks = [];
         return await new Promise((resolve, reject) => {

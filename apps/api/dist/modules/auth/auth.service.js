@@ -85,6 +85,9 @@ export class AuthService {
     async listUsers() {
         return this.authRepository.listAll();
     }
+    async listUsersForOwner(ownerId) {
+        return this.authRepository.listByOwner(ownerId);
+    }
     async listUsersForRestaurant(restaurantId) {
         return this.authRepository.listByRestaurant(restaurantId);
     }

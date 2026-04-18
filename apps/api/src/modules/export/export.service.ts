@@ -12,13 +12,13 @@ export class ExportService {
     private readonly pricingService: PricingService
   ) {}
 
-  async createEventExcel(eventId: number): Promise<Buffer> {
-    const event = await this.eventRepository.getByNumber(eventId);
+  async createEventExcel(restaurantId: string, eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }
 
-    const pricing = await this.pricingService.calculateEventPricing(eventId);
+    const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Banquet Summary');
@@ -48,13 +48,13 @@ export class ExportService {
     return Buffer.from(await workbook.xlsx.writeBuffer());
   }
 
-  async createEventPdf(eventId: number): Promise<Buffer> {
-    const event = await this.eventRepository.getByNumber(eventId);
+  async createEventPdf(restaurantId: string, eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }
 
-    const pricing = await this.pricingService.calculateEventPricing(eventId);
+    const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
 
     const pdf = new PDFDocument({ margin: 40 });
     const chunks: Buffer[] = [];

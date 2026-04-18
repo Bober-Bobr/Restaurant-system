@@ -7,8 +7,8 @@ const publicTableCategoriesUrl = (): string => {
 };
 
 export const publicTableCategoryService = {
-  async listActive(): Promise<TableCategory[]> {
-    const { data } = await axios.get<TableCategory[]>(publicTableCategoriesUrl());
+  async listActive(restaurantId: string): Promise<TableCategory[]> {
+    const { data } = await axios.get<TableCategory[]>(publicTableCategoriesUrl(), { params: { restaurantId } });
     return data;
   }
 };

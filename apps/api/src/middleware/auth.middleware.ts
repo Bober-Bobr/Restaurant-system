@@ -2,6 +2,7 @@ import type { AdminRole } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { prisma } from '../db/prisma.js';
 
 type JwtPayload = {
   sub: string;
@@ -77,3 +78,26 @@ export const requireRole = (...roles: AdminRole[]) =>
     }
     next();
   };
+
+export const requireRestaurant = async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  const admin = request.admin;
+  if (!admin) {
+    response.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+  if (admin.restaurantId) {
+    request.restaurantId = admin.restaurantId;
+    next();
+    return;
+  }
+  const user = await prisma.adminUser.findUnique({
+    where: { id: admin.id },
+    select: { restaurantId: true }
+  });
+  if (!user?.restaurantId) {
+    response.status(400).json({ message: 'No restaurant assigned to this account' });
+    return;
+  }
+  request.restaurantId = user.restaurantId;
+  next();
+};

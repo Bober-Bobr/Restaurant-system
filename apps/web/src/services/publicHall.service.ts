@@ -7,8 +7,8 @@ const publicHallsUrl = (): string => {
 };
 
 export const publicHallService = {
-  async listActive(): Promise<Hall[]> {
-    const { data } = await axios.get<Hall[]>(publicHallsUrl());
+  async listActive(restaurantId: string): Promise<Hall[]> {
+    const { data } = await axios.get<Hall[]>(publicHallsUrl(), { params: { restaurantId } });
     return data;
   }
 };

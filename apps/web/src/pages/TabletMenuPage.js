@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -50,6 +50,8 @@ const ADDITIONAL_CATEGORIES = [
 const COURSE_CATEGORIES = ['FIRST_COURSE', 'SECOND_COURSE'];
 export const TabletMenuPage = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const restaurantId = searchParams.get('restaurantId') ?? '';
     const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale } = useTabletStore();
     const menuItems = usePublicDataStore((state) => state.menuItems);
     const halls = usePublicDataStore((state) => state.halls);
@@ -60,8 +62,9 @@ export const TabletMenuPage = () => {
     const [activeCategory, setActiveCategory] = useState(null);
     const t = (key, params) => translate(key, locale, params);
     useEffect(() => {
-        loadPublicData();
-    }, [loadPublicData]);
+        if (restaurantId)
+            loadPublicData(restaurantId);
+    }, [loadPublicData, restaurantId]);
     const sortedAndFiltered = quickSort((menuItems ?? []).filter((item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
         (activeCategory === null || item.category === activeCategory)));
     const courseItems = quickSort((menuItems ?? []).filter((item) => COURSE_CATEGORIES.includes(item.category)));

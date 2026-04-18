@@ -4,8 +4,8 @@ const publicMenuUrl = () => {
     return `${apiRoot}/public/menu-items`;
 };
 export const publicMenuService = {
-    async listActive() {
-        const { data } = await axios.get(publicMenuUrl());
+    async listActive(restaurantId) {
+        const { data } = await axios.get(publicMenuUrl(), { params: { restaurantId } });
         return data;
     }
 };
