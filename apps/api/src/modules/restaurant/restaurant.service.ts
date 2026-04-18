@@ -18,6 +18,10 @@ export class RestaurantService {
     return restaurant ? [restaurant] : [];
   }
 
+  async listAll() {
+    return this.repo.findAll();
+  }
+
   async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string }) {
     return this.repo.create(ownerId, data);
   }

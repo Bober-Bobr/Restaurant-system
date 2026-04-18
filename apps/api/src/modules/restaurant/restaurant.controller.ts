@@ -17,8 +17,14 @@ export class RestaurantController {
       response.json(await service.listForStaff(admin.restaurantId));
       return;
     }
-    // JWT is stale — look up from DB
-    response.json(await service.listForStaffByUserId(admin.id));
+    // JWT stale — look up from DB
+    const fromDb = await service.listForStaffByUserId(admin.id);
+    if (fromDb.length > 0) {
+      response.json(fromDb);
+      return;
+    }
+    // No restaurant assigned yet — return all so ADMIN can select one for new employees
+    response.json(await service.listAll());
   }
 
   async create(request: Request, response: Response) {

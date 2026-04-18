@@ -10,6 +10,19 @@ export class AuthRepository {
             orderBy: { createdAt: 'asc' }
         });
     }
+    async listByRestaurant(restaurantId) {
+        const restaurant = await prisma.restaurant.findUnique({
+            where: { id: restaurantId },
+            select: { ownerId: true }
+        });
+        if (!restaurant)
+            return [];
+        return prisma.adminUser.findMany({
+            where: { OR: [{ id: restaurant.ownerId }, { restaurantId }] },
+            select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
+            orderBy: { createdAt: 'asc' }
+        });
+    }
     async findByUsername(username) {
         return prisma.adminUser.findUnique({ where: { username } });
     }

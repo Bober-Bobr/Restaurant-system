@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { AdminRole } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
@@ -84,9 +85,18 @@ export class AuthController {
     });
   }
 
-  async listUsers(_request: Request, response: Response) {
-    const users = await authService.listUsers();
-    response.json(users);
+  async listUsers(request: Request, response: Response) {
+    const admin = request.admin!;
+    if (admin.role === AdminRole.OWNER) {
+      response.json(await authService.listUsers());
+      return;
+    }
+    const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);
+    if (!restaurantId) {
+      response.json([]);
+      return;
+    }
+    response.json(await authService.listUsersForRestaurant(restaurantId));
   }
 
   async deleteUser(request: Request, response: Response) {

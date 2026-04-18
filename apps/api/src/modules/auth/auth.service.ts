@@ -103,6 +103,16 @@ export class AuthService {
     return this.authRepository.listAll();
   }
 
+  async listUsersForRestaurant(restaurantId: string) {
+    return this.authRepository.listByRestaurant(restaurantId);
+  }
+
+  async resolveRestaurantId(userId: string, jwtRestaurantId: string | null): Promise<string | null> {
+    if (jwtRestaurantId) return jwtRestaurantId;
+    const user = await this.authRepository.findById(userId);
+    return user?.restaurantId ?? null;
+  }
+
   async deleteUser(callerId: string, callerRole: AdminRole, targetId: string) {
     if (callerId === targetId) {
       throw createHttpError(400, 'Cannot delete your own account.');

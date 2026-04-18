@@ -29,6 +29,10 @@ export class RestaurantRepository {
     return prisma.restaurant.update({ where: { id }, data });
   }
 
+  async findAll() {
+    return prisma.restaurant.findMany({ orderBy: { createdAt: 'asc' } });
+  }
+
   async delete(id: string) {
     return prisma.restaurant.delete({ where: { id } });
   }

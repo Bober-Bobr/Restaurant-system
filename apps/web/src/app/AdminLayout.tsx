@@ -1,12 +1,13 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
-import logo from '../assets/logo.png';
+import { getPhotoUrl } from '../utils/photoUrl';
 
 const ROLE_LABELS: Record<string, string> = {
   OWNER: 'Owner',
@@ -28,6 +29,15 @@ export const AdminLayout = () => {
   const { locale, setLocale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
+  const { data: restaurants = [] } = useQuery({
+    queryKey: ['restaurants'],
+    queryFn: () => restaurantService.list(),
+    enabled: !!accessToken
+  });
+
+  const restaurantLogoSrc = getPhotoUrl(restaurants[0]?.logoUrl);
+  const restaurantName = restaurants[0]?.name;
+
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
     onSettled: () => {
@@ -45,9 +55,11 @@ export const AdminLayout = () => {
       <nav className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex flex-wrap items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Madinabek logo" className="h-11 w-11 rounded-2xl object-cover" />
+            {restaurantLogoSrc && (
+              <img src={restaurantLogoSrc} alt={restaurantName ?? 'Restaurant logo'} className="h-11 w-11 rounded-2xl object-cover" />
+            )}
             <div>
-              <p className="text-sm font-semibold text-slate-900">{t('banquet_admin')}</p>
+              <p className="text-sm font-semibold text-slate-900">{restaurantName ?? t('banquet_admin')}</p>
               <p className="text-xs text-slate-500">
                 {username}
                 {role && (

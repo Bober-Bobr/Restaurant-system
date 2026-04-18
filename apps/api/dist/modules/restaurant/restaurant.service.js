@@ -15,6 +15,9 @@ export class RestaurantService {
         const restaurant = await this.repo.findByStaffUserId(userId);
         return restaurant ? [restaurant] : [];
     }
+    async listAll() {
+        return this.repo.findAll();
+    }
     async create(ownerId, data) {
         return this.repo.create(ownerId, data);
     }
