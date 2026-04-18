@@ -18,7 +18,10 @@ export class AuthController {
     const payload = registerSchema.parse(request.body);
     const result = await authService.register(payload.username, payload.password, {
       callerRole: request.admin?.role,
-      requestedRole: payload.role
+      callerId: request.admin?.id,
+      callerRestaurantId: request.admin?.restaurantId,
+      requestedRole: payload.role,
+      restaurantId: payload.restaurantId
     });
     response.status(201).json(result);
   }
@@ -81,7 +84,7 @@ export class AuthController {
     });
   }
 
-  async listUsers(request: Request, response: Response) {
+  async listUsers(_request: Request, response: Response) {
     const users = await authService.listUsers();
     response.json(users);
   }

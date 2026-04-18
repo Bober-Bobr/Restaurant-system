@@ -60,17 +60,28 @@ export const AdminLayout = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
-            <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
-            {(role === 'OWNER' || role === 'ADMIN') && (
-              <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
+            {/* Operational links — ADMIN and EMPLOYEE only */}
+            {role !== 'OWNER' && (
+              <>
+                <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
+                <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
+                <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
+                <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
+                <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
+                {role === 'ADMIN' && (
+                  <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
+                )}
+                <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to="/tablet">
+                  {t('tablet')}
+                </Link>
+              </>
             )}
-            <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to="/tablet">
-              {t('tablet')}
-            </Link>
+            {role === 'OWNER' && (
+              <>
+                <Link className="transition hover:text-slate-900" to="/admin/restaurants">{t('my_restaurants')}</Link>
+                <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
+              </>
+            )}
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-3">

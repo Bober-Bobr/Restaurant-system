@@ -7,12 +7,14 @@ export type AuthResponse = {
   expiresIn: number;
   username: string;
   role: AdminRole;
+  restaurantId: string | null;
 };
 
 export type AdminUser = {
   id: string;
   username: string;
   role: AdminRole;
+  restaurantId: string | null;
   createdAt: string;
 };
 
@@ -21,8 +23,13 @@ export const authService = {
     const { data } = await httpClient.post<AuthResponse>('/auth/login', { username, password });
     return data;
   },
-  async register(username: string, password: string, role?: AdminRole) {
-    const { data } = await httpClient.post<AuthResponse>('/auth/register', { username, password, ...(role ? { role } : {}) });
+  async register(username: string, password: string, role?: AdminRole, restaurantId?: string) {
+    const { data } = await httpClient.post<AuthResponse>('/auth/register', {
+      username,
+      password,
+      ...(role ? { role } : {}),
+      ...(restaurantId ? { restaurantId } : {})
+    });
     return data;
   },
   async refresh(refreshToken: string) {

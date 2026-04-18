@@ -7,6 +7,7 @@ type JwtPayload = {
   sub: string;
   username: string;
   role?: AdminRole;
+  restaurantId?: string | null;
   type?: string;
 };
 
@@ -23,7 +24,7 @@ export const adminAuthMiddleware = (request: Request, response: Response, next: 
         response.status(401).json({ message: 'Invalid token type' });
         return;
       }
-      request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole };
+      request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole, restaurantId: decoded.restaurantId ?? null };
       next();
       return;
     } catch (error) {
@@ -37,7 +38,7 @@ export const adminAuthMiddleware = (request: Request, response: Response, next: 
   }
 
   if (env.ADMIN_API_KEY && legacyKey === env.ADMIN_API_KEY) {
-    request.admin = { id: 'legacy', username: 'legacy', role: 'OWNER' as AdminRole };
+    request.admin = { id: 'legacy', username: 'legacy', role: 'OWNER' as AdminRole, restaurantId: null };
     next();
     return;
   }
@@ -54,7 +55,7 @@ export const optionalAuthMiddleware = (request: Request, _response: Response, ne
     try {
       const decoded = jwt.verify(bearerToken, env.JWT_SECRET) as JwtPayload;
       if (!decoded.type || decoded.type === 'access') {
-        request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole };
+        request.admin = { id: decoded.sub, username: decoded.username, role: decoded.role as AdminRole, restaurantId: decoded.restaurantId ?? null };
       }
     } catch {
       // Ignore invalid tokens — request proceeds without admin context

@@ -8,7 +8,7 @@ export class AuthRepository {
 
   async listAll() {
     return prisma.adminUser.findMany({
-      select: { id: true, username: true, role: true, createdAt: true },
+      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
   }
@@ -21,9 +21,9 @@ export class AuthRepository {
     return prisma.adminUser.findUnique({ where: { id } });
   }
 
-  async create(username: string, passwordHash: string, role: AdminRole = AdminRole.OWNER) {
+  async create(username: string, passwordHash: string, role: AdminRole = AdminRole.OWNER, restaurantId?: string) {
     return prisma.adminUser.create({
-      data: { username, passwordHash, role }
+      data: { username, passwordHash, role, ...(restaurantId ? { restaurantId } : {}) }
     });
   }
 

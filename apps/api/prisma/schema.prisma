@@ -79,13 +79,32 @@ enum AdminRole {
 }
 
 model AdminUser {
-  id               String    @id @default(cuid())
-  username         String    @unique
+  id               String       @id @default(cuid())
+  username         String       @unique
   passwordHash     String
   refreshTokenHash String?
-  role             AdminRole @default(OWNER)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  role             AdminRole    @default(OWNER)
+  restaurantId     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  ownedRestaurants Restaurant[] @relation("OwnedRestaurants")
+  restaurant       Restaurant?  @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId])
+}
+
+model Restaurant {
+  id        String      @id @default(cuid())
+  name      String
+  address   String?
+  logoUrl   String?
+  ownerId   String
+  owner     AdminUser   @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
+  staff     AdminUser[] @relation("StaffRestaurant")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([ownerId])
 }
 
 model TableCategory {

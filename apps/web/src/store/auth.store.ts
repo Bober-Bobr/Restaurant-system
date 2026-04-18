@@ -8,9 +8,10 @@ type AuthState = {
   refreshToken: string | null;
   username: string | null;
   role: AdminRole | null;
+  restaurantId: string | null;
   expiresAt: number | null;
   setTokens: (accessToken: string, refreshToken: string, expiresIn: number) => void;
-  setAuth: (accessToken: string, refreshToken: string, username: string, expiresIn: number, role: AdminRole) => void;
+  setAuth: (accessToken: string, refreshToken: string, username: string, expiresIn: number, role: AdminRole, restaurantId: string | null) => void;
   logout: () => void;
 };
 
@@ -21,29 +22,14 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       username: null,
       role: null,
+      restaurantId: null,
       expiresAt: null,
       setTokens: (accessToken, refreshToken, expiresIn) =>
-        set({
-          accessToken,
-          refreshToken,
-          expiresAt: Date.now() + expiresIn
-        }),
-      setAuth: (accessToken, refreshToken, username, expiresIn, role) =>
-        set({
-          accessToken,
-          refreshToken,
-          username,
-          role,
-          expiresAt: Date.now() + expiresIn
-        }),
+        set({ accessToken, refreshToken, expiresAt: Date.now() + expiresIn }),
+      setAuth: (accessToken, refreshToken, username, expiresIn, role, restaurantId) =>
+        set({ accessToken, refreshToken, username, role, restaurantId, expiresAt: Date.now() + expiresIn }),
       logout: () =>
-        set({
-          accessToken: null,
-          refreshToken: null,
-          username: null,
-          role: null,
-          expiresAt: null
-        })
+        set({ accessToken: null, refreshToken: null, username: null, role: null, restaurantId: null, expiresAt: null })
     }),
     { name: 'banquet-admin-auth' }
   )

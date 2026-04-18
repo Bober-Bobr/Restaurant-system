@@ -14,6 +14,7 @@ export type AuthResponse = {
   expiresIn: number;
   username: string;
   role: AdminRole;
+  restaurantId: string | null;
 };
 
 export class AuthService {
@@ -22,22 +23,15 @@ export class AuthService {
   async register(
     username: string,
     password: string,
-    options: { callerRole?: AdminRole; requestedRole?: AdminRole }
+    options: { callerRole?: AdminRole; callerId?: string; callerRestaurantId?: string | null; requestedRole?: AdminRole; restaurantId?: string }
   ): Promise<AuthResponse> {
-    const existingCount = await this.authRepository.countAdmins();
-
-    if (existingCount === 0) {
-      // First ever user — always becomes OWNER, no auth needed
+    // Unauthenticated registration always creates a new OWNER
+    if (!options.callerRole) {
       const taken = await this.authRepository.findByUsername(username);
       if (taken) throw createHttpError(409, 'Username already taken');
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await this.authRepository.create(username, passwordHash, AdminRole.OWNER);
-      return this.issueTokenPair(user.id, user.username, user.role);
-    }
-
-    // Subsequent registrations require a caller with sufficient role
-    if (!options.callerRole) {
-      throw createHttpError(403, 'Registration requires authentication. Contact an administrator.');
+      return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
     }
 
     if (options.callerRole === AdminRole.EMPLOYEE) {
@@ -49,12 +43,20 @@ export class AuthService {
       if (options.requestedRole && options.requestedRole !== AdminRole.EMPLOYEE) {
         throw createHttpError(403, 'Administrators can only create Employee accounts.');
       }
-      const role = AdminRole.EMPLOYEE;
+      let restaurantId = options.restaurantId ?? options.callerRestaurantId ?? undefined;
+      if (!restaurantId && options.callerId) {
+        // JWT may be stale — fetch caller's restaurant directly from DB
+        const caller = await this.authRepository.findById(options.callerId);
+        restaurantId = caller?.restaurantId ?? undefined;
+      }
+      if (!restaurantId) {
+        throw createHttpError(400, 'A restaurant must be selected when creating an account.');
+      }
       const taken = await this.authRepository.findByUsername(username);
       if (taken) throw createHttpError(409, 'Username already taken');
       const passwordHash = await bcrypt.hash(password, 12);
-      const user = await this.authRepository.create(username, passwordHash, role);
-      return this.issueTokenPair(user.id, user.username, user.role);
+      const user = await this.authRepository.create(username, passwordHash, AdminRole.EMPLOYEE, restaurantId);
+      return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
     }
 
     // OWNER can create ADMIN or EMPLOYEE
@@ -62,11 +64,14 @@ export class AuthService {
     if (role === AdminRole.OWNER) {
       throw createHttpError(403, 'Cannot create another Owner account.');
     }
+    if (!options.restaurantId) {
+      throw createHttpError(400, 'A restaurant must be selected when creating an account.');
+    }
     const taken = await this.authRepository.findByUsername(username);
     if (taken) throw createHttpError(409, 'Username already taken');
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await this.authRepository.create(username, passwordHash, role);
-    return this.issueTokenPair(user.id, user.username, user.role);
+    const user = await this.authRepository.create(username, passwordHash, role, options.restaurantId);
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
   }
 
   async login(username: string, password: string): Promise<AuthResponse> {
@@ -76,7 +81,7 @@ export class AuthService {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw createHttpError(401, 'Invalid username or password');
 
-    return this.issueTokenPair(user.id, user.username, user.role);
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
   }
 
   async refreshAccessToken(userId: string, providedRefreshToken: string): Promise<AuthResponse> {
@@ -87,7 +92,7 @@ export class AuthService {
     const valid = await bcrypt.compare(providedRefreshToken, user.refreshTokenHash);
     if (!valid) throw createHttpError(401, 'Invalid or expired refresh token');
 
-    return this.issueTokenPair(user.id, user.username, user.role);
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
   }
 
   async logout(userId: string): Promise<void> {
@@ -127,9 +132,14 @@ export class AuthService {
     return this.authRepository.updateRole(targetId, newRole);
   }
 
-  private async issueTokenPair(userId: string, username: string, role: AdminRole): Promise<AuthResponse> {
+  private async issueTokenPair(
+    userId: string,
+    username: string,
+    role: AdminRole,
+    restaurantId: string | null
+  ): Promise<AuthResponse> {
     const accessToken = jwt.sign(
-      { sub: userId, username, role, type: 'access' },
+      { sub: userId, username, role, restaurantId, type: 'access' },
       env.JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
@@ -146,6 +156,6 @@ export class AuthService {
     const decoded = jwt.decode(accessToken) as { exp?: number } | null;
     const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : 15 * 60 * 1000;
 
-    return { accessToken, refreshToken, expiresIn, username, role };
+    return { accessToken, refreshToken, expiresIn, username, role, restaurantId };
   }
 }

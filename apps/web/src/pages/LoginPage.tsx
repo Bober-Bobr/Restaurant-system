@@ -1,8 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
-import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
 import logo from '../assets/logo.png';
@@ -48,7 +47,7 @@ type Tab = 'login' | 'register';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { setAuth, logout } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [tab, setTab] = useState<Tab>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -59,7 +58,7 @@ export const LoginPage = () => {
   const loginMutation = useMutation({
     mutationFn: () => authService.login(username.trim(), password),
     onSuccess: (data) => {
-      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
+      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
       navigate('/', { replace: true });
     }
   });
@@ -67,7 +66,7 @@ export const LoginPage = () => {
   const registerMutation = useMutation({
     mutationFn: () => authService.register(username.trim(), password),
     onSuccess: (data) => {
-      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
+      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
       navigate('/', { replace: true });
     }
   });
@@ -82,7 +81,7 @@ export const LoginPage = () => {
   const canSubmitRegister = username.trim().length >= 3 && passwordStrength?.valid;
   const canSubmitLogin = username.trim().length > 0 && password.length > 0;
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (pending) return;
     if (tab === 'login') {
@@ -103,7 +102,9 @@ export const LoginPage = () => {
           style={{ width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' }}
         />
         <h1 style={{ marginBottom: 8 }}>Banquet Admin</h1>
-        <p style={{ color: '#666', fontSize: 14 }}>Sign in to manage events and menu</p>
+        <p style={{ color: '#666', fontSize: 14 }}>
+          {tab === 'login' ? 'Sign in to manage events and menu' : 'Create a new restaurant owner account'}
+        </p>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }}>
@@ -290,14 +291,6 @@ export const LoginPage = () => {
         ) : null}
       </form>
 
-      <p style={{ marginTop: 20, fontSize: 13, color: '#666' }}>
-        <Link
-          to="/tablet"
-          style={{ color: '#2196F3', textDecoration: 'none' }}
-        >
-          Open tablet menu (public, no login)
-        </Link>
-      </p>
     </main>
   );
 };

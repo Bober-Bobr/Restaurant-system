@@ -4,8 +4,13 @@ export const authService = {
         const { data } = await httpClient.post('/auth/login', { username, password });
         return data;
     },
-    async register(username, password, role) {
-        const { data } = await httpClient.post('/auth/register', { username, password, ...(role ? { role } : {}) });
+    async register(username, password, role, restaurantId) {
+        const { data } = await httpClient.post('/auth/register', {
+            username,
+            password,
+            ...(role ? { role } : {}),
+            ...(restaurantId ? { restaurantId } : {})
+        });
         return data;
     },
     async refresh(refreshToken) {

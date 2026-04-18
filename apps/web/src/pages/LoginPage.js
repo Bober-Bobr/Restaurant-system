@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
 import logo from '../assets/logo.png';
@@ -45,7 +45,7 @@ const checkPasswordStrength = (password) => {
 };
 export const LoginPage = () => {
     const navigate = useNavigate();
-    const { setAuth, logout } = useAuthStore();
+    const { setAuth } = useAuthStore();
     const [tab, setTab] = useState('login');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -54,14 +54,14 @@ export const LoginPage = () => {
     const loginMutation = useMutation({
         mutationFn: () => authService.login(username.trim(), password),
         onSuccess: (data) => {
-            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
+            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
             navigate('/', { replace: true });
         }
     });
     const registerMutation = useMutation({
         mutationFn: () => authService.register(username.trim(), password),
         onSuccess: (data) => {
-            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role);
+            setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
             navigate('/', { replace: true });
         }
     });
@@ -88,7 +88,7 @@ export const LoginPage = () => {
             registerMutation.mutate();
         }
     };
-    return (_jsxs("main", { style: { maxWidth: 480, margin: '32px auto', padding: 20 }, children: [_jsxs("div", { style: { textAlign: 'center', marginBottom: 32 }, children: [_jsx("img", { src: logo, alt: "Restaurant logo", style: { width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' } }), _jsx("h1", { style: { marginBottom: 8 }, children: "Banquet Admin" }), _jsx("p", { style: { color: '#666', fontSize: 14 }, children: "Sign in to manage events and menu" })] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }, children: [_jsx("button", { type: "button", onClick: () => {
+    return (_jsxs("main", { style: { maxWidth: 480, margin: '32px auto', padding: 20 }, children: [_jsxs("div", { style: { textAlign: 'center', marginBottom: 32 }, children: [_jsx("img", { src: logo, alt: "Restaurant logo", style: { width: 96, height: 'auto', margin: '0 auto 16px', borderRadius: 16, objectFit: 'contain' } }), _jsx("h1", { style: { marginBottom: 8 }, children: "Banquet Admin" }), _jsx("p", { style: { color: '#666', fontSize: 14 }, children: tab === 'login' ? 'Sign in to manage events and menu' : 'Create a new restaurant owner account' })] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }, children: [_jsx("button", { type: "button", onClick: () => {
                             setTab('login');
                             setPassword('');
                         }, disabled: tab === 'login', style: {
@@ -165,5 +165,5 @@ export const LoginPage = () => {
                                 : 'Creating account...'
                             : tab === 'login'
                                 ? 'Sign In'
-                                : 'Create Account' }), errorMessage ? (_jsx("div", { style: { padding: 12, background: '#ffebee', border: '1px solid #f44336', borderRadius: 4, color: '#c62828', fontSize: 13 }, children: errorMessage })) : null] }), _jsx("p", { style: { marginTop: 20, fontSize: 13, color: '#666' }, children: _jsx(Link, { to: "/tablet", style: { color: '#2196F3', textDecoration: 'none' }, children: "Open tablet menu (public, no login)" }) })] }));
+                                : 'Create Account' }), errorMessage ? (_jsx("div", { style: { padding: 12, background: '#ffebee', border: '1px solid #f44336', borderRadius: 4, color: '#c62828', fontSize: 13 }, children: errorMessage })) : null] })] }));
 };

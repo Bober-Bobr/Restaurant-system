@@ -6,7 +6,7 @@ export class AuthRepository {
     }
     async listAll() {
         return prisma.adminUser.findMany({
-            select: { id: true, username: true, role: true, createdAt: true },
+            select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
             orderBy: { createdAt: 'asc' }
         });
     }
@@ -16,9 +16,9 @@ export class AuthRepository {
     async findById(id) {
         return prisma.adminUser.findUnique({ where: { id } });
     }
-    async create(username, passwordHash, role = AdminRole.OWNER) {
+    async create(username, passwordHash, role = AdminRole.OWNER, restaurantId) {
         return prisma.adminUser.create({
-            data: { username, passwordHash, role }
+            data: { username, passwordHash, role, ...(restaurantId ? { restaurantId } : {}) }
         });
     }
     async updateRefreshToken(userId, refreshTokenHash) {
