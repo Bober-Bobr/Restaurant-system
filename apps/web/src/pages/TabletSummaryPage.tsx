@@ -34,6 +34,9 @@ export const TabletSummaryPage = () => {
   const [eventNotes, setEventNotes] = useState('');
   const [eventType, setEventType] = useState<EventType>('RESERVATION');
   const [birthdayPersonName, setBirthdayPersonName] = useState('');
+  const [brideName, setBrideName] = useState('');
+  const [groomName, setGroomName] = useState('');
+  const [honoreePersonName, setHonoreeName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedEventId, setConfirmedEventId] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -71,6 +74,9 @@ export const TabletSummaryPage = () => {
         tableCategoryId: selectedTableCategoryId || undefined,
         notes: eventNotes.trim() || undefined,
         birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
+        brideName: eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
+        groomName: eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
+        honoreePersonName: !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
       });
       setConfirmedEventId(event.id);
       reset();
@@ -148,6 +154,9 @@ export const TabletSummaryPage = () => {
                 setEventNotes('');
                 setEventType('RESERVATION');
                 setBirthdayPersonName('');
+                setBrideName('');
+                setGroomName('');
+                setHonoreeName('');
                 navigate('/tablet');
               }}
             >
@@ -241,11 +250,25 @@ export const TabletSummaryPage = () => {
                 {eventType === 'BIRTHDAY' && (
                   <div className="grid gap-2">
                     <label className="text-sm font-medium text-slate-700">{t('birthday_person_name')}</label>
-                    <Input
-                      placeholder={t('birthday_person_name_placeholder')}
-                      value={birthdayPersonName}
-                      onChange={(e) => setBirthdayPersonName(e.target.value)}
-                    />
+                    <Input placeholder={t('birthday_person_name_placeholder')} value={birthdayPersonName} onChange={(e) => setBirthdayPersonName(e.target.value)} />
+                  </div>
+                )}
+                {eventType === 'WEDDING' && (
+                  <>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-slate-700">{t('bride_name')}</label>
+                      <Input placeholder={t('bride_groom_name_placeholder')} value={brideName} onChange={(e) => setBrideName(e.target.value)} />
+                    </div>
+                    <div className="grid gap-2">
+                      <label className="text-sm font-medium text-slate-700">{t('groom_name')}</label>
+                      <Input placeholder={t('bride_groom_name_placeholder')} value={groomName} onChange={(e) => setGroomName(e.target.value)} />
+                    </div>
+                  </>
+                )}
+                {!['BIRTHDAY', 'WEDDING'].includes(eventType) && (
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-slate-700">{t('honoree_person_name')}</label>
+                    <Input placeholder={t('honoree_person_name_placeholder')} value={honoreePersonName} onChange={(e) => setHonoreeName(e.target.value)} />
                   </div>
                 )}
                 <div className="grid gap-2">
@@ -274,6 +297,15 @@ export const TabletSummaryPage = () => {
                 <div className="rounded-3xl bg-slate-50 p-4">{t('event_type')}: <span className="font-medium text-slate-800">{t(`event_type_${eventType.toLowerCase()}` as Parameters<typeof t>[0])}</span></div>
                 {eventType === 'BIRTHDAY' && birthdayPersonName && (
                   <div className="rounded-3xl bg-slate-50 p-4">{t('birthday_person_name')}: <span className="font-medium text-slate-800">{birthdayPersonName}</span></div>
+                )}
+                {eventType === 'WEDDING' && brideName && (
+                  <div className="rounded-3xl bg-slate-50 p-4">{t('bride_name')}: <span className="font-medium text-slate-800">{brideName}</span></div>
+                )}
+                {eventType === 'WEDDING' && groomName && (
+                  <div className="rounded-3xl bg-slate-50 p-4">{t('groom_name')}: <span className="font-medium text-slate-800">{groomName}</span></div>
+                )}
+                {!['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName && (
+                  <div className="rounded-3xl bg-slate-50 p-4">{t('honoree_person_name')}: <span className="font-medium text-slate-800">{honoreePersonName}</span></div>
                 )}
                 <div className="rounded-3xl bg-slate-50 p-4">{t('hall')}: <span className="font-medium text-slate-800">{selectedHall?.name || t('not_selected')}</span></div>
                 <div className="rounded-3xl bg-slate-50 p-4">{t('table_category')}: <span className="font-medium text-slate-800">{selectedTableCategory?.name || t('not_selected')}</span></div>

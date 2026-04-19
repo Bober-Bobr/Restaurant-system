@@ -75,6 +75,9 @@ export const AdminEventsPage = () => {
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
   const [birthdayPersonName, setBirthdayPersonName] = useState('');
+  const [brideName, setBrideName] = useState('');
+  const [groomName, setGroomName] = useState('');
+  const [honoreePersonName, setHonoreeName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
 
   // Search functionality
@@ -127,7 +130,10 @@ export const AdminEventsPage = () => {
         hallId: hallId ? hallId : undefined,
         tableCategoryId: tableCategoryId ? tableCategoryId : undefined,
         notes: notes.trim() ? notes.trim() : undefined,
-        birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined
+        birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
+        brideName: eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
+        groomName: eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
+        honoreePersonName: !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined
       });
     },
     onSuccess: async () => {
@@ -142,6 +148,9 @@ export const AdminEventsPage = () => {
       setTableCategoryId('');
       setNotes('');
       setBirthdayPersonName('');
+      setBrideName('');
+      setGroomName('');
+      setHonoreeName('');
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -162,6 +171,9 @@ export const AdminEventsPage = () => {
       setTableCategoryId('');
       setNotes('');
       setBirthdayPersonName('');
+      setBrideName('');
+      setGroomName('');
+      setHonoreeName('');
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -227,7 +239,10 @@ export const AdminEventsPage = () => {
                   hallId: hallId ? hallId : undefined,
                   tableCategoryId: tableCategoryId ? tableCategoryId : undefined,
                   notes: notes.trim() ? notes.trim() : undefined,
-                  birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined
+                  birthdayPersonName: eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
+                  brideName: eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
+                  groomName: eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
+                  honoreePersonName: !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined
                 }
               });
             } else {
@@ -290,11 +305,25 @@ export const AdminEventsPage = () => {
           {eventType === 'BIRTHDAY' && (
             <label style={{ display: 'grid', gap: 6 }}>
               {t('birthday_person_name')}
-              <Input
-                placeholder={t('birthday_person_name_placeholder')}
-                value={birthdayPersonName}
-                onChange={(e) => setBirthdayPersonName(e.target.value)}
-              />
+              <Input placeholder={t('birthday_person_name_placeholder')} value={birthdayPersonName} onChange={(e) => setBirthdayPersonName(e.target.value)} />
+            </label>
+          )}
+          {eventType === 'WEDDING' && (
+            <>
+              <label style={{ display: 'grid', gap: 6 }}>
+                {t('bride_name')}
+                <Input placeholder={t('bride_groom_name_placeholder')} value={brideName} onChange={(e) => setBrideName(e.target.value)} />
+              </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                {t('groom_name')}
+                <Input placeholder={t('bride_groom_name_placeholder')} value={groomName} onChange={(e) => setGroomName(e.target.value)} />
+              </label>
+            </>
+          )}
+          {!['BIRTHDAY', 'WEDDING'].includes(eventType) && (
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('honoree_person_name')}
+              <Input placeholder={t('honoree_person_name_placeholder')} value={honoreePersonName} onChange={(e) => setHonoreeName(e.target.value)} />
             </label>
           )}
           <label style={{ display: 'grid', gap: 6 }}>
@@ -358,6 +387,9 @@ export const AdminEventsPage = () => {
                   setTableCategoryId('');
                   setNotes('');
                   setBirthdayPersonName('');
+                  setBrideName('');
+                  setGroomName('');
+                  setHonoreeName('');
                 }}
               >
                 {t('cancel')}
@@ -478,6 +510,24 @@ export const AdminEventsPage = () => {
                     <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.birthdayPersonName}</p>
                   </div>
                 )}
+                {searchResult.eventType === 'WEDDING' && searchResult.brideName && (
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('bride_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.brideName}</p>
+                  </div>
+                )}
+                {searchResult.eventType === 'WEDDING' && searchResult.groomName && (
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('groom_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.groomName}</p>
+                  </div>
+                )}
+                {searchResult.eventType && !['BIRTHDAY', 'WEDDING'].includes(searchResult.eventType) && searchResult.honoreePersonName && (
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('honoree_person_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.honoreePersonName}</p>
+                  </div>
+                )}
                 {searchResult.notes && (
                   <div style={{ gridColumn: '1 / -1' }}>
                     <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('notes')}</p>
@@ -505,6 +555,9 @@ export const AdminEventsPage = () => {
                     setTableCategoryId(searchResult.tableCategoryId ?? '');
                     setNotes(searchResult.notes ?? '');
                     setBirthdayPersonName(searchResult.birthdayPersonName ?? '');
+                    setBrideName(searchResult.brideName ?? '');
+                    setGroomName(searchResult.groomName ?? '');
+                    setHonoreeName(searchResult.honoreePersonName ?? '');
                     document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
@@ -553,6 +606,9 @@ export const AdminEventsPage = () => {
             setTableCategoryId(event.tableCategoryId ?? '');
             setNotes(event.notes ?? '');
             setBirthdayPersonName(event.birthdayPersonName ?? '');
+            setBrideName(event.brideName ?? '');
+            setGroomName(event.groomName ?? '');
+            setHonoreeName(event.honoreePersonName ?? '');
           }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}

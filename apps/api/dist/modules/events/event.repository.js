@@ -25,10 +25,8 @@ export class EventRepository {
         });
     }
     async updateByNumber(restaurantId, eventNumber, payload) {
-        return prisma.event.updateMany({
-            where: { eventNumber, restaurantId },
-            data: payload
-        }).then(() => prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude }));
+        await prisma.event.updateMany({ where: { eventNumber, restaurantId }, data: payload });
+        return prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude });
     }
     async getByNumber(restaurantId, eventNumber) {
         return prisma.event.findFirst({

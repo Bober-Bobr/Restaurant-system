@@ -13,6 +13,9 @@ export type CreateEventData = {
   tableCategoryId?: string;
   notes?: string;
   birthdayPersonName?: string;
+  brideName?: string;
+  groomName?: string;
+  honoreePersonName?: string;
 };
 
 const eventInclude = {
@@ -43,13 +46,9 @@ export class EventRepository {
     });
   }
 
-  async updateByNumber(restaurantId: string, eventNumber: number, payload: Prisma.EventUpdateInput) {
-    return prisma.event.updateMany({
-      where: { eventNumber, restaurantId },
-      data: payload
-    }).then(() =>
-      prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude })
-    );
+  async updateByNumber(restaurantId: string, eventNumber: number, payload: Prisma.EventUncheckedUpdateManyInput) {
+    await prisma.event.updateMany({ where: { eventNumber, restaurantId }, data: payload });
+    return prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude });
   }
 
   async getByNumber(restaurantId: string, eventNumber: number) {

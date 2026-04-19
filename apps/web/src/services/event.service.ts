@@ -18,6 +18,9 @@ export const eventService = {
     tableCategoryId?: string;
     notes?: string;
     birthdayPersonName?: string;
+    brideName?: string;
+    groomName?: string;
+    honoreePersonName?: string;
   }) {
     const { data } = await httpClient.post<Event>('/events', payload);
     return data;
@@ -34,6 +37,9 @@ export const eventService = {
     tableCategoryId?: string;
     notes?: string;
     birthdayPersonName?: string;
+    brideName?: string;
+    groomName?: string;
+    honoreePersonName?: string;
   }>) {
     const { data } = await httpClient.patch<Event>(`/events/${eventId}`, payload);
     return data;

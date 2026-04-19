@@ -14,6 +14,9 @@ export type Event = {
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
   eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE';
   birthdayPersonName?: string;
+  brideName?: string;
+  groomName?: string;
+  honoreePersonName?: string;
   region?: 'US' | 'CA' | 'GB' | 'DE' | 'FR' | 'IT' | 'ES' | 'RU' | 'CN' | 'JP' | 'KR' | 'AU' | 'UZ' | 'EU';
   hallId?: string;
   tableCategoryId?: string;

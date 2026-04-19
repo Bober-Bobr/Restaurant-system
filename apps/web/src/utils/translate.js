@@ -209,7 +209,12 @@ const resources = {
         event_type_private_party: 'Private Party',
         event_type_corporate: 'Corporate',
         birthday_person_name: "Birthday Person's Name",
-        birthday_person_name_placeholder: 'First and last name'
+        birthday_person_name_placeholder: 'First and last name',
+        bride_name: "Bride's Name",
+        groom_name: "Groom's Name",
+        bride_groom_name_placeholder: 'First and last name',
+        honoree_person_name: "Name",
+        honoree_person_name_placeholder: 'First and last name'
     },
     ru: {
         banquet_admin: 'Админ Банкет',
@@ -418,7 +423,12 @@ const resources = {
         event_type_private_party: 'Частная вечеринка',
         event_type_corporate: 'Корпоратив',
         birthday_person_name: 'Имя именинника',
-        birthday_person_name_placeholder: 'Имя и фамилия'
+        birthday_person_name_placeholder: 'Имя и фамилия',
+        bride_name: 'Имя невесты',
+        groom_name: 'Имя жениха',
+        bride_groom_name_placeholder: 'Имя и фамилия',
+        honoree_person_name: 'Имя',
+        honoree_person_name_placeholder: 'Имя и фамилия'
     },
     uz: {
         banquet_admin: 'Banket Maʼmuri',
@@ -627,7 +637,12 @@ const resources = {
         event_type_private_party: 'Xususiy ziyofat',
         event_type_corporate: 'Korporativ',
         birthday_person_name: 'Tug\'ilgan kun egasining ismi',
-        birthday_person_name_placeholder: 'Ism va familiya'
+        birthday_person_name_placeholder: 'Ism va familiya',
+        bride_name: 'Kelinchak ismi',
+        groom_name: 'Kuyov ismi',
+        bride_groom_name_placeholder: 'Ism va familiya',
+        honoree_person_name: 'Ism',
+        honoree_person_name_placeholder: 'Ism va familiya'
     }
 };
 export function translate(key, locale = defaultLocale, params) {

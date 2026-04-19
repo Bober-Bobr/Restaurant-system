@@ -65,6 +65,9 @@ model Event {
   restaurantId         String?
   notes                String?
   birthdayPersonName   String?
+  brideName            String?
+  groomName            String?
+  honoreePersonName    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   selections      EventMenuSelection[]

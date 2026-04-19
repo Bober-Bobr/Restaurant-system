@@ -32,7 +32,10 @@ export const createEventSchema = z
     hallId: z.string().cuid().optional(),
     tableCategoryId: z.string().cuid().optional(),
     notes: z.string().max(2000).optional(),
-    birthdayPersonName: z.string().max(120).optional()
+    birthdayPersonName: z.string().max(120).optional(),
+    brideName: z.string().max(120).optional(),
+    groomName: z.string().max(120).optional(),
+    honoreePersonName: z.string().max(120).optional()
   })
   .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {
@@ -58,7 +61,10 @@ export const updateEventSchema = z
     region: z.nativeEnum(Region).optional(),
     hallId: z.string().cuid().optional(),
     notes: z.string().max(2000).optional(),
-    birthdayPersonName: z.string().max(120).optional()
+    birthdayPersonName: z.string().max(120).optional(),
+    brideName: z.string().max(120).optional(),
+    groomName: z.string().max(120).optional(),
+    honoreePersonName: z.string().max(120).optional()
   })
   .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {

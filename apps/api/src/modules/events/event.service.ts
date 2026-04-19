@@ -31,16 +31,18 @@ export class EventService {
       status: payload.status,
       eventType: payload.eventType,
       region: payload.region,
-      notes: payload.notes
+      notes: payload.notes,
+      birthdayPersonName: payload.birthdayPersonName,
+      brideName: payload.brideName,
+      groomName: payload.groomName,
+      honoreePersonName: payload.honoreePersonName
     };
 
     if (payload.hallId !== undefined) {
-      updateData.hall = payload.hallId ? { connect: { id: payload.hallId } } : { disconnect: true };
+      updateData.hallId = payload.hallId || null;
     }
     if (payload.tableCategoryId !== undefined) {
-      updateData.tableCategory = payload.tableCategoryId
-        ? { connect: { id: payload.tableCategoryId } }
-        : { disconnect: true };
+      updateData.tableCategoryId = payload.tableCategoryId || null;
     }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
