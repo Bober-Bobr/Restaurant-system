@@ -21,6 +21,7 @@ const passwordSchema = z
 export const registerSchema = z.object({
   username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   password: passwordSchema,
+  restaurantName: z.string().min(1).max(100).optional(),
   role: z.nativeEnum(AdminRole).optional(),
   restaurantId: z.string().optional()
 });

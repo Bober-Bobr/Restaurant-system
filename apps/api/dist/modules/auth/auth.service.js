@@ -11,52 +11,18 @@ export class AuthService {
         this.authRepository = authRepository;
     }
     async register(username, password, options) {
-        // Unauthenticated registration always creates a new OWNER
-        if (!options.callerRole) {
-            const taken = await this.authRepository.findByUsername(username);
-            if (taken)
-                throw createHttpError(409, 'Username already taken');
-            const passwordHash = await bcrypt.hash(password, 12);
-            const user = await this.authRepository.create(username, passwordHash, AdminRole.OWNER);
-            return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
+        if (!options.restaurantName?.trim()) {
+            throw createHttpError(400, 'Restaurant name is required.');
         }
-        if (options.callerRole === AdminRole.EMPLOYEE) {
-            throw createHttpError(403, 'Employees cannot create user accounts.');
-        }
-        // ADMIN can only create EMPLOYEE
-        if (options.callerRole === AdminRole.ADMIN) {
-            if (options.requestedRole && options.requestedRole !== AdminRole.EMPLOYEE) {
-                throw createHttpError(403, 'Administrators can only create Employee accounts.');
-            }
-            let restaurantId = options.restaurantId ?? options.callerRestaurantId ?? undefined;
-            if (!restaurantId && options.callerId) {
-                // JWT may be stale — fetch caller's restaurant directly from DB
-                const caller = await this.authRepository.findById(options.callerId);
-                restaurantId = caller?.restaurantId ?? undefined;
-            }
-            if (!restaurantId) {
-                throw createHttpError(400, 'A restaurant must be selected when creating an account.');
-            }
-            const taken = await this.authRepository.findByUsername(username);
-            if (taken)
-                throw createHttpError(409, 'Username already taken');
-            const passwordHash = await bcrypt.hash(password, 12);
-            const user = await this.authRepository.create(username, passwordHash, AdminRole.EMPLOYEE, restaurantId);
-            return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
-        }
-        // OWNER can create ADMIN or EMPLOYEE
-        const role = options.requestedRole ?? AdminRole.EMPLOYEE;
-        if (role === AdminRole.OWNER) {
-            throw createHttpError(403, 'Cannot create another Owner account.');
-        }
-        if (!options.restaurantId) {
-            throw createHttpError(400, 'A restaurant must be selected when creating an account.');
-        }
+        const restaurantName = options.restaurantName.trim();
+        const existing = await this.authRepository.findRestaurantByName(restaurantName);
+        if (existing)
+            throw createHttpError(409, 'An admin for this restaurant already exists.');
         const taken = await this.authRepository.findByUsername(username);
         if (taken)
             throw createHttpError(409, 'Username already taken');
         const passwordHash = await bcrypt.hash(password, 12);
-        const user = await this.authRepository.create(username, passwordHash, role, options.restaurantId);
+        const user = await this.authRepository.createAdminWithRestaurant(username, passwordHash, restaurantName);
         return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
     }
     async login(username, password) {

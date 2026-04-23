@@ -48,6 +48,7 @@ export const LoginPage = () => {
     const [tab, setTab] = useState('login');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [restaurantName, setRestaurantName] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const passwordStrength = tab === 'register' ? checkPasswordStrength(password) : null;
     const loginMutation = useMutation({
@@ -58,7 +59,7 @@ export const LoginPage = () => {
         }
     });
     const registerMutation = useMutation({
-        mutationFn: () => authService.publicRegister(username.trim(), password),
+        mutationFn: () => authService.publicRegister(username.trim(), password, restaurantName.trim()),
         onSuccess: (data) => {
             setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
             navigate('/', { replace: true });
@@ -70,7 +71,7 @@ export const LoginPage = () => {
         : registerMutation.isError
             ? formatRequestError(registerMutation.error)
             : null;
-    const canSubmitRegister = username.trim().length >= 3 && passwordStrength?.valid;
+    const canSubmitRegister = username.trim().length >= 3 && (passwordStrength?.valid ?? false) && restaurantName.trim().length >= 1;
     const canSubmitLogin = username.trim().length > 0 && password.length > 0;
     const submit = (event) => {
         event.preventDefault();
@@ -90,6 +91,7 @@ export const LoginPage = () => {
     return (_jsxs("main", { style: { maxWidth: 480, margin: '32px auto', padding: 20 }, children: [_jsxs("div", { style: { textAlign: 'center', marginBottom: 32 }, children: [_jsx("h1", { style: { marginBottom: 8 }, children: "Banquet Admin" }), _jsx("p", { style: { color: '#666', fontSize: 14 }, children: tab === 'login' ? 'Sign in to manage events and menu' : 'Create a new restaurant owner account' })] }), _jsxs("div", { style: { display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }, children: [_jsx("button", { type: "button", onClick: () => {
                             setTab('login');
                             setPassword('');
+                            setRestaurantName('');
                         }, disabled: tab === 'login', style: {
                             flex: 1,
                             padding: '12px 16px',
@@ -113,7 +115,13 @@ export const LoginPage = () => {
                             fontWeight: tab === 'register' ? 600 : 400,
                             cursor: tab === 'register' ? 'default' : 'pointer',
                             fontSize: 14
-                        }, children: "Create Account" })] }), _jsxs("form", { onSubmit: submit, style: { display: 'grid', gap: 16, border: '1px solid #e0e0e0', borderRadius: '0 0 8px 8px', padding: 24, backgroundColor: '#fafafa' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: '#333' }, children: "Username" }), _jsx("input", { autoComplete: "username", placeholder: "Enter your username", value: username, onChange: (event) => setUsername(event.target.value), style: {
+                        }, children: "Create Account" })] }), _jsxs("form", { onSubmit: submit, style: { display: 'grid', gap: 16, border: '1px solid #e0e0e0', borderRadius: '0 0 8px 8px', padding: 24, backgroundColor: '#fafafa' }, children: [tab === 'register' && (_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: '#333' }, children: "Restaurant" }), _jsx("input", { autoComplete: "organization", placeholder: "Your restaurant name", value: restaurantName, onChange: (event) => setRestaurantName(event.target.value), style: {
+                                    padding: '10px 12px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: 4,
+                                    fontSize: 14,
+                                    fontFamily: 'inherit'
+                                } }), restaurantName && (_jsxs("span", { style: { fontSize: 12, color: restaurantName.trim().length >= 1 ? '#4CAF50' : '#f44336' }, children: [restaurantName.trim().length >= 1 ? '✓' : '✗', " Restaurant name is required"] }))] })), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [_jsx("span", { style: { fontSize: 13, fontWeight: 500, color: '#333' }, children: "Username" }), _jsx("input", { autoComplete: "username", placeholder: "Enter your username", value: username, onChange: (event) => setUsername(event.target.value), style: {
                                     padding: '10px 12px',
                                     border: '1px solid #ddd',
                                     borderRadius: 4,

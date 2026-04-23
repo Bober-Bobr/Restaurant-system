@@ -9,22 +9,11 @@ import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import { getPhotoUrl } from '../utils/photoUrl';
 
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Owner',
-  ADMIN: 'Admin',
-  EMPLOYEE: 'Employee'
-};
-const ROLE_COLORS: Record<string, string> = {
-  OWNER: '#7c3aed',
-  ADMIN: '#2563eb',
-  EMPLOYEE: '#16a34a'
-};
 
 export const AdminLayout = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
-  const role = useAuthStore((state) => state.role);
   const authRestaurantId = useAuthStore((state) => state.restaurantId);
   const logout = useAuthStore((state) => state.logout);
   const { locale, setLocale } = useAdminStore();
@@ -36,7 +25,7 @@ export const AdminLayout = () => {
     enabled: !!accessToken
   });
 
-  const restaurantLogoSrc = role !== 'OWNER' ? getPhotoUrl(restaurants[0]?.logoUrl) : undefined;
+  const restaurantLogoSrc = getPhotoUrl(restaurants[0]?.logoUrl);
   const restaurantName = restaurants[0]?.name;
   const tabletRestaurantId = authRestaurantId ?? restaurants[0]?.id ?? '';
 
@@ -64,38 +53,22 @@ export const AdminLayout = () => {
               <p className="text-sm font-semibold text-slate-900">{restaurantName ?? t('banquet_admin')}</p>
               <p className="text-xs text-slate-500">
                 {username}
-                {role && (
-                  <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: ROLE_COLORS[role] ?? '#888', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
-                    {ROLE_LABELS[role] ?? role}
-                  </span>
-                )}
+                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: '#2563eb', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
+                  Admin
+                </span>
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
-            {/* Operational links — ADMIN and EMPLOYEE only */}
-            {role !== 'OWNER' && (
-              <>
-                <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
-                <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
-                <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
-                <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
-                <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
-                {role === 'ADMIN' && (
-                  <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
-                )}
-                <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
-                  {t('tablet')}
-                </Link>
-              </>
-            )}
-            {role === 'OWNER' && (
-              <>
-                <Link className="transition hover:text-slate-900" to="/admin/restaurants">{t('my_restaurants')}</Link>
-                <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
-              </>
-            )}
+            <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
+            <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
+            <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
+            <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
+            <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
+            <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
+              {t('tablet')}
+            </Link>
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-3">

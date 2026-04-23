@@ -26,8 +26,8 @@ export const authService = {
     const { data } = await httpClient.post<AuthResponse>('/auth/login', { username, password });
     return data;
   },
-  async publicRegister(username: string, password: string) {
-    const { data } = await axios.post<AuthResponse>(`${baseURL}/auth/register`, { username, password });
+  async publicRegister(username: string, password: string, restaurantName: string) {
+    const { data } = await axios.post<AuthResponse>(`${baseURL}/auth/register`, { username, password, restaurantName });
     return data;
   },
   async register(username: string, password: string, role?: AdminRole, restaurantId?: string) {

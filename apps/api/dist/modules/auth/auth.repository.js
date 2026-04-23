@@ -46,6 +46,25 @@ export class AuthRepository {
             data: { username, passwordHash, role, ...(restaurantId ? { restaurantId } : {}) }
         });
     }
+    async findRestaurantByName(name) {
+        return prisma.restaurant.findFirst({
+            where: { name: { equals: name, mode: 'insensitive' } }
+        });
+    }
+    async createAdminWithRestaurant(username, passwordHash, restaurantName) {
+        return prisma.$transaction(async (tx) => {
+            const user = await tx.adminUser.create({
+                data: { username, passwordHash, role: AdminRole.ADMIN }
+            });
+            const restaurant = await tx.restaurant.create({
+                data: { name: restaurantName, ownerId: user.id }
+            });
+            return tx.adminUser.update({
+                where: { id: user.id },
+                data: { restaurantId: restaurant.id }
+            });
+        });
+    }
     async updateRefreshToken(userId, refreshTokenHash) {
         return prisma.adminUser.update({
             where: { id: userId },

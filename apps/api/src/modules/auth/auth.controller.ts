@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { AdminRole } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
@@ -18,11 +17,7 @@ export class AuthController {
   async register(request: Request, response: Response) {
     const payload = registerSchema.parse(request.body);
     const result = await authService.register(payload.username, payload.password, {
-      callerRole: request.admin?.role,
-      callerId: request.admin?.id,
-      callerRestaurantId: request.admin?.restaurantId,
-      requestedRole: payload.role,
-      restaurantId: payload.restaurantId
+      restaurantName: payload.restaurantName
     });
     response.status(201).json(result);
   }
@@ -87,10 +82,6 @@ export class AuthController {
 
   async listUsers(request: Request, response: Response) {
     const admin = request.admin!;
-    if (admin.role === AdminRole.OWNER) {
-      response.json(await authService.listUsersForOwner(admin.id));
-      return;
-    }
     const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);
     if (!restaurantId) {
       response.json([]);

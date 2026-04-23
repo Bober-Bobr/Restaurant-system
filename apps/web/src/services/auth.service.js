@@ -6,8 +6,8 @@ export const authService = {
         const { data } = await httpClient.post('/auth/login', { username, password });
         return data;
     },
-    async publicRegister(username, password) {
-        const { data } = await axios.post(`${baseURL}/auth/register`, { username, password });
+    async publicRegister(username, password, restaurantName) {
+        const { data } = await axios.post(`${baseURL}/auth/register`, { username, password, restaurantName });
         return data;
     },
     async register(username, password, role, restaurantId) {

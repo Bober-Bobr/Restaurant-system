@@ -53,6 +53,27 @@ export class AuthRepository {
     });
   }
 
+  async findRestaurantByName(name: string) {
+    return prisma.restaurant.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } }
+    });
+  }
+
+  async createAdminWithRestaurant(username: string, passwordHash: string, restaurantName: string) {
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.adminUser.create({
+        data: { username, passwordHash, role: AdminRole.ADMIN }
+      });
+      const restaurant = await tx.restaurant.create({
+        data: { name: restaurantName, ownerId: user.id }
+      });
+      return tx.adminUser.update({
+        where: { id: user.id },
+        data: { restaurantId: restaurant.id }
+      });
+    });
+  }
+
   async updateRefreshToken(userId: string, refreshTokenHash: string | null) {
     return prisma.adminUser.update({
       where: { id: userId },
