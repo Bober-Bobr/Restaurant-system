@@ -108,6 +108,9 @@ export const TabletMenuPage = () => {
                 </option>
               ))}
             </Select>
+            <Button variant="secondary" size="lg" className="w-full sm:w-auto text-base font-semibold" onClick={() => navigate('/')}>
+              ← {t('events')}
+            </Button>
           </div>
         </header>
 
@@ -349,7 +352,7 @@ export const TabletMenuPage = () => {
             <section className="card p-6 space-y-3">
               <p className="section-heading">{t('next_step')}</p>
               <p className="text-sm text-slate-500">{t('review_and_confirm')}</p>
-                <Button className="w-full" onClick={() => navigate('/tablet/summary')}>
+              <Button className="w-full" onClick={() => navigate('/tablet/summary')}>
                 {t('view_summary')}
               </Button>
             </section>

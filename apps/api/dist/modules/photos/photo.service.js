@@ -1,85 +1,90 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import createHttpError from 'http-errors';
+const DISH_CATEGORIES = [
+    'cold_appetizers', 'hot_appetizers', 'salads',
+    'first_course', 'second_course', 'drinks', 'sweets', 'fruits',
+];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 export class PhotoService {
     uploadDir;
     constructor() {
-        // Use an absolute path for uploads
         this.uploadDir = path.resolve(process.cwd(), 'uploads');
         this.ensureDirectoriesExist();
     }
     async ensureDirectoriesExist() {
         const categories = ['menu', 'hall', 'table'];
-        // Ensure root uploads directory exists
-        try {
-            await fs.access(this.uploadDir);
-        }
-        catch {
-            await fs.mkdir(this.uploadDir, { recursive: true });
-        }
-        // Ensure category subdirectories exist
         for (const category of categories) {
-            const categoryDir = path.join(this.uploadDir, category);
-            try {
-                await fs.access(categoryDir);
-            }
-            catch {
-                await fs.mkdir(categoryDir, { recursive: true });
-            }
+            await fs.mkdir(path.join(this.uploadDir, category), { recursive: true });
+        }
+        for (const dishCat of DISH_CATEGORIES) {
+            await fs.mkdir(path.join(this.uploadDir, 'menu', dishCat), { recursive: true });
         }
     }
-    async uploadPhotos(category, files) {
-        const categoryDir = path.join(this.uploadDir, category);
+    async listFilesInDir(dir, urlPrefix) {
+        try {
+            const files = await fs.readdir(dir);
+            return files
+                .filter(f => IMAGE_EXTENSIONS.includes(path.extname(f).toLowerCase()))
+                .map(f => `${urlPrefix}/${f}`)
+                .sort();
+        }
+        catch {
+            return [];
+        }
+    }
+    async uploadPhotos(category, files, dishCategory) {
+        const dir = category === 'menu' && dishCategory
+            ? path.join(this.uploadDir, category, dishCategory)
+            : path.join(this.uploadDir, category);
+        await fs.mkdir(dir, { recursive: true });
         const uploadedUrls = [];
         for (const file of files) {
-            // Generate unique filename
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 8);
             const extension = path.extname(file.originalname).toLowerCase();
             const filename = `${timestamp}-${random}${extension}`;
-            const filePath = path.join(categoryDir, filename);
-            // Write file buffer directly (Express Multer already provides Buffer)
-            await fs.writeFile(filePath, file.buffer);
-            // Return relative URL path
-            const urlPath = `/uploads/${category}/${filename}`;
+            await fs.writeFile(path.join(dir, filename), file.buffer);
+            const urlPath = category === 'menu' && dishCategory
+                ? `/uploads/${category}/${dishCategory}/${filename}`
+                : `/uploads/${category}/${filename}`;
             uploadedUrls.push(urlPath);
         }
         return uploadedUrls;
     }
-    async listPhotos(category) {
+    async listPhotos(category, dishCategory) {
         const categoryDir = path.join(this.uploadDir, category);
-        try {
-            const files = await fs.readdir(categoryDir);
-            // Filter for image files and return URLs
-            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-            return files
-                .filter(file => imageExtensions.includes(path.extname(file).toLowerCase()))
-                .map(file => `/uploads/${category}/${file}`)
-                .sort(); // Sort for consistent ordering
+        if (category === 'menu' && dishCategory) {
+            return this.listFilesInDir(path.join(categoryDir, dishCategory), `/uploads/${category}/${dishCategory}`);
         }
-        catch (error) {
-            // If directory doesn't exist, return empty array
-            return [];
+        if (category === 'menu') {
+            // All menu photos: root + every dish category subdir
+            const all = await this.listFilesInDir(categoryDir, `/uploads/${category}`);
+            for (const dishCat of DISH_CATEGORIES) {
+                const sub = await this.listFilesInDir(path.join(categoryDir, dishCat), `/uploads/${category}/${dishCat}`);
+                all.push(...sub);
+            }
+            return all.sort();
         }
+        return this.listFilesInDir(categoryDir, `/uploads/${category}`);
     }
-    async deletePhoto(category, filename) {
-        // Validate filename to prevent directory traversal
+    async deletePhoto(category, filename, dishCategory) {
         if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
             throw createHttpError(400, 'Invalid filename');
         }
-        const filePath = path.join(this.uploadDir, category, filename);
+        const filePath = category === 'menu' && dishCategory
+            ? path.join(this.uploadDir, category, dishCategory, filename)
+            : path.join(this.uploadDir, category, filename);
         try {
             await fs.unlink(filePath);
         }
         catch (error) {
-            if (error.code === 'ENOENT') {
+            if (error.code === 'ENOENT')
                 throw createHttpError(404, 'Photo not found');
-            }
             throw createHttpError(500, 'Failed to delete photo');
         }
     }
     async getPhotoPath(category, filename) {
-        // Validate filename to prevent directory traversal
         if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
             throw createHttpError(400, 'Invalid filename');
         }

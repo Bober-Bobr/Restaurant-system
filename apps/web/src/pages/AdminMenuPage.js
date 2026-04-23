@@ -1,13 +1,52 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { menuService } from '../services/menu.service';
+import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
+import { getPhotoUrl } from '../utils/photoUrl';
+const CATEGORY_ORDER = {
+    COLD_APPETIZERS: 0,
+    HOT_APPETIZERS: 1,
+    SALADS: 2,
+    FIRST_COURSE: 3,
+    SECOND_COURSE: 4,
+    DRINKS: 5,
+    SWEETS: 6,
+    FRUITS: 7,
+};
+const ALL_CATEGORIES = [
+    'COLD_APPETIZERS',
+    'HOT_APPETIZERS',
+    'SALADS',
+    'FIRST_COURSE',
+    'SECOND_COURSE',
+    'DRINKS',
+    'SWEETS',
+    'FRUITS',
+];
+function quickSort(items) {
+    if (items.length <= 1)
+        return items;
+    const pivot = items[Math.floor(items.length / 2)];
+    const left = [], equal = [], right = [];
+    for (const item of items) {
+        const cmp = (CATEGORY_ORDER[item.category] ?? 99) - (CATEGORY_ORDER[pivot.category] ?? 99) ||
+            item.name.localeCompare(pivot.name);
+        if (cmp < 0)
+            left.push(item);
+        else if (cmp > 0)
+            right.push(item);
+        else
+            equal.push(item);
+    }
+    return [...quickSort(left), ...equal, ...quickSort(right)];
+}
 const parsePriceToCents = (value) => {
     const normalized = value.replace(',', '.').trim();
     if (!normalized)
@@ -21,10 +60,28 @@ const formatCents = (cents) => (cents / 100).toFixed(2);
 export const AdminMenuPage = () => {
     const queryClient = useQueryClient();
     const { locale } = useAdminStore();
+    const [activeCategory, setActiveCategory] = useState(null);
     const { data, isLoading, isError } = useQuery({
         queryKey: ['menu-items', 'admin', 'all'],
         queryFn: () => menuService.listAllForAdmin()
     });
+    const { data: tableCategories = [] } = useQuery({
+        queryKey: ['tableCategories'],
+        queryFn: () => tableCategoryService.list()
+    });
+    // Map menuItemId → TableCategory[]
+    const itemTableCategoryMap = useMemo(() => {
+        const map = new Map();
+        for (const tc of tableCategories) {
+            for (const pi of tc.packageItems ?? []) {
+                const id = pi.menuItem.id;
+                if (!map.has(id))
+                    map.set(id, []);
+                map.get(id).push(tc);
+            }
+        }
+        return map;
+    }, [tableCategories]);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('HOT_APPETIZERS');
@@ -81,14 +138,20 @@ export const AdminMenuPage = () => {
                             if (!canCreate || createMutation.isPending)
                                 return;
                             createMutation.mutate();
-                        }, style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'end' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('name', locale), _jsx(Input, { value: name, onChange: (e) => setName(e.target.value) })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('category', locale), _jsxs(Select, { value: category, onChange: (e) => setCategory(e.target.value), children: [_jsx("option", { value: "COLD_APPETIZERS", children: translate('cold_appetizers', locale) }), _jsx("option", { value: "HOT_APPETIZERS", children: translate('hot_appetizers', locale) }), _jsx("option", { value: "SALADS", children: translate('salads', locale) }), _jsx("option", { value: "FIRST_COURSE", children: translate('first_course', locale) }), _jsx("option", { value: "SECOND_COURSE", children: translate('second_course', locale) }), _jsx("option", { value: "DRINKS", children: translate('drinks', locale) }), _jsx("option", { value: "SWEETS", children: translate('sweets', locale) }), _jsx("option", { value: "FRUITS", children: translate('fruits', locale) })] })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('price', locale), " (e.g. 6.50)", _jsx(Input, { value: price, onChange: (e) => setPrice(e.target.value) })] }), _jsx("div", { style: { gridColumn: '1 / -1', display: 'grid', gap: 6 }, children: _jsx(PhotoSelector, { category: "menu", selectedPhotoUrl: photoUrl || undefined, onPhotoSelect: (url) => setPhotoUrl(url || ''), placeholder: translate('select_menu_photo', locale) }) }), _jsxs("label", { style: { gridColumn: '1 / -1', display: 'grid', gap: 6 }, children: [translate('description', locale), _jsx(Input, { value: description, onChange: (e) => setDescription(e.target.value) })] }), _jsxs("div", { style: { gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }, children: [_jsx(Button, { type: "submit", disabled: !canCreate || createMutation.isPending, children: createMutation.isPending ? translate('creating', locale) : translate('create', locale) }), createMutation.isError ? _jsx("span", { style: { color: '#b00020' }, children: "Failed to create item." }) : null] })] })] }), isLoading ? _jsx("p", { children: translate('loading_menu', locale) }) : null, isError ? _jsx("p", { children: translate('failed_load_menu', locale) }) : null, _jsx("section", { style: { display: 'grid', gap: 8 }, children: (data ?? []).map((item) => (_jsx(MenuItemRow, { item: item, locale: locale, onPatch: (patch) => updateMutation.mutate({ menuItemId: item.id, patch }), isSaving: updateMutation.isPending, onDelete: () => deleteMutation.mutate(item.id), isDeleting: deleteMutation.isPending && deleteMutation.variables === item.id }, item.id))) })] }));
+                        }, style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'end' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('name', locale), _jsx(Input, { value: name, onChange: (e) => setName(e.target.value) })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('category', locale), _jsxs(Select, { value: category, onChange: (e) => setCategory(e.target.value), children: [_jsx("option", { value: "COLD_APPETIZERS", children: translate('cold_appetizers', locale) }), _jsx("option", { value: "HOT_APPETIZERS", children: translate('hot_appetizers', locale) }), _jsx("option", { value: "SALADS", children: translate('salads', locale) }), _jsx("option", { value: "FIRST_COURSE", children: translate('first_course', locale) }), _jsx("option", { value: "SECOND_COURSE", children: translate('second_course', locale) }), _jsx("option", { value: "DRINKS", children: translate('drinks', locale) }), _jsx("option", { value: "SWEETS", children: translate('sweets', locale) }), _jsx("option", { value: "FRUITS", children: translate('fruits', locale) })] })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('price', locale), " (e.g. 6.50)", _jsx(Input, { value: price, onChange: (e) => setPrice(e.target.value) })] }), _jsx("div", { style: { gridColumn: '1 / -1', display: 'grid', gap: 6 }, children: _jsx(PhotoSelector, { category: "menu", dishCategory: category.toLowerCase(), selectedPhotoUrl: photoUrl || undefined, onPhotoSelect: (url) => setPhotoUrl(url || ''), placeholder: translate('select_menu_photo', locale) }) }), _jsxs("label", { style: { gridColumn: '1 / -1', display: 'grid', gap: 6 }, children: [translate('description', locale), _jsx(Input, { value: description, onChange: (e) => setDescription(e.target.value) })] }), _jsxs("div", { style: { gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }, children: [_jsx(Button, { type: "submit", disabled: !canCreate || createMutation.isPending, children: createMutation.isPending ? translate('creating', locale) : translate('create', locale) }), createMutation.isError ? _jsx("span", { style: { color: '#b00020' }, children: "Failed to create item." }) : null] })] })] }), isLoading ? _jsx("p", { children: translate('loading_menu', locale) }) : null, isError ? _jsx("p", { children: translate('failed_load_menu', locale) }) : null, (data ?? []).length > 0 && (() => {
+                const sorted = quickSort(data ?? []);
+                const filtered = activeCategory ? sorted.filter((item) => item.category === activeCategory) : sorted;
+                const presentCategories = ALL_CATEGORIES.filter((cat) => (data ?? []).some((item) => item.category === cat));
+                return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "mb-4 flex flex-wrap gap-2", children: [_jsx("button", { onClick: () => setActiveCategory(null), className: `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${activeCategory === null ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`, children: translate('filter_all', locale) }), presentCategories.map((cat) => (_jsx("button", { onClick: () => setActiveCategory(cat), className: `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${activeCategory === cat ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`, children: translate(cat.toLowerCase(), locale) }, cat)))] }), _jsx("div", { className: "overflow-x-auto rounded-2xl border border-slate-200", children: _jsxs("table", { className: "w-full border-collapse text-sm", children: [_jsx("thead", { children: _jsxs("tr", { className: "border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500", children: [_jsx("th", { className: "w-14 px-3 py-3" }), _jsx("th", { className: "px-4 py-3", children: translate('name', locale) }), _jsx("th", { className: "px-4 py-3", children: translate('category', locale) }), _jsx("th", { className: "px-4 py-3", children: translate('description', locale) }), _jsx("th", { className: "px-4 py-3", children: translate('price', locale) }), _jsx("th", { className: "px-4 py-3", children: translate('tables', locale) }), _jsx("th", { className: "px-4 py-3" })] }) }), _jsx("tbody", { className: "divide-y divide-slate-100", children: filtered.map((item) => (_jsx(MenuItemRow, { item: item, locale: locale, assignedTableCategories: itemTableCategoryMap.get(item.id) ?? [], onPatch: (patch) => updateMutation.mutate({ menuItemId: item.id, patch }), isSaving: updateMutation.isPending, onDelete: () => deleteMutation.mutate(item.id), isDeleting: deleteMutation.isPending && deleteMutation.variables === item.id }, item.id))) })] }) })] }));
+            })()] }));
 };
-const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }) => {
+const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }) => {
     const [localName, setLocalName] = useState(item.name);
     const [localCategory, setLocalCategory] = useState(item.category);
     const [localDescription, setLocalDescription] = useState(item.description ?? '');
     const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
     const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
+    const [showPhotoSelector, setShowPhotoSelector] = useState(false);
     useEffect(() => {
         setLocalName(item.name);
         setLocalCategory(item.category);
@@ -96,18 +159,22 @@ const MenuItemRow = ({ item, locale, onPatch, isSaving, onDelete, isDeleting }) 
         setLocalPrice(formatCents(item.priceCents));
         setLocalPhotoUrl(item.photoUrl ?? '');
     }, [item.category, item.description, item.name, item.priceCents, item.photoUrl]);
-    return (_jsxs("article", { style: { border: '1px solid #eee', borderRadius: 8, padding: 12 }, children: [_jsxs("div", { style: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, alignItems: 'end' }, children: [_jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('name', locale), _jsx(Input, { value: localName, onChange: (e) => setLocalName(e.target.value) })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('category', locale), _jsxs(Select, { value: localCategory, onChange: (e) => setLocalCategory(e.target.value), children: [_jsx("option", { value: "COLD_APPETIZERS", children: translate('cold_appetizers', locale) }), _jsx("option", { value: "HOT_APPETIZERS", children: translate('hot_appetizers', locale) }), _jsx("option", { value: "SALADS", children: translate('salads', locale) }), _jsx("option", { value: "FIRST_COURSE", children: translate('first_course', locale) }), _jsx("option", { value: "SECOND_COURSE", children: translate('second_course', locale) }), _jsx("option", { value: "DRINKS", children: translate('drinks', locale) }), _jsx("option", { value: "SWEETS", children: translate('sweets', locale) })] })] }), _jsxs("label", { style: { display: 'grid', gap: 6 }, children: [translate('price', locale), _jsx(Input, { value: localPrice, onChange: (e) => setLocalPrice(e.target.value) })] })] }), _jsx("div", { style: { marginTop: 12 }, children: _jsx(PhotoSelector, { category: "menu", selectedPhotoUrl: localPhotoUrl || undefined, onPhotoSelect: (url) => setLocalPhotoUrl(url || ''), placeholder: translate('select_menu_photo', locale) }) }), _jsxs("label", { style: { display: 'grid', gap: 6, marginTop: 10 }, children: [translate('description', locale), _jsx(Input, { value: localDescription, onChange: (e) => setLocalDescription(e.target.value) })] }), _jsxs("div", { style: { marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }, children: [_jsx("button", { type: "button", disabled: isSaving, onClick: () => {
-                            const priceCents = parsePriceToCents(localPrice);
-                            onPatch({
-                                name: localName.trim(),
-                                category: localCategory,
-                                description: localDescription.trim() ? localDescription.trim() : undefined,
-                                photoUrl: localPhotoUrl.trim() ? localPhotoUrl.trim() : undefined,
-                                ...(priceCents !== null ? { priceCents } : {})
-                            });
-                        }, children: translate('update', locale) }), _jsx("button", { type: "button", disabled: isSaving || isDeleting, onClick: () => {
-                            if (window.confirm(`Delete dish "${item.name}"? This removes it from all events.`)) {
-                                onDelete();
-                            }
-                        }, children: isDeleting ? translate('deleting', locale) : translate('delete', locale) }), _jsxs("span", { style: { color: '#666' }, children: ["Current: $", formatCents(item.priceCents)] })] })] }));
+    const handleSave = () => {
+        const priceCents = parsePriceToCents(localPrice);
+        onPatch({
+            name: localName.trim(),
+            category: localCategory,
+            description: localDescription.trim() || undefined,
+            photoUrl: localPhotoUrl.trim() || undefined,
+            ...(priceCents !== null ? { priceCents } : {})
+        });
+    };
+    const photoSrc = getPhotoUrl(localPhotoUrl) ?? null;
+    return (_jsxs(_Fragment, { children: [_jsxs("tr", { className: "transition-colors hover:bg-slate-50", children: [_jsx("td", { className: "w-14 px-3 py-2", children: _jsxs("button", { type: "button", onClick: () => setShowPhotoSelector((v) => !v), className: "group relative block h-12 w-12 overflow-hidden rounded-xl ring-1 ring-slate-200 transition-all hover:ring-slate-400", title: translate('select_menu_photo', locale), children: [photoSrc ? (_jsx("img", { src: photoSrc, alt: item.name, className: "h-full w-full object-cover" })) : (_jsx("div", { className: "flex h-full w-full items-center justify-center bg-slate-100 text-slate-400", children: _jsx("svg", { className: "h-4 w-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: _jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 1.5, d: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" }) }) })), _jsx("div", { className: "absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20", children: _jsx("svg", { className: "h-3.5 w-3.5 text-white opacity-0 transition-opacity group-hover:opacity-100", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: _jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" }) }) })] }) }), _jsx("td", { className: "px-4 py-2.5", children: _jsx(Input, { value: localName, onChange: (e) => setLocalName(e.target.value), className: "h-8 min-w-[140px] text-sm" }) }), _jsx("td", { className: "px-4 py-2.5", children: _jsxs(Select, { value: localCategory, onChange: (e) => setLocalCategory(e.target.value), className: "h-8 text-sm", children: [_jsx("option", { value: "COLD_APPETIZERS", children: translate('cold_appetizers', locale) }), _jsx("option", { value: "HOT_APPETIZERS", children: translate('hot_appetizers', locale) }), _jsx("option", { value: "SALADS", children: translate('salads', locale) }), _jsx("option", { value: "FIRST_COURSE", children: translate('first_course', locale) }), _jsx("option", { value: "SECOND_COURSE", children: translate('second_course', locale) }), _jsx("option", { value: "DRINKS", children: translate('drinks', locale) }), _jsx("option", { value: "SWEETS", children: translate('sweets', locale) }), _jsx("option", { value: "FRUITS", children: translate('fruits', locale) })] }) }), _jsx("td", { className: "px-4 py-2.5", children: _jsx(Input, { value: localDescription, onChange: (e) => setLocalDescription(e.target.value), className: "h-8 min-w-[160px] text-sm", placeholder: "\u2014" }) }), _jsx("td", { className: "px-4 py-2.5", children: _jsx(Input, { value: localPrice, onChange: (e) => setLocalPrice(e.target.value), className: "h-8 w-24 text-sm" }) }), _jsx("td", { className: "px-4 py-2.5", children: assignedTableCategories.length === 0 ? (_jsx("span", { className: "text-xs text-slate-400", children: "\u2014" })) : (_jsx("div", { className: "flex flex-wrap gap-1", children: assignedTableCategories.map((tc) => (_jsx("span", { className: "inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200", children: tc.name }, tc.id))) })) }), _jsx("td", { className: "whitespace-nowrap px-4 py-2.5", children: _jsxs("div", { className: "flex gap-2", children: [_jsx(Button, { size: "sm", variant: "outline", disabled: isSaving, onClick: handleSave, children: translate('save', locale) }), _jsx(Button, { size: "sm", variant: "destructive", disabled: isSaving || isDeleting, onClick: () => {
+                                        if (window.confirm(`Delete "${item.name}"?`))
+                                            onDelete();
+                                    }, children: isDeleting ? translate('deleting', locale) : translate('delete', locale) })] }) })] }), showPhotoSelector && (_jsx("tr", { children: _jsx("td", { colSpan: 7, className: "border-t-0 bg-slate-50 px-4 pb-3 pt-2", children: _jsx(PhotoSelector, { category: "menu", dishCategory: localCategory.toLowerCase(), selectedPhotoUrl: localPhotoUrl || undefined, onPhotoSelect: (url) => {
+                            setLocalPhotoUrl(url || '');
+                            setShowPhotoSelector(false);
+                        } }) }) }))] }));
 };

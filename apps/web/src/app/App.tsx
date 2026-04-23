@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminMenuPage } from '../pages/AdminMenuPage';
 import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
@@ -15,28 +15,8 @@ export const App = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/tablet"
-        element={
-          <>
-            <nav style={{ display: 'flex', gap: 12, padding: 12, borderBottom: '1px solid #ddd' }}>
-              <Link to="/login">Admin login</Link>
-            </nav>
-            <TabletMenuPage />
-          </>
-        }
-      />
-      <Route
-        path="/tablet/summary"
-        element={
-          <>
-            <nav style={{ display: 'flex', gap: 12, padding: 12, borderBottom: '1px solid #ddd' }}>
-              <Link to="/login">Admin login</Link>
-            </nav>
-            <TabletSummaryPage />
-          </>
-        }
-      />
+      <Route path="/tablet" element={<TabletMenuPage />} />
+      <Route path="/tablet/summary" element={<TabletSummaryPage />} />
       <Route element={<AdminLayout />}>
         <Route path="/" element={<AdminEventsPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />

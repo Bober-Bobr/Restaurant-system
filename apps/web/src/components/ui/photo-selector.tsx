@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
 import { photoService, type PhotoCategory } from '../../services/photo.service';
 import { useAdminStore } from '../../store/admin.store';
 import { translate } from '../../utils/translate';
 import { getPhotoUrl } from '../../utils/photoUrl';
-import { Button } from './button';
 
 interface PhotoSelectorProps {
   category: PhotoCategory;
+  dishCategory?: string;
   selectedPhotoUrl?: string;
   onPhotoSelect: (photoUrl: string | undefined) => void;
   placeholder?: string;
@@ -15,111 +14,49 @@ interface PhotoSelectorProps {
 
 export const PhotoSelector = ({
   category,
+  dishCategory,
   selectedPhotoUrl,
   onPhotoSelect,
   placeholder
 }: PhotoSelectorProps) => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const { data: photos = [], isLoading } = useQuery({
-    queryKey: ['photos', category],
-    queryFn: () => photoService.listPhotos(category)
-  });
-
-  const uploadMutation = useMutation({
-    mutationFn: (files: File[]) => photoService.uploadPhotos(category, files),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['photos', category] });
-      setIsUploading(false);
-    },
-    onError: () => {
-      setIsUploading(false);
-    }
+    queryKey: ['photos', category, dishCategory ?? ''],
+    queryFn: () => photoService.listPhotos(category, dishCategory)
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (filename: string) => photoService.deletePhoto(category, filename),
-    onSuccess: (_, filename) => {
+    mutationFn: ({ filename, dishCat }: { filename: string; dishCat?: string }) =>
+      photoService.deletePhoto(category, filename, dishCat),
+    onSuccess: (_, { filename }) => {
       queryClient.invalidateQueries({ queryKey: ['photos', category] });
-      // If the deleted photo was selected, clear selection
-      if (selectedPhotoUrl?.includes(filename)) {
-        onPhotoSelect(undefined);
-      }
+      if (selectedPhotoUrl?.includes(filename)) onPhotoSelect(undefined);
     }
   });
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    setIsUploading(true);
-    try {
-      await uploadMutation.mutateAsync(files);
-    } catch (error) {
-      console.error('Failed to upload photos:', error);
-    }
-    // Clear the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const handlePhotoClick = (photoUrl: string) => {
-    if (selectedPhotoUrl === photoUrl) {
-      onPhotoSelect(undefined); // Deselect if already selected
-    } else {
-      onPhotoSelect(photoUrl);
-    }
+    onPhotoSelect(selectedPhotoUrl === photoUrl ? undefined : photoUrl);
   };
 
   const handleDeletePhoto = async (photoUrl: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    const filename = photoUrl.split('/').pop();
+    const parts = photoUrl.split('/');
+    // /uploads/menu/hot_appetizers/photo.jpg → 5 parts; /uploads/menu/photo.jpg → 4 parts
+    const filename = parts[parts.length - 1];
+    const dishCat = parts.length === 5 ? parts[3] : undefined;
     if (filename && confirm(translate('confirm_delete_photo', locale))) {
       try {
-        await deleteMutation.mutateAsync(filename);
+        await deleteMutation.mutateAsync({ filename, dishCat });
       } catch (error) {
         console.error('Failed to delete photo:', error);
       }
     }
   };
 
-  const getCategoryLabel = (cat: PhotoCategory) => {
-    switch (cat) {
-      case 'menu': return translate('menu_photos', locale);
-      case 'hall': return translate('hall_photos', locale);
-      case 'table': return translate('table_photos', locale);
-    }
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">{getCategoryLabel(category)}</h4>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
-            {isUploading ? translate('uploading', locale) : translate('upload_photos', locale)}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </div>
-      </div>
-
+    <div className="space-y-3">
       {placeholder && !selectedPhotoUrl && (
         <p className="text-sm text-gray-500">{placeholder}</p>
       )}
@@ -136,15 +73,13 @@ export const PhotoSelector = ({
               <p className="text-sm font-medium text-blue-700">
                 {translate('selected_photo', locale)}
               </p>
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={() => onPhotoSelect(undefined)}
-                className="text-blue-600 hover:text-blue-800"
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
               >
                 {translate('clear_selection', locale)}
-              </Button>
+              </button>
             </div>
           </div>
         </div>

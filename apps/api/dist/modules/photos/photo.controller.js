@@ -5,7 +5,7 @@ export class PhotoController {
     }
     async uploadPhotos(req, res) {
         try {
-            const { category } = req.body;
+            const { category, dishCategory } = req.body;
             const files = req.files?.files || [];
             if (!files || files.length === 0) {
                 return res.status(400).json({ error: 'No files uploaded' });
@@ -13,8 +13,7 @@ export class PhotoController {
             if (!['menu', 'hall', 'table'].includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
-            // Pass Express Multer files directly to service
-            const urls = await this.photoService.uploadPhotos(category, files);
+            const urls = await this.photoService.uploadPhotos(category, files, dishCategory || undefined);
             res.json({ urls });
         }
         catch (error) {
@@ -28,7 +27,8 @@ export class PhotoController {
             if (!['menu', 'hall', 'table'].includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
-            const photos = await this.photoService.listPhotos(category);
+            const dishCategory = req.query.dishCategory || undefined;
+            const photos = await this.photoService.listPhotos(category, dishCategory);
             res.json({ photos });
         }
         catch (error) {
@@ -43,7 +43,8 @@ export class PhotoController {
             if (!['menu', 'hall', 'table'].includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
-            await this.photoService.deletePhoto(category, filename);
+            const dishCategory = req.query.dishCategory || undefined;
+            await this.photoService.deletePhoto(category, filename, dishCategory);
             res.json({ success: true });
         }
         catch (error) {
