@@ -6,6 +6,7 @@ import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
+import { Lightbox } from '../components/ui/lightbox';
 
 type DishCategory =
   | 'cold_appetizers' | 'hot_appetizers' | 'salads'
@@ -33,6 +34,7 @@ export const AdminPhotosPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<PhotoCategory>('menu');
   const [dishCategory, setDishCategory] = useState<DishCategory | ''>('');
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
@@ -93,6 +95,8 @@ export const AdminPhotosPage = () => {
   };
 
   return (
+    <>
+    {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <h1 className="page-heading">{t('photo_management')}</h1>
@@ -191,13 +195,17 @@ export const AdminPhotosPage = () => {
                     key={photoUrl}
                     className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-shadow hover:shadow-md"
                   >
-                    <div className="aspect-square">
+                    <button
+                      type="button"
+                      onClick={() => setLightboxSrc(getPhotoUrl(photoUrl) ?? null)}
+                      className="group/img aspect-square block w-full overflow-hidden"
+                    >
                       <img
                         src={getPhotoUrl(photoUrl)}
                         alt={filename}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-200 group-hover/img:scale-[1.03]"
                       />
-                    </div>
+                    </button>
                     <div className="p-3">
                       {photoDishCat && !dishCategory && (
                         <p className="mb-1 truncate text-xs font-medium text-slate-400 uppercase tracking-wide">
@@ -225,5 +233,6 @@ export const AdminPhotosPage = () => {
         </section>
       </div>
     </main>
+    </>
   );
 };

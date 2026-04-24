@@ -10,6 +10,7 @@ import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
 import type { MenuItem } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { Lightbox } from '../components/ui/lightbox';
 import logo from '../assets/logo.png';
 
 type MenuCategory = MenuItem['category'];
@@ -65,6 +66,7 @@ export const TabletMenuPage = () => {
   const loadPublicData = usePublicDataStore((state) => state.loadPublicData);
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
 
@@ -89,6 +91,7 @@ export const TabletMenuPage = () => {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -199,11 +202,22 @@ export const TabletMenuPage = () => {
                         {items!.map((pi) => (
                           <div key={pi!.id} className="flex gap-3 rounded-2xl bg-slate-50 p-3">
                             {pi!.menuItem.photoUrl ? (
-                              <img
-                                src={getPhotoUrl(pi!.menuItem.photoUrl)}
-                                alt={pi!.menuItem.name}
-                                className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
-                              />
+                              <button
+                                type="button"
+                                onClick={() => setLightboxSrc(getPhotoUrl(pi!.menuItem.photoUrl) ?? null)}
+                                className="group relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl"
+                              >
+                                <img
+                                  src={getPhotoUrl(pi!.menuItem.photoUrl)}
+                                  alt={pi!.menuItem.name}
+                                  className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/25 transition-colors rounded-xl">
+                                  <svg className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                                  </svg>
+                                </div>
+                              </button>
                             ) : (
                               <div className="h-16 w-16 flex-shrink-0 rounded-xl bg-slate-200" />
                             )}

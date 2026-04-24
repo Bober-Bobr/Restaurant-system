@@ -1,0 +1,12 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+export const Lightbox = ({ src, alt = '', onClose }) => {
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape')
+            onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return createPortal(_jsxs("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm", onClick: onClose, children: [_jsx("button", { type: "button", onClick: onClose, className: "absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20", "aria-label": "Close", children: _jsx("svg", { className: "h-5 w-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: _jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) }), _jsx("img", { src: src, alt: alt, onClick: (e) => e.stopPropagation(), className: "max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl" })] }), document.body);
+};

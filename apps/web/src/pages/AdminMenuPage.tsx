@@ -183,7 +183,7 @@ export const AdminMenuPage = () => {
               category="menu"
               dishCategory={category.toLowerCase()}
               selectedPhotoUrl={photoUrl || undefined}
-              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              onPhotoSelect={(url: string | undefined) => setPhotoUrl(url || '')}
               placeholder={translate('select_menu_photo', locale)}
             />
           </div>
@@ -405,7 +405,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
             category="menu"
             dishCategory={localCategory.toLowerCase()}
             selectedPhotoUrl={localPhotoUrl || undefined}
-            onPhotoSelect={(url) => {
+            onPhotoSelect={(url: string | undefined) => {
               setLocalPhotoUrl(url || '');
               setShowPhotoSelector(false);
             }}

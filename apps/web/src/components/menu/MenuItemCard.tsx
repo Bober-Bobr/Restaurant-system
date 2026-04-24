@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import type { MenuItem } from '../../types/domain';
 import { getPhotoUrl } from '../../utils/photoUrl';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
+import { Lightbox } from '../ui/lightbox';
 
 type MenuItemCardProps = {
   item: MenuItem;
@@ -11,14 +13,33 @@ type MenuItemCardProps = {
 };
 
 export const MenuItemCard = ({ item, quantity, onQuantityChange }: MenuItemCardProps) => {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const photoSrc = getPhotoUrl(item.photoUrl);
+
   return (
     <Card className="space-y-4 p-4">
-      {item.photoUrl ? (
-        <img
-          src={getPhotoUrl(item.photoUrl)}
-          alt={item.name}
-          className="h-40 w-full rounded-2xl object-cover"
-        />
+      {photoSrc ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="group relative w-full overflow-hidden rounded-2xl"
+          >
+            <img
+              src={photoSrc}
+              alt={item.name}
+              className="h-40 w-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20 rounded-2xl">
+              <svg className="h-8 w-8 text-white opacity-0 drop-shadow group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+              </svg>
+            </div>
+          </button>
+          {lightboxOpen && (
+            <Lightbox src={photoSrc} alt={item.name} onClose={() => setLightboxOpen(false)} />
+          )}
+        </>
       ) : (
         <div className="flex h-40 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm text-slate-400">
           No image

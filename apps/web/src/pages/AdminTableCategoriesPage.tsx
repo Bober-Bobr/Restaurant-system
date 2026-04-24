@@ -331,7 +331,7 @@ export const AdminTableCategoriesPage = () => {
             <PhotoSelector
               category="table"
               selectedPhotoUrl={photoUrl || undefined}
-              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              onPhotoSelect={(url: string | undefined) => setPhotoUrl(url || '')}
               placeholder={t('select_table_photo')}
             />
           </div>

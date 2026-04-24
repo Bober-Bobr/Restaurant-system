@@ -166,7 +166,7 @@ export const AdminHallsPage = () => {
             <PhotoSelector
               category="hall"
               selectedPhotoUrl={photoUrl || undefined}
-              onPhotoSelect={(url) => setPhotoUrl(url || '')}
+              onPhotoSelect={(url: string | undefined) => setPhotoUrl(url || '')}
               placeholder={t('select_hall_photo')}
             />
           </div>
