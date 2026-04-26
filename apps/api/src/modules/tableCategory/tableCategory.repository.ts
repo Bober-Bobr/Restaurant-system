@@ -7,6 +7,7 @@ export type CreateTableCategoryData = {
   ratePerPerson: number;
   description?: string;
   photoUrl?: string;
+  photos?: string[];
   isActive?: boolean;
 };
 
@@ -43,8 +44,9 @@ export class TableCategoryRepository {
   }
 
   async create(restaurantId: string, payload: CreateTableCategoryData) {
+    const { photos, ...rest } = payload;
     return prisma.tableCategory.create({
-      data: { ...payload, restaurantId },
+      data: { ...rest, photos: photos ?? [], restaurantId },
       include: packageItemsInclude
     });
   }

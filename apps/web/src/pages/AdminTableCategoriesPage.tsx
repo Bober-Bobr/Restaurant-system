@@ -9,6 +9,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
+import { Lightbox } from '../components/ui/lightbox';
 
 type FoodCategory = MenuItem['category'];
 
@@ -57,7 +58,6 @@ function FoodPackageSection({
 }) {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
-  // Group active menu items by category (only the 5 package categories)
   const grouped = FOOD_PACKAGE_CATEGORIES.reduce<Record<FoodCategory, MenuItem[]>>(
     (acc, cat) => {
       acc[cat] = allMenuItems.filter((item) => item.isActive && item.category === cat);
@@ -66,7 +66,6 @@ function FoodPackageSection({
     {} as Record<FoodCategory, MenuItem[]>
   );
 
-  // Checking a category → select all its dishes; unchecking → deselect all its dishes
   const toggleCat = (cat: FoodCategory) => {
     const catItemIds = grouped[cat].map((item) => item.id);
     if (selectedCats.includes(cat)) {
@@ -79,19 +78,16 @@ function FoodPackageSection({
     }
   };
 
-  // Selecting a dish → auto-check its category; deselecting last dish in a category → auto-uncheck category
   const toggleItem = (id: string, cat: FoodCategory) => {
     if (selectedItemIds.includes(id)) {
       const next = selectedItemIds.filter((i) => i !== id);
       onItemIdsChange(next);
-      // If no dishes from this category remain selected, uncheck the category
       const remainsInCat = grouped[cat].some((item) => next.includes(item.id));
       if (!remainsInCat) {
         onCatsChange(selectedCats.filter((c) => c !== cat));
       }
     } else {
       onItemIdsChange([...selectedItemIds, id]);
-      // Auto-check the category when its first dish is selected
       if (!selectedCats.includes(cat)) {
         onCatsChange([...selectedCats, cat]);
       }
@@ -105,23 +101,14 @@ function FoodPackageSection({
       {FOOD_PACKAGE_CATEGORIES.map((cat) => (
         <div
           key={cat}
-          style={{
-            border: '1px solid #e2e8f0',
-            borderRadius: 8,
-            overflow: 'hidden',
-          }}
+          style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}
         >
-          {/* Category header with checkbox */}
           <label
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+              display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px',
               background: selectedCats.includes(cat) ? '#f0fdf4' : '#f8fafc',
-              cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '0.9em',
+              cursor: 'pointer', fontWeight: 500, fontSize: '0.9em',
               borderBottom: grouped[cat].length > 0 ? '1px solid #e2e8f0' : 'none',
             }}
           >
@@ -136,23 +123,17 @@ function FoodPackageSection({
             </span>
           </label>
 
-          {/* Dish list */}
           {grouped[cat].length > 0 && (
             <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {grouped[cat].map((item) => (
                 <label
                   key={item.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '4px 10px',
-                    borderRadius: 20,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', borderRadius: 20,
                     border: `1px solid ${selectedItemIds.includes(item.id) ? '#22c55e' : '#cbd5e1'}`,
                     background: selectedItemIds.includes(item.id) ? '#f0fdf4' : 'white',
-                    cursor: 'pointer',
-                    fontSize: '0.85em',
-                    userSelect: 'none',
+                    cursor: 'pointer', fontSize: '0.85em', userSelect: 'none',
                     transition: 'all 0.15s',
                   }}
                 >
@@ -171,6 +152,76 @@ function FoodPackageSection({
         </div>
       ))}
     </div>
+  );
+}
+
+// ── Multi-photo field ──────────────────────────────────────────────────────
+function PhotosField({ photoUrls, onChange }: { photoUrls: string[]; onChange: (urls: string[]) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  return (
+    <>
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      <div style={{ display: 'grid', gap: 8 }}>
+        <span style={{ fontSize: '0.9em', fontWeight: 600 }}>Photos</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          {photoUrls.map((url, i) => (
+            <div key={i} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setLightboxSrc(getPhotoUrl(url) ?? null)}
+                style={{ display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', cursor: 'pointer' }}
+              >
+                <img
+                  src={getPhotoUrl(url)}
+                  alt=""
+                  style={{ width: 72, height: 60, objectFit: 'cover', display: 'block' }}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(photoUrls.filter((_, j) => j !== i))}
+                style={{
+                  position: 'absolute', top: -6, right: -6,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: '#b00020', color: 'white', border: 'none',
+                  cursor: 'pointer', fontSize: 11,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            style={{
+              width: 72, height: 60, borderRadius: 8,
+              border: '2px dashed #cbd5e1', background: adding ? '#f8fafc' : 'white',
+              cursor: 'pointer', fontSize: 22, color: '#94a3b8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            title="Add photo"
+          >
+            +
+          </button>
+        </div>
+        {adding && (
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 8 }}>
+            <PhotoSelector
+              category="table"
+              selectedPhotoUrl={undefined}
+              onPhotoSelect={(url: string | undefined) => {
+                if (url && !photoUrls.includes(url)) onChange([...photoUrls, url]);
+                setAdding(false);
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -196,7 +247,7 @@ export const AdminTableCategoriesPage = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
   const [description, setDescription] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
 
   // ── Edit state ─────────────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -205,7 +256,7 @@ export const AdminTableCategoriesPage = () => {
   const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
   const [editDescription, setEditDescription] = useState('');
-  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
 
   const validation = useMemo(() => {
@@ -235,7 +286,7 @@ export const AdminTableCategoriesPage = () => {
         menuItemIds: selectedItemIds,
         ratePerPerson: Math.round(Number(ratePerPersonText) * 100),
         description: description.trim() || undefined,
-        photoUrl: photoUrl.trim() || undefined,
+        photos,
         isActive: true,
       });
     },
@@ -245,7 +296,7 @@ export const AdminTableCategoriesPage = () => {
       setSelectedItemIds([]);
       setRatePerPersonText('0');
       setDescription('');
-      setPhotoUrl('');
+      setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
     },
   });
@@ -273,7 +324,7 @@ export const AdminTableCategoriesPage = () => {
     setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
     setEditRatePerPersonText((category.ratePerPerson / 100).toFixed(2));
     setEditDescription(category.description || '');
-    setEditPhotoUrl(category.photoUrl || '');
+    setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
   };
 
@@ -287,7 +338,7 @@ export const AdminTableCategoriesPage = () => {
         menuItemIds: editSelectedItemIds,
         ratePerPerson: Math.round(Number(editRatePerPersonText) * 100),
         description: editDescription.trim() || undefined,
-        photoUrl: editPhotoUrl.trim() || undefined,
+        photos: editPhotos,
         isActive: editIsActive,
       },
     });
@@ -327,14 +378,8 @@ export const AdminTableCategoriesPage = () => {
             locale={locale}
           />
 
-          <div>
-            <PhotoSelector
-              category="table"
-              selectedPhotoUrl={photoUrl || undefined}
-              onPhotoSelect={(url: string | undefined) => setPhotoUrl(url || '')}
-              placeholder={t('select_table_photo')}
-            />
-          </div>
+          <PhotosField photoUrls={photos} onChange={setPhotos} />
+
           <label style={{ display: 'grid', gap: 6 }}>
             {t('description_optional')}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
@@ -393,14 +438,9 @@ export const AdminTableCategoriesPage = () => {
                         {t('description')}
                         <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                       </label>
-                      <div>
-                        <PhotoSelector
-                          category="table"
-                          selectedPhotoUrl={editPhotoUrl || undefined}
-                          onPhotoSelect={(url) => setEditPhotoUrl(url || '')}
-                          placeholder={t('select_table_photo')}
-                        />
-                      </div>
+
+                      <PhotosField photoUrls={editPhotos} onChange={setEditPhotos} />
+
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9em' }}>
                         <input type="checkbox" checked={editIsActive} onChange={(e) => setEditIsActive(e.target.checked)} />
                         {t('active')}
@@ -421,12 +461,28 @@ export const AdminTableCategoriesPage = () => {
                     // ── Read view ──
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                        {category.photoUrl && (
-                          <img
-                            src={getPhotoUrl(category.photoUrl)}
-                            alt={category.name}
-                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
-                          />
+                        {/* Photos strip */}
+                        {(category.photos ?? []).length > 0 && (
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                            {(category.photos ?? []).slice(0, 4).map((url, i) => (
+                              <img
+                                key={i}
+                                src={getPhotoUrl(url)}
+                                alt=""
+                                style={{ width: 56, height: 44, objectFit: 'cover', borderRadius: 4 }}
+                              />
+                            ))}
+                            {(category.photos ?? []).length > 4 && (
+                              <div style={{
+                                width: 56, height: 44, borderRadius: 4,
+                                background: '#f1f5f9', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.8em', color: '#64748b', fontWeight: 600,
+                              }}>
+                                +{(category.photos ?? []).length - 4}
+                              </div>
+                            )}
+                          </div>
                         )}
                         <div>
                           <strong>{category.name}</strong>
@@ -434,39 +490,19 @@ export const AdminTableCategoriesPage = () => {
                             {t('rate')}: ${(category.ratePerPerson / 100).toFixed(2)}
                             {!category.isActive && ` • ${t('inactive')}`}
                           </p>
-                          {/* Category badges */}
                           {parseCats(category.includedCategories).length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
                               {parseCats(category.includedCategories).map((cat) => (
-                                <span
-                                  key={cat}
-                                  style={{
-                                    fontSize: '0.75em',
-                                    padding: '2px 8px',
-                                    borderRadius: 12,
-                                    background: '#dbeafe',
-                                    color: '#1e40af',
-                                  }}
-                                >
+                                <span key={cat} style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dbeafe', color: '#1e40af' }}>
                                   {t(CATEGORY_LABEL_KEY[cat])}
                                 </span>
                               ))}
                             </div>
                           )}
-                          {/* Specific dish chips */}
                           {(category.packageItems ?? []).length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
                               {(category.packageItems ?? []).map((pi) => (
-                                <span
-                                  key={pi.id}
-                                  style={{
-                                    fontSize: '0.75em',
-                                    padding: '2px 8px',
-                                    borderRadius: 12,
-                                    background: '#dcfce7',
-                                    color: '#166534',
-                                  }}
-                                >
+                                <span key={pi.id} style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dcfce7', color: '#166534' }}>
                                   {pi.menuItem.name}
                                 </span>
                               ))}

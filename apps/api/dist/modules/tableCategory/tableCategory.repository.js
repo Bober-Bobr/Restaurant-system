@@ -28,8 +28,9 @@ export class TableCategoryRepository {
         return prisma.tableCategory.count({ where: { restaurantId } });
     }
     async create(restaurantId, payload) {
+        const { photos, ...rest } = payload;
         return prisma.tableCategory.create({
-            data: { ...payload, restaurantId },
+            data: { ...rest, photos: photos ?? [], restaurantId },
             include: packageItemsInclude
         });
     }

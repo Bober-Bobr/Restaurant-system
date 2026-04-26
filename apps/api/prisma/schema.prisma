@@ -126,6 +126,7 @@ model TableCategory {
   ratePerPerson      Int                       @default(0)
   description        String?
   photoUrl           String?
+  photos             Json                      @default("[]")
   isActive           Boolean                   @default(true)
   restaurantId       String?
   createdAt          DateTime                  @default(now())

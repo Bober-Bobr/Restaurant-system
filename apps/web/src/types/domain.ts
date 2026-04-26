@@ -47,6 +47,7 @@ export type TableCategory = {
   ratePerPerson: number;
   description?: string;
   photoUrl?: string;
+  photos?: string[];
   isActive: boolean;
   packageItems?: TableCategoryPackageItem[];
 };

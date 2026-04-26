@@ -13,6 +13,7 @@ export const tableCategoryService = {
     ratePerPerson: number;
     description?: string;
     photoUrl?: string;
+    photos?: string[];
     isActive?: boolean;
   }) {
     const { data } = await httpClient.post<TableCategory>('/table-categories', payload);
