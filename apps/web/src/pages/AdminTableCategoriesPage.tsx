@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
+import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
 
 type FoodCategory = MenuItem['category'];
 
@@ -144,7 +145,7 @@ function FoodPackageSection({
                     onChange={() => toggleItem(item.id, cat)}
                   />
                   {item.name}
-                  <span style={{ color: '#94a3b8' }}>${(item.priceCents / 100).toFixed(2)}</span>
+                  <span style={{ color: '#94a3b8' }}>{formatSum(item.priceCents)}</span>
                 </label>
               ))}
             </div>
@@ -284,7 +285,7 @@ export const AdminTableCategoriesPage = () => {
         name: name.trim(),
         includedCategories: serializeCats(selectedCats),
         menuItemIds: selectedItemIds,
-        ratePerPerson: Math.round(Number(ratePerPersonText) * 100),
+        ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
         description: description.trim() || undefined,
         photos,
         isActive: true,
@@ -322,7 +323,7 @@ export const AdminTableCategoriesPage = () => {
     setEditName(category.name);
     setEditSelectedCats(parseCats(category.includedCategories));
     setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
-    setEditRatePerPersonText((category.ratePerPerson / 100).toFixed(2));
+    setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -336,7 +337,7 @@ export const AdminTableCategoriesPage = () => {
         name: editName.trim(),
         includedCategories: serializeCats(editSelectedCats),
         menuItemIds: editSelectedItemIds,
-        ratePerPerson: Math.round(Number(editRatePerPersonText) * 100),
+        ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
         description: editDescription.trim() || undefined,
         photos: editPhotos,
         isActive: editIsActive,
@@ -487,7 +488,7 @@ export const AdminTableCategoriesPage = () => {
                         <div>
                           <strong>{category.name}</strong>
                           <p style={{ margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }}>
-                            {t('rate')}: ${(category.ratePerPerson / 100).toFixed(2)}
+                            {t('rate')}: {formatSum(category.ratePerPerson)}
                             {!category.isActive && ` • ${t('inactive')}`}
                           </p>
                           {parseCats(category.includedCategories).length > 0 && (

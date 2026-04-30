@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
+import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
 const FOOD_PACKAGE_CATEGORIES = [
     'COLD_APPETIZERS',
     'SALADS',
@@ -80,7 +81,7 @@ function FoodPackageSection({ selectedCats, onCatsChange, selectedItemIds, onIte
                                 background: selectedItemIds.includes(item.id) ? '#f0fdf4' : 'white',
                                 cursor: 'pointer', fontSize: '0.85em', userSelect: 'none',
                                 transition: 'all 0.15s',
-                            }, children: [_jsx("input", { type: "checkbox", style: { display: 'none' }, checked: selectedItemIds.includes(item.id), onChange: () => toggleItem(item.id, cat) }), item.name, _jsxs("span", { style: { color: '#94a3b8' }, children: ["$", (item.priceCents / 100).toFixed(2)] })] }, item.id))) }))] }, cat)))] }));
+                            }, children: [_jsx("input", { type: "checkbox", style: { display: 'none' }, checked: selectedItemIds.includes(item.id), onChange: () => toggleItem(item.id, cat) }), item.name, _jsx("span", { style: { color: '#94a3b8' }, children: formatSum(item.priceCents) })] }, item.id))) }))] }, cat)))] }));
 }
 // ── Multi-photo field ──────────────────────────────────────────────────────
 function PhotosField({ photoUrls, onChange }) {
@@ -162,7 +163,7 @@ export const AdminTableCategoriesPage = () => {
                 name: name.trim(),
                 includedCategories: serializeCats(selectedCats),
                 menuItemIds: selectedItemIds,
-                ratePerPerson: Math.round(Number(ratePerPersonText) * 100),
+                ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
                 description: description.trim() || undefined,
                 photos,
                 isActive: true,
@@ -196,7 +197,7 @@ export const AdminTableCategoriesPage = () => {
         setEditName(category.name);
         setEditSelectedCats(parseCats(category.includedCategories));
         setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
-        setEditRatePerPersonText((category.ratePerPerson / 100).toFixed(2));
+        setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
         setEditDescription(category.description || '');
         setEditPhotos(category.photos ?? []);
         setEditIsActive(category.isActive);
@@ -210,7 +211,7 @@ export const AdminTableCategoriesPage = () => {
                 name: editName.trim(),
                 includedCategories: serializeCats(editSelectedCats),
                 menuItemIds: editSelectedItemIds,
-                ratePerPerson: Math.round(Number(editRatePerPersonText) * 100),
+                ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
                 description: editDescription.trim() || undefined,
                 photos: editPhotos,
                 isActive: editIsActive,
@@ -225,5 +226,5 @@ export const AdminTableCategoriesPage = () => {
                                                             background: '#f1f5f9', display: 'flex',
                                                             alignItems: 'center', justifyContent: 'center',
                                                             fontSize: '0.8em', color: '#64748b', fontWeight: 600,
-                                                        }, children: ["+", (category.photos ?? []).length - 4] }))] })), _jsxs("div", { children: [_jsx("strong", { children: category.name }), _jsxs("p", { style: { margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }, children: [t('rate'), ": $", (category.ratePerPerson / 100).toFixed(2), !category.isActive && ` • ${t('inactive')}`] }), parseCats(category.includedCategories).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: parseCats(category.includedCategories).map((cat) => (_jsx("span", { style: { fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dbeafe', color: '#1e40af' }, children: t(CATEGORY_LABEL_KEY[cat]) }, cat))) })), (category.packageItems ?? []).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: (category.packageItems ?? []).map((pi) => (_jsx("span", { style: { fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dcfce7', color: '#166534' }, children: pi.menuItem.name }, pi.id))) })), category.description && (_jsx("p", { style: { margin: '4px 0 0', fontSize: '0.82em', color: '#94a3b8' }, children: category.description }))] })] }), _jsxs("div", { style: { display: 'flex', gap: 4, flexShrink: 0 }, children: [_jsx("button", { onClick: () => startEditing(category), style: { background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('edit') }), _jsx("button", { onClick: () => deleteMutation.mutate(category.id), disabled: deleteMutation.isPending, style: { background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('delete') })] })] })) }, category.id))) }))] }))] }));
+                                                        }, children: ["+", (category.photos ?? []).length - 4] }))] })), _jsxs("div", { children: [_jsx("strong", { children: category.name }), _jsxs("p", { style: { margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }, children: [t('rate'), ": ", formatSum(category.ratePerPerson), !category.isActive && ` • ${t('inactive')}`] }), parseCats(category.includedCategories).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: parseCats(category.includedCategories).map((cat) => (_jsx("span", { style: { fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dbeafe', color: '#1e40af' }, children: t(CATEGORY_LABEL_KEY[cat]) }, cat))) })), (category.packageItems ?? []).length > 0 && (_jsx("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }, children: (category.packageItems ?? []).map((pi) => (_jsx("span", { style: { fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dcfce7', color: '#166534' }, children: pi.menuItem.name }, pi.id))) })), category.description && (_jsx("p", { style: { margin: '4px 0 0', fontSize: '0.82em', color: '#94a3b8' }, children: category.description }))] })] }), _jsxs("div", { style: { display: 'flex', gap: 4, flexShrink: 0 }, children: [_jsx("button", { onClick: () => startEditing(category), style: { background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('edit') }), _jsx("button", { onClick: () => deleteMutation.mutate(category.id), disabled: deleteMutation.isPending, style: { background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }, children: t('delete') })] })] })) }, category.id))) }))] }))] }));
 };

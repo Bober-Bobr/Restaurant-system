@@ -101,3 +101,52 @@
 .scale-in {
   animation: scaleIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* ── Tablet dark-green theme ── */
+.rg-bg {
+  background: #1a3320;
+}
+
+.rg-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.rg-heading {
+  color: #c9a42c;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rg-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.rg-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.75rem;
+  color: white;
+  padding: 0.6rem 1rem;
+  width: 100%;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.rg-input::placeholder { color: rgba(255,255,255,0.3); }
+.rg-input:focus { border-color: #c9a42c; }
+.rg-input option { background: #1a3320; color: white; }
+
+.rg-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmerMove 1.6s ease-in-out infinite;
+}

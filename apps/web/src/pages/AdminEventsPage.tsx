@@ -10,6 +10,7 @@ import type { Event } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
+import { formatSum } from '../utils/currency';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -351,7 +352,7 @@ export const AdminEventsPage = () => {
               <option value="">{t('choose_table_category')}</option>
               {tableCategories?.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.name} (${Number(category.ratePerPerson / 100).toFixed(2)} per person)
+                  {category.name} ({formatSum(category.ratePerPerson)} per person)
                 </option>
               ))}
             </Select>
@@ -495,7 +496,7 @@ export const AdminEventsPage = () => {
                   <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('table_category_optional')}</p>
                   <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.tableCategory?.name ?? '—'}</p>
                   {searchResult.tableCategory && (
-                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>${(searchResult.tableCategory.ratePerPerson / 100).toFixed(2)} per person</p>
+                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{formatSum(searchResult.tableCategory.ratePerPerson)} per person</p>
                   )}
                 </div>
                 <div>

@@ -1,6 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { formatSumInput, parseSumToTiyin } from '../utils/currency';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
@@ -47,16 +48,8 @@ function quickSort(items) {
     }
     return [...quickSort(left), ...equal, ...quickSort(right)];
 }
-const parsePriceToCents = (value) => {
-    const normalized = value.replace(',', '.').trim();
-    if (!normalized)
-        return null;
-    const amount = Number(normalized);
-    if (!Number.isFinite(amount) || amount <= 0)
-        return null;
-    return Math.round(amount * 100);
-};
-const formatCents = (cents) => (cents / 100).toFixed(2);
+const parsePriceToCents = parseSumToTiyin;
+const formatCents = formatSumInput;
 export const AdminMenuPage = () => {
     const queryClient = useQueryClient();
     const { locale } = useAdminStore();

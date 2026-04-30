@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import { formatSumInput, parseSumToTiyin } from '../utils/currency';
 import type { MenuItem, TableCategory } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
@@ -50,15 +51,8 @@ function quickSort(items: MenuItem[]): MenuItem[] {
   return [...quickSort(left), ...equal, ...quickSort(right)];
 }
 
-const parsePriceToCents = (value: string): number | null => {
-  const normalized = value.replace(',', '.').trim();
-  if (!normalized) return null;
-  const amount = Number(normalized);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  return Math.round(amount * 100);
-};
-
-const formatCents = (cents: number): string => (cents / 100).toFixed(2);
+const parsePriceToCents = parseSumToTiyin;
+const formatCents = formatSumInput;
 
 export const AdminMenuPage = () => {
   const queryClient = useQueryClient();
