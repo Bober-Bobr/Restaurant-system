@@ -5,7 +5,6 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Input } from '../components/ui/input';
-import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 
@@ -145,7 +144,7 @@ export const AdminHallsPage = () => {
             if (!canSubmit || createMutation.isPending) return;
             createMutation.mutate();
           }}
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'end' }}
+          className="form-grid-2" style={{ alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {t('name')}
@@ -213,7 +212,7 @@ export const AdminHallsPage = () => {
                 >
                   {editingId === hall.id ? (
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
+                      <div className="form-grid-4" style={{ alignItems: 'end', marginBottom: 12 }}>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('name')}
                           <Input value={editName} onChange={(e) => setEditName(e.target.value)} />

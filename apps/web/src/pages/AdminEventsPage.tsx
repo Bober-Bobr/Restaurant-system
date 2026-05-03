@@ -251,7 +251,7 @@ export const AdminEventsPage = () => {
               createMutation.mutate();
             }
           }}
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, alignItems: 'end' }}
+          className="form-grid-2" style={{ alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {t('customer_name')}
@@ -417,7 +417,7 @@ export const AdminEventsPage = () => {
       {/* Search Section */}
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
         <h3>{t('search_event_by_id')}</h3>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {t('enter_event_id')}:
             <Input
@@ -457,7 +457,7 @@ export const AdminEventsPage = () => {
             <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: 16, backgroundColor: '#f8fafc' }}>
               <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#475569' }}>{t('search_result')}</h4>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 24px' }}>
+              <div className="form-grid-3" style={{ gap: '10px 24px' }}>
                 <div>
                   <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>ID</p>
                   <p style={{ margin: '2px 0 0', fontFamily: 'monospace', color: '#475569' }}>#{searchResult.id}</p>

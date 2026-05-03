@@ -93,7 +93,7 @@ export const AdminRestaurantsPage = () => {
       {/* Create form */}
       <section style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 32 }}>
         <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('create_restaurant')}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2">
           <label style={labelStyle}>
             <span style={labelTextStyle}>{t('restaurant_name')} *</span>
             <input
@@ -159,7 +159,7 @@ export const AdminRestaurantsPage = () => {
             {editing?.id === r.id ? (
               /* Inline edit form */
               <div style={{ padding: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-grid-2">
                   <label style={labelStyle}>
                     <span style={labelTextStyle}>{t('restaurant_name')} *</span>
                     <input
@@ -204,7 +204,7 @@ export const AdminRestaurantsPage = () => {
               </div>
             ) : (
               /* Card view */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16, flexWrap: 'wrap' }}>
                 <img
                   src={getPhotoUrl(r.logoUrl) || DEFAULT_LOGO}
                   alt={r.name}

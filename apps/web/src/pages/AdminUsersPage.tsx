@@ -45,7 +45,6 @@ export const AdminUsersPage = () => {
 
   const currentRole = useAuthStore((state) => state.role);
   const currentUsername = useAuthStore((state) => state.username);
-  const currentRestaurantId = useAuthStore((state) => state.restaurantId);
   const queryClient = useQueryClient();
 
   const [newUsername, setNewUsername] = useState('');
@@ -104,7 +103,7 @@ export const AdminUsersPage = () => {
       {/* Create user form */}
       <section style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 32 }}>
         <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('create_user')}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2">
           <label style={{ display: 'grid', gap: 4 }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('name')}</span>
             <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="username" style={inputStyle} />
@@ -157,7 +156,8 @@ export const AdminUsersPage = () => {
       {!isLoading && users.length === 0 && <p style={{ color: '#6b7280' }}>{t('no_users_yet')}</p>}
 
       {users.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 500 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
               <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{t('name')}</th>
@@ -210,6 +210,7 @@ export const AdminUsersPage = () => {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </main>
   );

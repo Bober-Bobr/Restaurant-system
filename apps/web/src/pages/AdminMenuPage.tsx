@@ -149,7 +149,7 @@ export const AdminMenuPage = () => {
             if (!canCreate || createMutation.isPending) return;
             createMutation.mutate();
           }}
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'end' }}
+          className="form-grid-3" style={{ alignItems: 'end' }}
         >
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('name', locale)}

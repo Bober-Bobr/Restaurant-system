@@ -150,3 +150,37 @@
   background-size: 200% 100%;
   animation: shimmerMove 1.6s ease-in-out infinite;
 }
+
+/* ── Responsive admin form grids ── */
+.form-grid-2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 540px) {
+  .form-grid-2 { grid-template-columns: 1fr 1fr; }
+}
+
+.form-grid-3 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 540px) {
+  .form-grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 800px) {
+  .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.form-grid-4 {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 540px) {
+  .form-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 800px) {
+  .form-grid-4 { grid-template-columns: 1fr 1fr 1fr auto; }
+}

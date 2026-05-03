@@ -97,7 +97,7 @@ function TableCategoryCard({
           : 'shadow-lg hover:shadow-[0_0_25px_rgba(201,164,44,0.15)]'
       }`}
       style={{
-        width: 300,
+        width: 'min(300px, 85vw)',
         background: 'rgba(255,255,255,0.09)',
         border: isSelected ? '1px solid rgba(201,164,44,0.6)' : '1px solid rgba(255,255,255,0.14)',
         backdropFilter: 'blur(12px)',

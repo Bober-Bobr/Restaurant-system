@@ -94,7 +94,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <main style={{ maxWidth: 480, margin: '32px auto', padding: 20 }}>
+    <main style={{ maxWidth: 480, margin: '32px auto', padding: '20px 16px' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <h1 style={{ marginBottom: 8 }}>Banquet Admin</h1>
         <p style={{ color: '#666', fontSize: 14 }}>

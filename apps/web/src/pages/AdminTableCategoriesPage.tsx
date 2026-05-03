@@ -359,7 +359,7 @@ export const AdminTableCategoriesPage = () => {
           onSubmit={(e) => { e.preventDefault(); if (!canSubmit) return; createMutation.mutate(); }}
           style={{ display: 'grid', gap: 14 }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="form-grid-2">
             <label style={{ display: 'grid', gap: 6 }}>
               {t('name')}
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('table_category_name_placeholder')} />
@@ -415,7 +415,7 @@ export const AdminTableCategoriesPage = () => {
                   {editingId === category.id ? (
                     // ── Edit form ──
                     <div style={{ display: 'grid', gap: 14 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div className="form-grid-2" style={{ gap: 8 }}>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('name')}
                           <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -460,7 +460,7 @@ export const AdminTableCategoriesPage = () => {
                     </div>
                   ) : (
                     // ── Read view ──
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                         {/* Photos strip */}
                         {(category.photos ?? []).length > 0 && (
