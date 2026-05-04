@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import { buildSubdomainUrl, isRootDomain, toSubdomainSlug } from '../utils/subdomain';
 
 const formatRequestError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -55,20 +56,32 @@ export const LoginPage = () => {
 
   const passwordStrength = tab === 'register' ? checkPasswordStrength(password) : null;
 
-  const loginMutation = useMutation({
-    mutationFn: () => authService.login(username.trim(), password),
-    onSuccess: (data) => {
-      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
+  const redirectAfterLogin = (data: { accessToken: string; refreshToken: string; username: string; expiresIn: number; role: import('../store/auth.store').AdminRole; restaurantId: string | null; restaurantName?: string | null }) => {
+    setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName);
+    if (isRootDomain() && data.restaurantName && data.role !== 'OWNER') {
+      const slug = toSubdomainSlug(data.restaurantName);
+      window.location.href = buildSubdomainUrl(slug, {
+        _at: data.accessToken,
+        _rt: data.refreshToken,
+        _u: data.username,
+        _r: data.role,
+        _rid: data.restaurantId ?? '',
+        _rn: data.restaurantName ?? '',
+        _exp: String(data.expiresIn),
+      });
+    } else {
       navigate('/', { replace: true });
     }
+  };
+
+  const loginMutation = useMutation({
+    mutationFn: () => authService.login(username.trim(), password),
+    onSuccess: redirectAfterLogin,
   });
 
   const registerMutation = useMutation({
     mutationFn: () => authService.publicRegister(username.trim(), password, restaurantName.trim()),
-    onSuccess: (data) => {
-      setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId);
-      navigate('/', { replace: true });
-    }
+    onSuccess: redirectAfterLogin,
   });
 
   const pending = loginMutation.isPending || registerMutation.isPending;

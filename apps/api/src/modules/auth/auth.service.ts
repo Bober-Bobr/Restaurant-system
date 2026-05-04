@@ -15,6 +15,7 @@ export type AuthResponse = {
   username: string;
   role: AdminRole;
   restaurantId: string | null;
+  restaurantName: string | null;
 };
 
 export class AuthService {
@@ -137,6 +138,10 @@ export class AuthService {
     const decoded = jwt.decode(accessToken) as { exp?: number } | null;
     const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : 15 * 60 * 1000;
 
-    return { accessToken, refreshToken, expiresIn, username, role, restaurantId };
+    const restaurant = restaurantId
+      ? await this.authRepository.findRestaurantById(restaurantId)
+      : null;
+
+    return { accessToken, refreshToken, expiresIn, username, role, restaurantId, restaurantName: restaurant?.name ?? null };
   }
 }
