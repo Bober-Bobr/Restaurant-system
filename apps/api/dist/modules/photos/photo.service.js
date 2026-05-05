@@ -1,25 +1,23 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
 const DISH_CATEGORIES = [
     'cold_appetizers', 'hot_appetizers', 'salads',
     'first_course', 'second_course', 'drinks', 'sweets', 'fruits',
 ];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export class PhotoService {
     uploadDir;
     constructor() {
-        this.uploadDir = path.resolve(process.cwd(), 'uploads');
-        this.ensureDirectoriesExist();
+        this.uploadDir = path.resolve(__dirname, '..', '..', '..', 'uploads');
     }
-    async ensureDirectoriesExist() {
-        const categories = ['menu', 'hall', 'table'];
-        for (const category of categories) {
-            await fs.mkdir(path.join(this.uploadDir, category), { recursive: true });
-        }
-        for (const dishCat of DISH_CATEGORIES) {
-            await fs.mkdir(path.join(this.uploadDir, 'menu', dishCat), { recursive: true });
-        }
+    restaurantSlug(restaurantId) {
+        return restaurantId ?? 'shared';
+    }
+    getBaseDir(restaurantId) {
+        return path.join(this.uploadDir, this.restaurantSlug(restaurantId));
     }
     async listFilesInDir(dir, urlPrefix) {
         try {
@@ -33,11 +31,13 @@ export class PhotoService {
             return [];
         }
     }
-    async uploadPhotos(category, files, dishCategory) {
+    async uploadPhotos(category, files, restaurantId, dishCategory) {
+        const baseDir = this.getBaseDir(restaurantId);
         const dir = category === 'menu' && dishCategory
-            ? path.join(this.uploadDir, category, dishCategory)
-            : path.join(this.uploadDir, category);
+            ? path.join(baseDir, category, dishCategory)
+            : path.join(baseDir, category);
         await fs.mkdir(dir, { recursive: true });
+        const slug = this.restaurantSlug(restaurantId);
         const uploadedUrls = [];
         for (const file of files) {
             const timestamp = Date.now();
@@ -46,35 +46,37 @@ export class PhotoService {
             const filename = `${timestamp}-${random}${extension}`;
             await fs.writeFile(path.join(dir, filename), file.buffer);
             const urlPath = category === 'menu' && dishCategory
-                ? `/uploads/${category}/${dishCategory}/${filename}`
-                : `/uploads/${category}/${filename}`;
+                ? `/uploads/${slug}/${category}/${dishCategory}/${filename}`
+                : `/uploads/${slug}/${category}/${filename}`;
             uploadedUrls.push(urlPath);
         }
         return uploadedUrls;
     }
-    async listPhotos(category, dishCategory) {
-        const categoryDir = path.join(this.uploadDir, category);
+    async listPhotos(category, restaurantId, dishCategory) {
+        const baseDir = this.getBaseDir(restaurantId);
+        const slug = this.restaurantSlug(restaurantId);
+        const categoryDir = path.join(baseDir, category);
         if (category === 'menu' && dishCategory) {
-            return this.listFilesInDir(path.join(categoryDir, dishCategory), `/uploads/${category}/${dishCategory}`);
+            return this.listFilesInDir(path.join(categoryDir, dishCategory), `/uploads/${slug}/${category}/${dishCategory}`);
         }
         if (category === 'menu') {
-            // All menu photos: root + every dish category subdir
-            const all = await this.listFilesInDir(categoryDir, `/uploads/${category}`);
+            const all = await this.listFilesInDir(categoryDir, `/uploads/${slug}/${category}`);
             for (const dishCat of DISH_CATEGORIES) {
-                const sub = await this.listFilesInDir(path.join(categoryDir, dishCat), `/uploads/${category}/${dishCat}`);
+                const sub = await this.listFilesInDir(path.join(categoryDir, dishCat), `/uploads/${slug}/${category}/${dishCat}`);
                 all.push(...sub);
             }
             return all.sort();
         }
-        return this.listFilesInDir(categoryDir, `/uploads/${category}`);
+        return this.listFilesInDir(categoryDir, `/uploads/${slug}/${category}`);
     }
-    async deletePhoto(category, filename, dishCategory) {
+    async deletePhoto(category, filename, restaurantId, dishCategory) {
         if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
             throw createHttpError(400, 'Invalid filename');
         }
+        const baseDir = this.getBaseDir(restaurantId);
         const filePath = category === 'menu' && dishCategory
-            ? path.join(this.uploadDir, category, dishCategory, filename)
-            : path.join(this.uploadDir, category, filename);
+            ? path.join(baseDir, category, dishCategory, filename)
+            : path.join(baseDir, category, filename);
         try {
             await fs.unlink(filePath);
         }
@@ -82,19 +84,6 @@ export class PhotoService {
             if (error.code === 'ENOENT')
                 throw createHttpError(404, 'Photo not found');
             throw createHttpError(500, 'Failed to delete photo');
-        }
-    }
-    async getPhotoPath(category, filename) {
-        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-            throw createHttpError(400, 'Invalid filename');
-        }
-        const filePath = path.join(this.uploadDir, category, filename);
-        try {
-            await fs.access(filePath);
-            return filePath;
-        }
-        catch {
-            throw createHttpError(404, 'Photo not found');
         }
     }
 }

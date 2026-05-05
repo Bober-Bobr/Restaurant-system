@@ -97,6 +97,9 @@ export class AuthService {
         await this.authRepository.updateRefreshToken(userId, refreshTokenHash);
         const decoded = jwt.decode(accessToken);
         const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : 15 * 60 * 1000;
-        return { accessToken, refreshToken, expiresIn, username, role, restaurantId };
+        const restaurant = restaurantId
+            ? await this.authRepository.findRestaurantById(restaurantId)
+            : null;
+        return { accessToken, refreshToken, expiresIn, username, role, restaurantId, restaurantName: restaurant?.name ?? null };
     }
 }

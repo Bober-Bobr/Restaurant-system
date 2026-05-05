@@ -1,5 +1,7 @@
 import type { Event } from '../../types/domain';
 import { Button } from '../ui/button';
+import { useAdminStore } from '../../store/admin.store';
+import { translate } from '../../utils/translate';
 
 type EventListProps = {
   events: Event[];
@@ -31,6 +33,10 @@ function formatDateTime(iso: string) {
 }
 
 export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListProps) => {
+  const { locale } = useAdminStore();
+  const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
+    translate(key, locale, params);
+
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-200 py-14 text-center text-sm text-slate-400">
@@ -163,12 +169,12 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                           size="sm"
                           disabled={deletingId === event.id}
                           onClick={() => {
-                            if (window.confirm(`Delete reservation for ${event.customerName}?`)) {
+                            if (window.confirm(t('confirm_delete_event', { name: event.customerName }))) {
                               onDelete(event.id);
                             }
                           }}
                         >
-                          {deletingId === event.id ? 'Deleting…' : 'Delete'}
+                          {deletingId === event.id ? t('deleting') : t('delete')}
                         </Button>
                       )}
                     </div>

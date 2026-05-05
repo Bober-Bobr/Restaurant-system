@@ -51,6 +51,9 @@ export class AuthRepository {
             where: { name: { equals: name, mode: 'insensitive' } }
         });
     }
+    async findRestaurantById(id) {
+        return prisma.restaurant.findUnique({ where: { id } });
+    }
     async createAdminWithRestaurant(username, passwordHash, restaurantName) {
         return prisma.$transaction(async (tx) => {
             const user = await tx.adminUser.create({

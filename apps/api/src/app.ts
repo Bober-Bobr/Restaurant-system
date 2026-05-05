@@ -41,6 +41,10 @@ app.use('/uploads', (_req, res, next) => {
   etag: false
 }));
 
+app.get('/', (_request, response) => {
+  response.json({ name: 'Banquet API', status: 'ok' });
+});
+
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' });
 });
