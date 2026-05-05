@@ -19,9 +19,11 @@ export class PhotoController {
         return res.status(400).json({ error: 'Invalid category' });
       }
 
+      const restaurantId = req.admin?.restaurantId ?? null;
       const urls = await this.photoService.uploadPhotos(
         category as PhotoCategory,
         files,
+        restaurantId,
         dishCategory || undefined
       );
       res.json({ urls });
@@ -39,8 +41,9 @@ export class PhotoController {
         return res.status(400).json({ error: 'Invalid category' });
       }
 
+      const restaurantId = req.admin?.restaurantId ?? null;
       const dishCategory = (req.query.dishCategory as string) || undefined;
-      const photos = await this.photoService.listPhotos(category as PhotoCategory, dishCategory);
+      const photos = await this.photoService.listPhotos(category as PhotoCategory, restaurantId, dishCategory);
       res.json({ photos });
     } catch (error) {
       console.error('List photos error:', error);
@@ -57,8 +60,9 @@ export class PhotoController {
         return res.status(400).json({ error: 'Invalid category' });
       }
 
+      const restaurantId = req.admin?.restaurantId ?? null;
       const dishCategory = (req.query.dishCategory as string) || undefined;
-      await this.photoService.deletePhoto(category as PhotoCategory, filename, dishCategory);
+      await this.photoService.deletePhoto(category as PhotoCategory, filename, restaurantId, dishCategory);
       res.json({ success: true });
     } catch (error) {
       console.error('Delete photo error:', error);
@@ -66,29 +70,6 @@ export class PhotoController {
         return res.status(404).json({ error: 'Photo not found' });
       }
       res.status(500).json({ error: 'Failed to delete photo' });
-    }
-  }
-
-  async servePhoto(req: Request, res: Response) {
-    try {
-      const category = (req.params.category || '') as string;
-      const filename = (req.params.filename || '') as string;
-
-      if (!['menu', 'hall', 'table'].includes(category)) {
-        return res.status(400).json({ error: 'Invalid category' });
-      }
-
-      const filePath = await this.photoService.getPhotoPath(category as PhotoCategory, filename);
-
-      // Set appropriate headers for image serving
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-      res.sendFile(filePath);
-    } catch (error) {
-      console.error('Serve photo error:', error);
-      if (error instanceof Error && (error as any).status === 404) {
-        return res.status(404).json({ error: 'Photo not found' });
-      }
-      res.status(500).json({ error: 'Failed to serve photo' });
     }
   }
 }

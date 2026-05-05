@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
+import { useAdminStore } from '../store/admin.store';
+import { translate, locales, type Locale } from '../utils/translate';
 import { buildSubdomainUrl, isRootDomain, toSubdomainSlug } from '../utils/subdomain';
 
 const formatRequestError = (error: unknown): string => {
@@ -17,7 +19,7 @@ const formatRequestError = (error: unknown): string => {
 
 const checkPasswordStrength = (
   password: string
-): { score: number; message: string; valid: boolean } => {
+): { score: number; messageKey: string; valid: boolean } => {
   let score = 0;
   const checks = {
     length: password.length >= 8,
@@ -33,26 +35,27 @@ const checkPasswordStrength = (
   if (checks.numbers) score++;
   if (checks.special) score++;
 
-  const messages = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+  const messageKeys = ['pw_very_weak', 'pw_weak', 'pw_fair', 'pw_good', 'pw_strong', 'pw_very_strong'] as const;
   const valid = checks.length && checks.uppercase && checks.lowercase && checks.numbers;
 
-  return {
-    score,
-    message: messages[score] || 'Very weak',
-    valid
-  };
+  return { score, messageKey: messageKeys[score] ?? 'pw_very_weak', valid };
 };
+
+const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 type Tab = 'login' | 'register';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const { locale, setLocale } = useAdminStore();
   const [tab, setTab] = useState<Tab>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
   const passwordStrength = tab === 'register' ? checkPasswordStrength(password) : null;
 
@@ -94,7 +97,7 @@ export const LoginPage = () => {
   const canSubmitRegister = username.trim().length >= 3 && (passwordStrength?.valid ?? false) && restaurantName.trim().length >= 1;
   const canSubmitLogin = username.trim().length > 0 && password.length > 0;
 
-  const submit = (event: React.FormEvent) => {
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
     if (tab === 'login') {
@@ -108,21 +111,40 @@ export const LoginPage = () => {
 
   return (
     <main style={{ maxWidth: 480, margin: '32px auto', padding: '20px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 4 }}>
+        {locales.map((loc) => (
+          <button
+            key={loc}
+            type="button"
+            onClick={() => setLocale(loc)}
+            style={{
+              padding: '4px 10px',
+              border: '1px solid',
+              borderColor: locale === loc ? '#2196F3' : '#ddd',
+              borderRadius: 4,
+              background: locale === loc ? '#e3f2fd' : '#fff',
+              color: locale === loc ? '#1565C0' : '#666',
+              fontWeight: locale === loc ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: 12,
+            }}
+          >
+            {LOCALE_LABELS[loc]}
+          </button>
+        ))}
+      </div>
+
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ marginBottom: 8 }}>Banquet Admin</h1>
+        <h1 style={{ marginBottom: 8 }}>{t('banquet_admin')}</h1>
         <p style={{ color: '#666', fontSize: 14 }}>
-          {tab === 'login' ? 'Sign in to manage events and menu' : 'Create a new restaurant owner account'}
+          {tab === 'login' ? t('login_subtitle') : t('register_subtitle')}
         </p>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }}>
         <button
           type="button"
-          onClick={() => {
-            setTab('login');
-            setPassword('');
-            setRestaurantName('');
-          }}
+          onClick={() => { setTab('login'); setPassword(''); setRestaurantName(''); }}
           disabled={tab === 'login'}
           style={{
             flex: 1,
@@ -136,14 +158,11 @@ export const LoginPage = () => {
             fontSize: 14
           }}
         >
-          Sign In
+          {t('sign_in')}
         </button>
         <button
           type="button"
-          onClick={() => {
-            setTab('register');
-            setPassword('');
-          }}
+          onClick={() => { setTab('register'); setPassword(''); }}
           disabled={tab === 'register'}
           style={{
             flex: 1,
@@ -157,7 +176,7 @@ export const LoginPage = () => {
             fontSize: 14
           }}
         >
-          Create Account
+          {t('create_account')}
         </button>
       </div>
 
@@ -167,79 +186,53 @@ export const LoginPage = () => {
       >
         {tab === 'register' && (
           <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>Restaurant</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{t('restaurant_field_label')}</span>
             <input
               autoComplete="organization"
-              placeholder="Your restaurant name"
+              placeholder={t('restaurant_field_placeholder')}
               value={restaurantName}
               onChange={(event) => setRestaurantName(event.target.value)}
-              style={{
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                fontSize: 14,
-                fontFamily: 'inherit'
-              }}
+              style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
             />
             {restaurantName && (
               <span style={{ fontSize: 12, color: restaurantName.trim().length >= 1 ? '#4CAF50' : '#f44336' }}>
-                {restaurantName.trim().length >= 1 ? '✓' : '✗'} Restaurant name is required
+                {restaurantName.trim().length >= 1 ? '✓' : '✗'} {t('restaurant_required')}
               </span>
             )}
           </label>
         )}
 
         <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>Username</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{t('username')}</span>
           <input
             autoComplete="username"
-            placeholder="Enter your username"
+            placeholder={t('username_placeholder')}
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            style={{
-              padding: '10px 12px',
-              border: '1px solid #ddd',
-              borderRadius: 4,
-              fontSize: 14,
-              fontFamily: 'inherit'
-            }}
+            style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
           />
           {tab === 'register' && username && (
             <span style={{ fontSize: 12, color: username.length >= 3 ? '#4CAF50' : '#f44336' }}>
-              {username.length >= 3 ? '✓' : '✗'} Username must be 3+ characters
+              {username.length >= 3 ? '✓' : '✗'} {t('username_min_length')}
             </span>
           )}
         </label>
 
         <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>Password</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{t('password')}</span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               type={showPassword ? 'text' : 'password'}
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-              placeholder={tab === 'login' ? 'Enter your password' : 'Create a strong password'}
+              placeholder={tab === 'login' ? t('password_enter_placeholder') : t('password_create_placeholder')}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                fontSize: 14,
-                fontFamily: 'inherit'
-              }}
+              style={{ flex: 1, padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              style={{
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: 12
-              }}
+              style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: 12 }}
             >
               {showPassword ? '👁️‍🗨️' : '👁️'}
             </button>
@@ -261,32 +254,24 @@ export const LoginPage = () => {
                 />
               ))}
             </div>
-            <span
-              style={{
-                fontSize: 12,
-                color: passwordStrength!.valid ? '#4CAF50' : '#f44336',
-                fontWeight: 500
-              }}
-            >
-              {passwordStrength!.valid ? '✓' : '✗'} {passwordStrength!.message}
+            <span style={{ fontSize: 12, color: passwordStrength!.valid ? '#4CAF50' : '#f44336', fontWeight: 500 }}>
+              {passwordStrength!.valid ? '✓' : '✗'} {t(passwordStrength!.messageKey as Parameters<typeof translate>[0])}
             </span>
             <ul style={{ fontSize: 12, color: '#666', margin: 0, paddingLeft: 16 }}>
-              <li style={{ color: password.length >= 8 ? '#4CAF50' : '#999' }}>At least 8 characters</li>
-              <li style={{ color: /[A-Z]/.test(password) ? '#4CAF50' : '#999' }}>One uppercase letter</li>
-              <li style={{ color: /[a-z]/.test(password) ? '#4CAF50' : '#999' }}>One lowercase letter</li>
-              <li style={{ color: /[0-9]/.test(password) ? '#4CAF50' : '#999' }}>One number</li>
+              <li style={{ color: password.length >= 8 ? '#4CAF50' : '#999' }}>{t('pw_req_length')}</li>
+              <li style={{ color: /[A-Z]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_upper')}</li>
+              <li style={{ color: /[a-z]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_lower')}</li>
+              <li style={{ color: /[0-9]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_number')}</li>
             </ul>
             <p style={{ fontSize: 12, color: '#999', margin: '8px 0 0 0' }}>
-              First admin to register can always proceed. Later registrations require server setting.
+              {t('first_admin_note')}
             </p>
           </div>
         )}
 
         <button
           type="submit"
-          disabled={
-            pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin)
-          }
+          disabled={pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin)}
           style={{
             padding: '12px 16px',
             background: pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin) ? '#ccc' : '#2196F3',
@@ -295,8 +280,7 @@ export const LoginPage = () => {
             borderRadius: 4,
             fontSize: 14,
             fontWeight: 600,
-            cursor:
-              pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin) ? 'not-allowed' : 'pointer',
+            cursor: pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin) ? 'not-allowed' : 'pointer',
             transition: 'background 200ms'
           }}
           onMouseEnter={(e) => {
@@ -309,12 +293,8 @@ export const LoginPage = () => {
           }}
         >
           {pending
-            ? tab === 'login'
-              ? 'Signing in...'
-              : 'Creating account...'
-            : tab === 'login'
-              ? 'Sign In'
-              : 'Create Account'}
+            ? tab === 'login' ? t('signing_in') : t('creating_account')
+            : tab === 'login' ? t('sign_in') : t('create_account')}
         </button>
 
         {errorMessage ? (
@@ -323,7 +303,6 @@ export const LoginPage = () => {
           </div>
         ) : null}
       </form>
-
     </main>
   );
 };

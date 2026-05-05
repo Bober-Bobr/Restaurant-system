@@ -56,9 +56,10 @@ export const AdminPhotosPage = () => {
   const deleteMutation = useMutation({
     mutationFn: (photoUrl: string) => {
       const parts = photoUrl.split('/');
-      // /uploads/menu/hot_appetizers/photo.jpg → 5 parts
+      // /uploads/{rid}/menu/hot_appetizers/photo.jpg → 6 parts (with dish category)
+      // /uploads/{rid}/menu/photo.jpg → 5 parts
       const filename = parts[parts.length - 1];
-      const dishCat = parts.length === 5 ? parts[3] : undefined;
+      const dishCat = parts.length === 6 ? parts[4] : undefined;
       return photoService.deletePhoto(category, filename, dishCat);
     },
     onSuccess: () => {
@@ -189,7 +190,7 @@ export const AdminPhotosPage = () => {
                 const isDeleting = deleteMutation.isPending && deleteMutation.variables === photoUrl;
                 // Show dish category badge when in "All" view
                 const parts = photoUrl.split('/');
-                const photoDishCat = parts.length === 5 ? parts[3] : null;
+                const photoDishCat = parts.length === 6 ? parts[4] : null;
                 return (
                   <div
                     key={photoUrl}

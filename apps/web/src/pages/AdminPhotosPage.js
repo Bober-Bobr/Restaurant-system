@@ -46,9 +46,10 @@ export const AdminPhotosPage = () => {
     const deleteMutation = useMutation({
         mutationFn: (photoUrl) => {
             const parts = photoUrl.split('/');
-            // /uploads/menu/hot_appetizers/photo.jpg → 5 parts
+            // /uploads/{rid}/menu/hot_appetizers/photo.jpg → 6 parts (with dish category)
+            // /uploads/{rid}/menu/photo.jpg → 5 parts
             const filename = parts[parts.length - 1];
-            const dishCat = parts.length === 5 ? parts[3] : undefined;
+            const dishCat = parts.length === 6 ? parts[4] : undefined;
             return photoService.deletePhoto(category, filename, dishCat);
         },
         onSuccess: () => {
@@ -88,7 +89,7 @@ export const AdminPhotosPage = () => {
                                         const isDeleting = deleteMutation.isPending && deleteMutation.variables === photoUrl;
                                         // Show dish category badge when in "All" view
                                         const parts = photoUrl.split('/');
-                                        const photoDishCat = parts.length === 5 ? parts[3] : null;
+                                        const photoDishCat = parts.length === 6 ? parts[4] : null;
                                         return (_jsxs("div", { className: "group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-shadow hover:shadow-md", children: [_jsx("button", { type: "button", onClick: () => setLightboxSrc(getPhotoUrl(photoUrl) ?? null), className: "group/img aspect-square block w-full overflow-hidden", children: _jsx("img", { src: getPhotoUrl(photoUrl), alt: filename, className: "h-full w-full object-cover transition-transform duration-200 group-hover/img:scale-[1.03]" }) }), _jsxs("div", { className: "p-3", children: [photoDishCat && !dishCategory && (_jsx("p", { className: "mb-1 truncate text-xs font-medium text-slate-400 uppercase tracking-wide", children: photoDishCat.replace(/_/g, ' ') })), _jsx("p", { className: "truncate text-xs text-slate-500", title: filename, children: filename }), _jsx("button", { type: "button", onClick: () => handleDelete(photoUrl), disabled: isDeleting || deleteMutation.isPending, className: "mt-2 w-full rounded-xl border border-red-200 bg-white py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50", children: isDeleting ? t('deleting') : t('delete') })] }), _jsx("div", { className: "pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-transparent transition-all group-hover:ring-slate-300" })] }, photoUrl));
                                     }) }))] })] }) })] }));
 };

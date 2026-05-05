@@ -71,7 +71,7 @@ function TableCategoryCard({ tc, isSelected, onSelect, onLightbox, t, }) {
     return (_jsxs("div", { className: `relative flex shrink-0 flex-col overflow-hidden rounded-3xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${isSelected
             ? 'ring-2 ring-[#c9a42c] shadow-[0_0_30px_rgba(201,164,44,0.3)]'
             : 'shadow-lg hover:shadow-[0_0_25px_rgba(201,164,44,0.15)]'}`, style: {
-            width: 300,
+            width: 'min(300px, 85vw)',
             background: 'rgba(255,255,255,0.09)',
             border: isSelected ? '1px solid rgba(201,164,44,0.6)' : '1px solid rgba(255,255,255,0.14)',
             backdropFilter: 'blur(12px)',

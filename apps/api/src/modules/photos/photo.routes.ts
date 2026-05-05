@@ -12,7 +12,7 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     // Allow only image files
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -26,6 +26,5 @@ const upload = multer({
 router.post('/upload', upload.fields([{ name: 'files', maxCount: 10 }]), (req, res) => photoController.uploadPhotos(req, res));
 router.get('/:category', (req, res) => photoController.listPhotos(req, res));
 router.delete('/:category/:filename', (req, res) => photoController.deletePhoto(req, res));
-router.get('/:category/:filename', (req, res) => photoController.servePhoto(req, res));
 
 export { router as photoRoutes };
