@@ -2,9 +2,8 @@
 set -e
 
 echo "==> Pulling latest changes..."
-git stash
-git pull --rebase
-git stash pop 2>/dev/null || true
+git fetch origin
+git reset --hard origin/main
 
 echo "==> Installing dependencies..."
 npm install
