@@ -7,6 +7,10 @@ git pull
 echo "==> Installing dependencies..."
 npm install
 
+echo "==> Fixing database permissions..."
+chmod 664 apps/api/prisma/dev.db 2>/dev/null || true
+chmod 775 apps/api/prisma/
+
 echo "==> Generating Prisma client..."
 npx prisma generate --schema=apps/api/prisma/schema.prisma
 
