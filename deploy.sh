@@ -25,6 +25,6 @@ rm -rf /var/www/restaurant/*
 cp -r apps/web/dist/* /var/www/restaurant/
 
 echo "==> Restarting API..."
-pm2 restart restaurant-api
+pm2 restart restaurant-api --update-env
 
 echo "==> Done. Deploy complete."
