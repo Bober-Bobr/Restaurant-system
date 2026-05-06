@@ -21,6 +21,7 @@ echo "==> Building frontend..."
 npm run build -w @banquet/web
 
 echo "==> Deploying frontend to /var/www/restaurant..."
+rm -rf /var/www/restaurant/*
 cp -r apps/web/dist/* /var/www/restaurant/
 
 echo "==> Restarting API..."
