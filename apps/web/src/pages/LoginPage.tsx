@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate, locales, type Locale } from '../utils/translate';
 import { buildSubdomainUrl, isRootDomain, toSubdomainSlug } from '../utils/subdomain';
+import logoSrc from '../assets/networking-logo.png';
 
 const formatRequestError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -135,7 +136,11 @@ export const LoginPage = () => {
       </div>
 
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ marginBottom: 8 }}>{t('banquet_admin')}</h1>
+        <img
+          src={logoSrc}
+          alt="Logo"
+          style={{ height: 80, width: 80, marginBottom: 12, objectFit: 'contain', display: 'block', margin: '0 auto 12px' }}
+        />
         <p style={{ color: '#666', fontSize: 14 }}>
           {tab === 'login' ? t('login_subtitle') : t('register_subtitle')}
         </p>
