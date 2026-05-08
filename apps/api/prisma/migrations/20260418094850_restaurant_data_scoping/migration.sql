@@ -68,6 +68,7 @@ CREATE TABLE "new_Event" (
 INSERT INTO "new_Event" ("createdAt", "customerName", "customerPhone", "eventDate", "eventType", "guestCount", "hallId", "id", "notes", "region", "status", "tableCategoryId", "updatedAt") SELECT "createdAt", "customerName", "customerPhone", "eventDate", "eventType", "guestCount", "hallId", "id", "notes", "region", "status", "tableCategoryId", "updatedAt" FROM "Event";
 DROP TABLE "Event";
 ALTER TABLE "new_Event" RENAME TO "Event";
+UPDATE "Event" SET "eventNumber" = rowid;
 CREATE UNIQUE INDEX "Event_eventNumber_key" ON "Event"("eventNumber");
 CREATE INDEX "Event_hallId_idx" ON "Event"("hallId");
 CREATE INDEX "Event_tableCategoryId_idx" ON "Event"("tableCategoryId");
