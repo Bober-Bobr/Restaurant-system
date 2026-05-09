@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { MenuRepository } from '../menu/menu.repository.js';
 import { HallRepository } from '../hall/hall.repository.js';
 import { TableCategoryRepository } from '../tableCategory/tableCategory.repository.js';
+import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
 
@@ -9,6 +10,17 @@ const router = Router();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
+const restaurantRepository = new RestaurantRepository();
+
+router.get('/restaurant', async (request, response, next) => {
+  try {
+    const restaurantId = String(request.query.restaurantId ?? '');
+    if (!restaurantId) { response.status(400).json({ message: 'restaurantId required' }); return; }
+    const restaurant = await restaurantRepository.findById(restaurantId);
+    if (!restaurant) { response.status(404).json({ message: 'Not found' }); return; }
+    response.json({ id: restaurant.id, name: restaurant.name, logoUrl: restaurant.logoUrl ?? null });
+  } catch (error) { next(error); }
+});
 
 router.get('/menu-items', async (request, response, next) => {
   try {

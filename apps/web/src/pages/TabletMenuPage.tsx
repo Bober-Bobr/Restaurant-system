@@ -8,7 +8,6 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import logo from '../assets/logo.png';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -234,12 +233,14 @@ export const TabletMenuPage = () => {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
     setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale,
   } = useTabletStore();
-  const menuItems       = usePublicDataStore((s) => s.menuItems);
-  const halls           = usePublicDataStore((s) => s.halls);
-  const tableCategories = usePublicDataStore((s) => s.tableCategories);
-  const isLoading       = usePublicDataStore((s) => s.isLoading);
-  const error           = usePublicDataStore((s) => s.error);
-  const loadPublicData  = usePublicDataStore((s) => s.loadPublicData);
+  const menuItems         = usePublicDataStore((s) => s.menuItems);
+  const halls             = usePublicDataStore((s) => s.halls);
+  const tableCategories   = usePublicDataStore((s) => s.tableCategories);
+  const restaurantName    = usePublicDataStore((s) => s.restaurantName);
+  const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
+  const isLoading         = usePublicDataStore((s) => s.isLoading);
+  const error             = usePublicDataStore((s) => s.error);
+  const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -274,10 +275,13 @@ export const TabletMenuPage = () => {
           style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <img src={logo} alt="logo"
-                className="h-14 w-14 rounded-2xl object-cover shadow-lg bg-white ring-2 ring-yellow-600/40" />
+              {restaurantLogoUrl && (
+                <img src={getPhotoUrl(restaurantLogoUrl)}
+                  alt={restaurantName ?? ''}
+                  className="h-14 w-14 rounded-2xl object-cover shadow-lg bg-white ring-2 ring-yellow-600/40" />
+              )}
               <div>
-                <p className="rg-label">Madinabek</p>
+                {restaurantName && <p className="rg-label">{restaurantName}</p>}
                 <h1 className="text-2xl font-bold text-white">{t('client_menu_selection')}</h1>
               </div>
             </div>
