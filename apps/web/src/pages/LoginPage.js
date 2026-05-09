@@ -56,7 +56,7 @@ export const LoginPage = () => {
     const passwordStrength = tab === 'register' ? checkPasswordStrength(password) : null;
     const redirectAfterLogin = (data) => {
         setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName);
-        if (isRootDomain() && data.restaurantName && data.role !== 'OWNER') {
+        if (isRootDomain() && data.restaurantName) {
             const slug = toSubdomainSlug(data.restaurantName);
             window.location.href = buildSubdomainUrl(slug, {
                 _at: data.accessToken,

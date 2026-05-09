@@ -29,12 +29,24 @@ export class RestaurantService {
             throw createHttpError(403, 'Forbidden');
         return this.repo.update(id, data);
     }
+    async updateAsChief(id, data) {
+        const restaurant = await this.repo.findById(id);
+        if (!restaurant)
+            throw createHttpError(404, 'Restaurant not found');
+        return this.repo.update(id, data);
+    }
     async remove(ownerId, id) {
         const restaurant = await this.repo.findById(id);
         if (!restaurant)
             throw createHttpError(404, 'Restaurant not found');
         if (restaurant.ownerId !== ownerId)
             throw createHttpError(403, 'Forbidden');
+        await this.repo.delete(id);
+    }
+    async removeAsChief(id) {
+        const restaurant = await this.repo.findById(id);
+        if (!restaurant)
+            throw createHttpError(404, 'Restaurant not found');
         await this.repo.delete(id);
     }
 }

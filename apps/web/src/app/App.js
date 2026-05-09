@@ -12,6 +12,7 @@ import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 import { useAuthStore } from '../store/auth.store';
+import { isRootDomain, toSubdomainSlug } from '../utils/subdomain';
 export const App = () => {
     const handledRef = useRef(false);
     if (!handledRef.current) {
@@ -28,6 +29,17 @@ export const App = () => {
             useAuthStore.getState().setAuth(at, rt, u, exp || 15 * 60 * 1000, r, rid || null, rn || null);
             window.history.replaceState({}, '', window.location.pathname);
         }
+    }
+    // On root domain, only /login, /tablet and /tablet/summary are accessible
+    if (isRootDomain() && window.location.hostname !== 'localhost') {
+        const { accessToken, restaurantName } = useAuthStore.getState();
+        // Authenticated user on root domain → send to their subdomain
+        if (accessToken && restaurantName && window.location.pathname !== '/login') {
+            const slug = toSubdomainSlug(restaurantName);
+            window.location.href = `https://${slug}.v-menu.uz/`;
+            return null;
+        }
+        return (_jsxs(Routes, { children: [_jsx(Route, { path: "/login", element: _jsx(LoginPage, {}) }), _jsx(Route, { path: "/tablet", element: _jsx(TabletMenuPage, {}) }), _jsx(Route, { path: "/tablet/summary", element: _jsx(TabletSummaryPage, {}) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/login", replace: true }) })] }));
     }
     return (_jsxs(Routes, { children: [_jsx(Route, { path: "/login", element: _jsx(LoginPage, {}) }), _jsx(Route, { path: "/tablet", element: _jsx(TabletMenuPage, {}) }), _jsx(Route, { path: "/tablet/summary", element: _jsx(TabletSummaryPage, {}) }), _jsxs(Route, { element: _jsx(AdminLayout, {}), children: [_jsx(Route, { path: "/", element: _jsx(AdminEventsPage, {}) }), _jsx(Route, { path: "/admin/menu", element: _jsx(AdminMenuPage, {}) }), _jsx(Route, { path: "/admin/table-categories", element: _jsx(AdminTableCategoriesPage, {}) }), _jsx(Route, { path: "/admin/halls", element: _jsx(AdminHallsPage, {}) }), _jsx(Route, { path: "/admin/photos", element: _jsx(AdminPhotosPage, {}) }), _jsx(Route, { path: "/admin/restaurants", element: _jsx(AdminRestaurantsPage, {}) })] }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/", replace: true }) })] }));
 };
