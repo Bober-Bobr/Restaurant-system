@@ -12,6 +12,7 @@ import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
+import { isRootDomain, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -30,6 +31,25 @@ export const App = () => {
       useAuthStore.getState().setAuth(at, rt, u, exp || 15 * 60 * 1000, r, rid || null, rn || null);
       window.history.replaceState({}, '', window.location.pathname);
     }
+  }
+
+  // On root domain, only /login, /tablet and /tablet/summary are accessible
+  if (isRootDomain() && window.location.hostname !== 'localhost') {
+    const { accessToken, restaurantName } = useAuthStore.getState();
+    // Authenticated user on root domain → send to their subdomain
+    if (accessToken && restaurantName && window.location.pathname !== '/login') {
+      const slug = toSubdomainSlug(restaurantName);
+      window.location.href = `https://${slug}.v-menu.uz/`;
+      return null;
+    }
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/tablet" element={<TabletMenuPage />} />
+        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   return (
