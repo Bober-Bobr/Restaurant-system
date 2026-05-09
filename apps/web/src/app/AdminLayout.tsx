@@ -38,8 +38,15 @@ export const AdminLayout = () => {
     }
   });
 
+  const role = useAuthStore((state) => state.role);
+
   if (!accessToken) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (role === 'OWNER') {
+    window.location.href = 'https://cabinet.v-menu.uz/';
+    return null;
   }
 
   return (

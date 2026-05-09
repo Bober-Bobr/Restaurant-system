@@ -86,6 +86,10 @@ export class AuthController {
       response.json(await authService.listUsers());
       return;
     }
+    if (admin.role === 'OWNER') {
+      response.json(await authService.listUsersForOwner(admin.id));
+      return;
+    }
     const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);
     if (!restaurantId) {
       response.json([]);

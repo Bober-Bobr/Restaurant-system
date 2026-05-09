@@ -10,7 +10,7 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx src/scripts/seed-test-users.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
