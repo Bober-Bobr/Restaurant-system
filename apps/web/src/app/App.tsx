@@ -6,6 +6,7 @@ import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
 import { AdminPhotosPage } from '../pages/AdminPhotosPage';
 import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
+import { ChiefAdminPage } from '../pages/ChiefAdminPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
@@ -57,15 +58,24 @@ export const App = () => {
     );
   }
 
-  // Admin subdomain → only the chief admin pages
+  // Admin subdomain → only the chief admin dashboard
   if (isAdminSubdomain()) {
+    const { accessToken, role } = useAuthStore.getState();
+    if (!accessToken || role !== 'CHIEF_ADMIN') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = 'https://v-menu.uz/login';
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
     return (
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<AdminLayout />}>
-          <Route path="/" element={<AdminRestaurantsPage />} />
-          <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
-        </Route>
+        <Route path="/" element={<ChiefAdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
