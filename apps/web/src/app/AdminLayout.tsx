@@ -33,7 +33,7 @@ export const AdminLayout = () => {
     mutationFn: () => authService.logout(),
     onSettled: () => {
       logout();
-      navigate('/login', { replace: true });
+      window.location.href = 'https://v-menu.uz/login';
     }
   });
 
