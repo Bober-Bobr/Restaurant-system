@@ -108,14 +108,14 @@ export const App = () => {
     );
   }
 
-  // EMPLOYEE → simplified layout
+  // EMPLOYEE → simplified layout (with tablet); KITCHEN → same layout but no tablet access
   const role = useAuthStore((s) => s.role);
-  if (role === 'EMPLOYEE') {
+  if (role === 'EMPLOYEE' || role === 'KITCHEN') {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/tablet" element={<TabletMenuPage />} />
-        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        {role === 'EMPLOYEE' && <Route path="/tablet" element={<TabletMenuPage />} />}
+        {role === 'EMPLOYEE' && <Route path="/tablet/summary" element={<TabletSummaryPage />} />}
         <Route element={<EmployeeLayout />}>
           <Route path="/" element={<EmployeeEventsPage />} />
         </Route>

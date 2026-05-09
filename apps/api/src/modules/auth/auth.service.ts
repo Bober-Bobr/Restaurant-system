@@ -77,12 +77,12 @@ export class AuthService {
   ) {
     if (caller.role === AdminRole.OWNER) {
       if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN) {
-        throw createHttpError(403, 'Owners can only create Administrator or Employee accounts.');
+        throw createHttpError(403, 'Owners can only create Administrator, Employee, or Kitchen accounts.');
       }
     }
     if (caller.role === AdminRole.ADMIN) {
-      if (payload.role !== AdminRole.EMPLOYEE) {
-        throw createHttpError(403, 'Administrators can only create Employee accounts.');
+      if (payload.role !== AdminRole.EMPLOYEE && payload.role !== AdminRole.KITCHEN) {
+        throw createHttpError(403, 'Administrators can only create Employee or Kitchen accounts.');
       }
       // Force the new employee into the admin's restaurant
       const restaurantId = caller.restaurantId

@@ -44,7 +44,7 @@ export const EmployeeLayout = () => {
   }
 
   // Wrong role lands here? Send them to the right place.
-  if (role !== 'EMPLOYEE') {
+  if (role !== 'EMPLOYEE' && role !== 'KITCHEN') {
     navigate('/', { replace: true });
     return null;
   }
@@ -63,8 +63,8 @@ export const EmployeeLayout = () => {
               <p className="text-sm font-semibold text-slate-900">{restaurantName ?? t('banquet_admin')}</p>
               <p className="text-xs text-slate-500">
                 {username}
-                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: '#16a34a', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
-                  {t('employee_role')}
+                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: role === 'KITCHEN' ? '#ea580c' : '#16a34a', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
+                  {t(role === 'KITCHEN' ? 'kitchen_role' : 'employee_role')}
                 </span>
               </p>
             </div>
@@ -72,9 +72,11 @@ export const EmployeeLayout = () => {
 
           <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
             <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
-            <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
-              {t('tablet')}
-            </Link>
+            {role !== 'KITCHEN' && (
+              <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
+                {t('tablet')}
+              </Link>
+            )}
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-3">

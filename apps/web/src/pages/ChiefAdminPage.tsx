@@ -198,6 +198,7 @@ export const ChiefAdminPage = () => {
                   <option value="OWNER">OWNER</option>
                   <option value="ADMIN">ADMIN</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
+                  <option value="KITCHEN">KITCHEN</option>
                 </select>
               </div>
               {uError && <p style={{ color: '#f87171', marginTop: 8 }}>{uError}</p>}
@@ -233,6 +234,7 @@ export const ChiefAdminPage = () => {
                       <option value="OWNER">OWNER</option>
                       <option value="ADMIN">ADMIN</option>
                       <option value="EMPLOYEE">EMPLOYEE</option>
+                      <option value="KITCHEN">KITCHEN</option>
                     </select>
                     {u.role !== 'CHIEF_ADMIN' && (
                       <button

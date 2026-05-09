@@ -85,6 +85,7 @@ enum AdminRole {
   OWNER
   ADMIN
   EMPLOYEE
+  KITCHEN
 }
 
 model AdminUser {

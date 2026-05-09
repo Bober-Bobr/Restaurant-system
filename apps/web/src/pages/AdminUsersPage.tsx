@@ -13,14 +13,16 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   CHIEF_ADMIN: 'Chief Administrator',
   OWNER: 'Owner',
   ADMIN: 'Administrator',
-  EMPLOYEE: 'Employee'
+  EMPLOYEE: 'Employee',
+  KITCHEN: 'Kitchen'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   CHIEF_ADMIN: { background: '#dc2626', color: '#fff' },
   OWNER: { background: '#7c3aed', color: '#fff' },
   ADMIN: { background: '#2563eb', color: '#fff' },
-  EMPLOYEE: { background: '#16a34a', color: '#fff' }
+  EMPLOYEE: { background: '#16a34a', color: '#fff' },
+  KITCHEN: { background: '#ea580c', color: '#fff' }
 };
 
 const formatError = (error: unknown): string => {
@@ -99,7 +101,7 @@ export const AdminUsersPage = () => {
   });
 
   // OWNER can create ADMIN or EMPLOYEE; ADMIN can only create EMPLOYEE
-  const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'EMPLOYEE'] : ['EMPLOYEE'];
+  const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'EMPLOYEE', 'KITCHEN'] : ['EMPLOYEE', 'KITCHEN'];
   const requiresRestaurantPicker = currentRole === 'OWNER';
 
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
@@ -203,6 +205,7 @@ export const AdminUsersPage = () => {
                       >
                         <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
                         <option value="EMPLOYEE">{ROLE_LABELS.EMPLOYEE}</option>
+                        <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
                       </select>
                     )}
                     {user.username !== currentUsername && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE') && (
