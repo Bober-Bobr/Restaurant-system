@@ -107,6 +107,13 @@ async function main() {
     console.log(`\n✓ owner_test2 (OWNER) → Company: Rest → Restaurant: "Rest" created (${restRestaurant.id})`);
   }
 
+  // Set Rest logo
+  await prisma.restaurant.update({
+    where: { id: restRestaurant.id },
+    data: { logoUrl: '/uploads/image.png' },
+  });
+  console.log(`✓ Rest logo set to /uploads/image.png`);
+
   // admin_test2 → Rest restaurant
   await upsertUser('admin_test2', AdminRole.ADMIN, restRestaurant.id);
   console.log(`✓ admin_test2 (ADMIN) → "${restRestaurant.name}"`);
