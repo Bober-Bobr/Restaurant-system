@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type AdminRole = 'OWNER' | 'ADMIN' | 'EMPLOYEE';
+export type AdminRole = 'CHIEF_ADMIN' | 'OWNER' | 'ADMIN' | 'EMPLOYEE';
 
 type AuthState = {
   accessToken: string | null;

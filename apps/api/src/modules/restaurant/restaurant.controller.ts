@@ -9,6 +9,10 @@ const service = new RestaurantService(new RestaurantRepository());
 export class RestaurantController {
   async list(request: Request, response: Response) {
     const admin = request.admin!;
+    if (admin.role === AdminRole.CHIEF_ADMIN) {
+      response.json(await service.listAll());
+      return;
+    }
     if (admin.role === AdminRole.OWNER) {
       response.json(await service.listForOwner(admin.id));
       return;
@@ -35,12 +39,20 @@ export class RestaurantController {
 
   async update(request: Request, response: Response) {
     const data = updateRestaurantSchema.parse(request.body);
-    const restaurant = await service.update(request.admin!.id, String(request.params.id), data);
+    const admin = request.admin!;
+    const restaurant = admin.role === AdminRole.CHIEF_ADMIN
+      ? await service.updateAsChief(String(request.params.id), data)
+      : await service.update(admin.id, String(request.params.id), data);
     response.json(restaurant);
   }
 
   async remove(request: Request, response: Response) {
-    await service.remove(request.admin!.id, String(request.params.id));
+    const admin = request.admin!;
+    if (admin.role === AdminRole.CHIEF_ADMIN) {
+      await service.removeAsChief(String(request.params.id));
+    } else {
+      await service.remove(admin.id, String(request.params.id));
+    }
     response.status(204).send();
   }
 }

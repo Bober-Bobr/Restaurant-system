@@ -62,7 +62,17 @@ export const LoginPage = () => {
 
   const redirectAfterLogin = (data: { accessToken: string; refreshToken: string; username: string; expiresIn: number; role: import('../store/auth.store').AdminRole; restaurantId: string | null; restaurantName?: string | null }) => {
     setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName);
-    if (isRootDomain() && data.restaurantName) {
+    if (isRootDomain() && data.role === 'CHIEF_ADMIN') {
+      window.location.href = buildSubdomainUrl('admin', {
+        _at: data.accessToken,
+        _rt: data.refreshToken,
+        _u: data.username,
+        _r: data.role,
+        _rid: '',
+        _rn: '',
+        _exp: String(data.expiresIn),
+      });
+    } else if (isRootDomain() && data.restaurantName) {
       const slug = toSubdomainSlug(data.restaurantName);
       window.location.href = buildSubdomainUrl(slug, {
         _at: data.accessToken,

@@ -12,7 +12,7 @@ import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -35,8 +35,13 @@ export const App = () => {
 
   // On root domain, only /login, /tablet and /tablet/summary are accessible
   if (isRootDomain() && window.location.hostname !== 'localhost') {
-    const { accessToken, restaurantName } = useAuthStore.getState();
-    // Authenticated user on root domain → send to their subdomain
+    const { accessToken, role, restaurantName } = useAuthStore.getState();
+    // CHIEF_ADMIN → admin.v-menu.uz
+    if (accessToken && role === 'CHIEF_ADMIN' && window.location.pathname !== '/login') {
+      window.location.href = 'https://admin.v-menu.uz/';
+      return null;
+    }
+    // Authenticated user on root domain → send to their restaurant subdomain
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
       const slug = toSubdomainSlug(restaurantName);
       window.location.href = `https://${slug}.v-menu.uz/`;
@@ -48,6 +53,20 @@ export const App = () => {
         <Route path="/tablet" element={<TabletMenuPage />} />
         <Route path="/tablet/summary" element={<TabletSummaryPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Admin subdomain → only the chief admin pages
+  if (isAdminSubdomain()) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<AdminLayout />}>
+          <Route path="/" element={<AdminRestaurantsPage />} />
+          <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
