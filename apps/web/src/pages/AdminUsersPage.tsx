@@ -10,12 +10,14 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 
 const ROLE_LABELS: Record<AdminRole, string> = {
+  CHIEF_ADMIN: 'Chief Administrator',
   OWNER: 'Owner',
   ADMIN: 'Administrator',
   EMPLOYEE: 'Employee'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
+  CHIEF_ADMIN: { background: '#dc2626', color: '#fff' },
   OWNER: { background: '#7c3aed', color: '#fff' },
   ADMIN: { background: '#2563eb', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' }
