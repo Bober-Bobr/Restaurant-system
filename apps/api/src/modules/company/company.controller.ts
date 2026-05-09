@@ -22,4 +22,14 @@ export class CompanyController {
     const company = await service.update(request.admin!.id, data);
     response.json(company);
   }
+
+  async listAll(request: Request, response: Response) {
+    const companies = await service.listAllWithDetails();
+    response.json(companies);
+  }
+
+  async deleteAsChief(request: Request, response: Response) {
+    await service.deleteAsChief(String(request.params.id));
+    response.status(204).send();
+  }
 }

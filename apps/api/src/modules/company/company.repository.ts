@@ -16,4 +16,18 @@ export class CompanyRepository {
   async findAll() {
     return prisma.company.findMany({ orderBy: { createdAt: 'asc' } });
   }
+
+  async findAllWithDetails() {
+    return prisma.company.findMany({
+      orderBy: { createdAt: 'asc' },
+      include: {
+        owner: { select: { id: true, username: true } },
+        restaurants: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+  }
+
+  async deleteById(id: string) {
+    return prisma.company.delete({ where: { id } });
+  }
 }

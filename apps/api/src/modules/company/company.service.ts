@@ -19,4 +19,12 @@ export class CompanyService {
     if (!company) throw createHttpError(404, 'Company not found. Create one first.');
     return this.repo.update(company.id, data);
   }
+
+  async listAllWithDetails() {
+    return this.repo.findAllWithDetails();
+  }
+
+  async deleteAsChief(id: string) {
+    return this.repo.deleteById(id);
+  }
 }

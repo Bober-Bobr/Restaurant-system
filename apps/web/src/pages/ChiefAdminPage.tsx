@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
-import { restaurantService, type Restaurant } from '../services/restaurant.service';
+import { companyService, type CompanyWithDetails } from '../services/company.service';
+import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -17,55 +18,47 @@ const formatError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-type Tab = 'restaurants' | 'users';
+type Tab = 'companies' | 'users';
 
 export const ChiefAdminPage = () => {
   const username = useAuthStore((s) => s.username);
   const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>('restaurants');
+  const [tab, setTab] = useState<Tab>('companies');
 
-  const restaurantsQuery = useQuery({ queryKey: ['cad-restaurants'], queryFn: () => restaurantService.list() });
-  const usersQuery = useQuery({ queryKey: ['cad-users'], queryFn: () => authService.listUsers() });
+  const companiesQuery = useQuery<CompanyWithDetails[]>({
+    queryKey: ['cad-companies'],
+    queryFn: () => companyService.listAll(),
+  });
+  const usersQuery = useQuery<AdminUser[]>({
+    queryKey: ['cad-users'],
+    queryFn: () => authService.listUsers(),
+  });
 
-  const [rName, setRName] = useState('');
-  const [rAddress, setRAddress] = useState('');
-  const [rLogoUrl, setRLogoUrl] = useState('');
-  const [rError, setRError] = useState<string | null>(null);
+  const companies: CompanyWithDetails[] = companiesQuery.data ?? [];
+  const users: AdminUser[] = usersQuery.data ?? [];
 
-  const createRestaurant = useMutation({
-    mutationFn: () => restaurantService.create({
-      name: rName.trim(),
-      address: rAddress.trim() || undefined,
-      logoUrl: rLogoUrl.trim() || undefined,
-    }),
-    onSuccess: () => {
-      setRName(''); setRAddress(''); setRLogoUrl(''); setRError(null);
-      queryClient.invalidateQueries({ queryKey: ['cad-restaurants'] });
-    },
-    onError: (e) => setRError(formatError(e)),
+  // ── Company actions ──────────────────────────────────────────────────────
+  const deleteCompany = useMutation({
+    mutationFn: (id: string) => companyService.deleteCompany(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-companies'] }),
   });
 
   const deleteRestaurant = useMutation({
     mutationFn: (id: string) => restaurantService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-restaurants'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-companies'] }),
   });
 
+  // ── User actions ─────────────────────────────────────────────────────────
   const [uName, setUName] = useState('');
   const [uPwd, setUPwd] = useState('');
   const [uRole, setURole] = useState<AdminRole>('OWNER');
-  const [uRestaurantId, setURestaurantId] = useState('');
   const [uError, setUError] = useState<string | null>(null);
 
   const createUser = useMutation({
-    mutationFn: () => authService.createUserAsChief({
-      username: uName.trim(),
-      password: uPwd,
-      role: uRole,
-      restaurantId: uRestaurantId || null,
-    }),
+    mutationFn: () => authService.createUserAsChief({ username: uName.trim(), password: uPwd, role: uRole, restaurantId: null }),
     onSuccess: () => {
-      setUName(''); setUPwd(''); setURole('OWNER'); setURestaurantId(''); setUError(null);
+      setUName(''); setUPwd(''); setURole('OWNER'); setUError(null);
       queryClient.invalidateQueries({ queryKey: ['cad-users'] });
     },
     onError: (e) => setUError(formatError(e)),
@@ -81,15 +74,14 @@ export const ChiefAdminPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-users'] }),
   });
 
-  const restaurants: Restaurant[] = restaurantsQuery.data ?? [];
-  const users: AdminUser[] = usersQuery.data ?? [];
-  const restaurantById = (id: string | null) => restaurants.find((r) => r.id === id);
-
   const handleLogout = async () => {
     try { await authService.logout(); } catch {}
     logout();
     window.location.href = 'https://v-menu.uz/login';
   };
+
+  // Collect all restaurant IDs that belong to a company
+  const assignedRestaurantIds = new Set(companies.flatMap((c) => c.restaurants.map((r) => r.id)));
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
@@ -107,7 +99,7 @@ export const ChiefAdminPage = () => {
       </header>
 
       <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid #1e293b' }}>
-        {(['restaurants', 'users'] as Tab[]).map((t) => (
+        {(['companies', 'users'] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '12px 20px', background: 'none', border: 'none',
             borderBottom: tab === t ? '2px solid #3b82f6' : '2px solid transparent',
@@ -120,46 +112,81 @@ export const ChiefAdminPage = () => {
       </nav>
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
-        {tab === 'restaurants' && (
-          <>
-            <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
-              <h2 style={{ marginTop: 0, fontSize: 16 }}>Create restaurant</h2>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                <input placeholder="Name" value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
-                <input placeholder="Address" value={rAddress} onChange={(e) => setRAddress(e.target.value)} style={inputStyle} />
-                <input placeholder="Logo URL (e.g. /uploads/logo.png)" value={rLogoUrl} onChange={(e) => setRLogoUrl(e.target.value)} style={inputStyle} />
-              </div>
-              {rError && <p style={{ color: '#f87171', marginTop: 8 }}>{rError}</p>}
-              <button
-                onClick={() => createRestaurant.mutate()}
-                disabled={!rName.trim() || createRestaurant.isPending}
-                style={{ ...btnStyle, marginTop: 12, opacity: !rName.trim() ? 0.5 : 1 }}
-              >
-                {createRestaurant.isPending ? 'Creating...' : 'Create'}
-              </button>
-            </section>
 
-            <section>
-              <h2 style={{ fontSize: 16, marginBottom: 12 }}>All restaurants ({restaurants.length})</h2>
-              <div style={{ display: 'grid', gap: 12 }}>
-                {restaurants.map((r) => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: '#1e293b', borderRadius: 8 }}>
-                    {r.logoUrl && <img src={getPhotoUrl(r.logoUrl)} alt={r.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
+        {/* ── Companies tab ── */}
+        {tab === 'companies' && (
+          <>
+            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>
+              {companies.length} {companies.length === 1 ? 'company' : 'companies'} registered
+            </p>
+
+            {companiesQuery.isLoading && <p style={{ color: '#64748b' }}>Loading…</p>}
+
+            <div style={{ display: 'grid', gap: 16 }}>
+              {companies.map((company) => (
+                <div key={company.id} style={{ background: '#1e293b', borderRadius: 10, overflow: 'hidden', border: '1px solid #334155' }}>
+
+                  {/* Company header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#0f172a', borderBottom: '1px solid #334155' }}>
+                    {company.logoUrl && (
+                      <img src={getPhotoUrl(company.logoUrl)} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
+                    )}
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 600 }}>{r.name}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{r.address ?? '—'}</p>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{company.name}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
+                        Owner:{' '}
+                        <span style={{ color: '#a78bfa', fontWeight: 600 }}>{company.owner.username}</span>
+                        <span style={{ marginLeft: 6, padding: '1px 6px', background: '#7c3aed', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>OWNER</span>
+                      </p>
                     </div>
-                    <button onClick={() => { if (confirm(`Delete ${r.name}? This will also delete all its data.`)) deleteRestaurant.mutate(r.id); }}
-                      style={{ ...btnStyle, background: '#dc2626' }}>
-                      Delete
+                    <button
+                      onClick={() => { if (confirm(`Delete company "${company.name}" and all its restaurants?`)) deleteCompany.mutate(company.id); }}
+                      style={{ ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px' }}
+                    >
+                      Delete company
                     </button>
                   </div>
-                ))}
-              </div>
-            </section>
+
+                  {/* Restaurants under company */}
+                  <div style={{ padding: '10px 16px 14px' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 12, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Restaurants ({company.restaurants.length})
+                    </p>
+                    {company.restaurants.length === 0 ? (
+                      <p style={{ margin: 0, color: '#475569', fontSize: 13 }}>No restaurants yet.</p>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {company.restaurants.map((r) => (
+                          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#0f172a', borderRadius: 7 }}>
+                            {r.logoUrl && (
+                              <img src={getPhotoUrl(r.logoUrl)} alt={r.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />
+                            )}
+                            <div style={{ flex: 1 }}>
+                              <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
+                              {r.address && <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{r.address}</p>}
+                            </div>
+                            <button
+                              onClick={() => { if (confirm(`Delete restaurant "${r.name}"?`)) deleteRestaurant.mutate(r.id); }}
+                              style={{ ...btnStyle, background: '#7f1d1d', fontSize: 11, padding: '4px 8px' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {companies.length === 0 && !companiesQuery.isLoading && (
+                <p style={{ color: '#475569' }}>No companies registered yet.</p>
+              )}
+            </div>
           </>
         )}
 
+        {/* ── Users tab ── */}
         {tab === 'users' && (
           <>
             <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
@@ -172,12 +199,6 @@ export const ChiefAdminPage = () => {
                   <option value="ADMIN">ADMIN</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
                 </select>
-                {uRole !== 'OWNER' && (
-                  <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
-                    <option value="">— No restaurant —</option>
-                    {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                )}
               </div>
               {uError && <p style={{ color: '#f87171', marginTop: 8 }}>{uError}</p>}
               <button
@@ -197,7 +218,9 @@ export const ChiefAdminPage = () => {
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 600 }}>{u.username}</p>
                       <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-                        {restaurantById(u.restaurantId)?.name ?? '— no restaurant —'}
+                        {companies.find((c) => c.owner.id === u.id)?.name
+                          ?? companies.flatMap((c) => c.restaurants).find((r) => r.id === u.restaurantId)?.name
+                          ?? (u.role === 'CHIEF_ADMIN' ? '— system —' : '— unassigned —')}
                       </p>
                     </div>
                     <select
@@ -212,8 +235,10 @@ export const ChiefAdminPage = () => {
                       <option value="EMPLOYEE">EMPLOYEE</option>
                     </select>
                     {u.role !== 'CHIEF_ADMIN' && (
-                      <button onClick={() => { if (confirm(`Delete user ${u.username}?`)) deleteUser.mutate(u.id); }}
-                        style={{ ...btnStyle, background: '#dc2626' }}>
+                      <button
+                        onClick={() => { if (confirm(`Delete user ${u.username}?`)) deleteUser.mutate(u.id); }}
+                        style={{ ...btnStyle, background: '#dc2626' }}
+                      >
                         Delete
                       </button>
                     )}
