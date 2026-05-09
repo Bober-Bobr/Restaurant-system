@@ -6,9 +6,9 @@ import { createCompanySchema, updateCompanySchema } from './company.schema.js';
 const service = new CompanyService(new CompanyRepository());
 
 export class CompanyController {
-  async getMine(request: Request, response: Response) {
-    const company = await service.getMine(request.admin!.id);
-    response.json(company ?? null);
+  async listMine(request: Request, response: Response) {
+    const companies = await service.listMine(request.admin!.id);
+    response.json(companies);
   }
 
   async create(request: Request, response: Response) {
@@ -17,10 +17,27 @@ export class CompanyController {
     response.status(201).json(company);
   }
 
-  async update(request: Request, response: Response) {
+  async updateOwn(request: Request, response: Response) {
     const data = updateCompanySchema.parse(request.body);
-    const company = await service.update(request.admin!.id, data);
+    const admin = request.admin!;
+    if (admin.role === 'CHIEF_ADMIN') {
+      const repo = (service as any).repo;
+      const company = await repo.update(String(request.params.id), data);
+      response.json(company);
+      return;
+    }
+    const company = await service.updateOwn(admin.id, String(request.params.id), data);
     response.json(company);
+  }
+
+  async deleteOwn(request: Request, response: Response) {
+    const admin = request.admin!;
+    if (admin.role === 'CHIEF_ADMIN') {
+      await service.deleteAsChief(String(request.params.id));
+    } else {
+      await service.deleteOwn(admin.id, String(request.params.id));
+    }
+    response.status(204).send();
   }
 
   async listAll(request: Request, response: Response) {

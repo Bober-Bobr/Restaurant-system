@@ -1,8 +1,15 @@
 import { prisma } from '../../db/prisma.js';
 
 export class CompanyRepository {
-  async findByOwnerId(ownerId: string) {
-    return prisma.company.findUnique({ where: { ownerId } });
+  async findAllByOwnerId(ownerId: string) {
+    return prisma.company.findMany({
+      where: { ownerId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async findById(id: string) {
+    return prisma.company.findUnique({ where: { id } });
   }
 
   async create(ownerId: string, data: { name: string; logoUrl?: string }) {

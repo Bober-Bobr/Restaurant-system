@@ -98,7 +98,7 @@ model AdminUser {
   updatedAt        DateTime     @updatedAt
   ownedRestaurants Restaurant[] @relation("OwnedRestaurants")
   restaurant       Restaurant?  @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
-  company          Company?
+  companies        Company[]
 
   @@index([restaurantId])
 }
@@ -107,11 +107,13 @@ model Company {
   id          String       @id @default(cuid())
   name        String
   logoUrl     String?
-  ownerId     String       @unique
+  ownerId     String
   owner       AdminUser    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   restaurants Restaurant[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([ownerId])
 }
 
 model Restaurant {

@@ -26,19 +26,19 @@ export const companyService = {
     const { data } = await httpClient.get<CompanyWithDetails[]>('/companies');
     return data;
   },
-  async getMine(): Promise<Company | null> {
-    const { data } = await httpClient.get<Company | null>('/companies/mine');
+  async listMine(): Promise<Company[]> {
+    const { data } = await httpClient.get<Company[]>('/companies/mine');
     return data;
-  },
-  async deleteCompany(id: string): Promise<void> {
-    await httpClient.delete(`/companies/${id}`);
   },
   async create(payload: { name: string; logoUrl?: string }): Promise<Company> {
     const { data } = await httpClient.post<Company>('/companies', payload);
     return data;
   },
-  async update(payload: { name?: string; logoUrl?: string }): Promise<Company> {
-    const { data } = await httpClient.patch<Company>('/companies/mine', payload);
+  async update(id: string, payload: { name?: string; logoUrl?: string }): Promise<Company> {
+    const { data } = await httpClient.patch<Company>(`/companies/${id}`, payload);
     return data;
+  },
+  async deleteCompany(id: string): Promise<void> {
+    await httpClient.delete(`/companies/${id}`);
   },
 };
