@@ -172,10 +172,12 @@ export const ChiefAdminPage = () => {
                   <option value="ADMIN">ADMIN</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
                 </select>
-                <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
-                  <option value="">— No restaurant —</option>
-                  {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                {uRole !== 'OWNER' && (
+                  <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
+                    <option value="">— No restaurant —</option>
+                    {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                )}
               </div>
               {uError && <p style={{ color: '#f87171', marginTop: 8 }}>{uError}</p>}
               <button

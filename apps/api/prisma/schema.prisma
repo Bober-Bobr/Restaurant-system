@@ -98,8 +98,20 @@ model AdminUser {
   updatedAt        DateTime     @updatedAt
   ownedRestaurants Restaurant[] @relation("OwnedRestaurants")
   restaurant       Restaurant?  @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
+  company          Company?
 
   @@index([restaurantId])
+}
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  logoUrl     String?
+  ownerId     String       @unique
+  owner       AdminUser    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  restaurants Restaurant[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Restaurant {
@@ -108,7 +120,9 @@ model Restaurant {
   address         String?
   logoUrl         String?
   ownerId         String
+  companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
+  company         Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
   staff           AdminUser[]     @relation("StaffRestaurant")
   events          Event[]
   menuItems       MenuItem[]
@@ -118,6 +132,7 @@ model Restaurant {
   updatedAt       DateTime        @updatedAt
 
   @@index([ownerId])
+  @@index([companyId])
 }
 
 model TableCategory {

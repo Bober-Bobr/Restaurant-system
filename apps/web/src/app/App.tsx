@@ -7,13 +7,14 @@ import { AdminHallsPage } from '../pages/AdminHallsPage';
 import { AdminPhotosPage } from '../pages/AdminPhotosPage';
 import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
 import { ChiefAdminPage } from '../pages/ChiefAdminPage';
+import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -54,6 +55,29 @@ export const App = () => {
         <Route path="/tablet" element={<TabletMenuPage />} />
         <Route path="/tablet/summary" element={<TabletSummaryPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Cabinet subdomain → owner dashboard
+  if (isCabinetSubdomain()) {
+    const { accessToken, role } = useAuthStore.getState();
+    if (!accessToken || role !== 'OWNER') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = 'https://v-menu.uz/login';
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
+    return (
+      <Routes>
+        <Route path="/" element={<OwnerCabinetPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }

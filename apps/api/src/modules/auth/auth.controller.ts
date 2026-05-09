@@ -95,7 +95,7 @@ export class AuthController {
   }
 
   async createUserAsChief(request: Request, response: Response) {
-    const result = await authService.createUserAsChief(request.body);
+    const result = await authService.createUserAsChief(request.admin!.role, request.body);
     response.status(201).json(result);
   }
 

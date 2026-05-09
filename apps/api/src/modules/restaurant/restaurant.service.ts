@@ -22,7 +22,7 @@ export class RestaurantService {
     return this.repo.findAll();
   }
 
-  async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string }) {
+  async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string; companyId?: string }) {
     return this.repo.create(ownerId, data);
   }
 

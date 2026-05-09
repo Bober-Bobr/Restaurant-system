@@ -14,6 +14,7 @@ export type CreateRestaurantPayload = {
   name: string;
   address?: string;
   logoUrl?: string;
+  companyId?: string;
 };
 
 export const restaurantService = {

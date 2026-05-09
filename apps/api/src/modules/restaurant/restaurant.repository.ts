@@ -21,7 +21,7 @@ export class RestaurantRepository {
     return prisma.restaurant.findUnique({ where: { id: user.restaurantId } });
   }
 
-  async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string }) {
+  async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string; companyId?: string }) {
     return prisma.restaurant.create({ data: { ...data, ownerId } });
   }
 

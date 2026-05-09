@@ -6,7 +6,7 @@ import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate, locales, type Locale } from '../utils/translate';
-import { buildSubdomainUrl, isRootDomain, toSubdomainSlug } from '../utils/subdomain';
+import { buildSubdomainUrl, isRootDomain, toSubdomainSlug, isCabinetSubdomain } from '../utils/subdomain';
 import logoSrc from '../assets/networking-logo.png';
 
 const formatRequestError = (error: unknown): string => {
@@ -40,6 +40,16 @@ export const LoginPage = () => {
         _r: data.role,
         _rid: '',
         _rn: '',
+        _exp: String(data.expiresIn),
+      });
+    } else if (isRootDomain() && data.role === 'OWNER') {
+      window.location.href = buildSubdomainUrl('cabinet', {
+        _at: data.accessToken,
+        _rt: data.refreshToken,
+        _u: data.username,
+        _r: data.role,
+        _rid: data.restaurantId ?? '',
+        _rn: data.restaurantName ?? '',
         _exp: String(data.expiresIn),
       });
     } else if (isRootDomain() && data.restaurantName) {

@@ -16,6 +16,7 @@ import { tableCategoryRouter } from './modules/tableCategory/tableCategory.route
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { photoRoutes } from './modules/photos/photo.routes.js';
 import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
+import { companyRouter } from './modules/company/company.routes.js';
 
 export const app = express();
 
@@ -62,6 +63,7 @@ protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/photos', photoRoutes);
 protectedApi.use('/restaurants', restaurantRouter);
+protectedApi.use('/companies', companyRouter);
 
 app.use('/api', protectedApi);
 
