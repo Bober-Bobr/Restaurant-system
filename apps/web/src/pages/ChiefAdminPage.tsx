@@ -6,6 +6,7 @@ import { restaurantService, type Restaurant } from '../services/restaurant.servi
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { getPhotoUrl } from '../utils/photoUrl';
+import networkingLogoSrc from '../assets/networking-logo.png';
 
 const formatError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -93,9 +94,12 @@ export const ChiefAdminPage = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #1e293b', background: '#0b1220' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Chief Administrator</h1>
-          <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{username}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src={networkingLogoSrc} alt="Networking" style={{ height: 40, width: 40, objectFit: 'contain' }} />
+          <div>
+            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Chief Administrator</h1>
+            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{username}</p>
+          </div>
         </div>
         <button onClick={handleLogout} style={{ padding: '8px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
           Logout
