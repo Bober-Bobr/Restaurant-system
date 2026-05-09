@@ -18,47 +18,17 @@ const formatRequestError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-const checkPasswordStrength = (
-  password: string
-): { score: number; messageKey: string; valid: boolean } => {
-  let score = 0;
-  const checks = {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    numbers: /[0-9]/.test(password),
-    special: /[!@#$%^&*]/.test(password)
-  };
-
-  if (checks.length) score++;
-  if (checks.uppercase) score++;
-  if (checks.lowercase) score++;
-  if (checks.numbers) score++;
-  if (checks.special) score++;
-
-  const messageKeys = ['pw_very_weak', 'pw_weak', 'pw_fair', 'pw_good', 'pw_strong', 'pw_very_strong'] as const;
-  const valid = checks.length && checks.uppercase && checks.lowercase && checks.numbers;
-
-  return { score, messageKey: messageKeys[score] ?? 'pw_very_weak', valid };
-};
-
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
-
-type Tab = 'login' | 'register';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const { locale, setLocale } = useAdminStore();
-  const [tab, setTab] = useState<Tab>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-
-  const passwordStrength = tab === 'register' ? checkPasswordStrength(password) : null;
 
   const redirectAfterLogin = (data: { accessToken: string; refreshToken: string; username: string; expiresIn: number; role: import('../store/auth.store').AdminRole; restaurantId: string | null; restaurantName?: string | null }) => {
     setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName);
@@ -93,31 +63,14 @@ export const LoginPage = () => {
     onSuccess: redirectAfterLogin,
   });
 
-  const registerMutation = useMutation({
-    mutationFn: () => authService.publicRegister(username.trim(), password, restaurantName.trim()),
-    onSuccess: redirectAfterLogin,
-  });
-
-  const pending = loginMutation.isPending || registerMutation.isPending;
-  const errorMessage = loginMutation.isError
-    ? formatRequestError(loginMutation.error)
-    : registerMutation.isError
-      ? formatRequestError(registerMutation.error)
-      : null;
-
-  const canSubmitRegister = username.trim().length >= 3 && (passwordStrength?.valid ?? false) && restaurantName.trim().length >= 1;
-  const canSubmitLogin = username.trim().length > 0 && password.length > 0;
+  const pending = loginMutation.isPending;
+  const errorMessage = loginMutation.isError ? formatRequestError(loginMutation.error) : null;
+  const canSubmit = username.trim().length > 0 && password.length > 0;
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pending) return;
-    if (tab === 'login') {
-      if (!canSubmitLogin) return;
-      loginMutation.mutate();
-    } else {
-      if (!canSubmitRegister) return;
-      registerMutation.mutate();
-    }
+    if (pending || !canSubmit) return;
+    loginMutation.mutate();
   };
 
   return (
@@ -151,72 +104,13 @@ export const LoginPage = () => {
           alt="Logo"
           style={{ height: 80, width: 80, marginBottom: 12, objectFit: 'contain', display: 'block', margin: '0 auto 12px' }}
         />
-        <p style={{ color: '#666', fontSize: 14 }}>
-          {tab === 'login' ? t('login_subtitle') : t('register_subtitle')}
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid #eee', borderRadius: '8px 8px 0 0' }}>
-        <button
-          type="button"
-          onClick={() => { setTab('login'); setPassword(''); setRestaurantName(''); }}
-          disabled={tab === 'login'}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            border: 'none',
-            borderBottom: tab === 'login' ? '2px solid #2196F3' : 'none',
-            background: 'none',
-            color: tab === 'login' ? '#2196F3' : '#999',
-            fontWeight: tab === 'login' ? 600 : 400,
-            cursor: tab === 'login' ? 'default' : 'pointer',
-            fontSize: 14
-          }}
-        >
-          {t('sign_in')}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setTab('register'); setPassword(''); }}
-          disabled={tab === 'register'}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            border: 'none',
-            borderBottom: tab === 'register' ? '2px solid #2196F3' : 'none',
-            background: 'none',
-            color: tab === 'register' ? '#2196F3' : '#999',
-            fontWeight: tab === 'register' ? 600 : 400,
-            cursor: tab === 'register' ? 'default' : 'pointer',
-            fontSize: 14
-          }}
-        >
-          {t('create_account')}
-        </button>
+        <p style={{ color: '#666', fontSize: 14 }}>{t('login_subtitle')}</p>
       </div>
 
       <form
         onSubmit={submit}
-        style={{ display: 'grid', gap: 16, border: '1px solid #e0e0e0', borderRadius: '0 0 8px 8px', padding: 24, backgroundColor: '#fafafa' }}
+        style={{ display: 'grid', gap: 16, border: '1px solid #e0e0e0', borderRadius: 8, padding: 24, backgroundColor: '#fafafa' }}
       >
-        {tab === 'register' && (
-          <label style={{ display: 'grid', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{t('restaurant_field_label')}</span>
-            <input
-              autoComplete="organization"
-              placeholder={t('restaurant_field_placeholder')}
-              value={restaurantName}
-              onChange={(event) => setRestaurantName(event.target.value)}
-              style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
-            />
-            {restaurantName && (
-              <span style={{ fontSize: 12, color: restaurantName.trim().length >= 1 ? '#4CAF50' : '#f44336' }}>
-                {restaurantName.trim().length >= 1 ? '✓' : '✗'} {t('restaurant_required')}
-              </span>
-            )}
-          </label>
-        )}
-
         <label style={{ display: 'grid', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{t('username')}</span>
           <input
@@ -226,11 +120,6 @@ export const LoginPage = () => {
             onChange={(event) => setUsername(event.target.value)}
             style={{ padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
           />
-          {tab === 'register' && username && (
-            <span style={{ fontSize: 12, color: username.length >= 3 ? '#4CAF50' : '#f44336' }}>
-              {username.length >= 3 ? '✓' : '✗'} {t('username_min_length')}
-            </span>
-          )}
         </label>
 
         <label style={{ display: 'grid', gap: 6 }}>
@@ -238,8 +127,8 @@ export const LoginPage = () => {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               type={showPassword ? 'text' : 'password'}
-              autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-              placeholder={tab === 'login' ? t('password_enter_placeholder') : t('password_create_placeholder')}
+              autoComplete="current-password"
+              placeholder={t('password_enter_placeholder')}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               style={{ flex: 1, padding: '10px 12px', border: '1px solid #ddd', borderRadius: 4, fontSize: 14, fontFamily: 'inherit' }}
@@ -254,62 +143,30 @@ export const LoginPage = () => {
           </div>
         </label>
 
-        {tab === 'register' && password && (
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[1, 2, 3, 4, 5].map((level) => (
-                <div
-                  key={level}
-                  style={{
-                    flex: 1,
-                    height: 4,
-                    borderRadius: 2,
-                    background: level <= passwordStrength!.score ? '#2196F3' : '#e0e0e0'
-                  }}
-                />
-              ))}
-            </div>
-            <span style={{ fontSize: 12, color: passwordStrength!.valid ? '#4CAF50' : '#f44336', fontWeight: 500 }}>
-              {passwordStrength!.valid ? '✓' : '✗'} {t(passwordStrength!.messageKey as Parameters<typeof translate>[0])}
-            </span>
-            <ul style={{ fontSize: 12, color: '#666', margin: 0, paddingLeft: 16 }}>
-              <li style={{ color: password.length >= 8 ? '#4CAF50' : '#999' }}>{t('pw_req_length')}</li>
-              <li style={{ color: /[A-Z]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_upper')}</li>
-              <li style={{ color: /[a-z]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_lower')}</li>
-              <li style={{ color: /[0-9]/.test(password) ? '#4CAF50' : '#999' }}>{t('pw_req_number')}</li>
-            </ul>
-            <p style={{ fontSize: 12, color: '#999', margin: '8px 0 0 0' }}>
-              {t('first_admin_note')}
-            </p>
-          </div>
-        )}
-
         <button
           type="submit"
-          disabled={pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin)}
+          disabled={pending || !canSubmit}
           style={{
             padding: '12px 16px',
-            background: pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin) ? '#ccc' : '#2196F3',
+            background: pending || !canSubmit ? '#ccc' : '#2196F3',
             color: '#fff',
             border: 'none',
             borderRadius: 4,
             fontSize: 14,
             fontWeight: 600,
-            cursor: pending || (tab === 'register' ? !canSubmitRegister : !canSubmitLogin) ? 'not-allowed' : 'pointer',
+            cursor: pending || !canSubmit ? 'not-allowed' : 'pointer',
             transition: 'background 200ms'
           }}
           onMouseEnter={(e) => {
-            if (!pending && (tab === 'register' ? canSubmitRegister : canSubmitLogin)) {
+            if (!pending && canSubmit) {
               (e.currentTarget as HTMLButtonElement).style.background = '#1976D2';
             }
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = '#2196F3';
+            (e.currentTarget as HTMLButtonElement).style.background = pending || !canSubmit ? '#ccc' : '#2196F3';
           }}
         >
-          {pending
-            ? tab === 'login' ? t('signing_in') : t('creating_account')
-            : tab === 'login' ? t('sign_in') : t('create_account')}
+          {pending ? t('signing_in') : t('sign_in')}
         </button>
 
         {errorMessage ? (

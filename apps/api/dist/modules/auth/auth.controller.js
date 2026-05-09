@@ -64,12 +64,20 @@ export class AuthController {
     }
     async listUsers(request, response) {
         const admin = request.admin;
+        if (admin.role === 'CHIEF_ADMIN') {
+            response.json(await authService.listUsers());
+            return;
+        }
         const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);
         if (!restaurantId) {
             response.json([]);
             return;
         }
         response.json(await authService.listUsersForRestaurant(restaurantId));
+    }
+    async createUserAsChief(request, response) {
+        const result = await authService.createUserAsChief(request.body);
+        response.status(201).json(result);
     }
     async deleteUser(request, response) {
         const admin = request.admin;

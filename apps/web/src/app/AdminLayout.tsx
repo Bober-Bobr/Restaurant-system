@@ -8,6 +8,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import { getPhotoUrl } from '../utils/photoUrl';
+import networkingLogoSrc from '../assets/networking-logo.png';
 
 
 export const AdminLayout = () => {
@@ -46,6 +47,7 @@ export const AdminLayout = () => {
       <nav className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex flex-wrap items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
+            <img src={networkingLogoSrc} alt="Networking" className="h-9 w-9 object-contain" />
             {restaurantLogoSrc && (
               <img src={restaurantLogoSrc} alt={restaurantName ?? 'Restaurant logo'} className="h-11 w-11 rounded-2xl object-cover" />
             )}

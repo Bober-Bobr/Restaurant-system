@@ -51,6 +51,13 @@ export class AuthService {
     async listUsers() {
         return this.authRepository.listAll();
     }
+    async createUserAsChief(payload) {
+        const taken = await this.authRepository.findByUsername(payload.username);
+        if (taken)
+            throw createHttpError(409, 'Username already taken');
+        const passwordHash = await bcrypt.hash(payload.password, 12);
+        return this.authRepository.create(payload.username, passwordHash, payload.role, payload.restaurantId ?? undefined);
+    }
     async listUsersForOwner(ownerId) {
         return this.authRepository.listByOwner(ownerId);
     }
