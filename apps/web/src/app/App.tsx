@@ -6,8 +6,11 @@ import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
 import { AdminPhotosPage } from '../pages/AdminPhotosPage';
 import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
+import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { ChiefAdminPage } from '../pages/ChiefAdminPage';
 import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
+import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
+import { EmployeeLayout } from './EmployeeLayout';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
@@ -105,6 +108,22 @@ export const App = () => {
     );
   }
 
+  // EMPLOYEE → simplified layout
+  const role = useAuthStore((s) => s.role);
+  if (role === 'EMPLOYEE') {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/tablet" element={<TabletMenuPage />} />
+        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        <Route element={<EmployeeLayout />}>
+          <Route path="/" element={<EmployeeEventsPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -117,6 +136,7 @@ export const App = () => {
         <Route path="/admin/halls" element={<AdminHallsPage />} />
         <Route path="/admin/photos" element={<AdminPhotosPage />} />
         <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

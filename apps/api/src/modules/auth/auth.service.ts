@@ -71,11 +71,25 @@ export class AuthService {
     return this.authRepository.listAll();
   }
 
-  async createUserAsChief(callerRole: AdminRole, payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }) {
-    if (callerRole === AdminRole.OWNER) {
+  async createUserAsChief(
+    caller: { id: string; role: AdminRole; restaurantId: string | null },
+    payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }
+  ) {
+    if (caller.role === AdminRole.OWNER) {
       if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN) {
         throw createHttpError(403, 'Owners can only create Administrator or Employee accounts.');
       }
+    }
+    if (caller.role === AdminRole.ADMIN) {
+      if (payload.role !== AdminRole.EMPLOYEE) {
+        throw createHttpError(403, 'Administrators can only create Employee accounts.');
+      }
+      // Force the new employee into the admin's restaurant
+      const restaurantId = caller.restaurantId
+        ?? (await this.authRepository.findById(caller.id))?.restaurantId
+        ?? null;
+      if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
+      payload.restaurantId = restaurantId;
     }
     const taken = await this.authRepository.findByUsername(payload.username);
     if (taken) throw createHttpError(409, 'Username already taken');

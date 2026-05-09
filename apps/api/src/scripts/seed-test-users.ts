@@ -41,7 +41,7 @@ async function main() {
   // ── owner_test → Madinabek company ───────────────────────────────────────
   const ownerTest = await upsertUser('owner_test', AdminRole.OWNER);
 
-  let madinabek = await prisma.company.findUnique({ where: { ownerId: ownerTest.id } });
+  let madinabek = await prisma.company.findFirst({ where: { ownerId: ownerTest.id, name: 'Madinabek' } });
   if (!madinabek) {
     madinabek = await prisma.company.create({ data: { name: 'Madinabek', ownerId: ownerTest.id } });
   }
@@ -79,7 +79,7 @@ async function main() {
   // ── owner_test2 → Rest company ────────────────────────────────────────────
   const ownerTest2 = await upsertUser('owner_test2', AdminRole.OWNER);
 
-  let restCompany = await prisma.company.findUnique({ where: { ownerId: ownerTest2.id } });
+  let restCompany = await prisma.company.findFirst({ where: { ownerId: ownerTest2.id, name: 'Rest' } });
   if (!restCompany) {
     restCompany = await prisma.company.create({ data: { name: 'Rest', ownerId: ownerTest2.id } });
   }

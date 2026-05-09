@@ -71,7 +71,12 @@ export const AdminUsersPage = () => {
   const effectiveRestaurantId = newRestaurantId;
 
   const createMutation = useMutation({
-    mutationFn: () => authService.register(newUsername.trim(), newPassword, newRole, effectiveRestaurantId || undefined),
+    mutationFn: () => authService.createUserAsChief({
+      username: newUsername.trim(),
+      password: newPassword,
+      role: newRole,
+      restaurantId: effectiveRestaurantId || null,
+    }),
     onSuccess: () => {
       setNewUsername('');
       setNewPassword('');
@@ -95,8 +100,9 @@ export const AdminUsersPage = () => {
 
   // OWNER can create ADMIN or EMPLOYEE; ADMIN can only create EMPLOYEE
   const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'EMPLOYEE'] : ['EMPLOYEE'];
+  const requiresRestaurantPicker = currentRole === 'OWNER';
 
-  const canSubmit = !!newUsername.trim() && !!newPassword && !!effectiveRestaurantId;
+  const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
 
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
@@ -122,15 +128,17 @@ export const AdminUsersPage = () => {
               ))}
             </select>
           </label>
-          <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('my_restaurants')} *</span>
-            <select value={newRestaurantId} onChange={(e) => setNewRestaurantId(e.target.value)} style={inputStyle}>
-              <option value="">— {t('select_restaurant')} —</option>
-              {restaurants.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          </label>
+          {requiresRestaurantPicker && (
+            <label style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('my_restaurants')} *</span>
+              <select value={newRestaurantId} onChange={(e) => setNewRestaurantId(e.target.value)} style={inputStyle}>
+                <option value="">— {t('select_restaurant')} —</option>
+                {restaurants.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
           <button

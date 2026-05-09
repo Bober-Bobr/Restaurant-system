@@ -10,20 +10,20 @@ import { Select } from '../components/ui/select';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
-
-export const AdminLayout = () => {
+export const EmployeeLayout = () => {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
+  const role = useAuthStore((state) => state.role);
   const authRestaurantId = useAuthStore((state) => state.restaurantId);
   const logout = useAuthStore((state) => state.logout);
   const { locale, setLocale } = useAdminStore();
-  const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
+  const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants'],
     queryFn: () => restaurantService.list(),
-    enabled: !!accessToken
+    enabled: !!accessToken,
   });
 
   const effectiveLogoUrl = restaurants[0]?.logoUrl ?? restaurants[0]?.company?.logoUrl ?? null;
@@ -36,17 +36,16 @@ export const AdminLayout = () => {
     onSettled: () => {
       logout();
       window.location.href = 'https://v-menu.uz/login';
-    }
+    },
   });
-
-  const role = useAuthStore((state) => state.role);
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role === 'OWNER') {
-    window.location.href = 'https://cabinet.v-menu.uz/';
+  // Wrong role lands here? Send them to the right place.
+  if (role !== 'EMPLOYEE') {
+    navigate('/', { replace: true });
     return null;
   }
 
@@ -64,8 +63,8 @@ export const AdminLayout = () => {
               <p className="text-sm font-semibold text-slate-900">{restaurantName ?? t('banquet_admin')}</p>
               <p className="text-xs text-slate-500">
                 {username}
-                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: '#2563eb', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
-                  Admin
+                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: '#16a34a', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
+                  {t('employee_role')}
                 </span>
               </p>
             </div>
@@ -73,13 +72,6 @@ export const AdminLayout = () => {
 
           <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
             <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
-            {role === 'ADMIN' && (
-              <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
-            )}
             <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
               {t('tablet')}
             </Link>
