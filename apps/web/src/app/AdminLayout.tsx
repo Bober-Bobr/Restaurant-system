@@ -26,7 +26,8 @@ export const AdminLayout = () => {
     enabled: !!accessToken
   });
 
-  const restaurantLogoSrc = getPhotoUrl(restaurants[0]?.logoUrl);
+  const effectiveLogoUrl = restaurants[0]?.logoUrl ?? restaurants[0]?.company?.logoUrl ?? null;
+  const restaurantLogoSrc = getPhotoUrl(effectiveLogoUrl);
   const restaurantName = restaurants[0]?.name;
   const tabletRestaurantId = authRestaurantId ?? restaurants[0]?.id ?? '';
 

@@ -6,6 +6,8 @@ export type Restaurant = {
   address: string | null;
   logoUrl: string | null;
   ownerId: string;
+  companyId: string | null;
+  company: { id: string; name: string; logoUrl: string | null } | null;
   createdAt: string;
   updatedAt: string;
 };

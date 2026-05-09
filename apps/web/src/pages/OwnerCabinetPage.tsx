@@ -6,6 +6,8 @@ import { companyService, type Company } from '../services/company.service';
 import { restaurantService, type Restaurant } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
+import { useAdminStore } from '../store/admin.store';
+import { locales, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
@@ -18,7 +20,9 @@ const formatError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-type Tab = 'company' | 'restaurants' | 'users';
+type Tab = 'company' | 'users';
+
+const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 const ROLE_LABELS: Record<AdminRole, string> = {
   CHIEF_ADMIN: 'Chief Admin',
@@ -31,6 +35,7 @@ export const OwnerCabinetPage = () => {
   const username = useAuthStore((s) => s.username);
   const logout = useAuthStore((s) => s.logout);
   const queryClient = useQueryClient();
+  const { locale, setLocale } = useAdminStore();
   const [tab, setTab] = useState<Tab>('company');
 
   // ── Company ──
@@ -65,7 +70,6 @@ export const OwnerCabinetPage = () => {
 
   const [rName, setRName] = useState('');
   const [rAddress, setRAddress] = useState('');
-  const [rLogo, setRLogo] = useState('');
   const [rError, setRError] = useState<string | null>(null);
 
   const createRestaurant = useMutation({
@@ -73,11 +77,10 @@ export const OwnerCabinetPage = () => {
       restaurantService.create({
         name: rName.trim(),
         address: rAddress.trim() || undefined,
-        logoUrl: rLogo.trim() || undefined,
         companyId: company?.id,
       }),
     onSuccess: () => {
-      setRName(''); setRAddress(''); setRLogo(''); setRError(null);
+      setRName(''); setRAddress(''); setRError(null);
       queryClient.invalidateQueries({ queryKey: ['owner-restaurants'] });
     },
     onError: (e) => setRError(formatError(e)),
@@ -136,24 +139,50 @@ export const OwnerCabinetPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #1e293b', background: '#0b1220' }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #1e293b', background: '#0b1220', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={networkingLogoSrc} alt="Networking" style={{ height: 40, width: 40, objectFit: 'contain' }} />
-          {companyLogoSrc && (
+          {companyLogoSrc ? (
             <img src={companyLogoSrc} alt={company?.name} style={{ height: 40, width: 40, borderRadius: 8, objectFit: 'cover' }} />
+          ) : (
+            <img src={networkingLogoSrc} alt="Networking" style={{ height: 40, width: 40, objectFit: 'contain' }} />
           )}
           <div>
             <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{company?.name ?? 'Owner Cabinet'}</h1>
             <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{username}</p>
           </div>
         </div>
-        <button onClick={handleLogout} style={{ padding: '8px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-          Logout
-        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {locales.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setLocale(loc)}
+                style={{
+                  padding: '4px 10px',
+                  border: '1px solid',
+                  borderColor: locale === loc ? '#3b82f6' : '#334155',
+                  borderRadius: 4,
+                  background: locale === loc ? '#1e3a8a' : '#1e293b',
+                  color: locale === loc ? '#fff' : '#94a3b8',
+                  fontWeight: locale === loc ? 600 : 400,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                }}
+              >
+                {LOCALE_LABELS[loc]}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleLogout} style={{ padding: '8px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            Logout
+          </button>
+        </div>
       </header>
 
       <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid #1e293b' }}>
-        {(['company', 'restaurants', 'users'] as Tab[]).map((t) => (
+        {(['company', 'users'] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '12px 20px', background: 'none', border: 'none',
             borderBottom: tab === t ? '2px solid #3b82f6' : '2px solid transparent',
@@ -167,21 +196,30 @@ export const OwnerCabinetPage = () => {
 
       <main style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
 
-        {/* ── Company tab ── */}
+        {/* ── Company tab (combined company + restaurants) ── */}
         {tab === 'company' && (
           <>
+            {/* Company create/edit form */}
             <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
               <h2 style={{ marginTop: 0, fontSize: 16 }}>
                 {company ? 'Update company' : 'Create your company'}
               </h2>
               {company && (
-                <p style={{ margin: '0 0 12px', fontSize: 13, color: '#94a3b8' }}>
-                  Current name: <strong style={{ color: '#e2e8f0' }}>{company.name}</strong>
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: '#0f172a', borderRadius: 6, marginBottom: 12 }}>
+                  {companyLogoSrc && (
+                    <img src={companyLogoSrc} alt={company.name} style={{ height: 36, width: 36, borderRadius: 6, objectFit: 'cover' }} />
+                  )}
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600 }}>{company.name}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
+                      {company.logoUrl ?? 'No logo set'}
+                    </p>
+                  </div>
+                </div>
               )}
               <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                 <input
-                  placeholder={company ? `New name (current: ${company.name})` : 'Company name *'}
+                  placeholder={company ? 'New name' : 'Company name *'}
                   value={cName}
                   onChange={(e) => setCName(e.target.value)}
                   style={inputStyle}
@@ -196,61 +234,61 @@ export const OwnerCabinetPage = () => {
               {cError && <p style={{ color: '#f87171', marginTop: 8 }}>{cError}</p>}
               <button
                 onClick={() => saveCompany.mutate()}
-                disabled={!company && !cName.trim() || saveCompany.isPending}
-                style={{ ...btnStyle, marginTop: 12, opacity: (!company && !cName.trim()) ? 0.5 : 1 }}
+                disabled={(!company && !cName.trim()) || saveCompany.isPending}
+                style={{ ...btnStyle, marginTop: 12, opacity: ((!company && !cName.trim()) || saveCompany.isPending) ? 0.5 : 1 }}
               >
                 {saveCompany.isPending ? 'Saving...' : company ? 'Update' : 'Create'}
               </button>
             </section>
-          </>
-        )}
 
-        {/* ── Restaurants tab ── */}
-        {tab === 'restaurants' && (
-          <>
-            <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
-              <h2 style={{ marginTop: 0, fontSize: 16 }}>Add restaurant</h2>
-              {!company && (
-                <p style={{ color: '#f87171', marginBottom: 12, fontSize: 13 }}>
-                  Create your company first before adding restaurants.
-                </p>
-              )}
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                <input placeholder="Name *" value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
-                <input placeholder="Address" value={rAddress} onChange={(e) => setRAddress(e.target.value)} style={inputStyle} />
-                <input placeholder="Logo URL" value={rLogo} onChange={(e) => setRLogo(e.target.value)} style={inputStyle} />
-              </div>
-              {rError && <p style={{ color: '#f87171', marginTop: 8 }}>{rError}</p>}
-              <button
-                onClick={() => createRestaurant.mutate()}
-                disabled={!rName.trim() || !company || createRestaurant.isPending}
-                style={{ ...btnStyle, marginTop: 12, opacity: (!rName.trim() || !company) ? 0.5 : 1 }}
-              >
-                {createRestaurant.isPending ? 'Adding...' : 'Add'}
-              </button>
-            </section>
-
-            <section>
-              <h2 style={{ fontSize: 16, marginBottom: 12 }}>My restaurants ({restaurants.length})</h2>
-              <div style={{ display: 'grid', gap: 12 }}>
-                {restaurants.map((r) => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: '#1e293b', borderRadius: 8 }}>
-                    {r.logoUrl && <img src={getPhotoUrl(r.logoUrl)} alt={r.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 600 }}>{r.name}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{r.address ?? '—'}</p>
-                    </div>
-                    <button
-                      onClick={() => { if (confirm(`Delete ${r.name}? All its data will be lost.`)) deleteRestaurant.mutate(r.id); }}
-                      style={{ ...btnStyle, background: '#dc2626' }}
-                    >
-                      Delete
-                    </button>
+            {/* Restaurants under the company */}
+            {company && (
+              <>
+                <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+                  <h2 style={{ marginTop: 0, fontSize: 16 }}>Add restaurant to {company.name}</h2>
+                  <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b' }}>
+                    The company logo will be used automatically — no need to upload a separate restaurant logo.
+                  </p>
+                  <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                    <input placeholder="Name *" value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
+                    <input placeholder="Address" value={rAddress} onChange={(e) => setRAddress(e.target.value)} style={inputStyle} />
                   </div>
-                ))}
-                {restaurants.length === 0 && <p style={{ color: '#64748b' }}>No restaurants yet.</p>}
-              </div>
-            </section>
+                  {rError && <p style={{ color: '#f87171', marginTop: 8 }}>{rError}</p>}
+                  <button
+                    onClick={() => createRestaurant.mutate()}
+                    disabled={!rName.trim() || createRestaurant.isPending}
+                    style={{ ...btnStyle, marginTop: 12, opacity: !rName.trim() ? 0.5 : 1 }}
+                  >
+                    {createRestaurant.isPending ? 'Adding...' : 'Add'}
+                  </button>
+                </section>
+
+                <section>
+                  <h2 style={{ fontSize: 16, marginBottom: 12 }}>Restaurants in {company.name} ({restaurants.length})</h2>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {restaurants.map((r) => {
+                      const effLogo = r.logoUrl ?? r.company?.logoUrl ?? null;
+                      return (
+                        <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: '#1e293b', borderRadius: 8 }}>
+                          {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontWeight: 600 }}>{r.name}</p>
+                            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{r.address ?? '—'}</p>
+                          </div>
+                          <button
+                            onClick={() => { if (confirm(`Delete ${r.name}? All its data will be lost.`)) deleteRestaurant.mutate(r.id); }}
+                            style={{ ...btnStyle, background: '#dc2626' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {restaurants.length === 0 && <p style={{ color: '#64748b' }}>No restaurants yet.</p>}
+                  </div>
+                </section>
+              </>
+            )}
           </>
         )}
 

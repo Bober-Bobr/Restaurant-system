@@ -18,7 +18,13 @@ router.get('/restaurant', async (request, response, next) => {
     if (!restaurantId) { response.status(400).json({ message: 'restaurantId required' }); return; }
     const restaurant = await restaurantRepository.findById(restaurantId);
     if (!restaurant) { response.status(404).json({ message: 'Not found' }); return; }
-    response.json({ id: restaurant.id, name: restaurant.name, logoUrl: restaurant.logoUrl ?? null });
+    const company = (restaurant as any).company as { id: string; name: string; logoUrl: string | null } | null;
+    response.json({
+      id: restaurant.id,
+      name: restaurant.name,
+      logoUrl: restaurant.logoUrl ?? company?.logoUrl ?? null,
+      companyName: company?.name ?? null,
+    });
   } catch (error) { next(error); }
 });
 

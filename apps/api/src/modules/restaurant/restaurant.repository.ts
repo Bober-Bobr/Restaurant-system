@@ -4,12 +4,16 @@ export class RestaurantRepository {
   async findAllByOwner(ownerId: string) {
     return prisma.restaurant.findMany({
       where: { ownerId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      include: { company: { select: { id: true, name: true, logoUrl: true } } }
     });
   }
 
   async findById(id: string) {
-    return prisma.restaurant.findUnique({ where: { id } });
+    return prisma.restaurant.findUnique({
+      where: { id },
+      include: { company: { select: { id: true, name: true, logoUrl: true } } }
+    });
   }
 
   async findByStaffUserId(userId: string) {
@@ -18,7 +22,10 @@ export class RestaurantRepository {
       select: { restaurantId: true }
     });
     if (!user?.restaurantId) return null;
-    return prisma.restaurant.findUnique({ where: { id: user.restaurantId } });
+    return prisma.restaurant.findUnique({
+      where: { id: user.restaurantId },
+      include: { company: { select: { id: true, name: true, logoUrl: true } } }
+    });
   }
 
   async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string; companyId?: string }) {
@@ -30,7 +37,10 @@ export class RestaurantRepository {
   }
 
   async findAll() {
-    return prisma.restaurant.findMany({ orderBy: { createdAt: 'asc' } });
+    return prisma.restaurant.findMany({
+      orderBy: { createdAt: 'asc' },
+      include: { company: { select: { id: true, name: true, logoUrl: true } } }
+    });
   }
 
   async delete(id: string) {
