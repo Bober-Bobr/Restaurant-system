@@ -8,7 +8,7 @@ import { locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import tabletMusicSrc from '../assets/tablet-music.mp3';
+const tabletMusicSrc = '/tablet-music.mp3';
 const CATEGORY_ORDER = {
     COLD_APPETIZERS: 0, HOT_APPETIZERS: 1, SALADS: 2,
     FIRST_COURSE: 3, SECOND_COURSE: 4, DRINKS: 5, SWEETS: 6, FRUITS: 7,

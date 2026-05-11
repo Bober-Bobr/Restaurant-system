@@ -9,7 +9,7 @@ import logo from '../assets/logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
-import tabletMusicSrc from '../assets/tablet-music.mp3';
+const tabletMusicSrc = '/tablet-music.mp3';
 
 type EventType = NonNullable<Event['eventType']>;
 const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];

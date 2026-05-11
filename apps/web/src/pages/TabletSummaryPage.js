@@ -9,7 +9,7 @@ import { httpClient } from '../services/http';
 import logo from '../assets/logo.png';
 import { locales, translate } from '../utils/translate';
 import { formatSum } from '../utils/currency';
-import tabletMusicSrc from '../assets/tablet-music.mp3';
+const tabletMusicSrc = '/tablet-music.mp3';
 const eventTypes = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
 // ── Decorative background (shared with menu page) ─────────────────────────
 function PageBackground() {

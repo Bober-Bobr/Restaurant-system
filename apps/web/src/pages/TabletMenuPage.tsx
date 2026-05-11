@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import tabletMusicSrc from '../assets/tablet-music.mp3';
+const tabletMusicSrc = '/tablet-music.mp3';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
