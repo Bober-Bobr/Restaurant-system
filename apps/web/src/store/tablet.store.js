@@ -6,7 +6,6 @@ export const useTabletStore = create((set) => ({
     selectedTableCategoryId: undefined,
     guestCount: 1,
     locale: defaultLocale,
-    musicStarted: false,
     setQuantity: (menuItemId, quantity) => {
         set((state) => ({
             selectedItems: {
@@ -26,9 +25,6 @@ export const useTabletStore = create((set) => ({
     },
     setLocale: (locale) => {
         set({ locale });
-    },
-    setMusicStarted: (v) => {
-        set({ musicStarted: v });
     },
     reset: () => {
         set({

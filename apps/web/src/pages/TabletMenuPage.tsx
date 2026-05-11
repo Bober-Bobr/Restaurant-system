@@ -233,7 +233,6 @@ export const TabletMenuPage = () => {
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
     setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale,
-    musicStarted, setMusicStarted,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -246,6 +245,7 @@ export const TabletMenuPage = () => {
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [musicStarted, setMusicStarted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
@@ -259,10 +259,6 @@ export const TabletMenuPage = () => {
     audioRef.current?.play().catch(() => {});
     setMusicStarted(true);
   };
-
-  useEffect(() => {
-    if (musicStarted) audioRef.current?.play().catch(() => {});
-  }, [musicStarted]);
 
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(

@@ -93,7 +93,7 @@ export const TabletMenuPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const restaurantId = searchParams.get('restaurantId') ?? '';
-    const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale, musicStarted, setMusicStarted, } = useTabletStore();
+    const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale, } = useTabletStore();
     const menuItems = usePublicDataStore((s) => s.menuItems);
     const halls = usePublicDataStore((s) => s.halls);
     const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -104,6 +104,7 @@ export const TabletMenuPage = () => {
     const loadPublicData = usePublicDataStore((s) => s.loadPublicData);
     const [activeCategory, setActiveCategory] = useState(null);
     const [lightboxSrc, setLightboxSrc] = useState(null);
+    const [musicStarted, setMusicStarted] = useState(false);
     const audioRef = useRef(null);
     const t = (key, params) => translate(key, locale, params);
     useEffect(() => {
@@ -114,10 +115,6 @@ export const TabletMenuPage = () => {
         audioRef.current?.play().catch(() => { });
         setMusicStarted(true);
     };
-    useEffect(() => {
-        if (musicStarted)
-            audioRef.current?.play().catch(() => { });
-    }, [musicStarted]);
     const sortedAndFiltered = quickSort((menuItems ?? []).filter((item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
         (activeCategory === null || item.category === activeCategory)));
     const courseItems = quickSort((menuItems ?? []).filter((item) => COURSE_CATEGORIES.includes(item.category)));

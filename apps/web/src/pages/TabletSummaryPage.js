@@ -39,7 +39,8 @@ export const TabletSummaryPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const restaurantId = searchParams.get('restaurantId') ?? '';
-    const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset, musicStarted, setMusicStarted } = useTabletStore();
+    const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
+    const [musicStarted, setMusicStarted] = useState(false);
     const audioRef = useRef(null);
     const menuItems = usePublicDataStore((s) => s.menuItems);
     const halls = usePublicDataStore((s) => s.halls);
@@ -64,10 +65,6 @@ export const TabletSummaryPage = () => {
         if (restaurantId)
             loadPublicData(restaurantId);
     }, [loadPublicData, restaurantId]);
-    useEffect(() => {
-        if (musicStarted)
-            audioRef.current?.play().catch(() => { });
-    }, [musicStarted]);
     const startMusic = () => {
         audioRef.current?.play().catch(() => { });
         setMusicStarted(true);
