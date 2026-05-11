@@ -245,6 +245,7 @@ export const TabletMenuPage = () => {
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -252,6 +253,19 @@ export const TabletMenuPage = () => {
   useEffect(() => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const tryPlay = () => { audio.play().catch(() => {}); };
+    tryPlay();
+    document.addEventListener('click', tryPlay, { once: true });
+    document.addEventListener('touchstart', tryPlay, { once: true });
+    return () => {
+      document.removeEventListener('click', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+    };
+  }, []);
 
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(
@@ -266,7 +280,7 @@ export const TabletMenuPage = () => {
 
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
-      <audio src={tabletMusicSrc} autoPlay loop style={{ display: 'none' }} />
+      <audio ref={audioRef} src={tabletMusicSrc} loop style={{ display: 'none' }} />
       <PageBackground />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
