@@ -7,11 +7,13 @@ type SelectionState = {
   selectedTableCategoryId?: string;
   guestCount: number;
   locale: Locale;
+  musicStarted: boolean;
   setQuantity: (menuItemId: string, quantity: number) => void;
   setHall: (hallId: string) => void;
   setTableCategory: (tableCategoryId: string) => void;
   setGuestCount: (count: number) => void;
   setLocale: (locale: Locale) => void;
+  setMusicStarted: (v: boolean) => void;
   reset: () => void;
 };
 
@@ -21,6 +23,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedTableCategoryId: undefined,
   guestCount: 1,
   locale: defaultLocale,
+  musicStarted: false,
   setQuantity: (menuItemId, quantity) => {
     set((state) => ({
       selectedItems: {
@@ -40,6 +43,9 @@ export const useTabletStore = create<SelectionState>((set) => ({
   },
   setLocale: (locale) => {
     set({ locale });
+  },
+  setMusicStarted: (v) => {
+    set({ musicStarted: v });
   },
   reset: () => {
     set({

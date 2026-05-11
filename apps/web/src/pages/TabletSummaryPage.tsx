@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { usePublicDataStore } from '../store/publicData.store';
@@ -9,6 +9,7 @@ import logo from '../assets/logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
+import tabletMusicSrc from '../assets/tablet-music.mp3';
 
 type EventType = NonNullable<Event['eventType']>;
 const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
@@ -88,7 +89,8 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset, musicStarted, setMusicStarted } = useTabletStore();
+  const audioRef = useRef<HTMLAudioElement>(null);
   const menuItems       = usePublicDataStore((s) => s.menuItems);
   const halls           = usePublicDataStore((s) => s.halls);
   const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -115,6 +117,15 @@ export const TabletSummaryPage = () => {
   useEffect(() => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
+
+  useEffect(() => {
+    if (musicStarted) audioRef.current?.play().catch(() => {});
+  }, [musicStarted]);
+
+  const startMusic = () => {
+    audioRef.current?.play().catch(() => {});
+    setMusicStarted(true);
+  };
 
   const selectedTableCategory = tableCategories.find((tc) => tc.id === selectedTableCategoryId);
   const selectedHall          = halls.find((h) => h.id === selectedHallId);
@@ -225,6 +236,22 @@ export const TabletSummaryPage = () => {
   // ── Main summary screen ───────────────────────────────────────────────────
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+      <audio ref={audioRef} src={tabletMusicSrc} loop style={{ display: 'none' }} />
+
+      {!musicStarted && (
+        <div
+          onClick={startMusic}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 64 }}>♫</div>
+          <p style={{ color: '#fff', fontSize: 22, fontWeight: 600, marginTop: 16 }}>Tap to start</p>
+        </div>
+      )}
+
       <PageBackground />
 
       <div className="relative mx-auto max-w-5xl space-y-6">
