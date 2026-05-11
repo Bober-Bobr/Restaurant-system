@@ -42,6 +42,9 @@ export const TabletSummaryPage = () => {
     const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
     const [musicStarted, setMusicStarted] = useState(false);
     const audioRef = useRef(null);
+    useEffect(() => {
+        return () => { audioRef.current?.pause(); };
+    }, []);
     const menuItems = usePublicDataStore((s) => s.menuItems);
     const halls = usePublicDataStore((s) => s.halls);
     const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -66,7 +69,10 @@ export const TabletSummaryPage = () => {
             loadPublicData(restaurantId);
     }, [loadPublicData, restaurantId]);
     const startMusic = () => {
-        audioRef.current?.play().catch(() => { });
+        const audio = new Audio(tabletMusicSrc);
+        audio.loop = true;
+        audio.play().catch(() => { });
+        audioRef.current = audio;
         setMusicStarted(true);
     };
     const selectedTableCategory = tableCategories.find((tc) => tc.id === selectedTableCategoryId);
@@ -145,7 +151,7 @@ export const TabletSummaryPage = () => {
                                     }, className: "w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg", style: { background: '#c9a42c', color: '#1a3320' }, children: t('start_new_booking') })] })] })] }));
     }
     // ── Main summary screen ───────────────────────────────────────────────────
-    return (_jsxs("main", { className: "rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8", children: [_jsx("audio", { ref: audioRef, src: tabletMusicSrc, loop: true, style: { display: 'none' } }), !musicStarted && (_jsxs("div", { onClick: startMusic, style: {
+    return (_jsxs("main", { className: "rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8", children: [!musicStarted && (_jsxs("div", { onClick: startMusic, style: {
                     position: 'fixed', inset: 0, zIndex: 9999,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', cursor: 'pointer',

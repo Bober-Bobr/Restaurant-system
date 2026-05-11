@@ -111,15 +111,21 @@ export const TabletMenuPage = () => {
         if (restaurantId)
             loadPublicData(restaurantId);
     }, [loadPublicData, restaurantId]);
+    useEffect(() => {
+        return () => { audioRef.current?.pause(); };
+    }, []);
     const startMusic = () => {
-        audioRef.current?.play().catch(() => { });
+        const audio = new Audio(tabletMusicSrc);
+        audio.loop = true;
+        audio.play().catch(() => { });
+        audioRef.current = audio;
         setMusicStarted(true);
     };
     const sortedAndFiltered = quickSort((menuItems ?? []).filter((item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
         (activeCategory === null || item.category === activeCategory)));
     const courseItems = quickSort((menuItems ?? []).filter((item) => COURSE_CATEGORIES.includes(item.category)));
     const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
-    return (_jsxs("main", { className: "rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8", children: [_jsx("audio", { ref: audioRef, src: tabletMusicSrc, loop: true, style: { display: 'none' } }), !musicStarted && (_jsxs("div", { onClick: startMusic, style: {
+    return (_jsxs("main", { className: "rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8", children: [!musicStarted && (_jsxs("div", { onClick: startMusic, style: {
                     position: 'fixed', inset: 0, zIndex: 9999,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', cursor: 'pointer',

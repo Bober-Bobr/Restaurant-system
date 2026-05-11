@@ -91,7 +91,11 @@ export const TabletSummaryPage = () => {
   const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
   const [musicStarted, setMusicStarted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); };
+  }, []);
   const menuItems       = usePublicDataStore((s) => s.menuItems);
   const halls           = usePublicDataStore((s) => s.halls);
   const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -120,7 +124,10 @@ export const TabletSummaryPage = () => {
   }, [loadPublicData, restaurantId]);
 
   const startMusic = () => {
-    audioRef.current?.play().catch(() => {});
+    const audio = new Audio(tabletMusicSrc);
+    audio.loop = true;
+    audio.play().catch(() => {});
+    audioRef.current = audio;
     setMusicStarted(true);
   };
 
@@ -233,8 +240,6 @@ export const TabletSummaryPage = () => {
   // ── Main summary screen ───────────────────────────────────────────────────
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
-      <audio ref={audioRef} src={tabletMusicSrc} loop style={{ display: 'none' }} />
-
       {!musicStarted && (
         <div
           onClick={startMusic}

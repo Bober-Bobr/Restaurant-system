@@ -246,7 +246,7 @@ export const TabletMenuPage = () => {
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [musicStarted, setMusicStarted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -255,8 +255,15 @@ export const TabletMenuPage = () => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
 
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); };
+  }, []);
+
   const startMusic = () => {
-    audioRef.current?.play().catch(() => {});
+    const audio = new Audio(tabletMusicSrc);
+    audio.loop = true;
+    audio.play().catch(() => {});
+    audioRef.current = audio;
     setMusicStarted(true);
   };
 
@@ -273,8 +280,6 @@ export const TabletMenuPage = () => {
 
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
-      <audio ref={audioRef} src={tabletMusicSrc} loop style={{ display: 'none' }} />
-
       {!musicStarted && (
         <div
           onClick={startMusic}
