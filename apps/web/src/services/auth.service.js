@@ -45,5 +45,9 @@ export const authService = {
     async updateUserRole(id, role) {
         const { data } = await httpClient.patch(`/auth/users/${id}/role`, { role });
         return data;
+    },
+    async createUserAsChief(payload) {
+        const { data } = await httpClient.post('/auth/users', payload);
+        return data;
     }
 };

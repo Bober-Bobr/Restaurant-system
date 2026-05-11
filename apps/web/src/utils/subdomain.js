@@ -12,6 +12,12 @@ export function isRootDomain() {
     const host = window.location.hostname;
     return host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || host === 'localhost';
 }
+export function isAdminSubdomain() {
+    return window.location.hostname === `admin.${ROOT_DOMAIN}`;
+}
+export function isCabinetSubdomain() {
+    return window.location.hostname === `cabinet.${ROOT_DOMAIN}`;
+}
 export function getSubdomainSlug() {
     const host = window.location.hostname;
     if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || !host.endsWith(`.${ROOT_DOMAIN}`))
