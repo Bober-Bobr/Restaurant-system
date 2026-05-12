@@ -133,11 +133,11 @@ export const AdminHallsPage = () => {
   const canSaveEdit = editValidation.errors.length === 0 && !updateMutation.isPending;
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>{t('halls_management')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('halls_management')}</h1>
 
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{t('create_hall')}</h3>
+      <section className="adm-card tablet-fade-up adm-section">
+        <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('create_hall')}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -192,22 +192,22 @@ export const AdminHallsPage = () => {
       {isLoading ? <p>{t('loading_halls')}</p> : null}
       {isError ? <p>{t('failed_to_load_halls')}</p> : null}
       {halls && (
-        <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
-          <h3>{t('all_halls')}</h3>
+        <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
+          <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('all_halls')}</h3>
           {halls.length === 0 ? (
-            <p>{t('no_halls_yet')}</p>
+            <p className="adm-empty">{t('no_halls_yet')}</p>
           ) : (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {halls.map((hall) => (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {halls.map((hall, idx) => (
                 <div
                   key={hall.id}
+                  className="adm-card adm-card-hover tablet-fade-up"
                   style={{
-                    border: '1px solid #eee',
-                    padding: 12,
-                    borderRadius: 4,
+                    padding: 14,
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    animationDelay: `${idx * 50}ms`,
                   }}
                 >
                   {editingId === hall.id ? (

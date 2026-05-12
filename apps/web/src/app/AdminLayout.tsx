@@ -1,24 +1,26 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
-import { Button } from '../components/ui/button';
-import { Select } from '../components/ui/select';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
+const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 export const AdminLayout = () => {
-  const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
   const authRestaurantId = useAuthStore((state) => state.restaurantId);
   const logout = useAuthStore((state) => state.logout);
+  const role = useAuthStore((state) => state.role);
   const { locale, setLocale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
+  const location = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants'],
@@ -39,67 +41,183 @@ export const AdminLayout = () => {
     }
   });
 
-  const role = useAuthStore((state) => state.role);
+  if (!accessToken) return <Navigate to="/login" replace />;
+  if (role === 'OWNER') { window.location.href = 'https://cabinet.v-menu.uz/'; return null; }
 
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
+  const navItems: { to: string; label: string }[] = [
+    { to: '/', label: t('events') },
+    { to: '/admin/menu', label: t('menu') },
+    { to: '/admin/table-categories', label: t('tables') },
+    { to: '/admin/halls', label: t('halls') },
+    { to: '/admin/photos', label: t('photos') },
+    ...(role === 'ADMIN' ? [{ to: '/admin/users', label: t('users') }] : []),
+  ];
 
-  if (role === 'OWNER') {
-    window.location.href = 'https://cabinet.v-menu.uz/';
-    return null;
-  }
+  const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
   return (
-    <>
-      <nav className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-        <div className="mx-auto flex flex-wrap items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            {restaurantLogoSrc ? (
-              <img src={restaurantLogoSrc} alt={restaurantName ?? 'Restaurant logo'} className="h-11 w-11 rounded-2xl object-cover" />
-            ) : (
-              <img src={networkingLogoSrc} alt="Networking" className="h-9 w-9 object-contain" />
-            )}
+    <div className="adm-bg">
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 30,
+        background: 'rgba(15,23,42,0.78)',
+        backdropFilter: 'blur(18px)',
+        WebkitBackdropFilter: 'blur(18px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+
+          {/* Brand */}
+          <div className="adm-slide-in-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              position: 'relative', width: 44, height: 44, borderRadius: 12,
+              overflow: 'hidden',
+              border: '1px solid rgba(201,164,44,0.35)',
+              background: 'rgba(15,23,42,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <img
+                src={restaurantLogoSrc ?? networkingLogoSrc}
+                alt={restaurantName ?? 'Logo'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">{restaurantName ?? t('banquet_admin')}</p>
-              <p className="text-xs text-slate-500">
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>
+                {restaurantName ?? t('banquet_admin')}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {username}
-                <span style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 4, background: '#2563eb', color: '#fff', fontSize: 10, fontWeight: 600, verticalAlign: 'middle' }}>
-                  Admin
+                <span className="adm-badge" style={{ background: 'rgba(59,130,246,0.18)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}>
+                  {role}
                 </span>
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
-            <Link className="transition hover:text-slate-900" to="/">{t('events')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/menu">{t('menu')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/table-categories">{t('tables')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/halls">{t('halls')}</Link>
-            <Link className="transition hover:text-slate-900" to="/admin/photos">{t('photos')}</Link>
-            {role === 'ADMIN' && (
-              <Link className="transition hover:text-slate-900" to="/admin/users">{t('users')}</Link>
-            )}
-            <Link className="rounded-full border border-slate-200 px-3 py-2 transition hover:border-slate-300 hover:bg-slate-50" to={`/tablet?restaurantId=${tabletRestaurantId}`}>
+          {/* Desktop nav */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, flexWrap: 'wrap' }} className="adm-nav-desktop">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                style={{
+                  padding: '7px 13px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  letterSpacing: '0.01em',
+                  textDecoration: 'none',
+                  color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                  background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
+                  border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                  transition: 'all 0.18s',
+                }}
+                onMouseEnter={(e) => { if (!isActive(item.to)) (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+                onMouseLeave={(e) => { if (!isActive(item.to)) (e.currentTarget as HTMLElement).style.color = 'rgba(226,232,240,0.7)'; }}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              to={`/tablet?restaurantId=${tabletRestaurantId}`}
+              style={{
+                marginLeft: 4,
+                padding: '7px 14px',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: 'none',
+                color: '#c9a42c',
+                background: 'rgba(201,164,44,0.1)',
+                border: '1px solid rgba(201,164,44,0.4)',
+                transition: 'all 0.18s',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(201,164,44,0.2)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(201,164,44,0.1)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="14" rx="2" />
+                <line x1="8" y1="20" x2="16" y2="20" />
+                <line x1="12" y1="18" x2="12" y2="20" />
+              </svg>
               {t('tablet')}
             </Link>
           </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <Select value={locale} onChange={(event) => setLocale(event.target.value as Locale)} className="w-32" aria-label="Language">
-              {locales.map((localeOption) => (
-                <option key={localeOption} value={localeOption}>
-                  {t(localeOption === 'en' ? 'english' : localeOption === 'ru' ? 'russian' : 'uzbek')}
-                </option>
+          {/* Right side: locale + logout */}
+          <div className="adm-slide-in-right" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {locales.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setLocale(loc)}
+                  style={{
+                    padding: '5px 10px',
+                    border: '1px solid',
+                    borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                    borderRadius: 6,
+                    background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
+                    color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                    fontWeight: locale === loc ? 700 : 500,
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    letterSpacing: '0.06em',
+                    transition: 'all 0.18s',
+                  }}
+                >
+                  {LOCALE_LABELS[loc]}
+                </button>
               ))}
-            </Select>
-            <Button variant="destructive" size="sm" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+            </div>
+            <button
+              type="button"
+              className="adm-btn-danger"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
               {logoutMutation.isPending ? t('logging_out') : t('logout')}
-            </Button>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              className="adm-nav-mobile-toggle"
+              style={{
+                display: 'none',
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8,
+                padding: 8,
+                color: '#e2e8f0',
+                cursor: 'pointer',
+              }}
+              aria-label="Toggle menu"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {mobileNavOpen ? (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>) : (<><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>)}
+              </svg>
+            </button>
           </div>
         </div>
       </nav>
-      <Outlet />
-    </>
+
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <Outlet />
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .adm-nav-desktop { display: none !important; }
+          .adm-nav-mobile-toggle { display: inline-flex !important; align-items: center; justify-content: center; }
+        }
+      `}</style>
+    </div>
   );
 };

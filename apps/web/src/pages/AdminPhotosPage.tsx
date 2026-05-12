@@ -98,16 +98,16 @@ export const AdminPhotosPage = () => {
   return (
     <>
     {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <h1 className="page-heading">{t('photo_management')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <div style={{ display: 'grid', gap: 18 }}>
+        <h1 className="adm-title">{t('photo_management')}</h1>
 
         {/* Upload controls */}
-        <section className="card p-6">
-          <p className="section-heading mb-4">{t('upload_photos')}</p>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">{t('photo_category')}</label>
+        <section className="adm-card tablet-fade-up adm-section">
+          <p className="adm-heading" style={{ marginBottom: 16 }}>{t('upload_photos')}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 14 }}>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <label className="adm-label">{t('photo_category')}</label>
               <Select
                 value={category}
                 onChange={(e) => { setCategory(e.target.value as PhotoCategory); setDishCategory(''); }}
@@ -120,8 +120,8 @@ export const AdminPhotosPage = () => {
             </div>
 
             {category === 'menu' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">{t('dish_category')}</label>
+              <div style={{ display: 'grid', gap: 6 }}>
+                <label className="adm-label">{t('dish_category')}</label>
                 <Select
                   value={dishCategory}
                   onChange={(e) => setDishCategory(e.target.value as DishCategory | '')}
@@ -153,19 +153,19 @@ export const AdminPhotosPage = () => {
               className="hidden"
             />
           </div>
-          <p className="mt-3 text-sm text-slate-500">{t('upload_photos_help')}</p>
+          <p style={{ marginTop: 12, fontSize: 13, color: 'rgba(226,232,240,0.55)' }}>{t('upload_photos_help')}</p>
         </section>
 
         {/* Photo grid */}
-        <section className="card p-6">
-          <p className="section-heading mb-4">
+        <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
+          <p className="adm-heading" style={{ marginBottom: 14 }}>
             {getCategoryLabel(category)}
             {category === 'menu' && dishCategory && (
-              <span className="ml-2 text-base font-normal text-slate-500">
+              <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: 'rgba(226,232,240,0.55)', textTransform: 'none', letterSpacing: 0 }}>
                 — {t(DISH_CATEGORY_LABEL_KEY[dishCategory])}
               </span>
             )}
-            <span className="ml-2 text-base font-normal text-slate-500">({photos.length})</span>
+            <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: 'rgba(226,232,240,0.55)', textTransform: 'none', letterSpacing: 0 }}>({photos.length})</span>
           </p>
 
           {isLoading ? (

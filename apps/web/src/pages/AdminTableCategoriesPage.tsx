@@ -349,12 +349,12 @@ export const AdminTableCategoriesPage = () => {
   const canSaveEdit = editValidation.errors.length === 0 && !updateMutation.isPending;
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>{t('table_categories_management')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('table_categories_management')}</h1>
 
       {/* ── Create form ── */}
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>{t('create_table_category')}</h3>
+      <section className="adm-card tablet-fade-up adm-section">
+        <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('create_table_category')}</h3>
         <form
           onSubmit={(e) => { e.preventDefault(); if (!canSubmit) return; createMutation.mutate(); }}
           style={{ display: 'grid', gap: 14 }}
@@ -404,8 +404,8 @@ export const AdminTableCategoriesPage = () => {
 
       {/* ── List ── */}
       {categories && (
-        <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{t('all_categories')}</h3>
+        <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
+          <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('all_categories')}</h3>
           {categories.length === 0 ? (
             <p>{t('no_table_categories_yet')}</p>
           ) : (

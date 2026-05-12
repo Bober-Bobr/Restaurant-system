@@ -86,33 +86,33 @@ export const EmployeeEventsPage = () => {
   };
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{t('events')}</h1>
-      <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 24 }}>
+    <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 6 }}>{t('events')}</h1>
+      <p style={{ color: 'rgba(226,232,240,0.55)', fontSize: 13, marginBottom: 24, marginTop: 0 }}>
         {events.length} {events.length === 1 ? 'event' : 'events'}
       </p>
 
-      {eventsQuery.isLoading && <p style={{ color: '#6b7280' }}>{t('loading_events')}</p>}
-      {eventsQuery.isError && <p style={{ color: '#dc2626' }}>{t('failed_load_events')}</p>}
+      {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_events')}</p>}
+      {eventsQuery.isError && <p style={{ color: '#fca5a5' }}>{t('failed_load_events')}</p>}
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        {events.map((event) => {
+      <div style={{ display: 'grid', gap: 14 }}>
+        {events.map((event, idx) => {
           const hall = halls.find((h) => h.id === event.hallId);
           const tc = tableCategories.find((c) => c.id === event.tableCategoryId);
           const selections = event.selections ?? [];
           const status = STATUS_BADGE[event.status];
 
           return (
-            <div key={event.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>
-                  #{event.id} — {event.customerName}
+            <div key={event.id} className="adm-card adm-card-hover tablet-fade-up" style={{ padding: 20, animationDelay: `${idx * 60}ms` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#f8fafc' }}>
+                  <span style={{ color: '#c9a42c' }}>#{event.id}</span> — {event.customerName}
                 </h2>
-                <span style={{ padding: '2px 8px', background: status.bg, color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                <span className="adm-badge" style={{ background: status.bg, color: '#fff' }}>
                   {status.label}
                 </span>
                 {event.eventType && (
-                  <span style={{ padding: '2px 8px', background: '#e0e7ff', color: '#3730a3', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                  <span className="adm-badge" style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}>
                     {EVENT_TYPE_LABEL[event.eventType]}
                   </span>
                 )}
@@ -126,14 +126,14 @@ export const EmployeeEventsPage = () => {
               </div>
 
               {selections.length > 0 && (
-                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12, marginBottom: 12 }}>
-                  <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
+                  <p className="adm-label" style={{ marginBottom: 6 }}>
                     {t('selected_dishes')} ({selections.length})
                   </p>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
                     {selections.map((s) => (
-                      <li key={s.id} style={{ fontSize: 13, color: '#4b5563' }}>
-                        {s.menuItem.name} <span style={{ color: '#9ca3af' }}>× {s.quantity}</span>
+                      <li key={s.id} style={{ fontSize: 13, color: '#cbd5e1' }}>
+                        {s.menuItem.name} <span style={{ color: 'rgba(226,232,240,0.45)' }}>× {s.quantity}</span>
                       </li>
                     ))}
                   </ul>
@@ -141,16 +141,16 @@ export const EmployeeEventsPage = () => {
               )}
 
               {event.notes && (
-                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 10, marginBottom: 12, fontSize: 13, color: '#6b7280' }}>
-                  <strong style={{ color: '#374151' }}>{t('notes')}:</strong> {event.notes}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, marginBottom: 12, fontSize: 13, color: 'rgba(226,232,240,0.65)' }}>
+                  <strong style={{ color: '#c9a42c' }}>{t('notes')}:</strong> {event.notes}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-                <button onClick={() => downloadEvent(event, 'pdf')} style={btnStyle('#2563eb')}>
+              <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+                <button onClick={() => downloadEvent(event, 'pdf')} className="adm-btn-primary" style={{ fontSize: 13 }}>
                   {t('download_pdf')}
                 </button>
-                <button onClick={() => downloadEvent(event, 'excel')} style={btnStyle('#059669')}>
+                <button onClick={() => downloadEvent(event, 'excel')} className="adm-btn-ghost" style={{ fontSize: 13, color: '#4ade80', borderColor: 'rgba(74,222,128,0.3)' }}>
                   {t('download_excel')}
                 </button>
               </div>
@@ -159,7 +159,7 @@ export const EmployeeEventsPage = () => {
         })}
 
         {!eventsQuery.isLoading && events.length === 0 && (
-          <p style={{ color: '#6b7280' }}>{t('no_items_selected')}</p>
+          <p className="adm-empty">{t('no_items_selected')}</p>
         )}
       </div>
     </main>
@@ -168,8 +168,8 @@ export const EmployeeEventsPage = () => {
 
 const Detail = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <p style={{ margin: 0, fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{label}</p>
-    <p style={{ margin: 0, fontSize: 14, color: '#111827' }}>{value}</p>
+    <p className="adm-label" style={{ margin: 0 }}>{label}</p>
+    <p style={{ margin: '4px 0 0', fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>{value}</p>
   </div>
 );
 

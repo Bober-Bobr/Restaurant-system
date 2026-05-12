@@ -74,25 +74,29 @@ export const AdminRestaurantsPage = () => {
   });
 
   const inputStyle: React.CSSProperties = {
-    padding: '8px 10px',
-    border: '1px solid #d1d5db',
-    borderRadius: 6,
+    background: 'rgba(15,23,42,0.6)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    padding: '0.6rem 0.9rem',
+    width: '100%',
     fontSize: 14,
     fontFamily: 'inherit',
-    width: '100%',
-    boxSizing: 'border-box'
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.18s, background 0.18s',
   };
 
   const labelStyle: React.CSSProperties = { display: 'grid', gap: 4 };
   const labelTextStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151' };
 
   return (
-    <main style={{ maxWidth: 860, margin: '0 auto', padding: '24px 16px' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>{t('restaurants_management')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 880, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 24 }}>{t('restaurants_management')}</h1>
 
       {/* Create form */}
-      <section style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 32 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('create_restaurant')}</h2>
+      <section className="adm-card tablet-fade-up adm-section" style={{ marginBottom: 28 }}>
+        <h2 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('create_restaurant')}</h2>
         <div className="form-grid-2">
           <label style={labelStyle}>
             <span style={labelTextStyle}>{t('restaurant_name')} *</span>
@@ -124,18 +128,9 @@ export const AdminRestaurantsPage = () => {
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
+            className="adm-btn-primary"
             onClick={() => { setFormError(null); createMutation.mutate(); }}
             disabled={createMutation.isPending || !name.trim()}
-            style={{
-              padding: '8px 20px',
-              background: createMutation.isPending || !name.trim() ? '#9ca3af' : '#2563eb',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: createMutation.isPending || !name.trim() ? 'not-allowed' : 'pointer'
-            }}
           >
             {createMutation.isPending ? t('creating') : t('create')}
           </button>
@@ -146,16 +141,16 @@ export const AdminRestaurantsPage = () => {
       </section>
 
       {/* List */}
-      {isLoading && <p style={{ color: '#6b7280' }}>{t('loading_restaurants')}</p>}
-      {isError && <p style={{ color: '#dc2626' }}>{t('failed_load_restaurants')}</p>}
+      {isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_restaurants')}</p>}
+      {isError && <p style={{ color: '#fca5a5' }}>{t('failed_load_restaurants')}</p>}
 
       {!isLoading && restaurants.length === 0 && (
-        <p style={{ color: '#6b7280', fontStyle: 'italic' }}>{t('no_restaurants_yet')}</p>
+        <p className="adm-empty">{t('no_restaurants_yet')}</p>
       )}
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        {restaurants.map((r: Restaurant) => (
-          <div key={r.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gap: 14 }}>
+        {restaurants.map((r: Restaurant, idx: number) => (
+          <div key={r.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden', animationDelay: `${idx * 60}ms` }}>
             {editing?.id === r.id ? (
               /* Inline edit form */
               <div style={{ padding: 20 }}>

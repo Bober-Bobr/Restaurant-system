@@ -35,12 +35,14 @@ const formatError = (error: unknown): string => {
 };
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
+  background: 'rgba(15,23,42,0.6)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 10,
+  color: '#e2e8f0',
+  padding: '0.6rem 0.9rem',
   fontSize: 14,
   fontFamily: 'inherit',
-  background: '#fff'
+  outline: 'none',
 };
 
 export const AdminUsersPage = () => {
@@ -107,23 +109,23 @@ export const AdminUsersPage = () => {
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
 
   return (
-    <main style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 24 }}>{t('users_management')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 980, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 24 }}>{t('users_management')}</h1>
 
       {/* Create user form */}
-      <section style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 32 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('create_user')}</h2>
+      <section className="adm-card tablet-fade-up adm-section" style={{ marginBottom: 28 }}>
+        <h2 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('create_user')}</h2>
         <div className="form-grid-2">
           <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('name')}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(226,232,240,0.7)' }}>{t('name')}</span>
             <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="username" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('password')}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(226,232,240,0.7)' }}>{t('password')}</span>
             <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
           </label>
           <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('user_role')}</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(226,232,240,0.7)' }}>{t('user_role')}</span>
             <select value={newRole} onChange={(e) => setNewRole(e.target.value as AdminRole)} style={inputStyle}>
               {creatableRoles.map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -132,7 +134,7 @@ export const AdminUsersPage = () => {
           </label>
           {requiresRestaurantPicker && (
             <label style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{t('my_restaurants')} *</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(226,232,240,0.7)' }}>{t('my_restaurants')} *</span>
               <select value={newRestaurantId} onChange={(e) => setNewRestaurantId(e.target.value)} style={inputStyle}>
                 <option value="">— {t('select_restaurant')} —</option>
                 {restaurants.map((r) => (
@@ -144,47 +146,41 @@ export const AdminUsersPage = () => {
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
+            className="adm-btn-primary"
             onClick={() => { setFormError(null); createMutation.mutate(); }}
             disabled={createMutation.isPending || !canSubmit}
-            style={{
-              padding: '8px 20px',
-              background: createMutation.isPending || !canSubmit ? '#9ca3af' : '#2563eb',
-              color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600,
-              cursor: createMutation.isPending || !canSubmit ? 'not-allowed' : 'pointer',
-              whiteSpace: 'nowrap'
-            }}
           >
             {createMutation.isPending ? t('creating') : t('create')}
           </button>
           {formError && (
-            <span style={{ color: '#dc2626', fontSize: 13 }}>{formError}</span>
+            <span style={{ color: '#fca5a5', fontSize: 13 }}>{formError}</span>
           )}
         </div>
       </section>
 
       {/* User list */}
-      {isLoading && <p style={{ color: '#6b7280' }}>{t('loading_users')}</p>}
-      {isError && <p style={{ color: '#dc2626' }}>{t('failed_load_users')}</p>}
-      {!isLoading && users.length === 0 && <p style={{ color: '#6b7280' }}>{t('no_users_yet')}</p>}
+      {isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_users')}</p>}
+      {isError && <p style={{ color: '#fca5a5' }}>{t('failed_load_users')}</p>}
+      {!isLoading && users.length === 0 && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('no_users_yet')}</p>}
 
       {users.length > 0 && (
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 500 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{t('name')}</th>
-              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{t('user_role')}</th>
-              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{t('my_restaurants')}</th>
-              <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{t('actions')}</th>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: 'rgba(226,232,240,0.7)' }}>{t('name')}</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: 'rgba(226,232,240,0.7)' }}>{t('user_role')}</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: 'rgba(226,232,240,0.7)' }}>{t('my_restaurants')}</th>
+              <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600, color: 'rgba(226,232,240,0.7)' }}>{t('actions')}</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user: AdminUser) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '10px 12px', color: '#111827' }}>
+              <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>
                   {user.username}
                   {user.username === currentUsername && (
-                    <span style={{ marginLeft: 6, fontSize: 11, color: '#6b7280' }}>(you)</span>
+                    <span style={{ marginLeft: 6, fontSize: 11, color: 'rgba(226,232,240,0.55)' }}>(you)</span>
                   )}
                 </td>
                 <td style={{ padding: '10px 12px' }}>
@@ -192,7 +188,7 @@ export const AdminUsersPage = () => {
                     {ROLE_LABELS[user.role]}
                   </span>
                 </td>
-                <td style={{ padding: '10px 12px', color: '#6b7280', fontSize: 13 }}>
+                <td style={{ padding: '10px 12px', color: 'rgba(226,232,240,0.55)', fontSize: 13 }}>
                   {user.role === 'OWNER' ? '—' : restaurantName(user.restaurantId)}
                 </td>
                 <td style={{ padding: '10px 12px', textAlign: 'right' }}>

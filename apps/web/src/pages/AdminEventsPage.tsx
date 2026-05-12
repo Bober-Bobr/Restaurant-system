@@ -215,11 +215,11 @@ export const AdminEventsPage = () => {
   const canSave = validation.errors.length === 0 && !updateMutation.isPending;
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>{t('banquet_events')}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('banquet_events')}</h1>
 
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{editingId ? t('edit_existing_event') : t('create_new_event')}</h3>
+      <section className="adm-card tablet-fade-up adm-section">
+        <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{editingId ? t('edit_existing_event') : t('create_new_event')}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -415,8 +415,8 @@ export const AdminEventsPage = () => {
       </section>
 
       {/* Search Section */}
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{t('search_event_by_id')}</h3>
+      <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
+        <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('search_event_by_id')}</h3>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {t('enter_event_id')}:
@@ -448,91 +448,91 @@ export const AdminEventsPage = () => {
             PRIVATE_PARTY: t('event_type_private_party'), CORPORATE: t('event_type_corporate')
           };
           const statusColors: Record<string, string> = {
-            DRAFT: '#64748b', CONFIRMED: '#059669', CANCELLED: '#dc2626'
+            DRAFT: '#94a3b8', CONFIRMED: '#4ade80', CANCELLED: '#fca5a5'
           };
           const dishTypes  = searchResult.selections?.length ?? 0;
           const totalPcs   = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
 
           return (
-            <div style={{ border: '1px solid #cbd5e1', borderRadius: 8, padding: 16, backgroundColor: '#f8fafc' }}>
-              <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#475569' }}>{t('search_result')}</h4>
+            <div className="tablet-fade-up" style={{ background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 18 }}>
+              <h4 className="adm-heading" style={{ margin: '0 0 14px' }}>{t('search_result')}</h4>
 
               <div className="form-grid-3" style={{ gap: '10px 24px' }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>ID</p>
-                  <p style={{ margin: '2px 0 0', fontFamily: 'monospace', color: '#475569' }}>#{searchResult.id}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>ID</p>
+                  <p style={{ margin: '2px 0 0', fontFamily: 'monospace', color: 'rgba(226,232,240,0.7)' }}>#{searchResult.id}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('customer_name')}</p>
-                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a' }}>{searchResult.customerName}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('customer_name')}</p>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#e2e8f0' }}>{searchResult.customerName}</p>
                   {searchResult.customerPhone && (
-                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{searchResult.customerPhone}</p>
+                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: 'rgba(226,232,240,0.6)' }}>{searchResult.customerPhone}</p>
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('status')}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('status')}</p>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: statusColors[searchResult.status] ?? '#475569' }}>{searchResult.status}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('event_date_time')}</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{dateStr}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{timeStr}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('event_date_time')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{dateStr}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: 'rgba(226,232,240,0.6)' }}>{timeStr}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('event_type')}</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('event_type')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>
                     {searchResult.eventType ? (eventTypeLabels[searchResult.eventType] ?? searchResult.eventType) : '—'}
                   </p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('guests')}</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.guestCount}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('guests')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.guestCount}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('hall_optional')}</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.hall?.name ?? '—'}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('hall_optional')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.hall?.name ?? '—'}</p>
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('table_category_optional')}</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.tableCategory?.name ?? '—'}</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('table_category_optional')}</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.tableCategory?.name ?? '—'}</p>
                   {searchResult.tableCategory && (
-                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: '#64748b' }}>{formatSum(searchResult.tableCategory.ratePerPerson)} per person</p>
+                    <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: 'rgba(226,232,240,0.6)' }}>{formatSum(searchResult.tableCategory.ratePerPerson)} per person</p>
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>Menu</p>
-                  <p style={{ margin: '2px 0 0', color: '#0f172a' }}>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>Menu</p>
+                  <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>
                     {dishTypes > 0 ? `${dishTypes} dish${dishTypes !== 1 ? 'es' : ''}, ${totalPcs} pcs` : '—'}
                   </p>
                 </div>
                 {searchResult.eventType === 'BIRTHDAY' && searchResult.birthdayPersonName && (
                   <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('birthday_person_name')}</p>
-                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.birthdayPersonName}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('birthday_person_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.birthdayPersonName}</p>
                   </div>
                 )}
                 {searchResult.eventType === 'WEDDING' && searchResult.brideName && (
                   <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('bride_name')}</p>
-                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.brideName}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('bride_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.brideName}</p>
                   </div>
                 )}
                 {searchResult.eventType === 'WEDDING' && searchResult.groomName && (
                   <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('groom_name')}</p>
-                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.groomName}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('groom_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.groomName}</p>
                   </div>
                 )}
                 {searchResult.eventType && !['BIRTHDAY', 'WEDDING'].includes(searchResult.eventType) && searchResult.honoreePersonName && (
                   <div>
-                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('honoree_person_name')}</p>
-                    <p style={{ margin: '2px 0 0', color: '#0f172a' }}>{searchResult.honoreePersonName}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('honoree_person_name')}</p>
+                    <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{searchResult.honoreePersonName}</p>
                   </div>
                 )}
                 {searchResult.notes && (
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>{t('notes')}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#475569' }}>{searchResult.notes}</p>
+                    <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('notes')}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'rgba(226,232,240,0.7)' }}>{searchResult.notes}</p>
                   </div>
                 )}
               </div>

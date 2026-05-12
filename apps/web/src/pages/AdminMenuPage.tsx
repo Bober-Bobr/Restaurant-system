@@ -138,11 +138,11 @@ export const AdminMenuPage = () => {
   }, [name, price]);
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>{translate('menu_management', locale)}</h1>
+    <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+      <h1 className="adm-title" style={{ marginBottom: 20 }}>{translate('menu_management', locale)}</h1>
 
-      <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3>{translate('create_menu_item', locale)}</h3>
+      <section className="adm-card tablet-fade-up adm-section">
+        <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{translate('create_menu_item', locale)}</h3>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -204,10 +204,16 @@ export const AdminMenuPage = () => {
         const presentCategories = ALL_CATEGORIES.filter((cat) => (data ?? []).some((item) => item.category === cat));
         return (
           <>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="tablet-fade-up" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
               <button
                 onClick={() => setActiveCategory(null)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${activeCategory === null ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                style={{
+                  padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  background: activeCategory === null ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+                  color: activeCategory === null ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                  border: `1px solid ${activeCategory === null ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  transition: 'all 0.15s',
+                }}
               >
                 {translate('filter_all', locale)}
               </button>
@@ -215,27 +221,33 @@ export const AdminMenuPage = () => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${activeCategory === cat ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  style={{
+                    padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    background: activeCategory === cat ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+                    color: activeCategory === cat ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                    border: `1px solid ${activeCategory === cat ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    transition: 'all 0.15s',
+                  }}
                 >
                   {translate(cat.toLowerCase() as Parameters<typeof translate>[0], locale)}
                 </button>
               ))}
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="w-full border-collapse text-sm">
+            <div className="adm-card tablet-fade-up" style={{ overflowX: 'auto' }}>
+              <table className="adm-table" style={{ width: '100%' }}>
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    <th className="w-14 px-3 py-3"></th>
-                    <th className="px-4 py-3">{translate('name', locale)}</th>
-                    <th className="px-4 py-3">{translate('category', locale)}</th>
-                    <th className="px-4 py-3">{translate('description', locale)}</th>
-                    <th className="px-4 py-3">{translate('price', locale)}</th>
-                    <th className="px-4 py-3">{translate('tables', locale)}</th>
-                    <th className="px-4 py-3"></th>
+                  <tr>
+                    <th style={{ width: 56 }}></th>
+                    <th>{translate('name', locale)}</th>
+                    <th>{translate('category', locale)}</th>
+                    <th>{translate('description', locale)}</th>
+                    <th>{translate('price', locale)}</th>
+                    <th>{translate('tables', locale)}</th>
+                    <th></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filtered.map((item) => (
                     <MenuItemRow
                       key={item.id}
@@ -299,7 +311,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
   return (
     <>
-      <tr className="transition-colors hover:bg-slate-50">
+      <tr>
         {/* Photo thumbnail */}
         <td className="w-14 px-3 py-2">
           <button

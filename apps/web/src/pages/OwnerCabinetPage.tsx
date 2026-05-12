@@ -155,13 +155,32 @@ export const OwnerCabinetPage = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #1e293b', background: '#0b1220', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img src={networkingLogoSrc} alt="Networking" style={{ height: 40, width: 40, objectFit: 'contain' }} />
+    <div className="adm-bg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <header className="tablet-fade-in" style={{
+        position: 'sticky', top: 0, zIndex: 30,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 24px',
+        background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        flexWrap: 'wrap', gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, overflow: 'hidden',
+            border: '1px solid rgba(201,164,44,0.35)',
+            background: 'rgba(15,23,42,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <img src={networkingLogoSrc} alt="Networking" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{t('owner_cabinet')}</h1>
-            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>{username}</p>
+            <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>{t('owner_cabinet')}</h1>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {username}
+              <span className="adm-badge" style={{ background: 'rgba(124,58,237,0.18)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }}>
+                OWNER
+              </span>
+            </p>
           </div>
         </div>
 
@@ -173,28 +192,35 @@ export const OwnerCabinetPage = () => {
                 type="button"
                 onClick={() => setLocale(loc)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '5px 10px',
                   border: '1px solid',
-                  borderColor: locale === loc ? '#3b82f6' : '#334155',
-                  borderRadius: 4,
-                  background: locale === loc ? '#1e3a8a' : '#1e293b',
-                  color: locale === loc ? '#fff' : '#94a3b8',
-                  fontWeight: locale === loc ? 600 : 400,
+                  borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                  borderRadius: 6,
+                  background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
+                  color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                  fontWeight: locale === loc ? 700 : 500,
                   cursor: 'pointer',
-                  fontSize: 12,
+                  fontSize: 11,
+                  letterSpacing: '0.06em',
+                  transition: 'all 0.18s',
                 }}
               >
                 {LOCALE_LABELS[loc]}
               </button>
             ))}
           </div>
-          <button onClick={handleLogout} style={{ padding: '8px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <button onClick={handleLogout} className="adm-btn-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
             {t('logout')}
           </button>
         </div>
       </header>
 
-      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid #1e293b' }}>
+      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.5)' }}>
         <button onClick={() => setTab('companies')} style={tabStyle(tab === 'companies')}>
           {t('companies')}
         </button>
@@ -203,13 +229,13 @@ export const OwnerCabinetPage = () => {
         </button>
       </nav>
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+      <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 24px', position: 'relative', zIndex: 1 }}>
 
         {tab === 'companies' && (
           <>
             {/* New company form */}
-            <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
-              <h2 style={{ marginTop: 0, fontSize: 16 }}>{t('new_company')}</h2>
+            <section className="adm-card tablet-fade-up adm-section" style={{ marginBottom: 24 }}>
+              <h2 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('new_company')}</h2>
               <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                 <input
                   placeholder={t('company_name')}
@@ -235,7 +261,7 @@ export const OwnerCabinetPage = () => {
             </section>
 
             {/* Companies list */}
-            {companiesQuery.isLoading && <p style={{ color: '#64748b' }}>...</p>}
+            {companiesQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
 
             <div style={{ display: 'grid', gap: 16 }}>
               {companies.map((company) => {
@@ -244,9 +270,9 @@ export const OwnerCabinetPage = () => {
                 const companyLogoSrc = company.logoUrl ? getPhotoUrl(company.logoUrl) : null;
 
                 return (
-                  <div key={company.id} style={{ background: '#1e293b', borderRadius: 10, overflow: 'hidden', border: '1px solid #334155' }}>
+                  <div key={company.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden' }}>
                     {/* Company header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#0f172a', borderBottom: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       {companyLogoSrc && (
                         <img src={companyLogoSrc} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
                       )}
@@ -287,22 +313,22 @@ export const OwnerCabinetPage = () => {
 
                     {/* Restaurants list */}
                     <div style={{ padding: '12px 16px' }}>
-                      <p style={{ margin: '0 0 8px', fontSize: 12, color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {t('restaurants_in', { name: company.name })} ({restaurantsHere.length})
                       </p>
 
                       {restaurantsHere.length === 0 ? (
-                        <p style={{ margin: '0 0 8px', color: '#475569', fontSize: 13 }}>—</p>
+                        <p style={{ margin: '0 0 8px', color: 'rgba(226,232,240,0.45)', fontSize: 13 }}>—</p>
                       ) : (
                         <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
                           {restaurantsHere.map((r) => {
                             const effLogo = r.logoUrl ?? r.company?.logoUrl ?? null;
                             return (
-                              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#0f172a', borderRadius: 7 }}>
+                              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }}>
                                 {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />}
                                 <div style={{ flex: 1 }}>
                                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
-                                  {r.address && <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{r.address}</p>}
+                                  {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
                                 </div>
                                 <button
                                   onClick={() => {
@@ -322,8 +348,8 @@ export const OwnerCabinetPage = () => {
 
                       {/* Add restaurant form (toggle per company) */}
                       {showForm ? (
-                        <div style={{ background: '#0f172a', padding: 12, borderRadius: 7 }}>
-                          <p style={{ margin: '0 0 8px', fontSize: 12, color: '#94a3b8' }}>{t('company_logo_used')}</p>
+                        <div style={{ background: 'rgba(15,23,42,0.55)', padding: 12, borderRadius: 7 }}>
+                          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{t('company_logo_used')}</p>
                           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
                             <input placeholder={t('name')} value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
                             <input placeholder={t('address')} value={rAddress} onChange={(e) => setRAddress(e.target.value)} style={inputStyle} />
@@ -359,7 +385,7 @@ export const OwnerCabinetPage = () => {
               })}
 
               {!companiesQuery.isLoading && companies.length === 0 && (
-                <p style={{ color: '#64748b' }}>{t('no_companies_yet')}</p>
+                <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_companies_yet')}</p>
               )}
             </div>
           </>
@@ -367,7 +393,7 @@ export const OwnerCabinetPage = () => {
 
         {tab === 'users' && (
           <>
-            <section style={{ background: '#1e293b', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+            <section style={{ background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
               <h2 style={{ marginTop: 0, fontSize: 16 }}>{t('create_user')}</h2>
               <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <input placeholder={t('username')} value={uName} onChange={(e) => setUName(e.target.value)} style={inputStyle} />
@@ -396,10 +422,10 @@ export const OwnerCabinetPage = () => {
               <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('all_users')} ({users.length})</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: '#1e293b', borderRadius: 8 }}>
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 600 }}>{u.username}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
+                      <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
                         {restaurants.find((r) => r.id === u.restaurantId)?.name ?? '—'}
                       </p>
                     </div>
@@ -431,7 +457,7 @@ export const OwnerCabinetPage = () => {
                     )}
                   </div>
                 ))}
-                {users.length === 0 && <p style={{ color: '#64748b' }}>{t('no_users_yet')}</p>}
+                {users.length === 0 && <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_users_yet')}</p>}
               </div>
             </section>
           </>
@@ -443,16 +469,33 @@ export const OwnerCabinetPage = () => {
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: '12px 20px', background: 'none', border: 'none',
-  borderBottom: active ? '2px solid #3b82f6' : '2px solid transparent',
-  color: active ? '#fff' : '#94a3b8', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+  borderBottom: active ? '2px solid #c9a42c' : '2px solid transparent',
+  color: active ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+  cursor: 'pointer', fontSize: 14, fontWeight: 600,
+  textTransform: 'capitalize',
+  transition: 'all 0.18s',
 });
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: 6,
-  color: '#e2e8f0', fontSize: 14, fontFamily: 'inherit',
+  background: 'rgba(15,23,42,0.6)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 10,
+  color: '#e2e8f0',
+  padding: '0.6rem 0.9rem',
+  fontSize: 14,
+  fontFamily: 'inherit',
+  outline: 'none',
 };
 
 const btnStyle: React.CSSProperties = {
-  padding: '8px 14px', background: '#3b82f6', border: 'none', borderRadius: 6,
-  color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+  padding: '0.6rem 1.2rem',
+  background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
+  border: 'none',
+  borderRadius: 10,
+  color: '#0f172a',
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 700,
+  letterSpacing: '0.02em',
+  transition: 'transform 0.15s, box-shadow 0.15s',
 };
