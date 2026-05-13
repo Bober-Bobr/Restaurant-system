@@ -9,7 +9,7 @@ import logo from '../assets/logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, stopTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 
 type EventType = NonNullable<Event['eventType']>;
 const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
@@ -118,10 +118,6 @@ export const TabletSummaryPage = () => {
   useEffect(() => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
-
-  useEffect(() => {
-    return () => { stopTabletMusic(); };
-  }, []);
 
   const startMusic = () => {
     startTabletMusic();

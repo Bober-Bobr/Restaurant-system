@@ -15,6 +15,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
+import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, toSubdomainSlug } from '../utils/subdomain';
@@ -55,8 +56,10 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/tablet" element={<TabletMenuPage />} />
-        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        <Route element={<TabletLayout />}>
+          <Route path="/tablet" element={<TabletMenuPage />} />
+          <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -114,8 +117,12 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        {role === 'EMPLOYEE' && <Route path="/tablet" element={<TabletMenuPage />} />}
-        {role === 'EMPLOYEE' && <Route path="/tablet/summary" element={<TabletSummaryPage />} />}
+        {role === 'EMPLOYEE' && (
+          <Route element={<TabletLayout />}>
+            <Route path="/tablet" element={<TabletMenuPage />} />
+            <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+          </Route>
+        )}
         <Route element={<EmployeeLayout />}>
           <Route path="/" element={<EmployeeEventsPage />} />
         </Route>
@@ -127,8 +134,10 @@ export const App = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/tablet" element={<TabletMenuPage />} />
-      <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+      <Route element={<TabletLayout />}>
+        <Route path="/tablet" element={<TabletMenuPage />} />
+        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+      </Route>
       <Route element={<AdminLayout />}>
         <Route path="/" element={<AdminEventsPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />

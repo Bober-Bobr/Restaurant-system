@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, stopTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -253,10 +253,6 @@ export const TabletMenuPage = () => {
   useEffect(() => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
-
-  useEffect(() => {
-    return () => { stopTabletMusic(); };
-  }, []);
 
   const startMusic = () => {
     startTabletMusic();
