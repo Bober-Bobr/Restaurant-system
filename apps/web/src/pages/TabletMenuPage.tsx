@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
+import { startTabletMusic, stopTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -253,6 +253,10 @@ export const TabletMenuPage = () => {
   useEffect(() => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
+
+  useEffect(() => {
+    return () => { stopTabletMusic(); };
+  }, []);
 
   const startMusic = () => {
     startTabletMusic();
@@ -525,7 +529,7 @@ export const TabletMenuPage = () => {
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} />
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark />
                     </div>
                   ))}
                 </div>

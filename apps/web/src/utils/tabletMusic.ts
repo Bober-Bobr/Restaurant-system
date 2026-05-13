@@ -17,6 +17,14 @@ export function startTabletMusic() {
     .catch(() => {});
 }
 
+export function stopTabletMusic() {
+  if (audio) {
+    audio.pause();
+    audio.currentTime = 0;
+  }
+  started = false;
+}
+
 export function isTabletMusicStarted() {
   return started && !!audio && !audio.paused;
 }
