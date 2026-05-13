@@ -118,10 +118,10 @@ export class AuthService {
     const target = await this.authRepository.findById(targetId);
     if (!target) throw createHttpError(404, 'User not found');
 
-    if (callerRole === AdminRole.ADMIN && target.role !== AdminRole.EMPLOYEE) {
-      throw createHttpError(403, 'Administrators can only delete Employee accounts.');
+    if (callerRole === AdminRole.ADMIN && target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+      throw createHttpError(403, 'Administrators can only delete Employee or Kitchen accounts.');
     }
-    if (callerRole === AdminRole.EMPLOYEE) {
+    if (callerRole === AdminRole.EMPLOYEE || callerRole === AdminRole.KITCHEN) {
       throw createHttpError(403, 'Forbidden.');
     }
     await this.authRepository.deleteById(targetId);

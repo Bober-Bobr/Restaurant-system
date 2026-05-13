@@ -422,11 +422,11 @@ export const AdminTableCategoriesPage = () => {
         <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
           <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('all_categories')}</h3>
           {categories.length === 0 ? (
-            <p>{t('no_table_categories_yet')}</p>
+            <p className="adm-empty">{t('no_table_categories_yet')}</p>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
-              {categories.map((category) => (
-                <div key={category.id} style={{ border: '1px solid #eee', padding: 12, borderRadius: 6 }}>
+              {categories.map((category, idx) => (
+                <div key={category.id} className="adm-card adm-card-hover tablet-fade-up" style={{ padding: 14, animationDelay: `${idx * 50}ms` }}>
                   {editingId === category.id ? (
                     // ── Edit form ──
                     <div style={{ display: 'grid', gap: 14 }}>
@@ -491,9 +491,10 @@ export const AdminTableCategoriesPage = () => {
                             {(category.photos ?? []).length > 4 && (
                               <div style={{
                                 width: 56, height: 44, borderRadius: 4,
-                                background: '#f1f5f9', display: 'flex',
+                                background: 'rgba(15,23,42,0.6)', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.8em', color: '#64748b', fontWeight: 600,
+                                fontSize: 12, color: 'rgba(226,232,240,0.6)', fontWeight: 600,
+                                border: '1px solid rgba(255,255,255,0.08)',
                               }}>
                                 +{(category.photos ?? []).length - 4}
                               </div>
@@ -501,46 +502,57 @@ export const AdminTableCategoriesPage = () => {
                           </div>
                         )}
                         <div>
-                          <strong>{category.name}</strong>
-                          <p style={{ margin: '3px 0 0', fontSize: '0.85em', color: '#64748b' }}>
-                            {t('rate')}: {formatSum(category.ratePerPerson)}
-                            {!category.isActive && ` • ${t('inactive')}`}
+                          <strong style={{ color: '#f8fafc', fontSize: 15 }}>{category.name}</strong>
+                          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
+                            {t('rate')}: <span style={{ color: '#c9a42c', fontWeight: 600 }}>{formatSum(category.ratePerPerson)}</span>
+                            {!category.isActive && <span style={{ color: '#fca5a5' }}> • {t('inactive')}</span>}
                           </p>
                           {parseCats(category.includedCategories).length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
                               {parseCats(category.includedCategories).map((cat) => (
-                                <span key={cat} style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dbeafe', color: '#1e40af' }}>
+                                <span key={cat} className="adm-badge" style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}>
                                   {t(CATEGORY_LABEL_KEY[cat])}
                                 </span>
                               ))}
                             </div>
                           )}
                           {(category.packageItems ?? []).length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
                               {(category.packageItems ?? []).map((pi) => (
-                                <span key={pi.id} style={{ fontSize: '0.75em', padding: '2px 8px', borderRadius: 12, background: '#dcfce7', color: '#166534' }}>
+                                <span key={pi.id} className="adm-badge" style={{ background: 'rgba(34,197,94,0.15)', color: '#86efac', border: '1px solid rgba(34,197,94,0.3)' }}>
                                   {pi.menuItem.name}
                                 </span>
                               ))}
                             </div>
                           )}
                           {category.description && (
-                            <p style={{ margin: '4px 0 0', fontSize: '0.82em', color: '#94a3b8' }}>{category.description}</p>
+                            <p style={{ margin: '6px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{category.description}</p>
                           )}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <button
                           onClick={() => startEditing(category)}
-                          style={{ background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                          className="adm-btn-ghost"
+                          style={{ fontSize: 12, padding: '5px 12px', color: '#c9a42c', borderColor: 'rgba(201,164,44,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                           {t('edit')}
                         </button>
                         <button
                           onClick={() => deleteMutation.mutate(category.id)}
                           disabled={deleteMutation.isPending}
-                          style={{ background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                          className="adm-btn-danger"
+                          style={{ fontSize: 12, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                          </svg>
                           {t('delete')}
                         </button>
                       </div>

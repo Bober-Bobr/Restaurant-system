@@ -259,7 +259,7 @@ export const AdminEventsPage = () => {
                             PRIVATE_PARTY: t('event_type_private_party'), CORPORATE: t('event_type_corporate')
                         };
                         const statusColors = {
-                            DRAFT: '#94a3b8', CONFIRMED: '#4ade80', CANCELLED: '#fca5a5'
+                            DRAFT: '#94a3b8', CONFIRMED: '#', CANCELLED: '#fca5a5'
                         };
                         const dishTypes = searchResult.selections?.length ?? 0;
                         const totalPcs = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;

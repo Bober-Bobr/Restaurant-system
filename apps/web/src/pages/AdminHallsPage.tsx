@@ -270,35 +270,46 @@ export const AdminHallsPage = () => {
                     </div>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         {hall.photoUrl ? (
                           <img
                             src={getPhotoUrl(hall.photoUrl)}
                             alt={hall.name}
-                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }}
+                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)' }}
                           />
                         ) : null}
                         <div>
-                          <strong>{hall.name}</strong>
-                          <p style={{ margin: '4px 0 0', fontSize: '0.9em', color: '#666' }}>
-                            {t('hall_capacity')}: {hall.capacity}
-                            {hall.description ? ` - ${hall.description}` : ''}
-                            {!hall.isActive && ` (${t('hall_inactive')})`}
+                          <strong style={{ color: '#f8fafc', fontSize: 15 }}>{hall.name}</strong>
+                          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.6)' }}>
+                            {t('hall_capacity')}: <span style={{ color: '#c9a42c', fontWeight: 600 }}>{hall.capacity}</span>
+                            {hall.description ? <span style={{ color: 'rgba(226,232,240,0.45)' }}> · {hall.description}</span> : ''}
+                            {!hall.isActive && <span style={{ color: '#fca5a5' }}> ({t('hall_inactive')})</span>}
                           </p>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           onClick={() => startEditing(hall)}
-                          style={{ background: '#28a745', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
+                          className="adm-btn-ghost"
+                          style={{ fontSize: 12, padding: '5px 12px', color: '#c9a42c', borderColor: 'rgba(201,164,44,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                           {t('edit')}
                         </button>
                         <button
                           onClick={() => deleteMutation.mutate(hall.id)}
                           disabled={deleteMutation.isPending}
-                          style={{ background: '#b00020', color: 'white', padding: '4px 8px', border: 'none', borderRadius: 4 }}
+                          className="adm-btn-danger"
+                          style={{ fontSize: 12, padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                          </svg>
                           {t('delete')}
                         </button>
                       </div>

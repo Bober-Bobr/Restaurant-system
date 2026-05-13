@@ -204,11 +204,12 @@ export const AdminUsersPage = () => {
                         <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
                       </select>
                     )}
-                    {user.username !== currentUsername && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE') && (
+                    {user.username !== currentUsername && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE' && user.role !== 'KITCHEN') && (
                       <button
+                        className="adm-btn-danger"
                         onClick={() => { if (window.confirm(t('confirm_delete_user'))) deleteMutation.mutate(user.id); }}
                         disabled={deleteMutation.isPending}
-                        style={{ padding: '4px 10px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer' }}
+                        style={{ fontSize: 12 }}
                       >
                         {t('delete')}
                       </button>
