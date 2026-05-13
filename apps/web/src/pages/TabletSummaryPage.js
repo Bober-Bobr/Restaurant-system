@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { usePublicDataStore } from '../store/publicData.store';
@@ -9,7 +9,7 @@ import { httpClient } from '../services/http';
 import logo from '../assets/logo.png';
 import { locales, translate } from '../utils/translate';
 import { formatSum } from '../utils/currency';
-const tabletMusicSrc = '/tablet-music.mp3';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 const eventTypes = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
 // ── Decorative background (shared with menu page) ─────────────────────────
 function PageBackground() {
@@ -40,11 +40,7 @@ export const TabletSummaryPage = () => {
     const [searchParams] = useSearchParams();
     const restaurantId = searchParams.get('restaurantId') ?? '';
     const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
-    const [musicStarted, setMusicStarted] = useState(false);
-    const audioRef = useRef(null);
-    useEffect(() => {
-        return () => { audioRef.current?.pause(); };
-    }, []);
+    const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
     const menuItems = usePublicDataStore((s) => s.menuItems);
     const halls = usePublicDataStore((s) => s.halls);
     const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -69,10 +65,7 @@ export const TabletSummaryPage = () => {
             loadPublicData(restaurantId);
     }, [loadPublicData, restaurantId]);
     const startMusic = () => {
-        const audio = new Audio(tabletMusicSrc);
-        audio.loop = true;
-        audio.play().catch(() => { });
-        audioRef.current = audio;
+        startTabletMusic();
         setMusicStarted(true);
     };
     const selectedTableCategory = tableCategories.find((tc) => tc.id === selectedTableCategoryId);

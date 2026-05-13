@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-const tabletMusicSrc = '/tablet-music.mp3';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -245,8 +245,7 @@ export const TabletMenuPage = () => {
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [musicStarted, setMusicStarted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -255,15 +254,8 @@ export const TabletMenuPage = () => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
 
-  useEffect(() => {
-    return () => { audioRef.current?.pause(); };
-  }, []);
-
   const startMusic = () => {
-    const audio = new Audio(tabletMusicSrc);
-    audio.loop = true;
-    audio.play().catch(() => {});
-    audioRef.current = audio;
+    startTabletMusic();
     setMusicStarted(true);
   };
 

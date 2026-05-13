@@ -8,7 +8,7 @@ import { locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-const tabletMusicSrc = '/tablet-music.mp3';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 const CATEGORY_ORDER = {
     COLD_APPETIZERS: 0, HOT_APPETIZERS: 1, SALADS: 2,
     FIRST_COURSE: 3, SECOND_COURSE: 4, DRINKS: 5, SWEETS: 6, FRUITS: 7,
@@ -104,21 +104,14 @@ export const TabletMenuPage = () => {
     const loadPublicData = usePublicDataStore((s) => s.loadPublicData);
     const [activeCategory, setActiveCategory] = useState(null);
     const [lightboxSrc, setLightboxSrc] = useState(null);
-    const [musicStarted, setMusicStarted] = useState(false);
-    const audioRef = useRef(null);
+    const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
     const t = (key, params) => translate(key, locale, params);
     useEffect(() => {
         if (restaurantId)
             loadPublicData(restaurantId);
     }, [loadPublicData, restaurantId]);
-    useEffect(() => {
-        return () => { audioRef.current?.pause(); };
-    }, []);
     const startMusic = () => {
-        const audio = new Audio(tabletMusicSrc);
-        audio.loop = true;
-        audio.play().catch(() => { });
-        audioRef.current = audio;
+        startTabletMusic();
         setMusicStarted(true);
     };
     const sortedAndFiltered = quickSort((menuItems ?? []).filter((item) => ADDITIONAL_CATEGORIES.includes(item.category) &&

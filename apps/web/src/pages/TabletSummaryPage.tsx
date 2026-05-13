@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { usePublicDataStore } from '../store/publicData.store';
@@ -9,7 +9,7 @@ import logo from '../assets/logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
-const tabletMusicSrc = '/tablet-music.mp3';
+import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
 
 type EventType = NonNullable<Event['eventType']>;
 const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
@@ -90,12 +90,8 @@ export const TabletSummaryPage = () => {
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
-  const [musicStarted, setMusicStarted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
 
-  useEffect(() => {
-    return () => { audioRef.current?.pause(); };
-  }, []);
   const menuItems       = usePublicDataStore((s) => s.menuItems);
   const halls           = usePublicDataStore((s) => s.halls);
   const tableCategories = usePublicDataStore((s) => s.tableCategories);
@@ -124,10 +120,7 @@ export const TabletSummaryPage = () => {
   }, [loadPublicData, restaurantId]);
 
   const startMusic = () => {
-    const audio = new Audio(tabletMusicSrc);
-    audio.loop = true;
-    audio.play().catch(() => {});
-    audioRef.current = audio;
+    startTabletMusic();
     setMusicStarted(true);
   };
 
