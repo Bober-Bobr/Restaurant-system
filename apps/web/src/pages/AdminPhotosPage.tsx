@@ -169,22 +169,26 @@ export const AdminPhotosPage = () => {
           </p>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-square animate-pulse rounded-2xl bg-slate-100" />
+                <div key={i} className="rg-shimmer" style={{ aspectRatio: '1 / 1', borderRadius: 16 }} />
               ))}
             </div>
           ) : isError ? (
-            <p className="text-sm text-red-600">{t('failed_load_photos')}</p>
+            <p style={{ fontSize: 14, color: '#fca5a5' }}>{t('failed_load_photos')}</p>
           ) : photos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 py-16 text-slate-400">
-              <svg className="mb-3 h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '60px 16px', color: 'rgba(226,232,240,0.45)',
+              border: '2px dashed rgba(255,255,255,0.08)', borderRadius: 16,
+            }}>
+              <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ marginBottom: 12 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p className="text-sm">{t('no_photos_uploaded')}</p>
+              <p style={{ fontSize: 14 }}>{t('no_photos_uploaded')}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
               {photos.map((photoUrl) => {
                 const filename = photoUrl.split('/').pop() ?? '';
                 const isDeleting = deleteMutation.isPending && deleteMutation.variables === photoUrl;
@@ -194,38 +198,39 @@ export const AdminPhotosPage = () => {
                 return (
                   <div
                     key={photoUrl}
-                    className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition-shadow hover:shadow-md"
+                    className="adm-card adm-card-hover tablet-fade-up"
+                    style={{ overflow: 'hidden', position: 'relative' }}
                   >
                     <button
                       type="button"
                       onClick={() => setLightboxSrc(getPhotoUrl(photoUrl) ?? null)}
-                      className="group/img aspect-square block w-full overflow-hidden"
+                      style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: 'rgba(15,23,42,0.5)', border: 'none', padding: 0, cursor: 'pointer' }}
                     >
                       <img
                         src={getPhotoUrl(photoUrl)}
                         alt={filename}
-                        className="h-full w-full object-cover transition-transform duration-200 group-hover/img:scale-[1.03]"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.2s' }}
                       />
                     </button>
-                    <div className="p-3">
+                    <div style={{ padding: 12 }}>
                       {photoDishCat && !dishCategory && (
-                        <p className="mb-1 truncate text-xs font-medium text-slate-400 uppercase tracking-wide">
+                        <p className="adm-label" style={{ marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {photoDishCat.replace(/_/g, ' ')}
                         </p>
                       )}
-                      <p className="truncate text-xs text-slate-500" title={filename}>
+                      <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'rgba(226,232,240,0.6)' }} title={filename}>
                         {filename}
                       </p>
                       <button
                         type="button"
                         onClick={() => handleDelete(photoUrl)}
                         disabled={isDeleting || deleteMutation.isPending}
-                        className="mt-2 w-full rounded-xl border border-red-200 bg-white py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+                        className="adm-btn-danger"
+                        style={{ marginTop: 10, width: '100%', fontSize: 12 }}
                       >
                         {isDeleting ? t('deleting') : t('delete')}
                       </button>
                     </div>
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-transparent transition-all group-hover:ring-slate-300" />
                   </div>
                 );
               })}

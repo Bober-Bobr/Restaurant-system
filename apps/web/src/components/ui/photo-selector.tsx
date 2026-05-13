@@ -63,33 +63,37 @@ export const PhotoSelector = ({
         <Lightbox src={previewUrl} onClose={() => setPreviewUrl(null)} />
       )}
 
-      <div className="space-y-3">
+      <div style={{ display: 'grid', gap: 12 }}>
         {placeholder && !selectedPhotoUrl && (
-          <p className="text-sm text-gray-500">{placeholder}</p>
+          <p style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)' }}>{placeholder}</p>
         )}
 
         {selectedPhotoUrl && (
-          <div className="border-2 border-blue-300 rounded-lg p-2 bg-blue-50">
-            <div className="flex items-center gap-2">
+          <div style={{
+            border: '1px solid rgba(201,164,44,0.4)',
+            borderRadius: 10, padding: 10,
+            background: 'rgba(201,164,44,0.08)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
                 type="button"
                 onClick={() => setPreviewUrl(getPhotoUrl(selectedPhotoUrl) ?? null)}
-                className="flex-shrink-0"
+                style={{ flexShrink: 0, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer' }}
               >
                 <img
                   src={getPhotoUrl(selectedPhotoUrl)}
                   alt="Selected"
-                  className="w-16 h-16 object-cover rounded hover:opacity-80 transition-opacity"
+                  style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }}
                 />
               </button>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-700">
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#c9a42c' }}>
                   {translate('selected_photo', locale)}
                 </p>
                 <button
                   type="button"
                   onClick={() => onPhotoSelect(undefined)}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  style={{ background: 'transparent', border: 'none', color: 'rgba(226,232,240,0.7)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', padding: 0, marginTop: 2 }}
                 >
                   {translate('clear_selection', locale)}
                 </button>
@@ -98,62 +102,96 @@ export const PhotoSelector = ({
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto border rounded-lg p-2">
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
+          maxHeight: 256, overflowY: 'auto',
+          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(15,23,42,0.4)',
+          borderRadius: 10, padding: 8,
+        }}>
           {isLoading ? (
-            <div className="col-span-4 text-center py-4">
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 16, color: 'rgba(226,232,240,0.55)' }}>
               {translate('loading_photos', locale)}
             </div>
           ) : photos.length === 0 ? (
-            <div className="col-span-4 text-center py-4 text-gray-500">
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 16, color: 'rgba(226,232,240,0.45)' }}>
               {translate('no_photos_uploaded', locale)}
             </div>
           ) : (
-            photos.map((photoUrl) => (
-              <div
-                key={photoUrl}
-                className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                  selectedPhotoUrl === photoUrl
-                    ? 'border-blue-500 ring-2 ring-blue-200'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handlePhotoClick(photoUrl)}
-              >
-                <img
-                  src={getPhotoUrl(photoUrl)}
-                  alt=""
-                  className="w-full h-20 object-cover"
-                />
-
-                {/* Delete button */}
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
-                  onClick={(e) => handleDeletePhoto(photoUrl, e)}
-                  disabled={deleteMutation.isPending}
+            photos.map((photoUrl) => {
+              const isSelected = selectedPhotoUrl === photoUrl;
+              return (
+                <div
+                  key={photoUrl}
+                  className="group"
+                  style={{
+                    position: 'relative', cursor: 'pointer',
+                    border: `2px solid ${isSelected ? '#c9a42c' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 8, overflow: 'hidden',
+                    transition: 'all 0.15s',
+                    boxShadow: isSelected ? '0 0 0 2px rgba(201,164,44,0.25)' : 'none',
+                  }}
+                  onClick={() => handlePhotoClick(photoUrl)}
                 >
-                  ×
-                </button>
+                  <img
+                    src={getPhotoUrl(photoUrl)}
+                    alt=""
+                    style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block' }}
+                  />
 
-                {/* Expand button */}
-                <button
-                  type="button"
-                  className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
-                  onClick={(e) => { e.stopPropagation(); setPreviewUrl(getPhotoUrl(photoUrl) ?? null); }}
-                >
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                  </svg>
-                </button>
+                  <button
+                    type="button"
+                    className="opacity-0 group-hover:opacity-100"
+                    style={{
+                      position: 'absolute', top: 4, right: 4,
+                      background: '#dc2626', color: '#fff', border: 'none',
+                      borderRadius: '50%', width: 20, height: 20,
+                      fontSize: 12, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'opacity 0.15s',
+                    }}
+                    onClick={(e) => handleDeletePhoto(photoUrl, e)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    ×
+                  </button>
 
-                {selectedPhotoUrl === photoUrl && (
-                  <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center">
-                    <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
-                      ✓
+                  <button
+                    type="button"
+                    className="opacity-0 group-hover:opacity-100"
+                    style={{
+                      position: 'absolute', bottom: 4, right: 4,
+                      background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none',
+                      borderRadius: '50%', width: 20, height: 20, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'opacity 0.15s',
+                    }}
+                    onClick={(e) => { e.stopPropagation(); setPreviewUrl(getPhotoUrl(photoUrl) ?? null); }}
+                  >
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                    </svg>
+                  </button>
+
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute', inset: 0,
+                      background: 'rgba(201,164,44,0.18)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <div style={{
+                        background: '#c9a42c', color: '#0f172a',
+                        borderRadius: '50%', width: 26, height: 26,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, fontWeight: 800,
+                      }}>
+                        ✓
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

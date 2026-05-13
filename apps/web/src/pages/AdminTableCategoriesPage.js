@@ -68,37 +68,51 @@ function FoodPackageSection({ selectedCats, onCatsChange, selectedItemIds, onIte
             }
         }
     };
-    return (_jsxs("div", { style: { display: 'grid', gap: 12 }, children: [_jsx("span", { style: { fontSize: '0.9em', fontWeight: 600 }, children: t('food_package') }), FOOD_PACKAGE_CATEGORIES.map((cat) => (_jsxs("div", { style: { border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }, children: [_jsxs("label", { style: {
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '8px 12px',
-                            background: selectedCats.includes(cat) ? '#f0fdf4' : '#f8fafc',
-                            cursor: 'pointer', fontWeight: 500, fontSize: '0.9em',
-                            borderBottom: grouped[cat].length > 0 ? '1px solid #e2e8f0' : 'none',
-                        }, children: [_jsx("input", { type: "checkbox", checked: selectedCats.includes(cat), onChange: () => toggleCat(cat) }), t(CATEGORY_LABEL_KEY[cat]), _jsxs("span", { style: { marginLeft: 'auto', fontSize: '0.8em', color: '#94a3b8', fontWeight: 400 }, children: [grouped[cat].length, " ", grouped[cat].length === 1 ? 'dish' : 'dishes'] })] }), grouped[cat].length > 0 && (_jsx("div", { style: { padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }, children: grouped[cat].map((item) => (_jsxs("label", { style: {
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '4px 10px', borderRadius: 20,
-                                border: `1px solid ${selectedItemIds.includes(item.id) ? '#22c55e' : '#cbd5e1'}`,
-                                background: selectedItemIds.includes(item.id) ? '#f0fdf4' : 'white',
-                                cursor: 'pointer', fontSize: '0.85em', userSelect: 'none',
-                                transition: 'all 0.15s',
-                            }, children: [_jsx("input", { type: "checkbox", style: { display: 'none' }, checked: selectedItemIds.includes(item.id), onChange: () => toggleItem(item.id, cat) }), item.name, _jsx("span", { style: { color: '#94a3b8' }, children: formatSum(item.priceCents) })] }, item.id))) }))] }, cat)))] }));
+    return (_jsxs("div", { style: { display: 'grid', gap: 10 }, children: [_jsx("span", { className: "adm-label", style: { marginBottom: 2 }, children: t('food_package') }), FOOD_PACKAGE_CATEGORIES.map((cat) => (_jsxs("div", { style: {
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    background: 'rgba(15,23,42,0.4)',
+                }, children: [_jsxs("label", { style: {
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 14px',
+                            background: selectedCats.includes(cat) ? 'rgba(201,164,44,0.12)' : 'transparent',
+                            cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                            color: selectedCats.includes(cat) ? '#c9a42c' : '#e2e8f0',
+                            borderBottom: grouped[cat].length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                            transition: 'all 0.15s',
+                        }, children: [_jsx("input", { type: "checkbox", checked: selectedCats.includes(cat), onChange: () => toggleCat(cat), style: { accentColor: '#c9a42c' } }), t(CATEGORY_LABEL_KEY[cat]), _jsxs("span", { style: { marginLeft: 'auto', fontSize: 11, color: 'rgba(226,232,240,0.45)', fontWeight: 500 }, children: [grouped[cat].length, " ", grouped[cat].length === 1 ? 'dish' : 'dishes'] })] }), grouped[cat].length > 0 && (_jsx("div", { style: { padding: '10px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }, children: grouped[cat].map((item) => {
+                            const active = selectedItemIds.includes(item.id);
+                            return (_jsxs("label", { style: {
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '4px 12px', borderRadius: 999,
+                                    border: `1px solid ${active ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                                    background: active ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
+                                    color: active ? '#c9a42c' : '#cbd5e1',
+                                    cursor: 'pointer', fontSize: 12, userSelect: 'none',
+                                    transition: 'all 0.15s',
+                                }, children: [_jsx("input", { type: "checkbox", style: { display: 'none' }, checked: active, onChange: () => toggleItem(item.id, cat) }), item.name, _jsx("span", { style: { color: 'rgba(226,232,240,0.4)' }, children: formatSum(item.priceCents) })] }, item.id));
+                        }) }))] }, cat)))] }));
 }
 // ── Multi-photo field ──────────────────────────────────────────────────────
 function PhotosField({ photoUrls, onChange }) {
     const [adding, setAdding] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState(null);
-    return (_jsxs(_Fragment, { children: [lightboxSrc && _jsx(Lightbox, { src: lightboxSrc, onClose: () => setLightboxSrc(null) }), _jsxs("div", { style: { display: 'grid', gap: 8 }, children: [_jsx("span", { style: { fontSize: '0.9em', fontWeight: 600 }, children: "Photos" }), _jsxs("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }, children: [photoUrls.map((url, i) => (_jsxs("div", { style: { position: 'relative' }, children: [_jsx("button", { type: "button", onClick: () => setLightboxSrc(getPhotoUrl(url) ?? null), style: { display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid #e2e8f0', cursor: 'pointer' }, children: _jsx("img", { src: getPhotoUrl(url), alt: "", style: { width: 72, height: 60, objectFit: 'cover', display: 'block' } }) }), _jsx("button", { type: "button", onClick: () => onChange(photoUrls.filter((_, j) => j !== i)), style: {
+    return (_jsxs(_Fragment, { children: [lightboxSrc && _jsx(Lightbox, { src: lightboxSrc, onClose: () => setLightboxSrc(null) }), _jsxs("div", { style: { display: 'grid', gap: 8 }, children: [_jsx("span", { className: "adm-label", children: "Photos" }), _jsxs("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }, children: [photoUrls.map((url, i) => (_jsxs("div", { style: { position: 'relative' }, children: [_jsx("button", { type: "button", onClick: () => setLightboxSrc(getPhotoUrl(url) ?? null), style: { display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', padding: 0, background: 'rgba(15,23,42,0.5)' }, children: _jsx("img", { src: getPhotoUrl(url), alt: "", style: { width: 72, height: 60, objectFit: 'cover', display: 'block' } }) }), _jsx("button", { type: "button", onClick: () => onChange(photoUrls.filter((_, j) => j !== i)), style: {
                                             position: 'absolute', top: -6, right: -6,
-                                            width: 18, height: 18, borderRadius: '50%',
-                                            background: '#b00020', color: 'white', border: 'none',
-                                            cursor: 'pointer', fontSize: 11,
+                                            width: 20, height: 20, borderRadius: '50%',
+                                            background: '#dc2626', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                                            cursor: 'pointer', fontSize: 12, fontWeight: 700, lineHeight: 1,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                                         }, children: "\u00D7" })] }, i))), _jsx("button", { type: "button", onClick: () => setAdding((v) => !v), style: {
                                     width: 72, height: 60, borderRadius: 8,
-                                    border: '2px dashed #cbd5e1', background: adding ? '#f8fafc' : 'white',
-                                    cursor: 'pointer', fontSize: 22, color: '#94a3b8',
+                                    border: `2px dashed ${adding ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                                    background: adding ? 'rgba(201,164,44,0.08)' : 'rgba(15,23,42,0.4)',
+                                    cursor: 'pointer', fontSize: 22, color: adding ? '#c9a42c' : 'rgba(226,232,240,0.45)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }, title: "Add photo", children: "+" })] }), adding && (_jsx("div", { style: { border: '1px solid #e2e8f0', borderRadius: 8, padding: 8 }, children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: undefined, onPhotoSelect: (url) => {
+                                    transition: 'all 0.15s',
+                                }, title: "Add photo", children: "+" })] }), adding && (_jsx("div", { style: { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 10, background: 'rgba(15,23,42,0.4)' }, children: _jsx(PhotoSelector, { category: "table", selectedPhotoUrl: undefined, onPhotoSelect: (url) => {
                                 if (url && !photoUrls.includes(url))
                                     onChange([...photoUrls, url]);
                                 setAdding(false);

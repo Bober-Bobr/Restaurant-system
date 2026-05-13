@@ -10,10 +10,10 @@ type EventListProps = {
   deletingId?: number | null;
 };
 
-const statusStyles: Record<string, string> = {
-  DRAFT:      'bg-slate-100 text-slate-600',
-  CONFIRMED:  'bg-emerald-100 text-emerald-700',
-  CANCELLED:  'bg-red-100 text-red-600',
+const statusStyle: Record<string, React.CSSProperties> = {
+  DRAFT:     { background: 'rgba(148,163,184,0.15)', color: '#cbd5e1', border: '1px solid rgba(148,163,184,0.3)' },
+  CONFIRMED: { background: 'rgba(34,197,94,0.15)',   color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' },
+  CANCELLED: { background: 'rgba(220,38,38,0.15)',   color: '#fca5a5', border: '1px solid rgba(220,38,38,0.3)' },
 };
 
 const eventTypeLabel: Record<string, string> = {
@@ -39,7 +39,14 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
 
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 py-14 text-center text-sm text-slate-400">
+      <div style={{
+        border: '2px dashed rgba(255,255,255,0.08)',
+        borderRadius: 16,
+        padding: '56px 16px',
+        textAlign: 'center',
+        fontSize: 14,
+        color: 'rgba(226,232,240,0.45)',
+      }}>
         No events yet.
       </div>
     );
@@ -48,110 +55,100 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
   const hasActions = onEdit || onDelete;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200">
-      <table className="w-full border-collapse text-sm">
+    <div className="adm-card tablet-fade-up" style={{ overflow: 'auto' }}>
+      <table className="adm-table">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3">Customer</th>
-            <th className="px-4 py-3">Date / Time</th>
-            <th className="px-4 py-3">Type</th>
-            <th className="px-4 py-3">Guests</th>
-            <th className="px-4 py-3">Hall / Table</th>
-            <th className="px-4 py-3">Menu</th>
-            <th className="px-4 py-3">Notes</th>
-            <th className="px-4 py-3">Status</th>
-            {hasActions ? <th className="px-4 py-3">Actions</th> : null}
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Date / Time</th>
+            <th>Type</th>
+            <th>Guests</th>
+            <th>Hall / Table</th>
+            <th>Menu</th>
+            <th>Notes</th>
+            <th>Status</th>
+            {hasActions ? <th>Actions</th> : null}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {events.map((event) => {
             const { date, time } = formatDateTime(event.eventDate);
             const dishTypes  = event.selections?.length ?? 0;
             const totalPcs   = event.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
 
             return (
-              <tr key={event.id} className="transition-colors hover:bg-slate-50">
-
-                {/* ID */}
-                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-400">
+              <tr key={event.id}>
+                <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: 12, color: '#c9a42c' }}>
                   #{event.id}
                 </td>
 
-                {/* Customer */}
-                <td className="px-4 py-3">
-                  <p className="font-medium text-slate-900">{event.customerName}</p>
+                <td>
+                  <p style={{ margin: 0, fontWeight: 600, color: '#f8fafc' }}>{event.customerName}</p>
                   {event.customerPhone && (
-                    <p className="mt-0.5 text-xs text-slate-500">{event.customerPhone}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{event.customerPhone}</p>
                   )}
                 </td>
 
-                {/* Date / Time */}
-                <td className="whitespace-nowrap px-4 py-3">
-                  <p className="text-slate-800">{date}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{time}</p>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: 0, color: '#e2e8f0' }}>{date}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{time}</p>
                 </td>
 
-                {/* Type */}
-                <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                <td style={{ whiteSpace: 'nowrap', color: 'rgba(226,232,240,0.75)' }}>
                   {event.eventType ? (eventTypeLabel[event.eventType] ?? event.eventType) : '—'}
                 </td>
 
-                {/* Guests */}
-                <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                <td style={{ whiteSpace: 'nowrap', color: 'rgba(226,232,240,0.75)' }}>
                   {event.guestCount}
                 </td>
 
-                {/* Hall / Table */}
-                <td className="px-4 py-3">
+                <td>
                   {event.hall ? (
-                    <p className="text-slate-800">{event.hall.name}</p>
+                    <p style={{ margin: 0, color: '#e2e8f0' }}>{event.hall.name}</p>
                   ) : (
-                    <p className="text-slate-400">—</p>
+                    <p style={{ margin: 0, color: 'rgba(226,232,240,0.35)' }}>—</p>
                   )}
                   {event.tableCategory && (
-                    <p className="mt-0.5 text-xs text-slate-500">{event.tableCategory.name}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{event.tableCategory.name}</p>
                   )}
                 </td>
 
-                {/* Menu selections */}
-                <td className="whitespace-nowrap px-4 py-3">
+                <td style={{ whiteSpace: 'nowrap' }}>
                   {dishTypes > 0 ? (
                     <>
-                      <p className="text-slate-800">
+                      <p style={{ margin: 0, color: '#e2e8f0' }}>
                         {dishTypes} {dishTypes === 1 ? 'dish' : 'dishes'}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500">{totalPcs} pcs total</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{totalPcs} pcs total</p>
                     </>
                   ) : (
-                    <p className="text-slate-400">—</p>
+                    <p style={{ margin: 0, color: 'rgba(226,232,240,0.35)' }}>—</p>
                   )}
                 </td>
 
-                {/* Notes */}
-                <td className="max-w-[180px] px-4 py-3">
+                <td style={{ maxWidth: 180 }}>
                   {event.notes ? (
-                    <p className="truncate text-xs text-slate-500" title={event.notes}>
+                    <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={event.notes}>
                       {event.notes}
                     </p>
                   ) : (
-                    <p className="text-slate-400">—</p>
+                    <p style={{ margin: 0, color: 'rgba(226,232,240,0.35)' }}>—</p>
                   )}
                 </td>
 
-                {/* Status badge */}
-                <td className="whitespace-nowrap px-4 py-3">
+                <td style={{ whiteSpace: 'nowrap' }}>
                   <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[event.status] ?? 'bg-slate-100 text-slate-600'}`}
+                    className="adm-badge"
+                    style={statusStyle[event.status] ?? statusStyle.DRAFT}
                   >
                     {event.status}
                   </span>
                 </td>
 
-                {/* Actions */}
                 {hasActions ? (
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <div className="flex gap-2">
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
                       {onEdit && (
                         <Button
                           type="button"
