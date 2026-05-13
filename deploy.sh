@@ -28,6 +28,9 @@ npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
 echo "==> Building API..."
 npm run build -w @banquet/api
 
+echo "==> Clearing Vite build cache..."
+rm -rf apps/web/node_modules/.vite apps/web/dist
+
 echo "==> Building frontend..."
 npm run build -w @banquet/web
 
