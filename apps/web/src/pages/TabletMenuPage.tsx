@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
+import { startTabletMusic, isTabletMusicStarted, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -246,6 +246,7 @@ export const TabletMenuPage = () => {
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
+  const [welcomeShown, setWelcomeShown] = useState(isTabletWelcomeShown());
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -257,6 +258,11 @@ export const TabletMenuPage = () => {
   const startMusic = () => {
     startTabletMusic();
     setMusicStarted(true);
+  };
+
+  const dismissWelcome = () => {
+    markTabletWelcomeShown();
+    setWelcomeShown(true);
   };
 
   const sortedAndFiltered = quickSort(
@@ -283,6 +289,82 @@ export const TabletMenuPage = () => {
         >
           <div style={{ fontSize: 64 }}>♫</div>
           <p style={{ color: '#fff', fontSize: 22, fontWeight: 600, marginTop: 16 }}>Tap to start</p>
+        </div>
+      )}
+
+      {musicStarted && !welcomeShown && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(8,18,12,0.85)', backdropFilter: 'blur(10px)',
+            padding: '20px',
+          }}
+        >
+          <div
+            className="tablet-fade-up"
+            style={{
+              width: '100%', maxWidth: 560,
+              borderRadius: 28,
+              background: 'linear-gradient(135deg, rgba(26,51,32,0.95) 0%, rgba(15,33,20,0.95) 100%)',
+              border: '1px solid rgba(201,164,44,0.35)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 80px rgba(201,164,44,0.12)',
+              padding: '32px 28px',
+              textAlign: 'center',
+              color: '#fff',
+            }}
+          >
+            {restaurantLogoUrl && (
+              <img
+                src={getPhotoUrl(restaurantLogoUrl)}
+                alt={restaurantName ?? ''}
+                style={{
+                  width: 88, height: 88, borderRadius: 22,
+                  objectFit: 'cover',
+                  margin: '0 auto 18px',
+                  border: '2px solid rgba(201,164,44,0.5)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  display: 'block',
+                }}
+              />
+            )}
+            <h2 style={{
+              margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em',
+              color: '#c9a42c',
+            }}>
+              {t('welcome_title', { restaurant: restaurantName ?? '' })}
+            </h2>
+            <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.82)' }}>
+                {t('welcome_intro')}
+              </p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.82)' }}>
+                {t('welcome_help')}
+              </p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>
+                {t('welcome_bon_appetit')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={dismissWelcome}
+              style={{
+                marginTop: 26,
+                padding: '12px 36px',
+                borderRadius: 14,
+                border: 'none',
+                background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
+                color: '#1a3320',
+                fontWeight: 700,
+                fontSize: 15,
+                letterSpacing: '0.02em',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(201,164,44,0.35)',
+              }}
+            >
+              {t('welcome_continue')} →
+            </button>
+          </div>
         </div>
       )}
 

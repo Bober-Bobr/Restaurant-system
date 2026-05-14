@@ -4,6 +4,7 @@
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
+let welcomeShown = false;
 
 const SRC = '/tablet-music.mp3';
 
@@ -23,8 +24,17 @@ export function stopTabletMusic() {
     audio.currentTime = 0;
   }
   started = false;
+  welcomeShown = false;
 }
 
 export function isTabletMusicStarted() {
   return started && !!audio && !audio.paused;
+}
+
+export function markTabletWelcomeShown() {
+  welcomeShown = true;
+}
+
+export function isTabletWelcomeShown() {
+  return welcomeShown;
 }

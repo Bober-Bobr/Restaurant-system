@@ -272,6 +272,11 @@ const resources = {
     delete_restaurant_confirm: 'Delete {name}? All its data will be lost.',
     delete_user_confirm: 'Delete user {name}?',
     address: 'Address',
+    welcome_title: 'Welcome to {restaurant}!',
+    welcome_intro: 'We are glad to see you today. We hope you will have a pleasant time with us, enjoy the cozy atmosphere, and sample dishes prepared with care and attention to each guest.',
+    welcome_help: 'If you need help choosing a dish or drink, our staff is always ready to assist.',
+    welcome_bon_appetit: 'We wish you a pleasant stay and bon appétit!',
+    welcome_continue: 'Continue',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -539,6 +544,11 @@ const resources = {
     delete_restaurant_confirm: 'Удалить {name}? Все её данные будут потеряны.',
     delete_user_confirm: 'Удалить пользователя {name}?',
     address: 'Адрес',
+    welcome_title: 'Добро пожаловать в {restaurant}!',
+    welcome_intro: 'Мы рады видеть вас сегодня. Надеемся, вы приятно проведёте у нас время, насладитесь уютной атмосферой и попробуете блюда, приготовленные с заботой и вниманием к каждому гостю.',
+    welcome_help: 'Если вам понадобится помощь в выборе блюда или напитка, наш персонал всегда готов помочь.',
+    welcome_bon_appetit: 'Желаем вам приятного отдыха и приятного аппетита!',
+    welcome_continue: 'Продолжить',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -806,6 +816,11 @@ const resources = {
     delete_restaurant_confirm: '{name} ni o\'chirish? Barcha ma\'lumotlari yo\'qoladi.',
     delete_user_confirm: '{name} foydalanuvchini o\'chirish?',
     address: 'Manzil',
+    welcome_title: '{restaurant} ga xush kelibsiz!',
+    welcome_intro: 'Bugun sizni ko\'rganimizdan xursandmiz. Biz bilan yoqimli vaqt o\'tkazishingizni, qulay muhitdan zavqlanishingizni va har bir mehmonga g\'amxo\'rlik va e\'tibor bilan tayyorlangan taomlardan tatib ko\'rishingizni umid qilamiz.',
+    welcome_help: 'Agar taom yoki ichimlik tanlashda yordam kerak bo\'lsa, xodimlarimiz har doim yordamga tayyor.',
+    welcome_bon_appetit: 'Yoqimli dam olish va yoqimli ishtaha tilaymiz!',
+    welcome_continue: 'Davom etish',
   }
 } as const;
 
