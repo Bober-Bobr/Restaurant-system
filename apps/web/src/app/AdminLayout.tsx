@@ -68,19 +68,11 @@ export const AdminLayout = () => {
 
           {/* Brand */}
           <div className="adm-slide-in-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              position: 'relative', width: 44, height: 44, borderRadius: 12,
-              overflow: 'hidden',
-              border: '1px solid rgba(201,164,44,0.35)',
-              background: 'rgba(15,23,42,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <img
-                src={restaurantLogoSrc ?? networkingLogoSrc}
-                alt={restaurantName ?? 'Logo'}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
+            <img
+              src={restaurantLogoSrc ?? networkingLogoSrc}
+              alt={restaurantName ?? 'Logo'}
+              style={{ height: 44, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>
                 {restaurantName ?? t('banquet_admin')}

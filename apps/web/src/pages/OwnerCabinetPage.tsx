@@ -165,14 +165,7 @@ export const OwnerCabinetPage = () => {
         flexWrap: 'wrap', gap: 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, overflow: 'hidden',
-            border: '1px solid rgba(201,164,44,0.35)',
-            background: 'rgba(15,23,42,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <img src={networkingLogoSrc} alt="Networking" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-          </div>
+          <img src={networkingLogoSrc} alt="Networking" style={{ height: 44, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
           <div>
             <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>{t('owner_cabinet')}</h1>
             <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -274,7 +267,7 @@ export const OwnerCabinetPage = () => {
                     {/* Company header */}
                     <div className="owner-company-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       {companyLogoSrc && (
-                        <img src={companyLogoSrc} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                        <img src={companyLogoSrc} alt={company.name} style={{ height: 36, width: 'auto', maxWidth: 80, objectFit: 'contain', flexShrink: 0 }} />
                       )}
                       <div className="owner-company-name" style={{ flex: 1, minWidth: 0 }}>
                         <input
@@ -326,7 +319,7 @@ export const OwnerCabinetPage = () => {
                             const effLogo = r.logoUrl ?? r.company?.logoUrl ?? null;
                             return (
                               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }}>
-                                {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />}
+                                {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ height: 32, width: 'auto', maxWidth: 72, objectFit: 'contain', flexShrink: 0 }} />}
                                 <div style={{ flex: 1 }}>
                                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
                                   {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}

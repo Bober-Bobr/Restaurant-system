@@ -314,16 +314,40 @@ export const TabletMenuPage = () => {
               color: '#fff',
             }}
           >
+            {/* Language switcher */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
+              {locales.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLocale(loc); }}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 8,
+                    border: '1px solid',
+                    borderColor: locale === loc ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.15)',
+                    background: locale === loc ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+                    color: locale === loc ? '#c9a42c' : 'rgba(255,255,255,0.7)',
+                    fontWeight: locale === loc ? 700 : 500,
+                    fontSize: 11,
+                    letterSpacing: '0.06em',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {loc}
+                </button>
+              ))}
+            </div>
+
             {restaurantLogoUrl && (
               <img
                 src={getPhotoUrl(restaurantLogoUrl)}
                 alt={restaurantName ?? ''}
                 style={{
-                  width: 88, height: 88, borderRadius: 22,
-                  objectFit: 'cover',
+                  maxHeight: 110, maxWidth: '80%', height: 'auto', width: 'auto',
+                  objectFit: 'contain',
                   margin: '0 auto 18px',
-                  border: '2px solid rgba(201,164,44,0.5)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                   display: 'block',
                 }}
               />
@@ -381,7 +405,7 @@ export const TabletMenuPage = () => {
               {restaurantLogoUrl && (
                 <img src={getPhotoUrl(restaurantLogoUrl)}
                   alt={restaurantName ?? ''}
-                  className="h-14 w-14 rounded-2xl object-cover shadow-lg bg-white ring-2 ring-yellow-600/40" />
+                  style={{ height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
               )}
               <div>
                 {restaurantName && <p className="rg-label">{restaurantName}</p>}

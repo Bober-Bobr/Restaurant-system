@@ -59,17 +59,11 @@ export const EmployeeLayout = () => {
 
           {/* Brand */}
           <div className="adm-slide-in-left emp-nav-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-              border: '1px solid rgba(201,164,44,0.35)',
-              background: 'rgba(15,23,42,0.5)',
-            }}>
-              <img
-                src={restaurantLogoSrc ?? networkingLogoSrc}
-                alt={restaurantName ?? 'Logo'}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
+            <img
+              src={restaurantLogoSrc ?? networkingLogoSrc}
+              alt={restaurantName ?? 'Logo'}
+              style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
             <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {restaurantName ?? t('banquet_admin')}

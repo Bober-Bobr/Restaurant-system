@@ -59,7 +59,7 @@ function PageHeader({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <img src={logo} alt="logo" className="h-14 w-14 rounded-2xl object-cover shadow-lg bg-white" />
+          <img src={logo} alt="logo" style={{ height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
           <div>
             <p className="rg-label">Madinabek</p>
             <h1 className="text-2xl font-bold text-white">{title}</h1>
