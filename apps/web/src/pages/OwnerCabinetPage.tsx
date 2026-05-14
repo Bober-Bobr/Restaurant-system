@@ -272,11 +272,11 @@ export const OwnerCabinetPage = () => {
                 return (
                   <div key={company.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden' }}>
                     {/* Company header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="owner-company-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       {companyLogoSrc && (
-                        <img src={companyLogoSrc} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
+                        <img src={companyLogoSrc} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
                       )}
-                      <div style={{ flex: 1 }}>
+                      <div className="owner-company-name" style={{ flex: 1, minWidth: 0 }}>
                         <input
                           defaultValue={company.name}
                           onBlur={(e) => {
@@ -285,10 +285,11 @@ export const OwnerCabinetPage = () => {
                               updateCompany.mutate({ id: company.id, payload: { name: newName } });
                             }
                           }}
-                          style={{ ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px' }}
+                          style={{ ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px', width: '100%' }}
                         />
                       </div>
                       <input
+                        className="owner-company-logo-input"
                         defaultValue={company.logoUrl ?? ''}
                         placeholder={t('logo_url')}
                         onBlur={(e) => {
@@ -305,7 +306,7 @@ export const OwnerCabinetPage = () => {
                             deleteCompanyMut.mutate(company.id);
                           }
                         }}
-                        style={{ ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px' }}
+                        style={{ ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px', flexShrink: 0 }}
                       >
                         {t('delete')}
                       </button>
@@ -422,15 +423,15 @@ export const OwnerCabinetPage = () => {
               <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('all_users')} ({users.length})</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 600 }}>{u.username}</p>
-                      <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
+                  <div key={u.id} className="owner-user-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
+                    <div className="owner-user-info" style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.username}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {restaurants.find((r) => r.id === u.restaurantId)?.name ?? '—'}
                       </p>
                     </div>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                    <span className="owner-user-badge" style={{
+                      padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, flexShrink: 0,
                       background: u.role === 'ADMIN' ? '#2563eb' : u.role === 'OWNER' ? '#7c3aed' : '#16a34a',
                       color: '#fff'
                     }}>
@@ -438,6 +439,7 @@ export const OwnerCabinetPage = () => {
                     </span>
                     {u.role !== 'OWNER' && (
                       <select
+                        className="owner-user-role-select"
                         value={u.role}
                         onChange={(e) => updateRole.mutate({ id: u.id, role: e.target.value as AdminRole })}
                         style={{ ...inputStyle, width: 130 }}
@@ -450,7 +452,7 @@ export const OwnerCabinetPage = () => {
                     {u.role !== 'OWNER' && (
                       <button
                         onClick={() => { if (confirm(t('delete_user_confirm', { name: u.username }))) deleteUser.mutate(u.id); }}
-                        style={{ ...btnStyle, background: '#dc2626' }}
+                        style={{ ...btnStyle, background: '#dc2626', flexShrink: 0 }}
                       >
                         {t('delete')}
                       </button>
@@ -463,6 +465,36 @@ export const OwnerCabinetPage = () => {
           </>
         )}
       </main>
+
+      <style>{`
+        @media (max-width: 720px) {
+          .owner-company-header {
+            flex-wrap: wrap;
+            row-gap: 8px !important;
+          }
+          .owner-company-name {
+            flex: 1 1 calc(100% - 60px) !important;
+          }
+          .owner-company-logo-input {
+            order: 3;
+            width: 100% !important;
+            flex: 1 1 100% !important;
+          }
+          .owner-user-row {
+            flex-wrap: wrap;
+            row-gap: 8px !important;
+          }
+          .owner-user-info {
+            flex: 1 1 calc(100% - 110px) !important;
+          }
+          .owner-user-role-select {
+            order: 3;
+            flex: 1;
+            width: auto !important;
+            min-width: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 };

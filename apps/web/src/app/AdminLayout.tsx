@@ -145,9 +145,9 @@ export const AdminLayout = () => {
             </Link>
           </div>
 
-          {/* Right side: locale + logout */}
-          <div className="adm-slide-in-right" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-            <div style={{ display: 'flex', gap: 4 }}>
+          {/* Right side: locale + logout (desktop only) */}
+          <div className="adm-slide-in-right adm-nav-right" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            <div className="adm-nav-locale" style={{ display: 'flex', gap: 4 }}>
               {locales.map((loc) => (
                 <button
                   key={loc}
@@ -173,7 +173,7 @@ export const AdminLayout = () => {
             </div>
             <button
               type="button"
-              className="adm-btn-danger"
+              className="adm-btn-danger adm-nav-logout"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -212,11 +212,12 @@ export const AdminLayout = () => {
       {mobileNavOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 29,
+          background: 'rgba(0,0,0,0.5)',
         }} onClick={() => setMobileNavOpen(false)}>
           <div
             style={{
               position: 'absolute', top: 0, right: 0,
-              width: 260, height: '100%',
+              width: 280, maxWidth: '85vw', height: '100%',
               background: 'rgba(15,23,42,0.97)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
@@ -224,6 +225,7 @@ export const AdminLayout = () => {
               padding: '72px 16px 24px',
               display: 'flex', flexDirection: 'column', gap: 4,
               boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+              overflowY: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -270,6 +272,47 @@ export const AdminLayout = () => {
               </svg>
               {t('tablet')}
             </Link>
+
+            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {locales.map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setLocale(loc)}
+                    style={{
+                      flex: 1,
+                      padding: '7px 10px',
+                      border: '1px solid',
+                      borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
+                      color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                      fontWeight: locale === loc ? 700 : 500,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    {LOCALE_LABELS[loc]}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="adm-btn-danger"
+                onClick={() => { setMobileNavOpen(false); logoutMutation.mutate(); }}
+                disabled={logoutMutation.isPending}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 14px' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                {logoutMutation.isPending ? t('logging_out') : t('logout')}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -282,6 +325,8 @@ export const AdminLayout = () => {
         @media (max-width: 900px) {
           .adm-nav-desktop { display: none !important; }
           .adm-nav-mobile-toggle { display: inline-flex !important; align-items: center; justify-content: center; }
+          .adm-nav-locale, .adm-nav-logout { display: none !important; }
+          .adm-nav-right { gap: 0 !important; }
         }
       `}</style>
     </div>
