@@ -15,6 +15,8 @@ git merge --ff-only origin/main
 echo "==> Installing dependencies..."
 npm install
 
+export DATABASE_URL="file:$REPO_DIR/apps/api/prisma/dev.db"
+
 echo "==> Fixing database permissions..."
 chmod 664 apps/api/prisma/dev.db 2>/dev/null || true
 chmod 775 apps/api/prisma/
