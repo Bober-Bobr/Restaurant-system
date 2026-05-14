@@ -20,10 +20,10 @@ chmod 664 apps/api/prisma/dev.db 2>/dev/null || true
 chmod 775 apps/api/prisma/
 
 echo "==> Generating Prisma client..."
-"$REPO_DIR/node_modules/.bin/prisma" generate --schema=apps/api/prisma/schema.prisma
+"$REPO_DIR/apps/api/node_modules/.bin/prisma" generate --schema=apps/api/prisma/schema.prisma
 
 echo "==> Running database migrations..."
-"$REPO_DIR/node_modules/.bin/prisma" migrate deploy --schema=apps/api/prisma/schema.prisma
+"$REPO_DIR/apps/api/node_modules/.bin/prisma" migrate deploy --schema=apps/api/prisma/schema.prisma
 
 echo "==> Building API..."
 npm run build -w @banquet/api
