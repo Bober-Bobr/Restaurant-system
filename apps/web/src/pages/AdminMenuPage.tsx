@@ -234,8 +234,9 @@ export const AdminMenuPage = () => {
               ))}
             </div>
 
-            <div className="adm-card tablet-fade-up" style={{ overflowX: 'auto' }}>
-              <table className="adm-table" style={{ width: '100%' }}>
+            <div className="adm-card tablet-fade-up">
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table className="adm-table" style={{ width: '100%', minWidth: 780 }}>
                 <thead>
                   <tr>
                     <th style={{ width: 56 }}></th>
@@ -262,6 +263,7 @@ export const AdminMenuPage = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         );
@@ -317,13 +319,14 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
           <button
             type="button"
             onClick={() => setShowPhotoSelector((v) => !v)}
-            className="group relative block h-12 w-12 overflow-hidden rounded-xl ring-1 ring-slate-200 transition-all hover:ring-slate-400"
+            className="group relative block h-12 w-12 overflow-hidden rounded-xl transition-all"
+            style={{ border: '1px solid rgba(255,255,255,0.1)' }}
             title={translate('select_menu_photo', locale)}
           >
             {photoSrc ? (
               <img src={photoSrc} alt={item.name} className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+              <div className="flex h-full w-full items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }}>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -344,7 +347,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
         {/* Category */}
         <td className="px-4 py-2.5">
-          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 text-sm">
+          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
             <option value="COLD_APPETIZERS">{translate('cold_appetizers', locale)}</option>
             <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
             <option value="SALADS">{translate('salads', locale)}</option>
@@ -406,7 +409,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={7} className="border-t-0 bg-slate-50 px-4 pb-3 pt-2">
+        <td colSpan={7} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={localCategory.toLowerCase()}
