@@ -580,26 +580,27 @@ export const TabletMenuPage = () => {
       <PageBackground />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
-      <div className="relative mx-auto max-w-7xl space-y-6">
+      <div className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
 
         {/* ── Header ── */}
-        <header className="tablet-fade-in overflow-hidden rounded-[28px] px-8 py-5 shadow-2xl"
+        <header className="tablet-fade-in overflow-hidden rounded-2xl sm:rounded-[28px] px-4 sm:px-8 py-4 sm:py-5 shadow-2xl"
           style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {restaurantLogoUrl && (
                 <img src={getPhotoUrl(restaurantLogoUrl)}
                   alt={restaurantName ?? ''}
-                  style={{ height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+                  className="h-10 sm:h-14"
+                  style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
               )}
-              <div>
-                {restaurantName && <p className="rg-label">{restaurantName}</p>}
-                <h1 className="text-2xl font-bold text-white">{t('client_menu_selection')}</h1>
+              <div className="min-w-0">
+                {restaurantName && <p className="rg-label truncate">{restaurantName}</p>}
+                <h1 className="text-base sm:text-2xl font-bold text-white truncate">{t('client_menu_selection')}</h1>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}
-                className="rg-input" style={{ width: 'auto', paddingRight: '2rem' }}>
+                className="rg-input" style={{ width: 'auto', paddingRight: '2rem', fontSize: '0.8rem' }}>
                 {locales.map((l) => (
                   <option key={l} value={l}>
                     {t(l === 'en' ? 'english' : l === 'ru' ? 'russian' : 'uzbek')}
@@ -607,7 +608,7 @@ export const TabletMenuPage = () => {
                 ))}
               </select>
               <button type="button" onClick={() => navigate('/')}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all"
+                className="inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap"
                 style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}>
                 ← {t('events')}
               </button>
@@ -622,7 +623,7 @@ export const TabletMenuPage = () => {
           <div className="space-y-6">
 
             {/* Settings */}
-            <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
+            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
               <p className="rg-heading">{t('room_table_settings')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {t('choose_room_table_details')}
@@ -700,7 +701,7 @@ export const TabletMenuPage = () => {
 
             {/* Included dishes */}
             {selectedTableCategory && (selectedTableCategory.packageItems ?? []).length > 0 && (
-              <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
+              <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
                 <div className="mb-5">
                   <p className="rg-label">{selectedTableCategory.name}</p>
                   <p className="rg-heading mt-1">{t('included_with_table')}</p>
@@ -751,7 +752,7 @@ export const TabletMenuPage = () => {
 
             {/* Courses */}
             {selectedTableCategory && courseItems.length > 0 && (
-              <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
+              <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
                 <p className="rg-heading mb-1">{t('courses')}</p>
                 <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('browse_menu_items')}</p>
                 {COURSE_CATEGORIES.map((cat) => {
@@ -775,7 +776,7 @@ export const TabletMenuPage = () => {
             )}
 
             {/* Additional */}
-            <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '180ms' }}>
+            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '180ms' }}>
               <p className="rg-heading mb-1">{t('additional')}</p>
               <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('browse_menu_items')}</p>
 
@@ -825,7 +826,7 @@ export const TabletMenuPage = () => {
           {/* ── Sidebar ── */}
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             {/* CTA */}
-            <section className="rg-card p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
+            <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('review_and_confirm')}</p>
               <button type="button" onClick={() => navigate('/tablet/summary')}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"

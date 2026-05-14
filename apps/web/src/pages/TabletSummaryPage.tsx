@@ -54,23 +54,23 @@ function PageHeader({
 }) {
   return (
     <header
-      className="tablet-fade-in overflow-hidden rounded-[28px] px-8 py-5 shadow-2xl"
+      className="tablet-fade-in overflow-hidden rounded-2xl sm:rounded-[28px] px-4 sm:px-8 py-4 sm:py-5 shadow-2xl"
       style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <img src={logo} alt="logo" style={{ height: 56, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
-          <div>
-            <p className="rg-label">Madinabek</p>
-            <h1 className="text-2xl font-bold text-white">{title}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <img src={logo} alt="logo" className="h-10 sm:h-14" style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+          <div className="min-w-0">
+            <p className="rg-label truncate">Madinabek</p>
+            <h1 className="text-base sm:text-2xl font-bold text-white truncate">{title}</h1>
           </div>
         </div>
         <select
           value={locale}
           onChange={(e) => setLocale(e.target.value as Locale)}
           disabled={isLoading}
-          className="rg-input"
-          style={{ width: 'auto', paddingRight: '2rem' }}
+          className="rg-input flex-shrink-0"
+          style={{ width: 'auto', paddingRight: '2rem', fontSize: '0.8rem' }}
         >
           {locales.map((l) => (
             <option key={l} value={l}>
@@ -198,7 +198,7 @@ export const TabletSummaryPage = () => {
         <div className="relative mx-auto max-w-md space-y-6">
           <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} />
 
-          <div className="rg-card p-10 text-center space-y-6 tablet-fade-up" style={{ animationDelay: '80ms' }}>
+          <div className="rg-card p-6 sm:p-10 text-center space-y-6 tablet-fade-up" style={{ animationDelay: '80ms' }}>
             <div className="scale-in mx-auto flex h-24 w-24 items-center justify-center rounded-full"
               style={{ background: 'rgba(201,164,44,0.15)', border: '2px solid rgba(201,164,44,0.4)' }}>
               <svg className="h-12 w-12" style={{ color: '#c9a42c' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ export const TabletSummaryPage = () => {
           <div className="space-y-6">
 
             {/* Customer details */}
-            <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
+            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
               <p className="rg-heading">{t('customer_details')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {t('enter_customer_information')}
@@ -348,7 +348,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Event overview */}
-            <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
+            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
               <p className="rg-heading mb-4">{t('event_details')}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
@@ -374,7 +374,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Selected items */}
-            <section className="rg-card p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
+            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
               <p className="rg-heading mb-4">{t('selected_menu_items')}</p>
               {isLoading ? (
                 <div className="space-y-3">
@@ -387,16 +387,16 @@ export const TabletSummaryPage = () => {
               ) : (
                 <div className="space-y-2">
                   {selectedMenuItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-2xl px-4 py-3"
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl px-3 sm:px-4 py-3"
                       style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                           style={{ background: '#c9a42c', color: '#1a3320' }}>
                           {selectedItems[item.id]}
                         </span>
-                        <p className="text-sm font-medium text-white">{item.name}</p>
+                        <p className="text-sm font-medium text-white truncate">{item.name}</p>
                       </div>
-                      <p className="text-sm font-semibold" style={{ color: '#c9a42c' }}>
+                      <p className="text-sm font-semibold whitespace-nowrap" style={{ color: '#c9a42c' }}>
                         {formatSum(item.priceCents * selectedItems[item.id])}
                       </p>
                     </div>
@@ -410,26 +410,26 @@ export const TabletSummaryPage = () => {
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
 
             {/* Pricing */}
-            <section className="overflow-hidden rounded-3xl tablet-fade-up" style={{ animationDelay: '80ms',
+            <section className="overflow-hidden rounded-2xl sm:rounded-3xl tablet-fade-up" style={{ animationDelay: '80ms',
               background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="rg-label">{t('pricing')}</p>
               </div>
-              <div className="px-6 py-2">
+              <div className="px-4 sm:px-6 py-2">
                 {pricingRows.map(({ key, label, value }) => (
-                  <div key={key} className="flex items-center justify-between py-3 text-sm"
+                  <div key={key} className="flex items-center justify-between gap-3 py-3 text-sm"
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.55)' }}>{label}</span>
-                    <span className="font-medium text-white">{formatSum(value)}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }} className="min-w-0 truncate">{label}</span>
+                    <span className="font-medium text-white whitespace-nowrap">{formatSum(value)}</span>
                   </div>
                 ))}
               </div>
-              <div className="px-6 pb-6 pt-4">
-                <div className="rounded-2xl px-5 py-4"
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
+                <div className="rounded-2xl px-4 sm:px-5 py-3 sm:py-4"
                   style={{ background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.4)' }}>
-                  <div className="flex items-baseline justify-between">
+                  <div className="flex items-baseline justify-between gap-2">
                     <span className="rg-label">{t('total')}</span>
-                    <span className="text-2xl font-bold" style={{ color: '#c9a42c' }}>
+                    <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
                       {formatSum(pricing.totalCents)}
                     </span>
                   </div>
@@ -438,7 +438,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Actions */}
-            <section className="rg-card p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '120ms' }}>
+            <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '120ms' }}>
               <p className="rg-label">{t('actions')}</p>
 
               <button type="button" onClick={() => navigate('/tablet')}
