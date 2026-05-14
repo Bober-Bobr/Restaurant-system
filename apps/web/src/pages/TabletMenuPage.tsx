@@ -65,162 +65,335 @@ function PageBackground() {
   );
 }
 
-// ── TableCategoryCard ─────────────────────────────────────────────────────
+// ── TableCategoryFullscreen ───────────────────────────────────────────────
 
-function TableCategoryCard({
-  tc, isSelected, onSelect, onLightbox, t,
+function TableCategoryFullscreen({
+  tableCategories, onSelect, onLightbox, locale, setLocale, t,
 }: {
-  tc: TableCategory; isSelected: boolean;
-  onSelect: () => void; onLightbox: (src: string) => void; t: TFn;
+  tableCategories: TableCategory[];
+  onSelect: (id: string) => void;
+  onLightbox: (src: string) => void;
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: TFn;
 }) {
-  const photos = (tc.photos ?? []).filter(Boolean);
-  const [photoIdx, setPhotoIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
-  const prev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPhotoIdx((i) => (i - 1 + photos.length) % photos.length);
-  };
-  const next = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPhotoIdx((i) => (i + 1) % photos.length);
+  const goTo = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' });
   };
 
-  const includedCats = tc.includedCategories
-    ? tc.includedCategories.split(',').map((s) => s.trim()).filter(Boolean)
-    : [];
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== currentIdx) setCurrentIdx(idx);
+  };
 
   return (
-    <div
-      className={`relative flex shrink-0 flex-col overflow-hidden rounded-3xl transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${
-        isSelected
-          ? 'ring-2 ring-[#c9a42c] shadow-[0_0_30px_rgba(201,164,44,0.3)]'
-          : 'shadow-lg hover:shadow-[0_0_25px_rgba(201,164,44,0.15)]'
-      }`}
-      style={{
-        width: 'min(300px, 85vw)',
-        background: 'rgba(255,255,255,0.09)',
-        border: isSelected ? '1px solid rgba(201,164,44,0.6)' : '1px solid rgba(255,255,255,0.14)',
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9997,
+      background: 'linear-gradient(135deg, #0a1f12 0%, #051208 100%)',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Top bar */}
+      <div style={{
+        padding: '14px 20px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(0,0,0,0.25)',
         backdropFilter: 'blur(12px)',
-      }}
-    >
-      {/* Photo area */}
-      <div className="relative h-52" style={{ background: 'rgba(0,0,0,0.25)' }}>
-        {photos.length > 0 ? (
-          <>
-            <button type="button" onClick={() => onLightbox(getPhotoUrl(photos[photoIdx]) ?? '')} className="block h-full w-full">
-              <img key={photoIdx} src={getPhotoUrl(photos[photoIdx])} alt={tc.name}
-                className="scale-in h-full w-full object-cover opacity-90" />
+      }}>
+        <p style={{
+          margin: 0, color: 'rgba(255,255,255,0.55)',
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase',
+        }}>
+          {t('choose_table_category')}
+        </p>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {locales.map((loc) => (
+            <button
+              key={loc}
+              type="button"
+              onClick={() => setLocale(loc)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 8,
+                border: '1px solid',
+                borderColor: locale === loc ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.15)',
+                background: locale === loc ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+                color: locale === loc ? '#c9a42c' : 'rgba(255,255,255,0.7)',
+                fontWeight: locale === loc ? 700 : 500,
+                fontSize: 11,
+                letterSpacing: '0.06em',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+              }}
+            >
+              {loc}
             </button>
-            {photos.length > 1 && (
-              <>
-                <button type="button" onClick={prev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button type="button" onClick={next}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-                  {photos.map((_, i) => (
-                    <button key={i} type="button" onClick={(e) => { e.stopPropagation(); setPhotoIdx(i); }}
-                      className={`rounded-full bg-white transition-all duration-200 h-1.5 ${i === photoIdx ? 'w-4 opacity-100' : 'w-1.5 opacity-50'}`} />
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <svg className="h-12 w-12" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        )}
-        {/* Price badge */}
-        <div className="absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold shadow backdrop-blur-sm"
-          style={{ background: 'rgba(201,164,44,0.9)', color: '#1a3320' }}>
-          {formatSum(tc.ratePerPerson)}
-          <span className="ml-1 font-normal opacity-80">/ {t('person')}</span>
+          ))}
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div>
-          <h3 className="text-base font-bold text-white">{tc.name}</h3>
-          {tc.description && (
-            <p className="mt-1 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>{tc.description}</p>
-          )}
+      {/* Slides */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="scrollbar-none"
+        style={{
+          flex: 1, minHeight: 0,
+          display: 'flex',
+          overflowX: 'auto', overflowY: 'hidden',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {tableCategories.map((tc, i) => (
+          <CategorySlide
+            key={tc.id}
+            tc={tc}
+            index={i + 1}
+            total={tableCategories.length}
+            onSelect={() => onSelect(tc.id)}
+            onLightbox={onLightbox}
+            t={t}
+          />
+        ))}
+      </div>
+
+      {/* Bottom: arrows + dots */}
+      <div style={{
+        padding: '14px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12,
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(0,0,0,0.25)',
+        backdropFilter: 'blur(12px)',
+      }}>
+        <button
+          type="button"
+          onClick={() => goTo(Math.max(0, currentIdx - 1))}
+          disabled={currentIdx === 0}
+          style={{
+            width: 44, height: 44, borderRadius: '50%',
+            border: '1px solid rgba(201,164,44,0.35)',
+            background: 'rgba(201,164,44,0.1)',
+            color: '#c9a42c', fontSize: 22, fontWeight: 700, lineHeight: 1,
+            cursor: currentIdx === 0 ? 'not-allowed' : 'pointer',
+            opacity: currentIdx === 0 ? 0.35 : 1,
+            transition: 'opacity 0.2s',
+          }}
+          aria-label="Previous"
+        >‹</button>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {tableCategories.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => goTo(i)}
+              style={{
+                width: i === currentIdx ? 24 : 8,
+                height: 8,
+                borderRadius: 4,
+                background: i === currentIdx ? '#c9a42c' : 'rgba(255,255,255,0.25)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'width 0.25s, background 0.25s',
+                padding: 0,
+              }}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
         </div>
-        {includedCats.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {includedCats.map((cat) => (
-              <span key={cat} className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                style={{ background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.3)' }}>
-                {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
-              </span>
-            ))}
-          </div>
-        )}
-        <button type="button" onClick={onSelect}
-          className="mt-auto w-full rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
-          style={isSelected
-            ? { background: '#c9a42c', color: '#1a3320' }
-            : { background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.4)' }}>
-          {isSelected ? '✓ ' + t('selected') : t('select_table')}
-        </button>
+
+        <button
+          type="button"
+          onClick={() => goTo(Math.min(tableCategories.length - 1, currentIdx + 1))}
+          disabled={currentIdx === tableCategories.length - 1}
+          style={{
+            width: 44, height: 44, borderRadius: '50%',
+            border: '1px solid rgba(201,164,44,0.35)',
+            background: 'rgba(201,164,44,0.1)',
+            color: '#c9a42c', fontSize: 22, fontWeight: 700, lineHeight: 1,
+            cursor: currentIdx === tableCategories.length - 1 ? 'not-allowed' : 'pointer',
+            opacity: currentIdx === tableCategories.length - 1 ? 0.35 : 1,
+            transition: 'opacity 0.2s',
+          }}
+          aria-label="Next"
+        >›</button>
       </div>
     </div>
   );
 }
 
-// ── TableCategoryShowcase ─────────────────────────────────────────────────
-
-function TableCategoryShowcase({
-  tableCategories, selectedId, onSelect, onLightbox, t,
+function CategorySlide({
+  tc, index, total, onSelect, onLightbox, t,
 }: {
-  tableCategories: TableCategory[]; selectedId: string | null;
-  onSelect: (id: string) => void; onLightbox: (src: string) => void; t: TFn;
+  tc: TableCategory;
+  index: number;
+  total: number;
+  onSelect: () => void;
+  onLightbox: (src: string) => void;
+  t: TFn;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scroll = (dir: 'left' | 'right') =>
-    scrollRef.current?.scrollBy({ left: dir === 'left' ? -340 : 340, behavior: 'smooth' });
+  const photos = (tc.photos ?? []).filter(Boolean);
+  const [photoIdx, setPhotoIdx] = useState(0);
 
-  const active = tableCategories.filter((tc) => tc.isActive);
-  if (active.length === 0) return null;
+  const includedCats = tc.includedCategories
+    ? tc.includedCategories.split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const photoPrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotoIdx((i) => (i - 1 + photos.length) % photos.length);
+  };
+  const photoNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotoIdx((i) => (i + 1) % photos.length);
+  };
 
   return (
-    <section className="tablet-fade-up" style={{ animationDelay: '40ms' }}>
-      <div className="mb-4 flex items-center justify-between px-1">
-        <div>
-          <p className="rg-label">{t('choose_table_category')}</p>
-          <p className="mt-1 text-2xl font-bold text-white">{t('table_categories')}</p>
+    <div style={{
+      flex: '0 0 100%',
+      scrollSnapAlign: 'center',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      padding: '24px 20px 20px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 720,
+        display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center',
+      }}>
+
+        {/* Slide index */}
+        <p style={{
+          margin: 0, fontSize: 11, fontWeight: 700,
+          color: 'rgba(255,255,255,0.4)', letterSpacing: '0.2em',
+        }}>
+          {index} / {total}
+        </p>
+
+        {/* Photo */}
+        <div style={{
+          position: 'relative', width: '100%',
+          aspectRatio: '16 / 10', maxHeight: '42vh',
+          borderRadius: 24, overflow: 'hidden',
+          background: 'rgba(0,0,0,0.35)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 14px 40px rgba(0,0,0,0.45)',
+        }}>
+          {photos.length > 0 ? (
+            <>
+              <button type="button"
+                onClick={() => onLightbox(getPhotoUrl(photos[photoIdx]) ?? '')}
+                style={{ display: 'block', width: '100%', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}>
+                <img key={photoIdx} src={getPhotoUrl(photos[photoIdx])} alt={tc.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className="scale-in" />
+              </button>
+              {photos.length > 1 && (
+                <>
+                  <button type="button" onClick={photoPrev}
+                    style={{
+                      position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+                      border: 'none', color: '#fff', fontSize: 20, lineHeight: 1, cursor: 'pointer',
+                    }}>‹</button>
+                  <button type="button" onClick={photoNext}
+                    style={{
+                      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+                      border: 'none', color: '#fff', fontSize: 20, lineHeight: 1, cursor: 'pointer',
+                    }}>›</button>
+                  <div style={{
+                    position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+                    display: 'flex', gap: 6,
+                  }}>
+                    {photos.map((_, i) => (
+                      <span key={i} style={{
+                        width: i === photoIdx ? 18 : 6, height: 6, borderRadius: 3,
+                        background: 'rgba(255,255,255,0.85)',
+                        opacity: i === photoIdx ? 1 : 0.5,
+                        transition: 'width 0.2s, opacity 0.2s',
+                      }} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1">
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
-          {(['left', 'right'] as const).map((dir) => (
-            <button key={dir} type="button" onClick={() => scroll(dir)}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold transition-all duration-200"
-              style={{ background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' }}>
-              {dir === 'left' ? '‹' : '›'}
-            </button>
-          ))}
+
+        {/* Name + Price */}
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{
+            margin: 0, fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
+          }}>{tc.name}</h2>
+          <p style={{
+            margin: '8px 0 0', fontSize: 18, fontWeight: 700, color: '#c9a42c',
+          }}>
+            {formatSum(tc.ratePerPerson)}
+            <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.55)', marginLeft: 6 }}>
+              / {t('person')}
+            </span>
+          </p>
         </div>
-      </div>
-      <div ref={scrollRef} className="scrollbar-none flex gap-4 overflow-x-auto px-1 py-3">
-        {active.map((tc, i) => (
-          <div key={tc.id} className="tablet-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-            <TableCategoryCard tc={tc} isSelected={tc.id === selectedId}
-              onSelect={() => onSelect(tc.id)} onLightbox={onLightbox} t={t} />
+
+        {/* Description */}
+        {tc.description && (
+          <p style={{
+            margin: 0, textAlign: 'center', maxWidth: 520,
+            fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.7)',
+          }}>{tc.description}</p>
+        )}
+
+        {/* Included categories */}
+        {includedCats.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+            {includedCats.map((cat) => (
+              <span key={cat} style={{
+                padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                background: 'rgba(201,164,44,0.15)', color: '#c9a42c',
+                border: '1px solid rgba(201,164,44,0.3)',
+              }}>
+                {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+              </span>
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Select button */}
+        <button type="button" onClick={onSelect}
+          style={{
+            marginTop: 4,
+            padding: '14px 48px',
+            borderRadius: 14,
+            border: 'none',
+            background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
+            color: '#1a3320',
+            fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(201,164,44,0.35)',
+          }}>
+          {t('select_table')} →
+        </button>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -392,6 +565,18 @@ export const TabletMenuPage = () => {
         </div>
       )}
 
+      {musicStarted && welcomeShown && !selectedTableCategoryId && !isLoading &&
+        tableCategories.filter((tc) => tc.isActive).length > 0 && (
+          <TableCategoryFullscreen
+            tableCategories={tableCategories.filter((tc) => tc.isActive)}
+            onSelect={(id) => setTableCategory(id)}
+            onLightbox={setLightboxSrc}
+            locale={locale}
+            setLocale={setLocale}
+            t={t}
+          />
+        )}
+
       <PageBackground />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
@@ -429,17 +614,6 @@ export const TabletMenuPage = () => {
             </div>
           </div>
         </header>
-
-        {/* ── Table category showcase ── */}
-        {!isLoading && tableCategories.filter((tc) => tc.isActive).length > 0 && (
-          <TableCategoryShowcase
-            tableCategories={tableCategories}
-            selectedId={selectedTableCategoryId ?? null}
-            onSelect={(id) => setTableCategory(id)}
-            onLightbox={setLightboxSrc}
-            t={t}
-          />
-        )}
 
         {/* ── Main grid ── */}
         <section className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
