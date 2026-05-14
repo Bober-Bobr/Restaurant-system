@@ -158,14 +158,9 @@ export const AdminMenuPage = () => {
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('category', locale)}
             <Select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
-              <option value="COLD_APPETIZERS">{translate('cold_appetizers', locale)}</option>
-              <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
-              <option value="SALADS">{translate('salads', locale)}</option>
-              <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
-              <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
-              <option value="DRINKS">{translate('drinks', locale)}</option>
-              <option value="SWEETS">{translate('sweets', locale)}</option>
-              <option value="FRUITS">{translate('fruits', locale)}</option>
+              {CATEGORY_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
+              ))}
             </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -234,7 +229,24 @@ export const AdminMenuPage = () => {
               ))}
             </div>
 
-            <div className="adm-card tablet-fade-up">
+            {/* Mobile cards */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              {filtered.map((item) => (
+                <MenuItemMobileCard
+                  key={item.id}
+                  item={item}
+                  locale={locale}
+                  assignedTableCategories={itemTableCategoryMap.get(item.id) ?? []}
+                  onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
+                  isSaving={updateMutation.isPending}
+                  onDelete={() => deleteMutation.mutate(item.id)}
+                  isDeleting={deleteMutation.isPending && deleteMutation.variables === item.id}
+                />
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="adm-card tablet-fade-up hidden sm:block">
               <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table className="adm-table" style={{ width: '100%', minWidth: 780 }}>
                 <thead>
@@ -280,6 +292,119 @@ type MenuItemRowProps = {
   isSaving: boolean;
   onDelete: () => void;
   isDeleting: boolean;
+};
+
+const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>[0] }[] = [
+  { value: 'COLD_APPETIZERS', key: 'cold_appetizers' },
+  { value: 'HOT_APPETIZERS', key: 'hot_appetizers' },
+  { value: 'SALADS', key: 'salads' },
+  { value: 'FIRST_COURSE', key: 'first_course' },
+  { value: 'SECOND_COURSE', key: 'second_course' },
+  { value: 'DRINKS', key: 'drinks' },
+  { value: 'SWEETS', key: 'sweets' },
+  { value: 'FRUITS', key: 'fruits' },
+];
+
+const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+  const [localName, setLocalName] = useState(item.name);
+  const [localCategory, setLocalCategory] = useState<MenuCategory>(item.category);
+  const [localDescription, setLocalDescription] = useState(item.description ?? '');
+  const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
+  const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
+  const [showPhotoSelector, setShowPhotoSelector] = useState(false);
+
+  useEffect(() => {
+    setLocalName(item.name);
+    setLocalCategory(item.category);
+    setLocalDescription(item.description ?? '');
+    setLocalPrice(formatCents(item.priceCents));
+    setLocalPhotoUrl(item.photoUrl ?? '');
+  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl]);
+
+  const handleSave = () => {
+    const priceCents = parsePriceToCents(localPrice);
+    onPatch({
+      name: localName.trim(),
+      category: localCategory,
+      description: localDescription.trim() || undefined,
+      photoUrl: localPhotoUrl.trim() || undefined,
+      ...(priceCents !== null ? { priceCents } : {}),
+    });
+  };
+
+  const photoSrc = getPhotoUrl(localPhotoUrl) ?? null;
+
+  return (
+    <div className="adm-card p-4 space-y-3">
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => setShowPhotoSelector((v) => !v)}
+          className="shrink-0 h-14 w-14 overflow-hidden rounded-xl"
+          style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+          {photoSrc
+            ? <img src={photoSrc} alt={item.name} className="h-full w-full object-cover" />
+            : <div className="flex h-full w-full items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }}>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+          }
+        </button>
+        <Input value={localName} onChange={(e) => setLocalName(e.target.value)}
+          className="flex-1 text-sm" placeholder={translate('name', locale)} />
+      </div>
+
+      {showPhotoSelector && (
+        <PhotoSelector
+          category="menu"
+          dishCategory={localCategory.toLowerCase()}
+          selectedPhotoUrl={localPhotoUrl || undefined}
+          onPhotoSelect={(url) => { setLocalPhotoUrl(url || ''); setShowPhotoSelector(false); }}
+        />
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <p className="adm-label text-xs">{translate('category', locale)}</p>
+          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuCategory)}>
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <p className="adm-label text-xs">{translate('price', locale)}</p>
+          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="text-sm" />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <p className="adm-label text-xs">{translate('description', locale)}</p>
+        <Input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)}
+          className="text-sm" placeholder="—" />
+      </div>
+
+      {assignedTableCategories.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {assignedTableCategories.map((tc) => (
+            <span key={tc.id} className="rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}>
+              {tc.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave} className="flex-1">
+          {translate('save', locale)}
+        </Button>
+        <Button size="sm" variant="destructive" disabled={isSaving || isDeleting}
+          onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) onDelete(); }}>
+          {isDeleting ? translate('deleting', locale) : translate('delete', locale)}
+        </Button>
+      </div>
+    </div>
+  );
 };
 
 const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
@@ -348,14 +473,9 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
         {/* Category */}
         <td className="px-4 py-2.5">
           <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <option value="COLD_APPETIZERS">{translate('cold_appetizers', locale)}</option>
-            <option value="HOT_APPETIZERS">{translate('hot_appetizers', locale)}</option>
-            <option value="SALADS">{translate('salads', locale)}</option>
-            <option value="FIRST_COURSE">{translate('first_course', locale)}</option>
-            <option value="SECOND_COURSE">{translate('second_course', locale)}</option>
-            <option value="DRINKS">{translate('drinks', locale)}</option>
-            <option value="SWEETS">{translate('sweets', locale)}</option>
-            <option value="FRUITS">{translate('fruits', locale)}</option>
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
+            ))}
           </Select>
         </td>
 
@@ -378,7 +498,8 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
               {assignedTableCategories.map((tc) => (
                 <span
                   key={tc.id}
-                  className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200"
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
                 >
                   {tc.name}
                 </span>
