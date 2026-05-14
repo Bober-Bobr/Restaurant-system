@@ -208,6 +208,72 @@ export const AdminLayout = () => {
         </div>
       </nav>
 
+      {/* Mobile nav drawer */}
+      {mobileNavOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 29,
+        }} onClick={() => setMobileNavOpen(false)}>
+          <div
+            style={{
+              position: 'absolute', top: 0, right: 0,
+              width: 260, height: '100%',
+              background: 'rgba(15,23,42,0.97)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              padding: '72px 16px 24px',
+              display: 'flex', flexDirection: 'column', gap: 4,
+              boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileNavOpen(false)}
+                style={{
+                  padding: '11px 16px',
+                  borderRadius: 10,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.85)',
+                  background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
+                  border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              to={`/tablet?restaurantId=${tabletRestaurantId}`}
+              onClick={() => setMobileNavOpen(false)}
+              style={{
+                marginTop: 8,
+                padding: '11px 16px',
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 700,
+                textDecoration: 'none',
+                color: '#c9a42c',
+                background: 'rgba(201,164,44,0.1)',
+                border: '1px solid rgba(201,164,44,0.4)',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="14" rx="2" />
+                <line x1="8" y1="20" x2="16" y2="20" />
+                <line x1="12" y1="18" x2="12" y2="20" />
+              </svg>
+              {t('tablet')}
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div style={{ position: 'relative', zIndex: 1 }}>
         <Outlet />
       </div>
