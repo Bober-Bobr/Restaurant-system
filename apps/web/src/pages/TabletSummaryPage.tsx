@@ -5,8 +5,9 @@ import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { eventService } from '../services/event.service';
 import { httpClient } from '../services/http';
-import logo from '../assets/logo.png';
+import networkingLogoSrc from '../assets/networking-logo.png';
 import { Locale, locales, translate } from '../utils/translate';
+import { getPhotoUrl } from '../utils/photoUrl';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
 import { startTabletMusic, isTabletMusicStarted } from '../utils/tabletMusic';
@@ -44,14 +45,17 @@ function PageBackground() {
 // ── Shared page header ────────────────────────────────────────────────────
 
 function PageHeader({
-  title, locale, setLocale, isLoading, t,
+  title, locale, setLocale, isLoading, t, restaurantLogoUrl, restaurantName,
 }: {
   title: string;
   locale: Locale;
   setLocale: (l: Locale) => void;
   isLoading: boolean;
   t: (key: Parameters<typeof translate>[0]) => string;
+  restaurantLogoUrl: string | null;
+  restaurantName: string | null;
 }) {
+  const logoSrc = restaurantLogoUrl ? getPhotoUrl(restaurantLogoUrl) : null;
   return (
     <header
       className="tablet-fade-in overflow-hidden rounded-2xl sm:rounded-[28px] px-4 sm:px-8 py-4 sm:py-5 shadow-2xl"
@@ -59,9 +63,9 @@ function PageHeader({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <img src={logo} alt="logo" className="h-10 sm:h-14" style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+          <img src={logoSrc ?? networkingLogoSrc} alt={restaurantName ?? 'logo'} className="h-10 sm:h-14" style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
           <div className="min-w-0">
-            <p className="rg-label truncate">Madinabek</p>
+            {restaurantName && <p className="rg-label truncate">{restaurantName}</p>}
             <h1 className="text-base sm:text-2xl font-bold text-white truncate">{title}</h1>
           </div>
         </div>
@@ -92,11 +96,13 @@ export const TabletSummaryPage = () => {
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
   const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
 
-  const menuItems       = usePublicDataStore((s) => s.menuItems);
-  const halls           = usePublicDataStore((s) => s.halls);
-  const tableCategories = usePublicDataStore((s) => s.tableCategories);
-  const isLoading       = usePublicDataStore((s) => s.isLoading);
-  const loadPublicData  = usePublicDataStore((s) => s.loadPublicData);
+  const menuItems         = usePublicDataStore((s) => s.menuItems);
+  const halls             = usePublicDataStore((s) => s.halls);
+  const tableCategories   = usePublicDataStore((s) => s.tableCategories);
+  const restaurantName    = usePublicDataStore((s) => s.restaurantName);
+  const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
+  const isLoading         = usePublicDataStore((s) => s.isLoading);
+  const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
 
   const [customerName, setCustomerName]             = useState('');
   const [customerPhone, setCustomerPhone]           = useState('');
@@ -168,7 +174,7 @@ export const TabletSummaryPage = () => {
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], pricing, locale, restaurantName: 'Madinabek' },
+          guestCount, selectedItems, menuItems: menuItems || [], pricing, locale, restaurantName: restaurantName ?? '' },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -196,7 +202,7 @@ export const TabletSummaryPage = () => {
       <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-12 sm:px-6">
         <PageBackground />
         <div className="relative mx-auto max-w-md space-y-6">
-          <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} />
+          <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
           <div className="rg-card p-6 sm:p-10 text-center space-y-6 tablet-fade-up" style={{ animationDelay: '80ms' }}>
             <div className="scale-in mx-auto flex h-24 w-24 items-center justify-center rounded-full"
@@ -250,7 +256,7 @@ export const TabletSummaryPage = () => {
       <PageBackground />
 
       <div className="relative mx-auto max-w-5xl space-y-6">
-        <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} />
+        <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
         <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
 
