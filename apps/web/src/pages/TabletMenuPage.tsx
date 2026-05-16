@@ -8,7 +8,7 @@ import type { MenuItem, TableCategory } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, isTabletMusicStarted, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
+import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -418,7 +418,6 @@ export const TabletMenuPage = () => {
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [musicStarted, setMusicStarted] = useState(isTabletMusicStarted());
   const [welcomeShown, setWelcomeShown] = useState(isTabletWelcomeShown());
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
@@ -428,12 +427,8 @@ export const TabletMenuPage = () => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
 
-  const startMusic = () => {
-    startTabletMusic();
-    setMusicStarted(true);
-  };
-
   const dismissWelcome = () => {
+    startTabletMusic();
     markTabletWelcomeShown();
     setWelcomeShown(true);
   };
@@ -451,21 +446,7 @@ export const TabletMenuPage = () => {
 
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
-      {!musicStarted && (
-        <div
-          onClick={startMusic}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', cursor: 'pointer',
-          }}
-        >
-          <div style={{ fontSize: 64 }}>♫</div>
-          <p style={{ color: '#fff', fontSize: 22, fontWeight: 600, marginTop: 16 }}>Tap to start</p>
-        </div>
-      )}
-
-      {musicStarted && !welcomeShown && (
+      {!welcomeShown && (
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 9998,
@@ -565,7 +546,7 @@ export const TabletMenuPage = () => {
         </div>
       )}
 
-      {musicStarted && welcomeShown && !selectedTableCategoryId && !isLoading &&
+      {welcomeShown && !selectedTableCategoryId && !isLoading &&
         tableCategories.filter((tc) => tc.isActive).length > 0 && (
           <TableCategoryFullscreen
             tableCategories={tableCategories.filter((tc) => tc.isActive)}
