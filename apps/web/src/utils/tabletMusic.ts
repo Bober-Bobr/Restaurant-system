@@ -5,17 +5,35 @@
 let audio: HTMLAudioElement | null = null;
 let started = false;
 let welcomeShown = false;
+let lastTrackIdx = -1;
 
-const SRC = '/tablet-music.mp3';
+const TRACKS = ['/tablet-track-1.mp3', '/tablet-track-2.mp3', '/tablet-track-3.mp3'];
 
-export function startTabletMusic() {
-  if (!audio) {
-    audio = new Audio(SRC);
-    audio.loop = true;
+function pickNextTrack(): number {
+  if (TRACKS.length <= 1) return 0;
+  let idx = lastTrackIdx;
+  while (idx === lastTrackIdx) {
+    idx = Math.floor(Math.random() * TRACKS.length);
   }
+  return idx;
+}
+
+function playRandom() {
+  if (!audio) return;
+  const idx = pickNextTrack();
+  lastTrackIdx = idx;
+  audio.src = TRACKS[idx];
   audio.play()
     .then(() => { started = true; })
     .catch(() => {});
+}
+
+export function startTabletMusic() {
+  if (!audio) {
+    audio = new Audio();
+    audio.addEventListener('ended', playRandom);
+  }
+  playRandom();
 }
 
 export function stopTabletMusic() {
