@@ -46,6 +46,7 @@ export const AdminLayout = () => {
 
   const navItems: { to: string; label: string }[] = [
     { to: '/', label: t('events') },
+    { to: '/calendar', label: t('calendar') },
     { to: '/admin/menu', label: t('menu') },
     { to: '/admin/table-categories', label: t('tables') },
     { to: '/admin/halls', label: t('halls') },

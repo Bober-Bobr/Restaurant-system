@@ -11,6 +11,7 @@ import { ChiefAdminPage } from '../pages/ChiefAdminPage';
 import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
+import { CalendarPage } from '../pages/CalendarPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
@@ -125,6 +126,7 @@ export const App = () => {
         )}
         <Route element={<EmployeeLayout />}>
           <Route path="/" element={<EmployeeEventsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -140,6 +142,7 @@ export const App = () => {
       </Route>
       <Route element={<AdminLayout />}>
         <Route path="/" element={<AdminEventsPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />
         <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />
         <Route path="/admin/halls" element={<AdminHallsPage />} />

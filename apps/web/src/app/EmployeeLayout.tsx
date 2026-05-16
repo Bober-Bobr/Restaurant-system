@@ -92,6 +92,19 @@ export const EmployeeLayout = () => {
             >
               {t('events')}
             </Link>
+            <Link
+              to="/calendar"
+              style={{
+                padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                textDecoration: 'none', whiteSpace: 'nowrap',
+                color: isActive('/calendar') ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                background: isActive('/calendar') ? 'rgba(201,164,44,0.12)' : 'transparent',
+                border: isActive('/calendar') ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                transition: 'all 0.18s',
+              }}
+            >
+              {t('calendar')}
+            </Link>
             {role !== 'KITCHEN' && (
               <Link
                 to={`/tablet?restaurantId=${tabletRestaurantId}`}
