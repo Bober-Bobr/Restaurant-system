@@ -100,16 +100,8 @@ export const LoginPage = () => {
 
         {/* Logo + title */}
         <div className="scale-in" style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div className="adm-float" style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 104, height: 104, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(201,164,44,0.25) 0%, rgba(15,23,42,0.6) 70%)',
-            border: '1px solid rgba(201,164,44,0.35)',
-            marginBottom: 18,
-            backdropFilter: 'blur(14px)',
-          }}>
-            <img src={logoSrc} alt="Logo" style={{ height: 64, width: 64, objectFit: 'contain' }} />
-          </div>
+          <img className="adm-float" src={logoSrc} alt="Logo"
+            style={{ height: 160, width: 'auto', maxWidth: '70%', objectFit: 'contain', display: 'block', margin: '0 auto 18px' }} />
           <h1 className="adm-title" style={{ margin: '0 0 6px', fontSize: 26 }}>{t('sign_in')}</h1>
           <p style={{ margin: 0, color: 'rgba(226,232,240,0.55)', fontSize: 14 }}>{t('login_subtitle')}</p>
         </div>
