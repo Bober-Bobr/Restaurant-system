@@ -85,7 +85,6 @@ export const CalendarPage = () => {
     if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); }
     else setViewMonth(viewMonth + 1);
   };
-  const goToday = () => { setViewMonth(now.getMonth()); setViewYear(now.getFullYear()); };
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
@@ -114,11 +113,6 @@ export const CalendarPage = () => {
               border: '1px solid rgba(201,164,44,0.35)',
               color: '#c9a42c', fontSize: 18, fontWeight: 700, cursor: 'pointer',
             }}>›</button>
-          <button type="button" onClick={goToday}
-            className="adm-btn-primary"
-            style={{ padding: '8px 14px', fontSize: 12 }}>
-            Today
-          </button>
         </div>
       </div>
 
