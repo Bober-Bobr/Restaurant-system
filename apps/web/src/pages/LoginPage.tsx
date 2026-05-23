@@ -8,6 +8,7 @@ import { useAdminStore } from '../store/admin.store';
 import { translate, locales, type Locale } from '../utils/translate';
 import { buildSubdomainUrl, isRootDomain, toSubdomainSlug } from '../utils/subdomain';
 import logoSrc from '../assets/networking-logo.png';
+import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 
 const formatRequestError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -205,6 +206,8 @@ export const LoginPage = () => {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      <PWAInstallPrompt locale={locale} />
     </main>
   );
 };

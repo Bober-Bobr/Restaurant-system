@@ -303,6 +303,10 @@ const resources = {
     weekday_fri: 'Fri',
     weekday_sat: 'Sat',
     weekday_sun: 'Sun',
+    install_app: 'Install app',
+    install_app_desc: 'Add this app to your home screen for faster access.',
+    install_ios_hint: 'Tap the Share button and choose "Add to Home Screen".',
+    later: 'Later',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -601,6 +605,10 @@ const resources = {
     weekday_fri: 'Пт',
     weekday_sat: 'Сб',
     weekday_sun: 'Вс',
+    install_app: 'Установить приложение',
+    install_app_desc: 'Добавьте приложение на главный экран для быстрого доступа.',
+    install_ios_hint: 'Нажмите кнопку «Поделиться» и выберите «На экран Домой».',
+    later: 'Позже',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -899,6 +907,10 @@ const resources = {
     weekday_fri: 'Ju',
     weekday_sat: 'Sh',
     weekday_sun: 'Ya',
+    install_app: 'Ilovani o\'rnatish',
+    install_app_desc: 'Tezroq foydalanish uchun ilovani bosh ekranga qo\'shing.',
+    install_ios_hint: '«Ulashish» tugmasini bosing va «Bosh ekranga qo\'shish» ni tanlang.',
+    later: 'Keyinroq',
   }
 } as const;
 
