@@ -93,6 +93,22 @@ export class AuthRepository {
     });
   }
 
+  async updateCredentials(userId: string, data: { username?: string; passwordHash?: string }) {
+    return prisma.adminUser.update({
+      where: { id: userId },
+      data,
+      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true }
+    });
+  }
+
+  async findRestaurantIdsByOwner(ownerId: string) {
+    const restaurants = await prisma.restaurant.findMany({
+      where: { ownerId },
+      select: { id: true }
+    });
+    return restaurants.map((r) => r.id);
+  }
+
   async deleteById(userId: string) {
     return prisma.adminUser.delete({ where: { id: userId } });
   }

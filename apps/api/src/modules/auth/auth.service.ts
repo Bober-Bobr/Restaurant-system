@@ -127,6 +127,62 @@ export class AuthService {
     await this.authRepository.deleteById(targetId);
   }
 
+  async updateUserCredentials(
+    caller: { id: string; role: AdminRole; restaurantId: string | null },
+    targetId: string,
+    payload: { username?: string; password?: string }
+  ) {
+    if (payload.username === undefined && payload.password === undefined) {
+      throw createHttpError(400, 'Username or password must be provided.');
+    }
+
+    const target = await this.authRepository.findById(targetId);
+    if (!target) throw createHttpError(404, 'User not found.');
+
+    const isSelf = target.id === caller.id;
+
+    if (caller.role === AdminRole.CHIEF_ADMIN) {
+      // Chief admin may edit anyone.
+    } else if (caller.role === AdminRole.OWNER) {
+      if (!isSelf) {
+        if (target.role === AdminRole.CHIEF_ADMIN || target.role === AdminRole.OWNER) {
+          throw createHttpError(403, 'Owners cannot manage other Owners or Chief Admins.');
+        }
+        const ownerRestaurantIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
+        if (!target.restaurantId || !ownerRestaurantIds.includes(target.restaurantId)) {
+          throw createHttpError(403, 'Cannot manage users outside your restaurants.');
+        }
+      }
+    } else if (caller.role === AdminRole.ADMIN) {
+      if (!isSelf) {
+        if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+          throw createHttpError(403, 'Administrators can only edit Employee or Kitchen accounts.');
+        }
+        const callerRestId =
+          caller.restaurantId ?? (await this.authRepository.findById(caller.id))?.restaurantId ?? null;
+        if (!callerRestId || target.restaurantId !== callerRestId) {
+          throw createHttpError(403, 'Cannot manage users outside your restaurant.');
+        }
+      }
+    } else {
+      throw createHttpError(403, 'Forbidden.');
+    }
+
+    const updates: { username?: string; passwordHash?: string } = {};
+    if (payload.username !== undefined) {
+      const taken = await this.authRepository.findByUsername(payload.username);
+      if (taken && taken.id !== targetId) {
+        throw createHttpError(409, 'Username already taken.');
+      }
+      updates.username = payload.username;
+    }
+    if (payload.password !== undefined) {
+      updates.passwordHash = await bcrypt.hash(payload.password, 12);
+    }
+
+    return this.authRepository.updateCredentials(targetId, updates);
+  }
+
   async updateUserRole(callerRole: AdminRole, targetId: string, newRole: AdminRole) {
     if (callerRole !== AdminRole.OWNER) {
       throw createHttpError(403, 'Only the Owner can change roles.');

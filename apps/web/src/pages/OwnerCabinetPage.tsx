@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
+import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { companyService, type Company } from '../services/company.service';
 import { restaurantService, type Restaurant } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
@@ -114,6 +115,7 @@ export const OwnerCabinetPage = () => {
   const [uRole, setURole] = useState<AdminRole>('ADMIN');
   const [uRestaurantId, setURestaurantId] = useState('');
   const [uError, setUError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const createUser = useMutation({
     mutationFn: () =>
@@ -416,7 +418,8 @@ export const OwnerCabinetPage = () => {
               <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('all_users')} ({users.length})</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
-                  <div key={u.id} className="owner-user-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
+                  <Fragment key={u.id}>
+                  <div className="owner-user-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
                     <div className="owner-user-info" style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.username}</p>
                       <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -442,6 +445,19 @@ export const OwnerCabinetPage = () => {
                         <option value="KITCHEN">{t('kitchen_role')}</option>
                       </select>
                     )}
+                    <button
+                      onClick={() => setEditingUserId(editingUserId === u.id ? null : u.id)}
+                      style={{
+                        padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                        borderRadius: 8,
+                        background: editingUserId === u.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
+                        color: '#c9a42c',
+                        border: '1px solid rgba(201,164,44,0.35)',
+                        cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      {t('edit_credentials')}
+                    </button>
                     {u.role !== 'OWNER' && (
                       <button
                         onClick={() => { if (confirm(t('delete_user_confirm', { name: u.username }))) deleteUser.mutate(u.id); }}
@@ -451,6 +467,16 @@ export const OwnerCabinetPage = () => {
                       </button>
                     )}
                   </div>
+                  {editingUserId === u.id && (
+                    <EditCredentialsForm
+                      userId={u.id}
+                      currentUsername={u.username}
+                      onClose={() => setEditingUserId(null)}
+                      invalidateKeys={[['owner-users']]}
+                      locale={locale}
+                    />
+                  )}
+                  </Fragment>
                 ))}
                 {users.length === 0 && <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_users_yet')}</p>}
               </div>

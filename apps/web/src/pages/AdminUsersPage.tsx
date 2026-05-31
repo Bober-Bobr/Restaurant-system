@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { AdminUser } from '../services/auth.service';
 import { authService } from '../services/auth.service';
 import { restaurantService } from '../services/restaurant.service';
@@ -8,6 +8,7 @@ import type { AdminRole } from '../store/auth.store';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
+import { EditCredentialsForm } from '../components/EditCredentialsForm';
 
 const ROLE_LABELS: Record<AdminRole, string> = {
   CHIEF_ADMIN: 'Chief Administrator',
@@ -58,6 +59,7 @@ export const AdminUsersPage = () => {
   const [newRole, setNewRole] = useState<AdminRole>('EMPLOYEE');
   const [newRestaurantId, setNewRestaurantId] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants'],
@@ -175,49 +177,90 @@ export const AdminUsersPage = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user: AdminUser) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>
-                  {user.username}
-                  {user.username === currentUsername && (
-                    <span style={{ marginLeft: 6, fontSize: 11, color: 'rgba(226,232,240,0.55)' }}>(you)</span>
-                  )}
-                </td>
-                <td style={{ padding: '10px 12px' }}>
-                  <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, ...ROLE_BADGE_STYLE[user.role] }}>
-                    {ROLE_LABELS[user.role]}
-                  </span>
-                </td>
-                <td style={{ padding: '10px 12px', color: 'rgba(226,232,240,0.55)', fontSize: 13 }}>
-                  {user.role === 'OWNER' ? '—' : restaurantName(user.restaurantId)}
-                </td>
-                <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                    {currentRole === 'OWNER' && user.role !== 'OWNER' && (
-                      <select
-                        value={user.role}
-                        onChange={(e) => updateRoleMutation.mutate({ id: user.id, role: e.target.value as AdminRole })}
-                        style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 12, background: '#fff' }}
-                      >
-                        <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
-                        <option value="EMPLOYEE">{ROLE_LABELS.EMPLOYEE}</option>
-                        <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
-                      </select>
+            {users.map((user: AdminUser) => {
+              const isSelf = user.username === currentUsername;
+              const canEditCreds =
+                currentRole === 'OWNER'
+                  ? user.role !== 'CHIEF_ADMIN' && (user.role !== 'OWNER' || isSelf)
+                  : currentRole === 'ADMIN'
+                    ? isSelf || user.role === 'EMPLOYEE' || user.role === 'KITCHEN'
+                    : false;
+              const canDelete =
+                !isSelf && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE' && user.role !== 'KITCHEN');
+              return (
+                <Fragment key={user.id}>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>
+                    {user.username}
+                    {isSelf && (
+                      <span style={{ marginLeft: 6, fontSize: 11, color: 'rgba(226,232,240,0.55)' }}>(you)</span>
                     )}
-                    {user.username !== currentUsername && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE' && user.role !== 'KITCHEN') && (
-                      <button
-                        className="adm-btn-danger"
-                        onClick={() => { if (window.confirm(t('confirm_delete_user'))) deleteMutation.mutate(user.id); }}
-                        disabled={deleteMutation.isPending}
-                        style={{ fontSize: 12 }}
-                      >
-                        {t('delete')}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, ...ROLE_BADGE_STYLE[user.role] }}>
+                      {ROLE_LABELS[user.role]}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 12px', color: 'rgba(226,232,240,0.55)', fontSize: 13 }}>
+                    {user.role === 'OWNER' ? '—' : restaurantName(user.restaurantId)}
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                    <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                      {currentRole === 'OWNER' && user.role !== 'OWNER' && (
+                        <select
+                          value={user.role}
+                          onChange={(e) => updateRoleMutation.mutate({ id: user.id, role: e.target.value as AdminRole })}
+                          style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 12, background: '#fff' }}
+                        >
+                          <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
+                          <option value="EMPLOYEE">{ROLE_LABELS.EMPLOYEE}</option>
+                          <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
+                        </select>
+                      )}
+                      {canEditCreds && (
+                        <button
+                          onClick={() => setEditingId(editingId === user.id ? null : user.id)}
+                          style={{
+                            padding: '5px 10px', fontSize: 12, fontWeight: 600,
+                            borderRadius: 6,
+                            background: editingId === user.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
+                            color: '#c9a42c',
+                            border: '1px solid rgba(201,164,44,0.35)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {t('edit_credentials')}
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          className="adm-btn-danger"
+                          onClick={() => { if (window.confirm(t('confirm_delete_user'))) deleteMutation.mutate(user.id); }}
+                          disabled={deleteMutation.isPending}
+                          style={{ fontSize: 12 }}
+                        >
+                          {t('delete')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                {editingId === user.id && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '0 12px 12px' }}>
+                      <EditCredentialsForm
+                        userId={user.id}
+                        currentUsername={user.username}
+                        onClose={() => setEditingId(null)}
+                        invalidateKeys={[['admin-users']]}
+                        locale={locale}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
         </div>

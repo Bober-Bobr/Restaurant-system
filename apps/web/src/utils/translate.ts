@@ -307,6 +307,11 @@ const resources = {
     install_app_desc: 'Add this app to your home screen for faster access.',
     install_ios_hint: 'Tap the Share button and choose "Add to Home Screen".',
     later: 'Later',
+    edit_credentials: 'Edit credentials',
+    new_username: 'New username',
+    new_password: 'New password',
+    password_blank_keep: 'Leave blank to keep current',
+    credentials_saved: 'Saved',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -609,6 +614,11 @@ const resources = {
     install_app_desc: 'Добавьте приложение на главный экран для быстрого доступа.',
     install_ios_hint: 'Нажмите кнопку «Поделиться» и выберите «На экран Домой».',
     later: 'Позже',
+    edit_credentials: 'Изменить данные',
+    new_username: 'Новый логин',
+    new_password: 'Новый пароль',
+    password_blank_keep: 'Оставьте пустым, чтобы не менять',
+    credentials_saved: 'Сохранено',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -911,6 +921,11 @@ const resources = {
     install_app_desc: 'Tezroq foydalanish uchun ilovani bosh ekranga qo\'shing.',
     install_ios_hint: '«Ulashish» tugmasini bosing va «Bosh ekranga qo\'shish» ni tanlang.',
     later: 'Keyinroq',
+    edit_credentials: 'Ma\'lumotlarni o\'zgartirish',
+    new_username: 'Yangi login',
+    new_password: 'Yangi parol',
+    password_blank_keep: 'O\'zgartirmaslik uchun bo\'sh qoldiring',
+    credentials_saved: 'Saqlandi',
   }
 } as const;
 

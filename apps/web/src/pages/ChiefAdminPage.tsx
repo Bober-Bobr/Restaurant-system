@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
+import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { companyService, type CompanyWithDetails } from '../services/company.service';
 import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
@@ -54,6 +55,7 @@ export const ChiefAdminPage = () => {
   const [uPwd, setUPwd] = useState('');
   const [uRole, setURole] = useState<AdminRole>('OWNER');
   const [uError, setUError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const createUser = useMutation({
     mutationFn: () => authService.createUserAsChief({ username: uName.trim(), password: uPwd, role: uRole, restaurantId: null }),
@@ -239,8 +241,9 @@ export const ChiefAdminPage = () => {
               <h2 style={{ fontSize: 16, marginBottom: 12 }}>All users ({users.length})</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
-                    <div style={{ flex: 1 }}>
+                  <Fragment key={u.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 160 }}>
                       <p style={{ margin: 0, fontWeight: 600 }}>{u.username}</p>
                       <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
                         {companies.find((c) => c.owner.id === u.id)?.name
@@ -260,6 +263,19 @@ export const ChiefAdminPage = () => {
                       <option value="EMPLOYEE">EMPLOYEE</option>
                       <option value="KITCHEN">KITCHEN</option>
                     </select>
+                    <button
+                      onClick={() => setEditingUserId(editingUserId === u.id ? null : u.id)}
+                      style={{
+                        padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                        borderRadius: 8,
+                        background: editingUserId === u.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
+                        color: '#c9a42c',
+                        border: '1px solid rgba(201,164,44,0.35)',
+                        cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      Edit credentials
+                    </button>
                     {u.role !== 'CHIEF_ADMIN' && (
                       <button
                         onClick={() => { if (confirm(`Delete user ${u.username}?`)) deleteUser.mutate(u.id); }}
@@ -269,6 +285,16 @@ export const ChiefAdminPage = () => {
                       </button>
                     )}
                   </div>
+                  {editingUserId === u.id && (
+                    <EditCredentialsForm
+                      userId={u.id}
+                      currentUsername={u.username}
+                      onClose={() => setEditingUserId(null)}
+                      invalidateKeys={[['cad-users']]}
+                      locale="en"
+                    />
+                  )}
+                  </Fragment>
                 ))}
               </div>
             </section>

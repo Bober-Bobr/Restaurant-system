@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
-import { loginSchema, refreshTokenSchema, registerSchema, updateRoleSchema } from './auth.schema.js';
+import { loginSchema, refreshTokenSchema, registerSchema, updateCredentialsSchema, updateRoleSchema } from './auth.schema.js';
 import { AuthService } from './auth.service.js';
 
 type JwtPayload = {
@@ -117,6 +117,17 @@ export class AuthController {
     const admin = request.admin!;
     const { role } = updateRoleSchema.parse(request.body);
     const updated = await authService.updateUserRole(admin.role, String(request.params.id), role);
+    response.json(updated);
+  }
+
+  async updateCredentials(request: Request, response: Response) {
+    const admin = request.admin!;
+    const payload = updateCredentialsSchema.parse(request.body);
+    const updated = await authService.updateUserCredentials(
+      { id: admin.id, role: admin.role, restaurantId: admin.restaurantId ?? null },
+      String(request.params.id),
+      payload
+    );
     response.json(updated);
   }
 }

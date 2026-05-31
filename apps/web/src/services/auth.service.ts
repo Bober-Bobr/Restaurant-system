@@ -66,6 +66,10 @@ export const authService = {
     const { data } = await httpClient.patch<AdminUser>(`/auth/users/${id}/role`, { role });
     return data;
   },
+  async updateUserCredentials(id: string, payload: { username?: string; password?: string }) {
+    const { data } = await httpClient.patch<AdminUser>(`/auth/users/${id}/credentials`, payload);
+    return data;
+  },
   async createUserAsChief(payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }) {
     const { data } = await httpClient.post<AdminUser>('/auth/users', payload);
     return data;
