@@ -12,6 +12,18 @@ const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 
+router.get('/restaurants', async (_request, response, next) => {
+  try {
+    const list = await restaurantRepository.listAllPublic();
+    response.json(list.map((r) => ({
+      id: r.id,
+      name: r.name,
+      logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
+      companyName: r.company?.name ?? null,
+    })));
+  } catch (error) { next(error); }
+});
+
 router.get('/restaurant', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');

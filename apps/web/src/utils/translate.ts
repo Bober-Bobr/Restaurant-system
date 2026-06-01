@@ -312,6 +312,10 @@ const resources = {
     new_password: 'New password',
     password_blank_keep: 'Leave blank to keep current',
     credentials_saved: 'Saved',
+    view_tablet_menu: 'View tablet menu',
+    choose_restaurant_to_view: 'Choose a restaurant',
+    view_only_mode: 'View-only mode',
+    no_restaurants_available: 'No restaurants available.',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -619,6 +623,10 @@ const resources = {
     new_password: 'Новый пароль',
     password_blank_keep: 'Оставьте пустым, чтобы не менять',
     credentials_saved: 'Сохранено',
+    view_tablet_menu: 'Просмотр меню',
+    choose_restaurant_to_view: 'Выберите ресторан',
+    view_only_mode: 'Режим просмотра',
+    no_restaurants_available: 'Нет доступных ресторанов.',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -926,6 +934,10 @@ const resources = {
     new_password: 'Yangi parol',
     password_blank_keep: 'O\'zgartirmaslik uchun bo\'sh qoldiring',
     credentials_saved: 'Saqlandi',
+    view_tablet_menu: 'Menyuni ko\'rish',
+    choose_restaurant_to_view: 'Restoranni tanlang',
+    view_only_mode: 'Faqat ko\'rish rejimi',
+    no_restaurants_available: 'Restoranlar yo\'q.',
   }
 } as const;
 

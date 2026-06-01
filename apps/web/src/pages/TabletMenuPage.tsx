@@ -403,6 +403,7 @@ export const TabletMenuPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
+  const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
     setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale,
@@ -603,7 +604,8 @@ export const TabletMenuPage = () => {
           {/* ── Left column ── */}
           <div className="space-y-6">
 
-            {/* Settings */}
+            {/* Settings — hidden in view-only mode */}
+            {!viewOnly && (
             <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
               <p className="rg-heading">{t('room_table_settings')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -651,6 +653,7 @@ export const TabletMenuPage = () => {
                 </div>
               )}
             </section>
+            )}
 
             {/* Table category photos */}
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
@@ -746,7 +749,7 @@ export const TabletMenuPage = () => {
                         {items.map((item, i) => (
                           <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
                             <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                              onQuantityChange={(qty) => setQuantity(item.id, qty)} dark />
+                              onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} />
                           </div>
                         ))}
                       </div>
@@ -787,7 +790,7 @@ export const TabletMenuPage = () => {
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark />
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} />
                     </div>
                   ))}
                 </div>
@@ -804,7 +807,8 @@ export const TabletMenuPage = () => {
             </section>
           </div>
 
-          {/* ── Sidebar ── */}
+          {/* ── Sidebar — hidden in view-only mode ── */}
+          {!viewOnly && (
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             {/* CTA */}
             <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
@@ -816,6 +820,7 @@ export const TabletMenuPage = () => {
               </button>
             </section>
           </aside>
+          )}
         </section>
       </div>
     </main>

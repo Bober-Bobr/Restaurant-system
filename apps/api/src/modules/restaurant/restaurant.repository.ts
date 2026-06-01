@@ -16,6 +16,18 @@ export class RestaurantRepository {
     });
   }
 
+  async listAllPublic() {
+    return prisma.restaurant.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        company: { select: { name: true, logoUrl: true } },
+      },
+    });
+  }
+
   async findByStaffUserId(userId: string) {
     const user = await prisma.adminUser.findUnique({
       where: { id: userId },

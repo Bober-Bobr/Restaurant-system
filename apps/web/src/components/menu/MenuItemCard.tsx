@@ -10,9 +10,10 @@ type MenuItemCardProps = {
   quantity: number;
   onQuantityChange: (nextQuantity: number) => void;
   dark?: boolean;
+  viewOnly?: boolean;
 };
 
-export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false }: MenuItemCardProps) => {
+export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false }: MenuItemCardProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const photoSrc = getPhotoUrl(item.photoUrl);
 
@@ -82,7 +83,8 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false }:
           )}
         </div>
 
-        {/* Controls */}
+        {/* Controls — hidden in view-only mode */}
+        {!viewOnly && (
         <div className="mt-4">
           {quantity === 0 ? (
             <button
@@ -131,6 +133,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false }:
             </div>
           )}
         </div>
+        )}
       </div>
     </Wrapper>
   );
