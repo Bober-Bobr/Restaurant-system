@@ -5,12 +5,16 @@ import { TableCategoryRepository } from '../tableCategory/tableCategory.reposito
 import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
+import { InvitationController } from '../invitation/invitation.controller.js';
 
 const router = Router();
+const invitationController = new InvitationController();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
+
+router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
 
 router.get('/restaurants', async (_request, response, next) => {
   try {

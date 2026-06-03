@@ -150,6 +150,7 @@ export const OwnerCabinetPage = () => {
 
   const ROLE_LABEL_KEY: Record<AdminRole, Parameters<typeof translate>[0]> = {
     CHIEF_ADMIN: 'chief_admin_role',
+    MANAGER: 'manager_role',
     OWNER: 'owner_role',
     ADMIN: 'administrator_role',
     EMPLOYEE: 'employee_role',

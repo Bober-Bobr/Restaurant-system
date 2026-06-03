@@ -20,7 +20,7 @@ export class CompanyController {
   async updateOwn(request: Request, response: Response) {
     const data = updateCompanySchema.parse(request.body);
     const admin = request.admin!;
-    if (admin.role === 'CHIEF_ADMIN') {
+    if ((admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER')) {
       const repo = (service as any).repo;
       const company = await repo.update(String(request.params.id), data);
       response.json(company);
@@ -32,7 +32,7 @@ export class CompanyController {
 
   async deleteOwn(request: Request, response: Response) {
     const admin = request.admin!;
-    if (admin.role === 'CHIEF_ADMIN') {
+    if ((admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER')) {
       await service.deleteAsChief(String(request.params.id));
     } else {
       await service.deleteOwn(admin.id, String(request.params.id));

@@ -17,6 +17,7 @@ import { hallRouter } from './modules/hall/hall.routes.js';
 import { photoRoutes } from './modules/photos/photo.routes.js';
 import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
 import { companyRouter } from './modules/company/company.routes.js';
+import { invitationRouter } from './modules/invitation/invitation.routes.js';
 
 export const app = express();
 
@@ -64,6 +65,9 @@ protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/photos', photoRoutes);
 protectedApi.use('/restaurants', restaurantRouter);
 protectedApi.use('/companies', companyRouter);
+// Invitations: auth middleware is applied inside the router (it's outside the auto-mounted protected API
+// because routes use roles directly without requireRestaurant).
+app.use('/api/invitations', invitationRouter);
 
 app.use('/api', protectedApi);
 

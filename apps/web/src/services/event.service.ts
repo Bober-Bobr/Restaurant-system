@@ -2,8 +2,8 @@ import type { Event } from '../types/domain';
 import { httpClient } from './http';
 
 export const eventService = {
-  async list() {
-    const { data } = await httpClient.get<Event[]>('/events');
+  async list(params?: { restaurantId?: string }) {
+    const { data } = await httpClient.get<Event[]>('/events', { params });
     return data;
   },
   async create(payload: {

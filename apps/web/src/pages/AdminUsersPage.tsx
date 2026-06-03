@@ -12,6 +12,7 @@ import { EditCredentialsForm } from '../components/EditCredentialsForm';
 
 const ROLE_LABELS: Record<AdminRole, string> = {
   CHIEF_ADMIN: 'Chief Administrator',
+  MANAGER: 'Manager',
   OWNER: 'Owner',
   ADMIN: 'Administrator',
   EMPLOYEE: 'Employee',
@@ -20,6 +21,7 @@ const ROLE_LABELS: Record<AdminRole, string> = {
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   CHIEF_ADMIN: { background: '#dc2626', color: '#fff' },
+  MANAGER: { background: '#8b5cf6', color: '#fff' },
   OWNER: { background: '#7c3aed', color: '#fff' },
   ADMIN: { background: '#2563eb', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' },

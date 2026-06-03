@@ -9,6 +9,9 @@ import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { ChiefAdminPage } from '../pages/ChiefAdminPage';
 import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
+import { ManagerPortalPage, ManagerRestaurantEventsPage } from '../pages/ManagerPortalPage';
+import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
+import { PublicInvitationPage } from '../pages/PublicInvitationPage';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
 import { CalendarPage } from '../pages/CalendarPage';
@@ -19,7 +22,7 @@ import { AdminLayout } from './AdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, getInvitationSubdomainSlug, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -40,12 +43,53 @@ export const App = () => {
     }
   }
 
+  // Invitation subdomain (<slug>.invitation.v-menu.uz) → public viewer
+  if (getInvitationSubdomainSlug()) {
+    return (
+      <Routes>
+        <Route path="/:slug" element={<PublicInvitationPage />} />
+        <Route path="/" element={<PublicInvitationPage />} />
+        <Route path="*" element={<PublicInvitationPage />} />
+      </Routes>
+    );
+  }
+
+  // Manager subdomain → MANAGER portal
+  if (isManagerSubdomain()) {
+    const { accessToken, role } = useAuthStore.getState();
+    if (!accessToken || (role !== 'MANAGER' && role !== 'CHIEF_ADMIN')) {
+      if (window.location.pathname !== '/login') {
+        window.location.href = 'https://v-menu.uz/login';
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
+    return (
+      <Routes>
+        <Route path="/" element={<ManagerPortalPage />} />
+        <Route path="/restaurants/:restaurantId" element={<ManagerRestaurantEventsPage />} />
+        <Route path="/restaurants/:restaurantId/events/:eventId/invitation" element={<InvitationBuilderPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
   // On root domain, only /login, /tablet and /tablet/summary are accessible
   if (isRootDomain() && window.location.hostname !== 'localhost') {
     const { accessToken, role, restaurantName } = useAuthStore.getState();
     // CHIEF_ADMIN → admin.v-menu.uz
     if (accessToken && role === 'CHIEF_ADMIN' && window.location.pathname !== '/login') {
       window.location.href = 'https://admin.v-menu.uz/';
+      return null;
+    }
+    // MANAGER → manager.v-menu.uz
+    if (accessToken && role === 'MANAGER' && window.location.pathname !== '/login') {
+      window.location.href = 'https://manager.v-menu.uz/';
       return null;
     }
     // Authenticated user on root domain → send to their restaurant subdomain

@@ -71,6 +71,7 @@ model Event {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   selections      EventMenuSelection[]
+  invitation      Invitation?
   hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
   restaurant      Restaurant?       @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
@@ -82,6 +83,7 @@ model Event {
 
 enum AdminRole {
   CHIEF_ADMIN
+  MANAGER
   OWNER
   ADMIN
   EMPLOYEE
@@ -131,6 +133,7 @@ model Restaurant {
   menuItems       MenuItem[]
   tableCategories TableCategory[]
   halls           Hall[]
+  invitations     Invitation[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -218,5 +221,60 @@ model EventMenuSelection {
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, menuItemId])
+  @@index([eventId])
+}
+
+model Invitation {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  eventId         String?   @unique
+  restaurantId    String
+  createdById     String?
+
+  // Top hero card (gift / promo)
+  promoTitle      String?
+  promoSubtitle   String?
+  promoCode       String?
+  promoImageUrl   String?
+
+  // Secondary promo block under hero
+  promoCodeAlt    String?
+  promoDescription String?
+
+  // Telegram CTA
+  telegramUrl     String?
+  telegramLabel   String?
+
+  // Welcome / venue card
+  welcomeTitle    String?
+  welcomeSubtitle String?
+  welcomeImageUrl String?
+  welcomeMessage  String?
+
+  // Countdown
+  countdownAt     DateTime?
+  countdownLabel  String?
+
+  // Menu showcase items (JSON array of { number, name, photoUrl })
+  menuItems       Json      @default("[]")
+
+  // Photo gallery (JSON array of strings)
+  galleryPhotos   Json      @default("[]")
+
+  // Social + contacts
+  instagramUrl    String?
+  instagramLabel  String?
+  phone           String?
+  contactsTitle   String?
+  contactVCardUrl String?
+
+  isPublished     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  event       Event?      @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  restaurant  Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
   @@index([eventId])
 }

@@ -82,7 +82,7 @@ export class AuthController {
 
   async listUsers(request: Request, response: Response) {
     const admin = request.admin!;
-    if (admin.role === 'CHIEF_ADMIN') {
+    if (admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER') {
       response.json(await authService.listUsers());
       return;
     }
