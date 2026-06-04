@@ -167,7 +167,7 @@ export const TabletSummaryPage = () => {
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], pricing, locale, restaurantName: restaurantName ?? '' },
+          guestCount, selectedItems, menuItems: menuItems || [], pricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));

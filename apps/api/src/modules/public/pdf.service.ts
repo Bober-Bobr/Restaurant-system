@@ -29,6 +29,21 @@ interface SummaryData {
   };
   locale: Locale;
   restaurantName?: string;
+  restaurantLogoUrl?: string | null;
+}
+
+// Resolve a "/uploads/..." URL to an on-disk path, guarding against traversal.
+function resolveUploadPath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const marker = '/uploads/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null; // external URL or unrecognised — caller falls back
+  const relative = url.slice(idx + marker.length);
+  if (relative.includes('..')) return null;
+  const uploadsDir = path.join(process.cwd(), 'apps', 'api', 'uploads');
+  const full = path.join(uploadsDir, relative);
+  if (!full.startsWith(uploadsDir)) return null;
+  return full;
 }
 
 // ── Tablet-page theme ──────────────────────────────────────────────────────
@@ -82,9 +97,16 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     doc.roundedRect(MARGIN, MARGIN, contentWidth, headerH, 14).fill(PANEL_BG);
     doc.restore();
 
-    const logoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
+    // Prefer the restaurant's own logo; fall back to the bundled system logo.
     let logoImage: Buffer | null = null;
-    try { logoImage = fs.readFileSync(logoPath); } catch { /* no logo */ }
+    const restaurantLogoPath = resolveUploadPath(data.restaurantLogoUrl);
+    if (restaurantLogoPath) {
+      try { logoImage = fs.readFileSync(restaurantLogoPath); } catch { /* fall through */ }
+    }
+    if (!logoImage) {
+      const systemLogoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
+      try { logoImage = fs.readFileSync(systemLogoPath); } catch { /* no logo */ }
+    }
 
     const padX = MARGIN + 22;
     let textX = padX;

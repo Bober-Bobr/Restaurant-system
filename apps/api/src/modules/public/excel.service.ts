@@ -29,23 +29,47 @@ interface SummaryData {
   };
   locale: Locale;
   restaurantName?: string;
+  restaurantLogoUrl?: string | null;
+}
+
+function resolveUploadPath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const marker = '/uploads/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  const relative = url.slice(idx + marker.length);
+  if (relative.includes('..')) return null;
+  const uploadsDir = path.join(process.cwd(), 'apps', 'api', 'uploads');
+  const full = path.join(uploadsDir, relative);
+  if (!full.startsWith(uploadsDir)) return null;
+  return full;
 }
 
 export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Selection Summary');
 
-  // Load logo
-  const logoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
+  // Load logo — prefer the restaurant's own, fall back to system logo
+  let logoBuffer: Buffer | null = null;
+  let logoExt: 'png' | 'jpeg' = 'png';
+  const restaurantLogoPath = resolveUploadPath(data.restaurantLogoUrl);
+  if (restaurantLogoPath) {
+    try {
+      logoBuffer = fs.readFileSync(restaurantLogoPath);
+      logoExt = /\.jpe?g$/i.test(restaurantLogoPath) ? 'jpeg' : 'png';
+    } catch { /* fall through */ }
+  }
+  if (!logoBuffer) {
+    const systemLogoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
+    try { logoBuffer = fs.readFileSync(systemLogoPath); logoExt = 'png'; } catch { /* none */ }
+  }
+
   let logoImageId: number | undefined;
-  try {
-    const logoBuffer = fs.readFileSync(logoPath);
+  if (logoBuffer) {
     logoImageId = workbook.addImage({
       buffer: logoBuffer as any,
-      extension: 'png',
+      extension: logoExt,
     });
-  } catch (error) {
-    // Logo not found, continue without it
   }
 
   // Add logo if available
