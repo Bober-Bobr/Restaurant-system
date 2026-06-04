@@ -71,4 +71,23 @@ export class InvitationRepository {
     if (!existing) return false;
     return existing.id !== excludeId;
   }
+
+  // Events are externally identified by their per-restaurant `eventNumber` (int),
+  // not their cuid `id`. The invitation FK is on `id`, so we resolve here.
+  async resolveEventId(eventIdOrNumber: string | null | undefined, restaurantId: string): Promise<string | null> {
+    if (!eventIdOrNumber) return null;
+    const trimmed = String(eventIdOrNumber).trim();
+    if (!trimmed) return null;
+    const asInt = Number(trimmed);
+    if (Number.isInteger(asInt) && asInt > 0) {
+      const event = await prisma.event.findFirst({
+        where: { eventNumber: asInt, restaurantId },
+        select: { id: true },
+      });
+      return event?.id ?? null;
+    }
+    // Already a cuid (or some other id) — pass through.
+    const event = await prisma.event.findUnique({ where: { id: trimmed }, select: { id: true } });
+    return event?.id ?? null;
+  }
 }

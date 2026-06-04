@@ -74,7 +74,7 @@ export const InvitationBuilderPage = () => {
 
   const existingQuery = useQuery({
     queryKey: ['invitation-by-event', eventId],
-    queryFn: () => invitationService.byEvent(String(eventId)),
+    queryFn: () => invitationService.byEvent(String(eventId), restaurantId),
     enabled: !!accessToken && !!eventId,
   });
 

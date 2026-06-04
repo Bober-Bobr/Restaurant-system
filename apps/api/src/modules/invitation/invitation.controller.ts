@@ -25,8 +25,18 @@ export class InvitationController {
   }
 
   async getByEvent(request: Request, response: Response) {
-    const eventId = String(request.params.eventId);
-    const invitation = await repo.findByEventId(eventId);
+    const eventIdOrNumber = String(request.params.eventId);
+    const restaurantId = String(request.query.restaurantId ?? '').trim();
+    if (!restaurantId) {
+      response.status(400).json({ message: 'restaurantId required' });
+      return;
+    }
+    const cuid = await repo.resolveEventId(eventIdOrNumber, restaurantId);
+    if (!cuid) {
+      response.status(404).json({ message: 'Event not found' });
+      return;
+    }
+    const invitation = await repo.findByEventId(cuid);
     if (!invitation) {
       response.status(404).json({ message: 'No invitation for this event' });
       return;
@@ -49,8 +59,14 @@ export class InvitationController {
     const slugTaken = await repo.existsSlug(data.slug);
     if (slugTaken) throw createHttpError(409, 'Slug already in use');
 
+    const resolvedEventId = await repo.resolveEventId(data.eventId, data.restaurantId);
+    if (data.eventId && !resolvedEventId) {
+      throw createHttpError(404, 'Event not found for this restaurant');
+    }
+
     const created = await repo.create({
       ...normalizeJsonFields(data),
+      eventId: resolvedEventId,
       createdById: admin.id,
       menuItems: (data.menuItems ?? []) as unknown as object,
       galleryPhotos: (data.galleryPhotos ?? []) as unknown as object,

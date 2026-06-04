@@ -56,9 +56,9 @@ export const invitationService = {
     const { data } = await httpClient.get<Invitation[]>('/invitations', { params: { restaurantId } });
     return data;
   },
-  async byEvent(eventId: string): Promise<Invitation | null> {
+  async byEvent(eventId: string, restaurantId: string): Promise<Invitation | null> {
     try {
-      const { data } = await httpClient.get<Invitation>(`/invitations/by-event/${eventId}`);
+      const { data } = await httpClient.get<Invitation>(`/invitations/by-event/${eventId}`, { params: { restaurantId } });
       return data;
     } catch (e) {
       if (axios.isAxiosError(e) && e.response?.status === 404) return null;
