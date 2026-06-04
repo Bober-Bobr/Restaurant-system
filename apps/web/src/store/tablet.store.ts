@@ -19,7 +19,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedItems: {},
   selectedHallId: undefined,
   selectedTableCategoryId: undefined,
-  guestCount: 1,
+  guestCount: 0,
   locale: defaultLocale,
   setQuantity: (menuItemId, quantity) => {
     set((state) => ({
@@ -36,7 +36,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set({ selectedTableCategoryId: tableCategoryId });
   },
   setGuestCount: (count) => {
-    set({ guestCount: Math.max(count, 1) });
+    set({ guestCount: Math.max(count, 0) });
   },
   setLocale: (locale) => {
     set({ locale });
@@ -46,7 +46,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedItems: {},
       selectedHallId: undefined,
       selectedTableCategoryId: undefined,
-      guestCount: 1,
+      guestCount: 0,
       locale: defaultLocale
     });
   }
