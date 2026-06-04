@@ -630,8 +630,8 @@ export const TabletMenuPage = () => {
                 ))}
                 <div className="space-y-1.5">
                   <p className="rg-label">{t('guests')}</p>
-                  <input type="number" min={1} value={guestCount}
-                    onChange={(e) => setGuestCount(Number(e.target.value) || 1)}
+                  <input type="number" min={0} value={guestCount || ''}
+                    onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="rg-input" />
                 </div>
               </div>
