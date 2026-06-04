@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
 
-export type PhotoCategory = 'menu' | 'hall' | 'table';
+export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 
 const DISH_CATEGORIES = [
   'cold_appetizers', 'hot_appetizers', 'salads',

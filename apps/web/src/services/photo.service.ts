@@ -1,12 +1,18 @@
 import { httpClient } from './http';
 
-export type PhotoCategory = 'menu' | 'hall' | 'table';
+export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 
 export class PhotoService {
-  async uploadPhotos(category: PhotoCategory, files: File[], dishCategory?: string): Promise<string[]> {
+  async uploadPhotos(
+    category: PhotoCategory,
+    files: File[],
+    dishCategory?: string,
+    restaurantId?: string,
+  ): Promise<string[]> {
     const formData = new FormData();
     formData.append('category', category);
     if (dishCategory) formData.append('dishCategory', dishCategory);
+    if (restaurantId) formData.append('restaurantId', restaurantId);
     files.forEach(file => formData.append('files', file));
     const response = await httpClient.post<{ urls: string[] }>(`/photos/upload`, formData);
     return response.data.urls;

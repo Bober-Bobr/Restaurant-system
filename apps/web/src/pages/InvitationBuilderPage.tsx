@@ -5,9 +5,11 @@ import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
 import { eventService } from '../services/event.service';
 import { restaurantService } from '../services/restaurant.service';
+import { publicMenuService } from '../services/publicMenu.service';
 import { invitationService, type Invitation, type InvitationMenuItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
+import { PhotoUploadField } from '../components/PhotoUploadField';
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)',
@@ -157,19 +159,22 @@ export const InvitationBuilderPage = () => {
     ? `https://${restaurantSlug}.invitation.v-menu.uz/${form.slug}`
     : '';
 
-  const updateMenuItem = (index: number, patch: Partial<InvitationMenuItem>) => {
+  // Toggle a restaurant menu item in the invitation. Numbering is auto-assigned.
+  const toggleMenuItem = (selected: { id: string; name: string; photoUrl?: string | null }) => {
     const items = [...(form.menuItems ?? [])];
-    items[index] = { ...items[index], ...patch };
-    set('menuItems', items);
+    const idx = items.findIndex((it) => it.name === selected.name);
+    if (idx >= 0) {
+      items.splice(idx, 1);
+    } else {
+      items.push({ number: items.length + 1, name: selected.name, photoUrl: selected.photoUrl ?? null });
+    }
+    set('menuItems', items.map((it, i) => ({ ...it, number: i + 1 })));
   };
-  const addMenuItem = () => {
+  const moveMenuItem = (index: number, dir: -1 | 1) => {
     const items = [...(form.menuItems ?? [])];
-    items.push({ number: items.length + 1, name: '', photoUrl: '' });
-    set('menuItems', items);
-  };
-  const removeMenuItem = (index: number) => {
-    const items = [...(form.menuItems ?? [])];
-    items.splice(index, 1);
+    const next = index + dir;
+    if (next < 0 || next >= items.length) return;
+    [items[index], items[next]] = [items[next], items[index]];
     set('menuItems', items.map((it, i) => ({ ...it, number: i + 1 })));
   };
 
@@ -265,7 +270,12 @@ export const InvitationBuilderPage = () => {
           <Field label="Title"><input value={form.promoTitle ?? ''} onChange={(e) => set('promoTitle', e.target.value)} style={inputStyle} /></Field>
           <Field label="Subtitle"><input value={form.promoSubtitle ?? ''} onChange={(e) => set('promoSubtitle', e.target.value)} style={inputStyle} /></Field>
           <Field label="Promo code (badge)"><input value={form.promoCode ?? ''} onChange={(e) => set('promoCode', e.target.value)} style={inputStyle} placeholder="#MARJON88" /></Field>
-          <Field label="Promo image URL"><input value={form.promoImageUrl ?? ''} onChange={(e) => set('promoImageUrl', e.target.value)} style={inputStyle} placeholder="/uploads/..." /></Field>
+          <PhotoUploadField
+            label="Promo image"
+            value={form.promoImageUrl}
+            onChange={(url) => set('promoImageUrl', url)}
+            restaurantId={restaurantId}
+          />
           <Field label="Alt promo code"><input value={form.promoCodeAlt ?? ''} onChange={(e) => set('promoCodeAlt', e.target.value)} style={inputStyle} placeholder="#MARJON77" /></Field>
           <Field label="Description"><textarea value={form.promoDescription ?? ''} onChange={(e) => set('promoDescription', e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} /></Field>
         </Section>
@@ -278,7 +288,12 @@ export const InvitationBuilderPage = () => {
         <Section title="Welcome card">
           <Field label="Title"><input value={form.welcomeTitle ?? ''} onChange={(e) => set('welcomeTitle', e.target.value)} style={inputStyle} placeholder="Добро пожаловать" /></Field>
           <Field label="Subtitle"><input value={form.welcomeSubtitle ?? ''} onChange={(e) => set('welcomeSubtitle', e.target.value)} style={inputStyle} placeholder="Xush kelibsiz" /></Field>
-          <Field label="Image URL"><input value={form.welcomeImageUrl ?? ''} onChange={(e) => set('welcomeImageUrl', e.target.value)} style={inputStyle} /></Field>
+          <PhotoUploadField
+            label="Welcome image"
+            value={form.welcomeImageUrl}
+            onChange={(url) => set('welcomeImageUrl', url)}
+            restaurantId={restaurantId}
+          />
           <Field label="Message"><textarea value={form.welcomeMessage ?? ''} onChange={(e) => set('welcomeMessage', e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} /></Field>
         </Section>
 
@@ -293,19 +308,21 @@ export const InvitationBuilderPage = () => {
         </Section>
 
         <Section title="Menu showcase">
-          {(form.menuItems ?? []).map((item, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-              <Field label="№"><input type="number" min={1} value={item.number} onChange={(e) => updateMenuItem(i, { number: Number(e.target.value) || 1 })} style={inputStyle} /></Field>
-              <Field label="Name"><input value={item.name} onChange={(e) => updateMenuItem(i, { name: e.target.value })} style={inputStyle} /></Field>
-              <Field label="Photo URL"><input value={item.photoUrl ?? ''} onChange={(e) => updateMenuItem(i, { photoUrl: e.target.value })} style={inputStyle} /></Field>
-              <button type="button" onClick={() => removeMenuItem(i)} className="adm-btn-danger" style={{ fontSize: 11, padding: '7px 10px' }}>×</button>
-            </div>
-          ))}
-          <button type="button" onClick={addMenuItem} className="adm-btn-primary" style={{ fontSize: 12, justifySelf: 'start' }}>+ Add menu item</button>
+          <MenuPicker
+            restaurantId={restaurantId}
+            selected={form.menuItems ?? []}
+            onToggle={toggleMenuItem}
+            onMove={moveMenuItem}
+          />
         </Section>
 
         <Section title="Photo gallery">
-          <GalleryEditor photos={form.galleryPhotos ?? []} onAdd={addGalleryPhoto} onRemove={removeGalleryPhoto} />
+          <GalleryEditor
+            photos={form.galleryPhotos ?? []}
+            onAdd={addGalleryPhoto}
+            onRemove={removeGalleryPhoto}
+            restaurantId={restaurantId}
+          />
         </Section>
 
         <Section title="Contacts">
@@ -320,17 +337,15 @@ export const InvitationBuilderPage = () => {
   );
 };
 
-function GalleryEditor({ photos, onAdd, onRemove }: { photos: string[]; onAdd: (url: string) => void; onRemove: (i: number) => void }) {
-  const [url, setUrl] = useState('');
+function GalleryEditor({ photos, onAdd, onRemove, restaurantId }: { photos: string[]; onAdd: (url: string) => void; onRemove: (i: number) => void; restaurantId: string }) {
   return (
     <>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input value={url} onChange={(e) => setUrl(e.target.value)}
-          placeholder="/uploads/photo.jpg" style={inputStyle} />
-        <button type="button"
-          onClick={() => { onAdd(url); setUrl(''); }}
-          className="adm-btn-primary" style={{ fontSize: 12 }}>Add</button>
-      </div>
+      <PhotoUploadField
+        value={null}
+        onChange={(url) => { if (url) onAdd(url); }}
+        restaurantId={restaurantId}
+        height={110}
+      />
       {photos.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
           {photos.map((p, i) => (
@@ -344,4 +359,102 @@ function GalleryEditor({ photos, onAdd, onRemove }: { photos: string[]; onAdd: (
       )}
     </>
   );
+}
+
+function MenuPicker({
+  restaurantId, selected, onToggle, onMove,
+}: {
+  restaurantId: string;
+  selected: InvitationMenuItem[];
+  onToggle: (item: { id: string; name: string; photoUrl?: string | null }) => void;
+  onMove: (index: number, dir: -1 | 1) => void;
+}) {
+  const menuQuery = useQuery({
+    queryKey: ['public-menu', restaurantId],
+    queryFn: () => publicMenuService.listActive(restaurantId),
+    enabled: !!restaurantId,
+  });
+
+  const items = menuQuery.data ?? [];
+  const isSelected = (name: string) => selected.some((s) => s.name === name);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {selected.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <p style={{ margin: 0, ...labelStyle }}>Showcased ({selected.length})</p>
+          {selected.map((it, i) => (
+            <div key={`${it.name}-${i}`} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.25)',
+            }}>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', background: '#c9a42c', color: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{it.number}</span>
+              {it.photoUrl
+                ? <img src={getPhotoUrl(it.photoUrl) ?? it.photoUrl} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+              }
+              <span style={{ flex: 1, minWidth: 0, color: '#f8fafc', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</span>
+              <button type="button" onClick={() => onMove(i, -1)} disabled={i === 0}
+                style={moveBtnStyle(i === 0)}>↑</button>
+              <button type="button" onClick={() => onMove(i, 1)} disabled={i === selected.length - 1}
+                style={moveBtnStyle(i === selected.length - 1)}>↓</button>
+              <button type="button" onClick={() => onToggle({ id: it.name, name: it.name, photoUrl: it.photoUrl })}
+                style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1, flexShrink: 0 }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p style={{ margin: 0, ...labelStyle }}>Available menu items</p>
+      {menuQuery.isLoading && <p style={{ margin: 0, color: 'rgba(226,232,240,0.5)', fontSize: 12 }}>...</p>}
+      {!menuQuery.isLoading && items.length === 0 && (
+        <p style={{ margin: 0, color: 'rgba(226,232,240,0.5)', fontSize: 12 }}>
+          This restaurant has no active menu items yet.
+        </p>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+        {items.map((m) => {
+          const picked = isSelected(m.name);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onToggle({ id: m.id, name: m.name, photoUrl: m.photoUrl })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px', borderRadius: 10,
+                background: picked ? 'rgba(34,197,94,0.12)' : 'rgba(15,23,42,0.5)',
+                border: `1px solid ${picked ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                color: '#e2e8f0', textAlign: 'left', cursor: 'pointer',
+              }}
+            >
+              {m.photoUrl
+                ? <img src={getPhotoUrl(m.photoUrl) ?? undefined} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+              }
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
+              <span style={{ color: picked ? '#4ade80' : '#c9a42c', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                {picked ? '✓' : '+'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ margin: 0, fontSize: 11, color: 'rgba(226,232,240,0.45)' }}>
+        Showcase items come from this restaurant's menu. To add new items, open the restaurant's Menu page in the admin panel.
+      </p>
+    </div>
+  );
+}
+
+function moveBtnStyle(disabled: boolean): React.CSSProperties {
+  return {
+    width: 26, height: 26, borderRadius: 6,
+    background: disabled ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)',
+    color: disabled ? 'rgba(226,232,240,0.3)' : 'rgba(226,232,240,0.8)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    cursor: disabled ? 'default' : 'pointer',
+    fontSize: 12, lineHeight: 1, flexShrink: 0,
+  };
 }
