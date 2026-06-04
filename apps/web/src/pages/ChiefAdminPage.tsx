@@ -221,6 +221,7 @@ export const ChiefAdminPage = () => {
                 <input placeholder="Username" value={uName} onChange={(e) => setUName(e.target.value)} style={inputStyle} />
                 <input placeholder="Password" type="password" value={uPwd} onChange={(e) => setUPwd(e.target.value)} style={inputStyle} />
                 <select value={uRole} onChange={(e) => setURole(e.target.value as AdminRole)} style={inputStyle}>
+                  <option value="MANAGER">MANAGER</option>
                   <option value="OWNER">OWNER</option>
                   <option value="ADMIN">ADMIN</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
@@ -258,6 +259,7 @@ export const ChiefAdminPage = () => {
                       style={{ ...inputStyle, width: 130 }}
                     >
                       <option value="CHIEF_ADMIN">CHIEF_ADMIN</option>
+                      <option value="MANAGER">MANAGER</option>
                       <option value="OWNER">OWNER</option>
                       <option value="ADMIN">ADMIN</option>
                       <option value="EMPLOYEE">EMPLOYEE</option>

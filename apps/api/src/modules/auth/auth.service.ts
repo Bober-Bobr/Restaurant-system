@@ -76,7 +76,7 @@ export class AuthService {
     payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }
   ) {
     if (caller.role === AdminRole.OWNER) {
-      if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN) {
+      if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN || payload.role === AdminRole.MANAGER) {
         throw createHttpError(403, 'Owners can only create Administrator, Employee, or Kitchen accounts.');
       }
     }
@@ -184,11 +184,14 @@ export class AuthService {
   }
 
   async updateUserRole(callerRole: AdminRole, targetId: string, newRole: AdminRole) {
-    if (callerRole !== AdminRole.OWNER) {
-      throw createHttpError(403, 'Only the Owner can change roles.');
+    // CHIEF_ADMIN can assign any role. OWNER can only assign ADMIN/EMPLOYEE/KITCHEN.
+    if (callerRole !== AdminRole.CHIEF_ADMIN && callerRole !== AdminRole.OWNER) {
+      throw createHttpError(403, 'You cannot change user roles.');
     }
-    if (newRole === AdminRole.OWNER) {
-      throw createHttpError(400, 'Cannot assign the Owner role.');
+    if (callerRole === AdminRole.OWNER) {
+      if (newRole === AdminRole.CHIEF_ADMIN || newRole === AdminRole.MANAGER || newRole === AdminRole.OWNER) {
+        throw createHttpError(403, 'Owners can only assign Administrator, Employee, or Kitchen roles.');
+      }
     }
     const target = await this.authRepository.findById(targetId);
     if (!target) throw createHttpError(404, 'User not found');
