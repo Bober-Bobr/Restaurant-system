@@ -17,6 +17,8 @@ type FoodCategory = MenuItem['category'];
 const FOOD_PACKAGE_CATEGORIES: FoodCategory[] = [
   'COLD_APPETIZERS',
   'SALADS',
+  'FIRST_COURSE',
+  'SECOND_COURSE',
   'DRINKS',
   'SWEETS',
   'FRUITS',

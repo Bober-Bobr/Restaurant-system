@@ -30,6 +30,18 @@ const SLOT_KEYS: Record<Slot, Parameters<typeof translate>[0]> = {
   dinner: 'dinner',
 };
 
+type EventInfo = { name: string; time: string; type: string | null; sortAt: number };
+type DayBooking = { slots: Set<Slot>; events: EventInfo[] };
+
+const EVENT_TYPE_KEY: Record<string, Parameters<typeof translate>[0]> = {
+  RESERVATION: 'event_type_reservation',
+  BANQUET: 'event_type_banquet',
+  WEDDING: 'event_type_wedding',
+  BIRTHDAY: 'event_type_birthday',
+  PRIVATE_PARTY: 'event_type_private_party',
+  CORPORATE: 'event_type_corporate',
+};
+
 // Returns which slot an event time falls into (or null if outside the windows).
 function slotForHour(hour: number): Slot | null {
   if (hour >= 6 && hour < 11) return 'breakfast';
@@ -60,9 +72,9 @@ export const CalendarPage = () => {
   const halls = (hallsQuery.data ?? []).filter((h) => h.isActive);
   const events = eventsQuery.data ?? [];
 
-  // Map: hallId → date key (YYYY-MM-DD) → set of slots filled
+  // Map: hallId → date key (YYYY-MM-DD) → { slots, events }
   const bookingsByHallByDay = useMemo(() => {
-    const map = new Map<string, Map<string, Set<Slot>>>();
+    const map = new Map<string, Map<string, DayBooking>>();
     for (const ev of events) {
       if (!ev.hallId || ev.status === 'CANCELLED') continue;
       const d = new Date(ev.eventDate);
@@ -71,8 +83,20 @@ export const CalendarPage = () => {
       const slot = slotForHour(d.getHours());
       if (!map.has(ev.hallId)) map.set(ev.hallId, new Map());
       const dayMap = map.get(ev.hallId)!;
-      if (!dayMap.has(dayKey)) dayMap.set(dayKey, new Set());
-      if (slot) dayMap.get(dayKey)!.add(slot);
+      if (!dayMap.has(dayKey)) dayMap.set(dayKey, { slots: new Set(), events: [] });
+      const booking = dayMap.get(dayKey)!;
+      if (slot) booking.slots.add(slot);
+      booking.events.push({
+        name: ev.customerName,
+        time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+        type: ev.eventType ?? null,
+        sortAt: d.getTime(),
+      });
+    }
+    for (const dayMap of map.values()) {
+      for (const booking of dayMap.values()) {
+        booking.events.sort((a, b) => a.sortAt - b.sortAt);
+      }
     }
     return map;
   }, [events]);
@@ -166,25 +190,26 @@ function HallCalendar({
   hall: Hall;
   year: number;
   month: number;
-  bookings: Map<string, Set<Slot>>;
+  bookings: Map<string, DayBooking>;
   t: (k: Parameters<typeof translate>[0], p?: Record<string, string | number>) => string;
 }) {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
   // Build grid: 6 rows × 7 days = 42 cells max
   const firstOfMonth = new Date(year, month, 1);
   const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // shift so Monday = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const cells: Array<{ day: number | null; key: string; slots: Set<Slot> | null }> = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push({ day: null, key: `lead-${i}`, slots: null });
+  const cells: Array<{ day: number | null; key: string; booking: DayBooking | null }> = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push({ day: null, key: `lead-${i}`, booking: null });
   for (let d = 1; d <= daysInMonth; d++) {
     const dayKey = `${year}-${month}-${d}`;
-    const slots = bookings.get(dayKey) ?? null;
-    cells.push({ day: d, key: dayKey, slots });
+    const booking = bookings.get(dayKey) ?? null;
+    cells.push({ day: d, key: dayKey, booking });
   }
-  while (cells.length % 7 !== 0) cells.push({ day: null, key: `tail-${cells.length}`, slots: null });
+  while (cells.length % 7 !== 0) cells.push({ day: null, key: `tail-${cells.length}`, booking: null });
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -224,55 +249,118 @@ function HallCalendar({
             return <div key={cell.key} />;
           }
           const isToday = isCurrentMonth && cell.day === today.getDate();
-          const hasBookings = cell.slots !== null;
+          const booking = cell.booking;
+          const hasBookings = booking !== null;
+          const isOpen = openKey === cell.key;
           return (
-            <div
-              key={cell.key}
-              style={{
-                aspectRatio: '1 / 1',
-                position: 'relative',
-                borderRadius: 8,
-                border: '1px solid',
-                borderColor: isToday ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.06)',
-                background: hasBookings
-                  ? 'rgba(220,38,38,0.32)'
-                  : 'rgba(15,23,42,0.4)',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'flex-start',
-                padding: '4px 2px 2px',
-                overflow: 'hidden',
-              }}
-            >
-              <span style={{
-                fontSize: 13, fontWeight: isToday ? 800 : 600,
-                color: isToday ? '#c9a42c' : (hasBookings ? '#fff' : 'rgba(226,232,240,0.7)'),
-                lineHeight: 1,
-              }}>
-                {cell.day}
-              </span>
-              {hasBookings && (
-                <div style={{ display: 'flex', gap: 3, marginTop: 'auto', marginBottom: 2 }}>
-                  {(['breakfast', 'lunch', 'dinner'] as Slot[]).map((slot) => {
-                    const filled = cell.slots!.has(slot);
-                    return (
-                      <span
-                        key={slot}
-                        title={t(SLOT_KEYS[slot])}
-                        style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: filled ? SLOT_COLORS[slot] : 'transparent',
-                          border: filled ? 'none' : `1px solid ${SLOT_COLORS[slot]}80`,
-                          opacity: filled ? 1 : 0.4,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+            <div key={cell.key} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => hasBookings && setOpenKey(isOpen ? null : cell.key)}
+                style={{
+                  width: '100%',
+                  aspectRatio: '1 / 1',
+                  borderRadius: 8,
+                  border: '1px solid',
+                  borderColor: isOpen ? '#c9a42c' : isToday ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.06)',
+                  background: hasBookings ? 'rgba(220,38,38,0.32)' : 'rgba(15,23,42,0.4)',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'flex-start',
+                  padding: '4px 2px 2px',
+                  overflow: 'hidden',
+                  cursor: hasBookings ? 'pointer' : 'default',
+                  font: 'inherit',
+                }}
+              >
+                <span style={{
+                  fontSize: 13, fontWeight: isToday ? 800 : 600,
+                  color: isToday ? '#c9a42c' : (hasBookings ? '#fff' : 'rgba(226,232,240,0.7)'),
+                  lineHeight: 1,
+                }}>
+                  {cell.day}
+                </span>
+                {hasBookings && (
+                  <div style={{ display: 'flex', gap: 3, marginTop: 'auto', marginBottom: 2 }}>
+                    {(['breakfast', 'lunch', 'dinner'] as Slot[]).map((slot) => {
+                      const filled = booking!.slots.has(slot);
+                      return (
+                        <span
+                          key={slot}
+                          title={t(SLOT_KEYS[slot])}
+                          style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: filled ? SLOT_COLORS[slot] : 'transparent',
+                            border: filled ? 'none' : `1px solid ${SLOT_COLORS[slot]}80`,
+                            opacity: filled ? 1 : 0.4,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </button>
+
+              {isOpen && booking && (
+                <EventDayBox booking={booking} onClose={() => setOpenKey(null)} t={t} />
               )}
             </div>
           );
         })}
       </div>
     </section>
+  );
+}
+
+function EventDayBox({
+  booking, onClose, t,
+}: {
+  booking: DayBooking;
+  onClose: () => void;
+  t: (k: Parameters<typeof translate>[0], p?: Record<string, string | number>) => string;
+}) {
+  return (
+    <>
+      {/* Backdrop to catch outside clicks */}
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+      <div
+        className="scale-in"
+        style={{
+          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginTop: 6, zIndex: 41,
+          width: 'max(220px, 100%)',
+          background: 'rgba(15,23,42,0.98)',
+          border: '1px solid rgba(201,164,44,0.4)',
+          borderRadius: 12,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+          padding: 10,
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}
+      >
+        {booking.events.map((ev, i) => (
+          <div key={i} style={{
+            display: 'flex', flexDirection: 'column', gap: 2,
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'rgba(201,164,44,0.08)',
+            border: '1px solid rgba(201,164,44,0.2)',
+          }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{ev.name}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{ev.time}</span>
+              {ev.type && (
+                <span style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: '0.04em',
+                  padding: '2px 8px', borderRadius: 999,
+                  background: 'rgba(139,92,246,0.15)', color: '#c4b5fd',
+                  border: '1px solid rgba(139,92,246,0.3)',
+                }}>
+                  {EVENT_TYPE_KEY[ev.type] ? t(EVENT_TYPE_KEY[ev.type]) : ev.type}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
