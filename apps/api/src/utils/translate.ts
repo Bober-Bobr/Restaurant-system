@@ -29,7 +29,9 @@ const resources = {
     summary: 'Summary',
     thank_you_message: 'Thank you for choosing our banquet services. Your selection has been recorded.',
     total_guests: 'Total guests',
-    estimated_total: 'Estimated total'
+    estimated_total: 'Estimated total',
+    original_price: 'Original price',
+    discount: 'Discount'
   },
   ru: {
     selection_summary: 'Сводка выбора',
@@ -55,7 +57,9 @@ const resources = {
     summary: 'Сводка',
     thank_you_message: 'Спасибо за выбор наших банкетных услуг. Ваш выбор записан.',
     total_guests: 'Всего гостей',
-    estimated_total: 'Предполагаемая сумма'
+    estimated_total: 'Предполагаемая сумма',
+    original_price: 'Цена без скидки',
+    discount: 'Скидка'
   },
   uz: {
     selection_summary: 'Tanlov xulosasi',
@@ -81,7 +85,9 @@ const resources = {
     summary: 'Xulosa',
     thank_you_message: 'Banket xizmatlarimizni tanlaganingiz uchun rahmat. Sizning tanlovingiz saqlanib qoldi.',
     total_guests: 'Jami mehmonlar',
-    estimated_total: 'Taxminiy summa'
+    estimated_total: 'Taxminiy summa',
+    original_price: 'Chegirmasiz narx',
+    discount: 'Chegirma'
   }
 } as const;
 

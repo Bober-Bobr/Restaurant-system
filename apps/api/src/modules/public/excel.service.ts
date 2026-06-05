@@ -30,6 +30,9 @@ interface SummaryData {
     taxCents: number;
     totalCents: number;
     perGuestCents: number;
+    discountPercent?: number;
+    hasDiscount?: boolean;
+    originalTotalCents?: number;
   };
   locale: Locale;
   restaurantName?: string;
@@ -205,6 +208,19 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
 
   const taxRow = worksheet.addRow([translate('tax', data.locale), '', '', '', tiyinToSom(data.pricing.taxCents)]);
   taxRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
+
+  const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
+  if (hasDiscount && data.pricing.originalTotalCents != null) {
+    const origRow = worksheet.addRow([translate('original_price', data.locale), '', '', '', tiyinToSom(data.pricing.originalTotalCents)]);
+    origRow.getCell(1).font = { ...origRow.getCell(1).font, family: 2 };
+    // Strike-through the original total to show it's superseded
+    origRow.getCell(5).font = { family: 2, strike: true, color: { argb: 'FF888888' } };
+    origRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+
+    const discRow = worksheet.addRow([`${translate('discount', data.locale)} (−${data.pricing.discountPercent}%)`, '', '', '', '']);
+    discRow.getCell(1).font = { family: 2, color: { argb: 'FFC00000' }, bold: true };
+    discRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  }
 
   const totalRow = worksheet.addRow([translate('total', data.locale), '', '', '', tiyinToSom(data.pricing.totalCents)]);
   totalRow.getCell(1).font = { bold: true, family: 2 };
