@@ -81,6 +81,20 @@ export class AuthRepository {
             select: { id: true, username: true, role: true }
         });
     }
+    async updateCredentials(userId, data) {
+        return prisma.adminUser.update({
+            where: { id: userId },
+            data,
+            select: { id: true, username: true, role: true, restaurantId: true, createdAt: true }
+        });
+    }
+    async findRestaurantIdsByOwner(ownerId) {
+        const restaurants = await prisma.restaurant.findMany({
+            where: { ownerId },
+            select: { id: true }
+        });
+        return restaurants.map((r) => r.id);
+    }
     async deleteById(userId) {
         return prisma.adminUser.delete({ where: { id: userId } });
     }

@@ -65,6 +65,15 @@ export const requireRestaurant = async (request, response, next) => {
         response.status(401).json({ message: 'Unauthorized' });
         return;
     }
+    // CHIEF_ADMIN and MANAGER can scope to any restaurant via ?restaurantId=
+    if (admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER') {
+        const queryRestaurantId = String(request.query.restaurantId ?? request.body?.restaurantId ?? '').trim();
+        if (queryRestaurantId) {
+            request.restaurantId = queryRestaurantId;
+            next();
+            return;
+        }
+    }
     if (admin.restaurantId) {
         request.restaurantId = admin.restaurantId;
         next();

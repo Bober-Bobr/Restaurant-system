@@ -1,96 +1,202 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { translate } from '../../utils/translate.js';
+import { formatSom } from '../../utils/currency.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// When compiled: dist/modules/public/ → three levels up → apps/api/
+const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
+// Resolve a "/uploads/..." URL to an on-disk path, guarding against traversal.
+function resolveUploadPath(url) {
+    if (!url)
+        return null;
+    const marker = '/uploads/';
+    const idx = url.indexOf(marker);
+    if (idx === -1)
+        return null; // external URL or unrecognised — caller falls back
+    const relative = url.slice(idx + marker.length);
+    if (relative.includes('..'))
+        return null;
+    const full = path.join(UPLOADS_DIR, relative);
+    if (!full.startsWith(UPLOADS_DIR))
+        return null;
+    return full;
+}
+// Load the logo buffer: restaurant upload (local file) → remote URL → system logo.
+export async function loadLogoBuffer(restaurantLogoUrl, uploadsDir) {
+    // 1. Local uploaded file
+    const localPath = resolveUploadPath(restaurantLogoUrl);
+    if (localPath) {
+        try {
+            return fs.readFileSync(localPath);
+        }
+        catch { /* fall through */ }
+    }
+    // 2. Remote http(s) URL
+    if (restaurantLogoUrl && /^https?:\/\//i.test(restaurantLogoUrl)) {
+        try {
+            const res = await fetch(restaurantLogoUrl);
+            if (res.ok) {
+                const ab = await res.arrayBuffer();
+                return Buffer.from(ab);
+            }
+        }
+        catch { /* fall through */ }
+    }
+    // 3. Bundled system logo (try dist-relative then cwd-relative)
+    const candidates = [
+        path.resolve(uploadsDir, '..', 'src', 'assets', 'logo.png'),
+        path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png'),
+    ];
+    for (const c of candidates) {
+        try {
+            return fs.readFileSync(c);
+        }
+        catch { /* try next */ }
+    }
+    return null;
+}
+// ── Tablet-page theme ──────────────────────────────────────────────────────
+const PAGE_BG = '#0a1f12'; // deep green
+const PANEL_BG = '#15301f'; // lighter green card
+const GOLD = '#c9a42c';
+const WHITE = '#f4f7f5';
+const MUTED = '#9fb8a6';
+const DIVIDER = '#2a4d36';
+const MARGIN = 50;
 export async function generateSummaryPdf(data) {
+    const logoImage = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50, bufferPages: true });
+        const doc = new PDFDocument({ margin: MARGIN, bufferPages: true });
         const buffers = [];
         doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-            const pdfBuffer = Buffer.concat(buffers);
-            resolve(pdfBuffer);
-        });
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
-        // Register Cyrillic-compatible fonts
+        // Fonts (Cyrillic-capable on Linux; fallback handled by pdfkit itself)
+        let fontRegular = 'Helvetica';
+        let fontBold = 'Helvetica-Bold';
         try {
-            // Try to register DejaVuSans fonts (common on Linux)
             doc.registerFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
             doc.registerFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf');
+            fontRegular = 'DejaVu';
+            fontBold = 'DejaVu-Bold';
         }
-        catch (error) {
-            // Fonts not available, fallback to Helvetica
-            // This may cause issues with Cyrillic text
+        catch {
+            // keep Helvetica
         }
-        // Load logo
-        const logoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
-        let logoImage = null;
-        try {
-            logoImage = fs.readFileSync(logoPath);
-        }
-        catch (error) {
-            // Logo not found, continue without it
-        }
-        // Header with logo and restaurant name
-        const headerY = 50;
-        const logoWidth = 80;
-        const logoHeight = 80;
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        const contentWidth = pageWidth - MARGIN * 2;
+        const paintBackground = () => {
+            doc.save();
+            doc.rect(0, 0, pageWidth, pageHeight).fill(PAGE_BG);
+            doc.restore();
+        };
+        doc.on('pageAdded', paintBackground);
+        paintBackground();
+        const t = (key) => translate(key, data.locale);
+        // ── Header band ──────────────────────────────────────────────────────
+        const headerH = 110;
+        doc.save();
+        doc.roundedRect(MARGIN, MARGIN, contentWidth, headerH, 14).fill(PANEL_BG);
+        doc.restore();
+        const padX = MARGIN + 22;
+        let textX = padX;
         if (logoImage) {
-            doc.image(logoImage, 50, headerY, { width: logoWidth, height: logoHeight });
-        }
-        // Restaurant name and title on the right of logo
-        const contentX = logoImage ? 50 + logoWidth + 30 : 50;
-        const restaurantName = data.restaurantName || 'Restaurant';
-        doc.font('DejaVu-Bold', 20).text(restaurantName, contentX, headerY + 10);
-        doc.font('DejaVu', 12).text(translate('selection_summary', data.locale), contentX, headerY + 40, { width: 350 });
-        doc.moveDown(5);
-        // Customer Information
-        doc.font('DejaVu-Bold', 14).text(translate('customer_information', data.locale), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('DejaVu', 11).text(`${translate('name', data.locale)}: ${data.customerName}`);
-        doc.text(`${translate('phone', data.locale)}: ${data.customerPhone}`);
-        doc.moveDown();
-        // Event Details
-        doc.font('DejaVu-Bold', 14).text(translate('event_details', data.locale), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('DejaVu', 11).text(`${translate('hall', data.locale)}: ${data.hallName}`);
-        doc.text(`${translate('table_category', data.locale)}: ${data.tableCategoryName}`);
-        doc.text(`${translate('guest_count', data.locale)}: ${data.guestCount}`);
-        doc.moveDown();
-        // Menu
-        doc.font('DejaVu-Bold', 14).text(translate('selected_menu_items', data.locale), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('DejaVu', 11);
-        const selectedMenuItems = data.menuItems.filter(item => data.selectedItems[item.id] > 0);
-        selectedMenuItems.forEach(item => {
-            const quantity = data.selectedItems[item.id];
-            const itemTotal = (item.priceCents * quantity) / 100;
-            doc.text(`${item.name} (x${quantity}) - $${itemTotal.toFixed(2)}`);
-            if (item.description) {
-                doc.font('DejaVu', 9).text(`  ${item.description}`, { indent: 20 });
-                doc.font('DejaVu', 11);
+            try {
+                doc.image(logoImage, padX, MARGIN + 22, { fit: [66, 66] });
+                textX = padX + 84;
             }
-        });
-        doc.moveDown();
-        // Prices
-        doc.font('DejaVu-Bold', 14).text(translate('pricing', data.locale), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('DejaVu', 11);
-        doc.text(`${translate('subtotal', data.locale)}: $${(data.pricing.subtotalCents / 100).toFixed(2)}`);
-        doc.text(`${translate('service_fee', data.locale)}: $${(data.pricing.serviceFeeCents / 100).toFixed(2)}`);
-        doc.text(`${translate('tax', data.locale)}: $${(data.pricing.taxCents / 100).toFixed(2)}`);
-        doc.text(`${translate('total', data.locale)}: $${(data.pricing.totalCents / 100).toFixed(2)}`);
-        if (data.guestCount > 1) {
-            doc.text(`${translate('price_per_guest', data.locale)}: $${(data.pricing.perGuestCents / 100).toFixed(2)}`);
+            catch { /* ignore */ }
         }
-        doc.moveDown();
-        // Summary
-        doc.font('DejaVu-Bold', 14).text(translate('summary', data.locale), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('DejaVu', 11);
-        doc.text(translate('thank_you_message', data.locale));
-        doc.text(`${translate('total_guests', data.locale)}: ${data.guestCount}`);
-        doc.text(`${translate('estimated_total', data.locale)}: $${(data.pricing.totalCents / 100).toFixed(2)}`);
+        doc.fillColor(GOLD).font(fontBold, 22)
+            .text(data.restaurantName || 'Restaurant', textX, MARGIN + 30, { width: contentWidth - (textX - MARGIN) - 22 });
+        doc.fillColor(MUTED).font(fontRegular, 12)
+            .text(t('selection_summary'), textX, MARGIN + 62, { width: contentWidth - (textX - MARGIN) - 22 });
+        doc.y = MARGIN + headerH + 24;
+        // ── Section helper: gold title with accent bar + divider ─────────────
+        const section = (title) => {
+            if (doc.y > pageHeight - 120)
+                doc.addPage();
+            const y = doc.y;
+            doc.save();
+            doc.roundedRect(MARGIN, y, 4, 16, 2).fill(GOLD);
+            doc.restore();
+            doc.fillColor(GOLD).font(fontBold, 14).text(title, MARGIN + 14, y, { width: contentWidth - 14 });
+            doc.moveDown(0.4);
+            const ly = doc.y;
+            doc.save();
+            doc.moveTo(MARGIN, ly).lineTo(pageWidth - MARGIN, ly).lineWidth(0.6).strokeColor(DIVIDER).stroke();
+            doc.restore();
+            doc.moveDown(0.5);
+        };
+        const labelValue = (label, value) => {
+            const y = doc.y;
+            doc.fillColor(MUTED).font(fontRegular, 11).text(`${label}:`, MARGIN, y, { continued: true });
+            doc.fillColor(WHITE).font(fontBold, 11).text(`  ${value}`);
+        };
+        const priceRow = (label, value, emphasize = false) => {
+            const y = doc.y;
+            doc.fillColor(emphasize ? GOLD : MUTED).font(emphasize ? fontBold : fontRegular, emphasize ? 13 : 11)
+                .text(label, MARGIN, y, { width: contentWidth * 0.6, continued: false });
+            doc.fillColor(emphasize ? GOLD : WHITE).font(fontBold, emphasize ? 13 : 11)
+                .text(value, MARGIN, y, { width: contentWidth, align: 'right' });
+        };
+        // ── Customer ──────────────────────────────────────────────────────────
+        section(t('customer_information'));
+        labelValue(t('name'), data.customerName);
+        labelValue(t('phone'), data.customerPhone);
+        doc.moveDown(1);
+        // ── Event details ───────────────────────────────────────────────────
+        section(t('event_details'));
+        labelValue(t('hall'), data.hallName);
+        labelValue(t('table_category'), data.tableCategoryName);
+        labelValue(t('guest_count'), String(data.guestCount));
+        doc.moveDown(1);
+        // ── Menu items ──────────────────────────────────────────────────────
+        section(t('selected_menu_items'));
+        const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id] > 0);
+        if (selectedMenuItems.length === 0) {
+            doc.fillColor(MUTED).font(fontRegular, 11).text('—', MARGIN);
+        }
+        selectedMenuItems.forEach((item) => {
+            const quantity = data.selectedItems[item.id];
+            const itemTotal = item.priceCents * quantity;
+            const y = doc.y;
+            doc.fillColor(WHITE).font(fontRegular, 11)
+                .text(`${item.name}  ×${quantity}`, MARGIN, y, { width: contentWidth * 0.65, continued: false });
+            doc.fillColor(GOLD).font(fontBold, 11)
+                .text(formatSom(itemTotal), MARGIN, y, { width: contentWidth, align: 'right' });
+            if (item.description) {
+                doc.fillColor(MUTED).font(fontRegular, 9).text(item.description, MARGIN + 12, doc.y, { width: contentWidth - 12 });
+            }
+            doc.moveDown(0.3);
+        });
+        doc.moveDown(0.7);
+        // ── Pricing ─────────────────────────────────────────────────────────
+        section(t('pricing'));
+        priceRow(t('subtotal'), formatSom(data.pricing.subtotalCents));
+        priceRow(t('service_fee'), formatSom(data.pricing.serviceFeeCents));
+        priceRow(t('tax'), formatSom(data.pricing.taxCents));
+        doc.moveDown(0.2);
+        priceRow(t('total'), formatSom(data.pricing.totalCents), true);
+        if (data.guestCount > 1) {
+            priceRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents));
+        }
+        doc.moveDown(1);
+        // ── Summary footer ──────────────────────────────────────────────────
+        if (doc.y > pageHeight - 140)
+            doc.addPage();
+        const fy = doc.y;
+        const footerH = 84;
+        doc.save();
+        doc.roundedRect(MARGIN, fy, contentWidth, footerH, 12).fill(PANEL_BG);
+        doc.restore();
+        doc.fillColor(WHITE).font(fontRegular, 11)
+            .text(t('thank_you_message'), MARGIN + 18, fy + 16, { width: contentWidth - 36 });
+        doc.fillColor(GOLD).font(fontBold, 14)
+            .text(`${t('estimated_total')}: ${formatSom(data.pricing.totalCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
         doc.end();
     });
 }

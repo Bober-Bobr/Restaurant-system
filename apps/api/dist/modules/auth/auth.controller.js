@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
-import { loginSchema, refreshTokenSchema, registerSchema, updateRoleSchema } from './auth.schema.js';
+import { loginSchema, refreshTokenSchema, registerSchema, updateCredentialsSchema, updateRoleSchema } from './auth.schema.js';
 import { AuthService } from './auth.service.js';
 const authService = new AuthService(new AuthRepository());
 export class AuthController {
@@ -64,8 +64,12 @@ export class AuthController {
     }
     async listUsers(request, response) {
         const admin = request.admin;
-        if (admin.role === 'CHIEF_ADMIN') {
+        if (admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER') {
             response.json(await authService.listUsers());
+            return;
+        }
+        if (admin.role === 'OWNER') {
+            response.json(await authService.listUsersForOwner(admin.id));
             return;
         }
         const restaurantId = await authService.resolveRestaurantId(admin.id, admin.restaurantId);
@@ -76,7 +80,8 @@ export class AuthController {
         response.json(await authService.listUsersForRestaurant(restaurantId));
     }
     async createUserAsChief(request, response) {
-        const result = await authService.createUserAsChief(request.body);
+        const admin = request.admin;
+        const result = await authService.createUserAsChief({ id: admin.id, role: admin.role, restaurantId: admin.restaurantId ?? null }, request.body);
         response.status(201).json(result);
     }
     async deleteUser(request, response) {
@@ -88,6 +93,12 @@ export class AuthController {
         const admin = request.admin;
         const { role } = updateRoleSchema.parse(request.body);
         const updated = await authService.updateUserRole(admin.role, String(request.params.id), role);
+        response.json(updated);
+    }
+    async updateCredentials(request, response) {
+        const admin = request.admin;
+        const payload = updateCredentialsSchema.parse(request.body);
+        const updated = await authService.updateUserCredentials({ id: admin.id, role: admin.role, restaurantId: admin.restaurantId ?? null }, String(request.params.id), payload);
         response.json(updated);
     }
 }

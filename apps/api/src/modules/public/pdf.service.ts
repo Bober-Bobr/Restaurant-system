@@ -1,8 +1,13 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { translate, type Locale } from '../../utils/translate.js';
 import { formatSom } from '../../utils/currency.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// When compiled: dist/modules/public/ → three levels up → apps/api/
+const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
 
 interface MenuItem {
   id: string;
@@ -40,10 +45,40 @@ function resolveUploadPath(url: string | null | undefined): string | null {
   if (idx === -1) return null; // external URL or unrecognised — caller falls back
   const relative = url.slice(idx + marker.length);
   if (relative.includes('..')) return null;
-  const uploadsDir = path.join(process.cwd(), 'apps', 'api', 'uploads');
-  const full = path.join(uploadsDir, relative);
-  if (!full.startsWith(uploadsDir)) return null;
+  const full = path.join(UPLOADS_DIR, relative);
+  if (!full.startsWith(UPLOADS_DIR)) return null;
   return full;
+}
+
+// Load the logo buffer: restaurant upload (local file) → remote URL → system logo.
+export async function loadLogoBuffer(
+  restaurantLogoUrl: string | null | undefined,
+  uploadsDir: string,
+): Promise<Buffer | null> {
+  // 1. Local uploaded file
+  const localPath = resolveUploadPath(restaurantLogoUrl);
+  if (localPath) {
+    try { return fs.readFileSync(localPath); } catch { /* fall through */ }
+  }
+  // 2. Remote http(s) URL
+  if (restaurantLogoUrl && /^https?:\/\//i.test(restaurantLogoUrl)) {
+    try {
+      const res = await fetch(restaurantLogoUrl);
+      if (res.ok) {
+        const ab = await res.arrayBuffer();
+        return Buffer.from(ab);
+      }
+    } catch { /* fall through */ }
+  }
+  // 3. Bundled system logo (try dist-relative then cwd-relative)
+  const candidates = [
+    path.resolve(uploadsDir, '..', 'src', 'assets', 'logo.png'),
+    path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png'),
+  ];
+  for (const c of candidates) {
+    try { return fs.readFileSync(c); } catch { /* try next */ }
+  }
+  return null;
 }
 
 // ── Tablet-page theme ──────────────────────────────────────────────────────
@@ -57,6 +92,7 @@ const DIVIDER = '#2a4d36';
 const MARGIN = 50;
 
 export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
+  const logoImage = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: MARGIN, bufferPages: true });
     const buffers: Buffer[] = [];
@@ -96,17 +132,6 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     doc.save();
     doc.roundedRect(MARGIN, MARGIN, contentWidth, headerH, 14).fill(PANEL_BG);
     doc.restore();
-
-    // Prefer the restaurant's own logo; fall back to the bundled system logo.
-    let logoImage: Buffer | null = null;
-    const restaurantLogoPath = resolveUploadPath(data.restaurantLogoUrl);
-    if (restaurantLogoPath) {
-      try { logoImage = fs.readFileSync(restaurantLogoPath); } catch { /* fall through */ }
-    }
-    if (!logoImage) {
-      const systemLogoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
-      try { logoImage = fs.readFileSync(systemLogoPath); } catch { /* no logo */ }
-    }
 
     const padX = MARGIN + 22;
     let textX = padX;

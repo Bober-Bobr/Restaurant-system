@@ -1,22 +1,23 @@
 import ExcelJS from 'exceljs';
-import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { translate } from '../../utils/translate.js';
+import { tiyinToSom, formatSom } from '../../utils/currency.js';
+import { loadLogoBuffer } from './pdf.service.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
 export async function generateSummaryExcel(data) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Selection Summary');
-    // Load logo
-    const logoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
+    // Load logo — prefer the restaurant's own, fall back to system logo
+    const logoBuffer = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
+    const logoExt = /\.jpe?g$/i.test(data.restaurantLogoUrl ?? '') ? 'jpeg' : 'png';
     let logoImageId;
-    try {
-        const logoBuffer = fs.readFileSync(logoPath);
+    if (logoBuffer) {
         logoImageId = workbook.addImage({
             buffer: logoBuffer,
-            extension: 'png',
+            extension: logoExt,
         });
-    }
-    catch (error) {
-        // Logo not found, continue without it
     }
     // Add logo if available
     if (logoImageId !== undefined) {
@@ -123,8 +124,8 @@ export async function generateSummaryExcel(data) {
     const selectedMenuItems = data.menuItems.filter(item => data.selectedItems[item.id] > 0);
     selectedMenuItems.forEach(item => {
         const quantity = data.selectedItems[item.id];
-        const unitPrice = item.priceCents / 100;
-        const totalPrice = (item.priceCents * quantity) / 100;
+        const unitPrice = tiyinToSom(item.priceCents);
+        const totalPrice = tiyinToSom(item.priceCents * quantity);
         const itemRow = worksheet.addRow([
             item.name,
             item.category,
@@ -152,18 +153,18 @@ export async function generateSummaryExcel(data) {
         pattern: 'solid',
         fgColor: { argb: 'FFE6E6FA' }
     };
-    const subtotalRow = worksheet.addRow([translate('subtotal', data.locale), '', '', '', data.pricing.subtotalCents / 100]);
+    const subtotalRow = worksheet.addRow([translate('subtotal', data.locale), '', '', '', tiyinToSom(data.pricing.subtotalCents)]);
     subtotalRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-    const feeRow = worksheet.addRow([translate('service_fee', data.locale), '', '', '', data.pricing.serviceFeeCents / 100]);
+    const feeRow = worksheet.addRow([translate('service_fee', data.locale), '', '', '', tiyinToSom(data.pricing.serviceFeeCents)]);
     feeRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-    const taxRow = worksheet.addRow([translate('tax', data.locale), '', '', '', data.pricing.taxCents / 100]);
+    const taxRow = worksheet.addRow([translate('tax', data.locale), '', '', '', tiyinToSom(data.pricing.taxCents)]);
     taxRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-    const totalRow = worksheet.addRow([translate('total', data.locale), '', '', '', data.pricing.totalCents / 100]);
+    const totalRow = worksheet.addRow([translate('total', data.locale), '', '', '', tiyinToSom(data.pricing.totalCents)]);
     totalRow.getCell(1).font = { bold: true, family: 2 };
     totalRow.getCell(5).font = { bold: true, family: 2 };
     totalRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
     if (data.guestCount > 1) {
-        const perGuestRow = worksheet.addRow([translate('price_per_guest', data.locale), '', '', '', data.pricing.perGuestCents / 100]);
+        const perGuestRow = worksheet.addRow([translate('price_per_guest', data.locale), '', '', '', tiyinToSom(data.pricing.perGuestCents)]);
         perGuestRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
     }
     // Summary
@@ -184,15 +185,16 @@ export async function generateSummaryExcel(data) {
     const guestsRow = worksheet.addRow([`${translate('total_guests', data.locale)}: ${data.guestCount}`]);
     guestsRow.getCell(1).font = { family: 2 };
     guestsRow.getCell(1).alignment = { wrapText: true };
-    const totalRow2 = worksheet.addRow([`${translate('estimated_total', data.locale)}: $${(data.pricing.totalCents / 100).toFixed(2)}`]);
+    const totalRow2 = worksheet.addRow([`${translate('estimated_total', data.locale)}: ${formatSom(data.pricing.totalCents)}`]);
     totalRow2.getCell(1).font = { bold: true, family: 2 };
     totalRow2.getCell(1).alignment = { wrapText: true };
     // Auto-fit columns
     worksheet.columns.forEach(column => {
         column.width = 25;
     });
-    // Format currency columns
-    worksheet.getColumn(5).numFmt = '$#,##0.00';
+    // Format currency columns as Uzbek so'm (whole numbers, thousands-separated)
+    worksheet.getColumn(4).numFmt = '#,##0" so\'m"';
+    worksheet.getColumn(5).numFmt = '#,##0" so\'m"';
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
 }

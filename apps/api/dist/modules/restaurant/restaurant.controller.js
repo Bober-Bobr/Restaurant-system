@@ -6,7 +6,7 @@ const service = new RestaurantService(new RestaurantRepository());
 export class RestaurantController {
     async list(request, response) {
         const admin = request.admin;
-        if (admin.role === AdminRole.CHIEF_ADMIN) {
+        if ((admin.role === AdminRole.CHIEF_ADMIN || admin.role === AdminRole.MANAGER)) {
             response.json(await service.listAll());
             return;
         }
@@ -35,14 +35,14 @@ export class RestaurantController {
     async update(request, response) {
         const data = updateRestaurantSchema.parse(request.body);
         const admin = request.admin;
-        const restaurant = admin.role === AdminRole.CHIEF_ADMIN
+        const restaurant = (admin.role === AdminRole.CHIEF_ADMIN || admin.role === AdminRole.MANAGER)
             ? await service.updateAsChief(String(request.params.id), data)
             : await service.update(admin.id, String(request.params.id), data);
         response.json(restaurant);
     }
     async remove(request, response) {
         const admin = request.admin;
-        if (admin.role === AdminRole.CHIEF_ADMIN) {
+        if ((admin.role === AdminRole.CHIEF_ADMIN || admin.role === AdminRole.MANAGER)) {
             await service.removeAsChief(String(request.params.id));
         }
         else {

@@ -24,3 +24,14 @@ export const refreshTokenSchema = z.object({
 export const updateRoleSchema = z.object({
     role: z.nativeEnum(AdminRole)
 });
+export const updateCredentialsSchema = z
+    .object({
+    username: z
+        .string()
+        .min(3)
+        .max(64)
+        .regex(/^[a-zA-Z0-9_-]+$/)
+        .optional(),
+    password: passwordSchema.optional(),
+})
+    .refine((data) => data.username !== undefined || data.password !== undefined, { message: 'At least one of username or password must be provided' });

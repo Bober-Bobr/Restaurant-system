@@ -51,7 +51,24 @@ export class AuthService {
     async listUsers() {
         return this.authRepository.listAll();
     }
-    async createUserAsChief(payload) {
+    async createUserAsChief(caller, payload) {
+        if (caller.role === AdminRole.OWNER) {
+            if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN || payload.role === AdminRole.MANAGER) {
+                throw createHttpError(403, 'Owners can only create Administrator, Employee, or Kitchen accounts.');
+            }
+        }
+        if (caller.role === AdminRole.ADMIN) {
+            if (payload.role !== AdminRole.EMPLOYEE && payload.role !== AdminRole.KITCHEN) {
+                throw createHttpError(403, 'Administrators can only create Employee or Kitchen accounts.');
+            }
+            // Force the new employee into the admin's restaurant
+            const restaurantId = caller.restaurantId
+                ?? (await this.authRepository.findById(caller.id))?.restaurantId
+                ?? null;
+            if (!restaurantId)
+                throw createHttpError(400, 'Administrator has no restaurant assigned.');
+            payload.restaurantId = restaurantId;
+        }
         const taken = await this.authRepository.findByUsername(payload.username);
         if (taken)
             throw createHttpError(409, 'Username already taken');
@@ -77,20 +94,72 @@ export class AuthService {
         const target = await this.authRepository.findById(targetId);
         if (!target)
             throw createHttpError(404, 'User not found');
-        if (callerRole === AdminRole.ADMIN && target.role !== AdminRole.EMPLOYEE) {
-            throw createHttpError(403, 'Administrators can only delete Employee accounts.');
+        if (callerRole === AdminRole.ADMIN && target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+            throw createHttpError(403, 'Administrators can only delete Employee or Kitchen accounts.');
         }
-        if (callerRole === AdminRole.EMPLOYEE) {
+        if (callerRole === AdminRole.EMPLOYEE || callerRole === AdminRole.KITCHEN) {
             throw createHttpError(403, 'Forbidden.');
         }
         await this.authRepository.deleteById(targetId);
     }
-    async updateUserRole(callerRole, targetId, newRole) {
-        if (callerRole !== AdminRole.OWNER) {
-            throw createHttpError(403, 'Only the Owner can change roles.');
+    async updateUserCredentials(caller, targetId, payload) {
+        if (payload.username === undefined && payload.password === undefined) {
+            throw createHttpError(400, 'Username or password must be provided.');
         }
-        if (newRole === AdminRole.OWNER) {
-            throw createHttpError(400, 'Cannot assign the Owner role.');
+        const target = await this.authRepository.findById(targetId);
+        if (!target)
+            throw createHttpError(404, 'User not found.');
+        const isSelf = target.id === caller.id;
+        if (caller.role === AdminRole.CHIEF_ADMIN) {
+            // Chief admin may edit anyone.
+        }
+        else if (caller.role === AdminRole.OWNER) {
+            if (!isSelf) {
+                if (target.role === AdminRole.CHIEF_ADMIN || target.role === AdminRole.OWNER) {
+                    throw createHttpError(403, 'Owners cannot manage other Owners or Chief Admins.');
+                }
+                const ownerRestaurantIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
+                if (!target.restaurantId || !ownerRestaurantIds.includes(target.restaurantId)) {
+                    throw createHttpError(403, 'Cannot manage users outside your restaurants.');
+                }
+            }
+        }
+        else if (caller.role === AdminRole.ADMIN) {
+            if (!isSelf) {
+                if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+                    throw createHttpError(403, 'Administrators can only edit Employee or Kitchen accounts.');
+                }
+                const callerRestId = caller.restaurantId ?? (await this.authRepository.findById(caller.id))?.restaurantId ?? null;
+                if (!callerRestId || target.restaurantId !== callerRestId) {
+                    throw createHttpError(403, 'Cannot manage users outside your restaurant.');
+                }
+            }
+        }
+        else {
+            throw createHttpError(403, 'Forbidden.');
+        }
+        const updates = {};
+        if (payload.username !== undefined) {
+            const taken = await this.authRepository.findByUsername(payload.username);
+            if (taken && taken.id !== targetId) {
+                throw createHttpError(409, 'Username already taken.');
+            }
+            updates.username = payload.username;
+        }
+        if (payload.password !== undefined) {
+            updates.passwordHash = await bcrypt.hash(payload.password, 12);
+        }
+        return this.authRepository.updateCredentials(targetId, updates);
+    }
+    async updateUserRole(callerRole, targetId, newRole) {
+        // CHIEF_ADMIN can assign any role. OWNER can only assign ADMIN/EMPLOYEE/KITCHEN.
+        if (callerRole !== AdminRole.CHIEF_ADMIN && callerRole !== AdminRole.OWNER) {
+            throw createHttpError(403, 'You cannot change user roles.');
+        }
+        if (callerRole === AdminRole.OWNER) {
+            if (newRole === AdminRole.CHIEF_ADMIN || newRole === AdminRole.MANAGER || newRole === AdminRole.OWNER) {
+                throw createHttpError(403, 'Owners can only assign Administrator, Employee, or Kitchen roles.');
+            }
         }
         const target = await this.authRepository.findById(targetId);
         if (!target)

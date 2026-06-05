@@ -1,8 +1,12 @@
 import ExcelJS from 'exceljs';
-import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { translate, type Locale } from '../../utils/translate.js';
 import { tiyinToSom, formatSom } from '../../utils/currency.js';
+import { loadLogoBuffer } from './pdf.service.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
 
 interface MenuItem {
   id: string;
@@ -32,37 +36,13 @@ interface SummaryData {
   restaurantLogoUrl?: string | null;
 }
 
-function resolveUploadPath(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const marker = '/uploads/';
-  const idx = url.indexOf(marker);
-  if (idx === -1) return null;
-  const relative = url.slice(idx + marker.length);
-  if (relative.includes('..')) return null;
-  const uploadsDir = path.join(process.cwd(), 'apps', 'api', 'uploads');
-  const full = path.join(uploadsDir, relative);
-  if (!full.startsWith(uploadsDir)) return null;
-  return full;
-}
-
 export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Selection Summary');
 
   // Load logo — prefer the restaurant's own, fall back to system logo
-  let logoBuffer: Buffer | null = null;
-  let logoExt: 'png' | 'jpeg' = 'png';
-  const restaurantLogoPath = resolveUploadPath(data.restaurantLogoUrl);
-  if (restaurantLogoPath) {
-    try {
-      logoBuffer = fs.readFileSync(restaurantLogoPath);
-      logoExt = /\.jpe?g$/i.test(restaurantLogoPath) ? 'jpeg' : 'png';
-    } catch { /* fall through */ }
-  }
-  if (!logoBuffer) {
-    const systemLogoPath = path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png');
-    try { logoBuffer = fs.readFileSync(systemLogoPath); logoExt = 'png'; } catch { /* none */ }
-  }
+  const logoBuffer = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
+  const logoExt: 'png' | 'jpeg' = /\.jpe?g$/i.test(data.restaurantLogoUrl ?? '') ? 'jpeg' : 'png';
 
   let logoImageId: number | undefined;
   if (logoBuffer) {

@@ -5,11 +5,28 @@ import { TableCategoryRepository } from '../tableCategory/tableCategory.reposito
 import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
+import { InvitationController } from '../invitation/invitation.controller.js';
 const router = Router();
+const invitationController = new InvitationController();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
+router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
+router.get('/restaurants', async (_request, response, next) => {
+    try {
+        const list = await restaurantRepository.listAllPublic();
+        response.json(list.map((r) => ({
+            id: r.id,
+            name: r.name,
+            logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
+            companyName: r.company?.name ?? null,
+        })));
+    }
+    catch (error) {
+        next(error);
+    }
+});
 router.get('/restaurant', async (request, response, next) => {
     try {
         const restaurantId = String(request.query.restaurantId ?? '');
@@ -22,7 +39,13 @@ router.get('/restaurant', async (request, response, next) => {
             response.status(404).json({ message: 'Not found' });
             return;
         }
-        response.json({ id: restaurant.id, name: restaurant.name, logoUrl: restaurant.logoUrl ?? null });
+        const company = restaurant.company;
+        response.json({
+            id: restaurant.id,
+            name: restaurant.name,
+            logoUrl: restaurant.logoUrl ?? company?.logoUrl ?? null,
+            companyName: company?.name ?? null,
+        });
     }
     catch (error) {
         next(error);

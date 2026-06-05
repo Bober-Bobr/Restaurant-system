@@ -1,3 +1,4 @@
+const ALLOWED_CATEGORIES = ['menu', 'hall', 'table', 'invitation'];
 export class PhotoController {
     photoService;
     constructor(photoService) {
@@ -10,10 +11,14 @@ export class PhotoController {
             if (!files || files.length === 0) {
                 return res.status(400).json({ error: 'No files uploaded' });
             }
-            if (!['menu', 'hall', 'table'].includes(category)) {
+            if (!ALLOWED_CATEGORIES.includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
-            const restaurantId = req.admin?.restaurantId ?? null;
+            const role = req.admin?.role;
+            const bodyRestaurantId = typeof req.body.restaurantId === 'string' ? req.body.restaurantId.trim() : '';
+            const restaurantId = (role === 'CHIEF_ADMIN' || role === 'MANAGER') && bodyRestaurantId
+                ? bodyRestaurantId
+                : req.admin?.restaurantId ?? null;
             const urls = await this.photoService.uploadPhotos(category, files, restaurantId, dishCategory || undefined);
             res.json({ urls });
         }
@@ -25,10 +30,14 @@ export class PhotoController {
     async listPhotos(req, res) {
         try {
             const category = (req.params.category || '');
-            if (!['menu', 'hall', 'table'].includes(category)) {
+            if (!ALLOWED_CATEGORIES.includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
-            const restaurantId = req.admin?.restaurantId ?? null;
+            const role = req.admin?.role;
+            const queryRestaurantId = typeof req.query.restaurantId === 'string' ? req.query.restaurantId.trim() : '';
+            const restaurantId = (role === 'CHIEF_ADMIN' || role === 'MANAGER') && queryRestaurantId
+                ? queryRestaurantId
+                : req.admin?.restaurantId ?? null;
             const dishCategory = req.query.dishCategory || undefined;
             const photos = await this.photoService.listPhotos(category, restaurantId, dishCategory);
             res.json({ photos });
@@ -42,7 +51,7 @@ export class PhotoController {
         try {
             const category = (req.params.category || '');
             const filename = (req.params.filename || '');
-            if (!['menu', 'hall', 'table'].includes(category)) {
+            if (!ALLOWED_CATEGORIES.includes(category)) {
                 return res.status(400).json({ error: 'Invalid category' });
             }
             const restaurantId = req.admin?.restaurantId ?? null;
