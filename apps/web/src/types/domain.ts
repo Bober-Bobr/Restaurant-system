@@ -45,6 +45,7 @@ export type TableCategory = {
   name: string;
   includedCategories: string;
   ratePerPerson: number;
+  discountPercent?: number;
   description?: string;
   photoUrl?: string;
   photos?: string[];
@@ -60,6 +61,7 @@ export type MenuItem = {
   priceCents: number;
   photoUrl?: string;
   isActive: boolean;
+  showOnTablet?: boolean;
 };
 
 export type PricingSummary = {

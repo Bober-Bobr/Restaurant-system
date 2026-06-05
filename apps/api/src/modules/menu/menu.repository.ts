@@ -23,6 +23,7 @@ export class MenuRepository {
     priceCents: number;
     photoUrl?: string;
     isActive?: boolean;
+    showOnTablet?: boolean;
   }) {
     return prisma.menuItem.create({ data: { ...payload, restaurantId } });
   }
@@ -38,6 +39,7 @@ export class MenuRepository {
     priceCents?: number;
     photoUrl?: string;
     isActive?: boolean;
+    showOnTablet?: boolean;
   }) {
     return prisma.menuItem.update({ where: { id: menuItemId }, data: payload });
   }

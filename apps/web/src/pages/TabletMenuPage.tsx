@@ -437,6 +437,7 @@ export const TabletMenuPage = () => {
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(
       (item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
+        item.showOnTablet !== false &&
         (activeCategory === null || item.category === activeCategory)
     )
   );
@@ -766,7 +767,7 @@ export const TabletMenuPage = () => {
 
               {/* Category pills */}
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
-                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat))].map((cat) => (
+                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && item.showOnTablet !== false))].map((cat) => (
                   <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
                     className="shrink-0 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200"
                     style={activeCategory === cat

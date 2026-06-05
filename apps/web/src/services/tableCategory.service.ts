@@ -11,6 +11,7 @@ export const tableCategoryService = {
     includedCategories: string;
     menuItemIds?: string[];
     ratePerPerson: number;
+    discountPercent?: number;
     description?: string;
     photoUrl?: string;
     photos?: string[];

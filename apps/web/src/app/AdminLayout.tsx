@@ -48,6 +48,7 @@ export const AdminLayout = () => {
     { to: '/', label: t('events') },
     { to: '/calendar', label: t('calendar') },
     { to: '/admin/menu', label: t('menu') },
+    { to: '/admin/additional', label: t('additional') },
     { to: '/admin/table-categories', label: t('tables') },
     { to: '/admin/halls', label: t('halls') },
     { to: '/admin/photos', label: t('photos') },

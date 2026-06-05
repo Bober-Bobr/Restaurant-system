@@ -415,9 +415,22 @@ export const TabletSummaryPage = () => {
                   style={{ background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.4)' }}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="rg-label">{t('total')}</span>
-                    <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
-                      {formatSum(pricing.totalCents)}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      {pricing.hasDiscount && (
+                        <span className="flex items-center gap-2">
+                          <span className="text-sm whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                            {formatSum(pricing.originalTotalCents)}
+                          </span>
+                          <span className="rounded-full px-2 py-0.5 text-xs font-bold"
+                            style={{ background: '#dc2626', color: '#fff' }}>
+                            −{pricing.discountPercent}%
+                          </span>
+                        </span>
+                      )}
+                      <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
+                        {formatSum(pricing.totalCents)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
