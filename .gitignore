@@ -11,3 +11,4 @@ apps/web/dist/
 
 # Compiled cruft in TS source tree (Vite compiles .tsx directly)
 apps/web/src/**/*.js
+apps/web/src/*.js

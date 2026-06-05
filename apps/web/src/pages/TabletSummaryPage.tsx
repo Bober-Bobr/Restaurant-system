@@ -115,6 +115,8 @@ export const TabletSummaryPage = () => {
   const [isSubmitting, setIsSubmitting]             = useState(false);
   const [confirmedEventId, setConfirmedEventId]     = useState<number | null>(null);
   const [submitError, setSubmitError]               = useState<string | null>(null);
+  const [discountEnabled, setDiscountEnabled]       = useState(false);
+  const [discountText, setDiscountText]             = useState('');
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -132,6 +134,23 @@ export const TabletSummaryPage = () => {
 
   const pricing        = usePriceCalculator(menuItems ?? [], selectedItems, selectedTableCategory, guestCount);
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime;
+
+  // Ad-hoc discount entered here on the Summary page (not stored on the table category).
+  const discountPercent = discountEnabled
+    ? Math.min(100, Math.max(0, Math.round(Number(discountText) || 0)))
+    : 0;
+  const hasDiscount = discountPercent > 0;
+  const originalPerGuestCents = pricing.perGuestCents;
+  const finalPerGuestCents = Math.round(originalPerGuestCents * (1 - discountPercent / 100));
+
+  // Pricing payload for exports — only the per-guest figures.
+  const exportPricing = {
+    perGuestCents: finalPerGuestCents,
+    originalPerGuestCents,
+    discountPercent,
+    hasDiscount,
+    guestCount,
+  };
 
   const handleConfirm = async () => {
     if (confirmDisabled || isSubmitting) return;
@@ -167,7 +186,7 @@ export const TabletSummaryPage = () => {
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], pricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
+          guestCount, selectedItems, menuItems: menuItems || [], pricing: exportPricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -181,10 +200,6 @@ export const TabletSummaryPage = () => {
       alert(t('download_failed'));
     }
   };
-
-  const pricingRows = [
-    ...(guestCount > 1 ? [{ key: 'per_guest', label: t('price_per_guest'), value: pricing.perGuestCents }] : []),
-  ];
 
   // ── Success screen ────────────────────────────────────────────────────────
   if (confirmedEventId !== null) {
@@ -398,34 +413,55 @@ export const TabletSummaryPage = () => {
               <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="rg-label">{t('pricing')}</p>
               </div>
-              <div className="px-4 sm:px-6 py-2">
-                {pricingRows.map(({ key, label, value }) => (
-                  <div key={key} className="flex items-center justify-between gap-3 py-3 text-sm"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.55)' }} className="min-w-0 truncate">{label}</span>
-                    <span className="font-medium text-white whitespace-nowrap">{formatSum(value)}</span>
+
+              {/* Discount control */}
+              <div className="px-4 sm:px-6 pt-3 sm:pt-4">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={discountEnabled}
+                    onChange={(e) => setDiscountEnabled(e.target.checked)}
+                    style={{ accentColor: '#c9a42c', width: 18, height: 18 }}
+                  />
+                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>{t('apply_discount')}</span>
+                </label>
+                {discountEnabled && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={discountText}
+                      onChange={(e) => setDiscountText(e.target.value)}
+                      placeholder="0"
+                      className="rg-input"
+                      style={{ width: 110 }}
+                    />
+                    <span className="text-sm font-semibold" style={{ color: '#c9a42c' }}>%</span>
                   </div>
-                ))}
+                )}
               </div>
+
+              {/* Price per guest */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
                 <div className="rounded-2xl px-4 sm:px-5 py-3 sm:py-4"
                   style={{ background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.4)' }}>
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="rg-label">{t('total')}</span>
+                    <span className="rg-label">{t('price_per_guest')}</span>
                     <div className="flex flex-col items-end">
-                      {pricing.hasDiscount && (
+                      {hasDiscount && (
                         <span className="flex items-center gap-2">
                           <span className="text-sm whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                            {formatSum(pricing.originalTotalCents)}
+                            {formatSum(originalPerGuestCents)}
                           </span>
                           <span className="rounded-full px-2 py-0.5 text-xs font-bold"
                             style={{ background: '#dc2626', color: '#fff' }}>
-                            −{pricing.discountPercent}%
+                            −{discountPercent}%
                           </span>
                         </span>
                       )}
                       <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
-                        {formatSum(pricing.totalCents)}
+                        {formatSum(finalPerGuestCents)}
                       </span>
                     </div>
                   </div>

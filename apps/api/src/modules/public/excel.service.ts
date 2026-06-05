@@ -25,14 +25,10 @@ interface SummaryData {
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
   pricing: {
-    subtotalCents: number;
-    serviceFeeCents: number;
-    taxCents: number;
-    totalCents: number;
     perGuestCents: number;
+    originalPerGuestCents?: number;
     discountPercent?: number;
     hasDiscount?: boolean;
-    originalTotalCents?: number;
   };
   locale: Locale;
   restaurantName?: string;
@@ -200,20 +196,11 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
     fgColor: { argb: 'FFE6E6FA' }
   };
 
-  const subtotalRow = worksheet.addRow([translate('subtotal', data.locale), '', '', '', tiyinToSom(data.pricing.subtotalCents)]);
-  subtotalRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-
-  const feeRow = worksheet.addRow([translate('service_fee', data.locale), '', '', '', tiyinToSom(data.pricing.serviceFeeCents)]);
-  feeRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-
-  const taxRow = worksheet.addRow([translate('tax', data.locale), '', '', '', tiyinToSom(data.pricing.taxCents)]);
-  taxRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-
   const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
-  if (hasDiscount && data.pricing.originalTotalCents != null) {
-    const origRow = worksheet.addRow([translate('original_price', data.locale), '', '', '', tiyinToSom(data.pricing.originalTotalCents)]);
+  if (hasDiscount && data.pricing.originalPerGuestCents != null) {
+    const origRow = worksheet.addRow([translate('original_price', data.locale), '', '', '', tiyinToSom(data.pricing.originalPerGuestCents)]);
     origRow.getCell(1).font = { ...origRow.getCell(1).font, family: 2 };
-    // Strike-through the original total to show it's superseded
+    // Strike-through the original per-guest price to show it's superseded
     origRow.getCell(5).font = { family: 2, strike: true, color: { argb: 'FF888888' } };
     origRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
 
@@ -222,15 +209,10 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
     discRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
   }
 
-  const totalRow = worksheet.addRow([translate('total', data.locale), '', '', '', tiyinToSom(data.pricing.totalCents)]);
-  totalRow.getCell(1).font = { bold: true, family: 2 };
-  totalRow.getCell(5).font = { bold: true, family: 2 };
-  totalRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
-
-  if (data.guestCount > 1) {
-    const perGuestRow = worksheet.addRow([translate('price_per_guest', data.locale), '', '', '', tiyinToSom(data.pricing.perGuestCents)]);
-    perGuestRow.eachCell((cell) => { cell.font = { ...cell.font, family: 2 }; cell.alignment = { wrapText: true }; });
-  }
+  const perGuestRow = worksheet.addRow([translate('price_per_guest', data.locale), '', '', '', tiyinToSom(data.pricing.perGuestCents)]);
+  perGuestRow.getCell(1).font = { bold: true, family: 2 };
+  perGuestRow.getCell(5).font = { bold: true, family: 2 };
+  perGuestRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
 
   // Summary
   worksheet.addRow([]);
@@ -252,9 +234,9 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   guestsRow.getCell(1).font = { family: 2 };
   guestsRow.getCell(1).alignment = { wrapText: true };
 
-  const totalRow2 = worksheet.addRow([`${translate('estimated_total', data.locale)}: ${formatSom(data.pricing.totalCents)}`]);
-  totalRow2.getCell(1).font = { bold: true, family: 2 };
-  totalRow2.getCell(1).alignment = { wrapText: true };
+  const perGuestSummaryRow = worksheet.addRow([`${translate('price_per_guest', data.locale)}: ${formatSom(data.pricing.perGuestCents)}`]);
+  perGuestSummaryRow.getCell(1).font = { bold: true, family: 2 };
+  perGuestSummaryRow.getCell(1).alignment = { wrapText: true };
 
   // Auto-fit columns
   worksheet.columns.forEach(column => {

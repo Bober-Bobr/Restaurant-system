@@ -43,12 +43,6 @@ const parseCats = (raw: string): FoodCategory[] =>
 
 const serializeCats = (cats: FoodCategory[]): string => cats.join(',');
 
-const clampPercent = (text: string): number => {
-  const n = Math.round(Number(text));
-  if (!Number.isFinite(n)) return 0;
-  return Math.min(100, Math.max(0, n));
-};
-
 // ── Food package section ───────────────────────────────────────────────────
 function FoodPackageSection({
   selectedCats,
@@ -270,7 +264,6 @@ export const AdminTableCategoriesPage = () => {
   const [selectedCats, setSelectedCats] = useState<FoodCategory[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
-  const [discountText, setDiscountText] = useState('0');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -280,7 +273,6 @@ export const AdminTableCategoriesPage = () => {
   const [editSelectedCats, setEditSelectedCats] = useState<FoodCategory[]>([]);
   const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
-  const [editDiscountText, setEditDiscountText] = useState('0');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -311,7 +303,6 @@ export const AdminTableCategoriesPage = () => {
         includedCategories: serializeCats(selectedCats),
         menuItemIds: selectedItemIds,
         ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
-        discountPercent: clampPercent(discountText),
         description: description.trim() || undefined,
         photos,
         isActive: true,
@@ -322,7 +313,6 @@ export const AdminTableCategoriesPage = () => {
       setSelectedCats([]);
       setSelectedItemIds([]);
       setRatePerPersonText('0');
-      setDiscountText('0');
       setDescription('');
       setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
@@ -351,7 +341,6 @@ export const AdminTableCategoriesPage = () => {
     setEditSelectedCats(parseCats(category.includedCategories));
     setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
     setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
-    setEditDiscountText(String(category.discountPercent ?? 0));
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -366,7 +355,6 @@ export const AdminTableCategoriesPage = () => {
         includedCategories: serializeCats(editSelectedCats),
         menuItemIds: editSelectedItemIds,
         ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
-        discountPercent: clampPercent(editDiscountText),
         description: editDescription.trim() || undefined,
         photos: editPhotos,
         isActive: editIsActive,
@@ -396,10 +384,6 @@ export const AdminTableCategoriesPage = () => {
             <label style={{ display: 'grid', gap: 6 }}>
               {t('rate_per_person')}
               <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
-            </label>
-            <label style={{ display: 'grid', gap: 6 }}>
-              {t('discount_percent')}
-              <Input type="number" min={0} max={100} value={discountText} onChange={(e) => setDiscountText(e.target.value)} />
             </label>
           </div>
 
@@ -456,10 +440,6 @@ export const AdminTableCategoriesPage = () => {
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('rate_dollar')}
                           <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
-                        </label>
-                        <label style={{ display: 'grid', gap: 4 }}>
-                          {t('discount_percent')}
-                          <Input type="number" min={0} max={100} value={editDiscountText} onChange={(e) => setEditDiscountText(e.target.value)} />
                         </label>
                       </div>
 

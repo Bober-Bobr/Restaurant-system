@@ -26,14 +26,10 @@ interface SummaryData {
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
   pricing: {
-    subtotalCents: number;
-    serviceFeeCents: number;
-    taxCents: number;
-    totalCents: number;
     perGuestCents: number;
+    originalPerGuestCents?: number;
     discountPercent?: number;
     hasDiscount?: boolean;
-    originalTotalCents?: number;
   };
   locale: Locale;
   restaurantName?: string;
@@ -216,34 +212,26 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     });
     doc.moveDown(0.7);
 
-    // ── Pricing ─────────────────────────────────────────────────────────
+    // ── Pricing (price per guest only) ──────────────────────────────────
     section(t('pricing'));
-    priceRow(t('subtotal'), formatSom(data.pricing.subtotalCents));
-    priceRow(t('service_fee'), formatSom(data.pricing.serviceFeeCents));
-    priceRow(t('tax'), formatSom(data.pricing.taxCents));
-    doc.moveDown(0.2);
     const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
-    if (hasDiscount && data.pricing.originalTotalCents != null) {
-      // Original (crossed out) price
+    if (hasDiscount && data.pricing.originalPerGuestCents != null) {
+      // Original per-guest price (crossed out)
       const oy = doc.y;
       doc.fillColor(MUTED).font(fontRegular, 11).text(t('original_price'), MARGIN, oy, { width: contentWidth * 0.6 });
-      const origText = formatSom(data.pricing.originalTotalCents);
+      const origText = formatSom(data.pricing.originalPerGuestCents);
       doc.fillColor(MUTED).font(fontRegular, 11).text(origText, MARGIN, oy, { width: contentWidth, align: 'right' });
-      // strike-through line over the original price
       const tw = doc.widthOfString(origText);
       const lineY = oy + 7;
       doc.save();
       doc.moveTo(pageWidth - MARGIN - tw, lineY).lineTo(pageWidth - MARGIN, lineY).lineWidth(0.8).strokeColor(MUTED).stroke();
       doc.restore();
-      priceRow(`${t('discount')}`, `−${data.pricing.discountPercent}%`);
+      priceRow(t('discount'), `−${data.pricing.discountPercent}%`);
     }
-    priceRow(t('total'), formatSom(data.pricing.totalCents), true);
-    if (data.guestCount > 1) {
-      priceRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents));
-    }
+    priceRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
     doc.moveDown(1);
 
-    // ── Summary footer ──────────────────────────────────────────────────
+    // ── Footer ──────────────────────────────────────────────────────────
     if (doc.y > pageHeight - 140) doc.addPage();
     const fy = doc.y;
     const footerH = 84;
@@ -253,7 +241,7 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     doc.fillColor(WHITE).font(fontRegular, 11)
       .text(t('thank_you_message'), MARGIN + 18, fy + 16, { width: contentWidth - 36 });
     doc.fillColor(GOLD).font(fontBold, 14)
-      .text(`${t('estimated_total')}: ${formatSom(data.pricing.totalCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
+      .text(`${t('price_per_guest')}: ${formatSom(data.pricing.perGuestCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
 
     doc.end();
   });
