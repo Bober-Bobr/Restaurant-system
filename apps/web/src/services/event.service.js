@@ -1,7 +1,7 @@
 import { httpClient } from './http';
 export const eventService = {
-    async list() {
-        const { data } = await httpClient.get('/events');
+    async list(params) {
+        const { data } = await httpClient.get('/events', { params });
         return data;
     },
     async create(payload) {

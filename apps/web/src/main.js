@@ -6,4 +6,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './app/App';
 import './index.css';
 const queryClient = new QueryClient();
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => { });
+    });
+}
 ReactDOM.createRoot(document.getElementById('root')).render(_jsx(React.StrictMode, { children: _jsx(QueryClientProvider, { client: queryClient, children: _jsx(BrowserRouter, { children: _jsx(App, {}) }) }) }));

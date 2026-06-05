@@ -183,9 +183,6 @@ export const TabletSummaryPage = () => {
   };
 
   const pricingRows = [
-    { key: 'subtotal',    label: t('subtotal'),        value: pricing.subtotalCents },
-    { key: 'service_fee', label: t('service_fee'),     value: pricing.serviceFeeCents },
-    { key: 'tax',         label: t('tax'),             value: pricing.taxCents },
     ...(guestCount > 1 ? [{ key: 'per_guest', label: t('price_per_guest'), value: pricing.perGuestCents }] : []),
   ];
 

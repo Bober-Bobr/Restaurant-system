@@ -4,6 +4,7 @@ export const createTableCategorySchema = z.object({
     includedCategories: z.string().max(500).optional().default(''),
     menuItemIds: z.array(z.string()).optional(),
     ratePerPerson: z.number().int().nonnegative(),
+    discountPercent: z.number().int().min(0).max(100).optional(),
     description: z.string().max(500).optional(),
     photoUrl: z.string().min(1).optional(),
     photos: z.array(z.string()).optional(),

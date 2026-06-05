@@ -1,8 +1,9 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { authService } from '../services/auth.service';
+import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { companyService } from '../services/company.service';
 import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
@@ -101,6 +102,7 @@ export const OwnerCabinetPage = () => {
     const [uRole, setURole] = useState('ADMIN');
     const [uRestaurantId, setURestaurantId] = useState('');
     const [uError, setUError] = useState(null);
+    const [editingUserId, setEditingUserId] = useState(null);
     const createUser = useMutation({
         mutationFn: () => authService.createUserAsChief({
             username: uName.trim(),
@@ -136,6 +138,7 @@ export const OwnerCabinetPage = () => {
     };
     const ROLE_LABEL_KEY = {
         CHIEF_ADMIN: 'chief_admin_role',
+        MANAGER: 'manager_role',
         OWNER: 'owner_role',
         ADMIN: 'administrator_role',
         EMPLOYEE: 'employee_role',
@@ -148,12 +151,7 @@ export const OwnerCabinetPage = () => {
                     background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
                     borderBottom: '1px solid rgba(255,255,255,0.08)',
                     flexWrap: 'wrap', gap: 12,
-                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 14 }, children: [_jsx("div", { style: {
-                                    width: 44, height: 44, borderRadius: 12, overflow: 'hidden',
-                                    border: '1px solid rgba(201,164,44,0.35)',
-                                    background: 'rgba(15,23,42,0.5)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }, children: _jsx("img", { src: networkingLogoSrc, alt: "Networking", style: { width: 32, height: 32, objectFit: 'contain' } }) }), _jsxs("div", { children: [_jsx("h1", { style: { margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }, children: t('owner_cabinet') }), _jsxs("p", { style: { margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }, children: [username, _jsx("span", { className: "adm-badge", style: { background: 'rgba(124,58,237,0.18)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }, children: "OWNER" })] })] })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [_jsx("div", { style: { display: 'flex', gap: 4 }, children: locales.map((loc) => (_jsx("button", { type: "button", onClick: () => setLocale(loc), style: {
+                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 14 }, children: [_jsx("img", { src: networkingLogoSrc, alt: "Networking", style: { height: 44, width: 'auto', objectFit: 'contain', flexShrink: 0 } }), _jsxs("div", { children: [_jsx("h1", { style: { margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }, children: t('owner_cabinet') }), _jsxs("p", { style: { margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }, children: [username, _jsx("span", { className: "adm-badge", style: { background: 'rgba(124,58,237,0.18)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.3)' }, children: "OWNER" })] })] })] }), _jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 8 }, children: [_jsx("div", { style: { display: 'flex', gap: 4 }, children: locales.map((loc) => (_jsx("button", { type: "button", onClick: () => setLocale(loc), style: {
                                         padding: '5px 10px',
                                         border: '1px solid',
                                         borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
@@ -169,12 +167,12 @@ export const OwnerCabinetPage = () => {
                                         const restaurantsHere = restaurantsByCompany(company.id);
                                         const showForm = activeForm === company.id;
                                         const companyLogoSrc = company.logoUrl ? getPhotoUrl(company.logoUrl) : null;
-                                        return (_jsxs("div", { className: "adm-card adm-card-hover tablet-fade-up", style: { overflow: 'hidden' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }, children: [companyLogoSrc && (_jsx("img", { src: companyLogoSrc, alt: company.name, style: { width: 36, height: 36, borderRadius: 6, objectFit: 'cover' } })), _jsx("div", { style: { flex: 1 }, children: _jsx("input", { defaultValue: company.name, onBlur: (e) => {
+                                        return (_jsxs("div", { className: "adm-card adm-card-hover tablet-fade-up", style: { overflow: 'hidden' }, children: [_jsxs("div", { className: "owner-company-header", style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }, children: [companyLogoSrc && (_jsx("img", { src: companyLogoSrc, alt: company.name, style: { height: 36, width: 'auto', maxWidth: 80, objectFit: 'contain', flexShrink: 0 } })), _jsx("div", { className: "owner-company-name", style: { flex: 1, minWidth: 0 }, children: _jsx("input", { defaultValue: company.name, onBlur: (e) => {
                                                                     const newName = e.target.value.trim();
                                                                     if (newName && newName !== company.name) {
                                                                         updateCompany.mutate({ id: company.id, payload: { name: newName } });
                                                                     }
-                                                                }, style: { ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px' } }) }), _jsx("input", { defaultValue: company.logoUrl ?? '', placeholder: t('logo_url'), onBlur: (e) => {
+                                                                }, style: { ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px', width: '100%' } }) }), _jsx("input", { className: "owner-company-logo-input", defaultValue: company.logoUrl ?? '', placeholder: t('logo_url'), onBlur: (e) => {
                                                                 const newLogo = e.target.value.trim();
                                                                 if (newLogo !== (company.logoUrl ?? '')) {
                                                                     updateCompany.mutate({ id: company.id, payload: { logoUrl: newLogo || undefined } });
@@ -183,20 +181,55 @@ export const OwnerCabinetPage = () => {
                                                                 if (confirm(t('delete_company_confirm', { name: company.name }))) {
                                                                     deleteCompanyMut.mutate(company.id);
                                                                 }
-                                                            }, style: { ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px' }, children: t('delete') })] }), _jsxs("div", { style: { padding: '12px 16px' }, children: [_jsxs("p", { style: { margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }, children: [t('restaurants_in', { name: company.name }), " (", restaurantsHere.length, ")"] }), restaurantsHere.length === 0 ? (_jsx("p", { style: { margin: '0 0 8px', color: 'rgba(226,232,240,0.45)', fontSize: 13 }, children: "\u2014" })) : (_jsx("div", { style: { display: 'grid', gap: 8, marginBottom: 12 }, children: restaurantsHere.map((r) => {
+                                                            }, style: { ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px', flexShrink: 0 }, children: t('delete') })] }), _jsxs("div", { style: { padding: '12px 16px' }, children: [_jsxs("p", { style: { margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.45)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }, children: [t('restaurants_in', { name: company.name }), " (", restaurantsHere.length, ")"] }), restaurantsHere.length === 0 ? (_jsx("p", { style: { margin: '0 0 8px', color: 'rgba(226,232,240,0.45)', fontSize: 13 }, children: "\u2014" })) : (_jsx("div", { style: { display: 'grid', gap: 8, marginBottom: 12 }, children: restaurantsHere.map((r) => {
                                                                 const effLogo = r.logoUrl ?? r.company?.logoUrl ?? null;
-                                                                return (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }, children: [effLogo && _jsx("img", { src: getPhotoUrl(effLogo), alt: r.name, style: { width: 32, height: 32, borderRadius: 5, objectFit: 'cover' } }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("p", { style: { margin: 0, fontWeight: 600, fontSize: 14 }, children: r.name }), r.address && _jsx("p", { style: { margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }, children: r.address })] }), _jsx("button", { onClick: () => {
+                                                                return (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }, children: [effLogo && _jsx("img", { src: getPhotoUrl(effLogo), alt: r.name, style: { height: 32, width: 'auto', maxWidth: 72, objectFit: 'contain', flexShrink: 0 } }), _jsxs("div", { style: { flex: 1 }, children: [_jsx("p", { style: { margin: 0, fontWeight: 600, fontSize: 14 }, children: r.name }), r.address && _jsx("p", { style: { margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }, children: r.address })] }), _jsx("button", { onClick: () => {
                                                                                 if (confirm(t('delete_restaurant_confirm', { name: r.name }))) {
                                                                                     deleteRestaurant.mutate(r.id);
                                                                                 }
                                                                             }, style: { ...btnStyle, background: '#7f1d1d', fontSize: 11, padding: '4px 8px' }, children: t('delete') })] }, r.id));
                                                             }) })), showForm ? (_jsxs("div", { style: { background: 'rgba(15,23,42,0.55)', padding: 12, borderRadius: 7 }, children: [_jsx("p", { style: { margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.55)' }, children: t('company_logo_used') }), _jsxs("div", { style: { display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }, children: [_jsx("input", { placeholder: t('name'), value: rName, onChange: (e) => setRName(e.target.value), style: inputStyle }), _jsx("input", { placeholder: t('address'), value: rAddress, onChange: (e) => setRAddress(e.target.value), style: inputStyle })] }), rError && _jsx("p", { style: { color: '#f87171', marginTop: 8, fontSize: 12 }, children: rError }), _jsxs("div", { style: { display: 'flex', gap: 8, marginTop: 8 }, children: [_jsx("button", { onClick: () => createRestaurant.mutate(company.id), disabled: !rName.trim() || createRestaurant.isPending, style: { ...btnStyle, opacity: !rName.trim() ? 0.5 : 1, fontSize: 12, padding: '6px 12px' }, children: createRestaurant.isPending ? t('adding') : t('add') }), _jsx("button", { onClick: () => { setActiveForm(null); setRName(''); setRAddress(''); setRError(null); }, style: { ...btnStyle, background: '#334155', fontSize: 12, padding: '6px 12px' }, children: t('cancel') })] })] })) : (_jsxs("button", { onClick: () => { setActiveForm(company.id); setRName(''); setRAddress(''); setRError(null); }, style: { ...btnStyle, background: '#1e3a8a', fontSize: 12, padding: '6px 12px' }, children: ["+ ", t('add_restaurant_to', { name: company.name })] }))] })] }, company.id));
-                                    }), !companiesQuery.isLoading && companies.length === 0 && (_jsx("p", { style: { color: 'rgba(226,232,240,0.5)' }, children: t('no_companies_yet') }))] })] })), tab === 'users' && (_jsxs(_Fragment, { children: [_jsxs("section", { style: { background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }, children: [_jsx("h2", { style: { marginTop: 0, fontSize: 16 }, children: t('create_user') }), _jsxs("div", { style: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }, children: [_jsx("input", { placeholder: t('username'), value: uName, onChange: (e) => setUName(e.target.value), style: inputStyle }), _jsx("input", { placeholder: t('password'), type: "password", value: uPwd, onChange: (e) => setUPwd(e.target.value), style: inputStyle }), _jsxs("select", { value: uRole, onChange: (e) => setURole(e.target.value), style: inputStyle, children: [_jsx("option", { value: "ADMIN", children: t('administrator_role') }), _jsx("option", { value: "EMPLOYEE", children: t('employee_role') }), _jsx("option", { value: "KITCHEN", children: t('kitchen_role') })] }), _jsxs("select", { value: uRestaurantId, onChange: (e) => setURestaurantId(e.target.value), style: inputStyle, children: [_jsx("option", { value: "", children: t('select_restaurant_dash') }), restaurants.map((r) => _jsx("option", { value: r.id, children: r.name }, r.id))] })] }), uError && _jsx("p", { style: { color: '#f87171', marginTop: 8 }, children: uError }), _jsx("button", { onClick: () => createUser.mutate(), disabled: !uName.trim() || !uPwd || createUser.isPending, style: { ...btnStyle, marginTop: 12, opacity: (!uName.trim() || !uPwd) ? 0.5 : 1 }, children: createUser.isPending ? t('creating') : t('create') })] }), _jsxs("section", { children: [_jsxs("h2", { style: { fontSize: 16, marginBottom: 12 }, children: [t('all_users'), " (", users.length, ")"] }), _jsxs("div", { style: { display: 'grid', gap: 8 }, children: [users.map((u) => (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }, children: [_jsxs("div", { style: { flex: 1 }, children: [_jsx("p", { style: { margin: 0, fontWeight: 600 }, children: u.username }), _jsx("p", { style: { margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }, children: restaurants.find((r) => r.id === u.restaurantId)?.name ?? '—' })] }), _jsx("span", { style: {
-                                                            padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
-                                                            background: u.role === 'ADMIN' ? '#2563eb' : u.role === 'OWNER' ? '#7c3aed' : '#16a34a',
-                                                            color: '#fff'
-                                                        }, children: t(ROLE_LABEL_KEY[u.role]) }), u.role !== 'OWNER' && (_jsxs("select", { value: u.role, onChange: (e) => updateRole.mutate({ id: u.id, role: e.target.value }), style: { ...inputStyle, width: 130 }, children: [_jsx("option", { value: "ADMIN", children: t('administrator_role') }), _jsx("option", { value: "EMPLOYEE", children: t('employee_role') }), _jsx("option", { value: "KITCHEN", children: t('kitchen_role') })] })), u.role !== 'OWNER' && (_jsx("button", { onClick: () => { if (confirm(t('delete_user_confirm', { name: u.username })))
-                                                            deleteUser.mutate(u.id); }, style: { ...btnStyle, background: '#dc2626' }, children: t('delete') }))] }, u.id))), users.length === 0 && _jsx("p", { style: { color: 'rgba(226,232,240,0.5)' }, children: t('no_users_yet') })] })] })] }))] })] }));
+                                    }), !companiesQuery.isLoading && companies.length === 0 && (_jsx("p", { style: { color: 'rgba(226,232,240,0.5)' }, children: t('no_companies_yet') }))] })] })), tab === 'users' && (_jsxs(_Fragment, { children: [_jsxs("section", { style: { background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }, children: [_jsx("h2", { style: { marginTop: 0, fontSize: 16 }, children: t('create_user') }), _jsxs("div", { style: { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }, children: [_jsx("input", { placeholder: t('username'), value: uName, onChange: (e) => setUName(e.target.value), style: inputStyle }), _jsx("input", { placeholder: t('password'), type: "password", value: uPwd, onChange: (e) => setUPwd(e.target.value), style: inputStyle }), _jsxs("select", { value: uRole, onChange: (e) => setURole(e.target.value), style: inputStyle, children: [_jsx("option", { value: "ADMIN", children: t('administrator_role') }), _jsx("option", { value: "EMPLOYEE", children: t('employee_role') }), _jsx("option", { value: "KITCHEN", children: t('kitchen_role') })] }), _jsxs("select", { value: uRestaurantId, onChange: (e) => setURestaurantId(e.target.value), style: inputStyle, children: [_jsx("option", { value: "", children: t('select_restaurant_dash') }), restaurants.map((r) => _jsx("option", { value: r.id, children: r.name }, r.id))] })] }), uError && _jsx("p", { style: { color: '#f87171', marginTop: 8 }, children: uError }), _jsx("button", { onClick: () => createUser.mutate(), disabled: !uName.trim() || !uPwd || createUser.isPending, style: { ...btnStyle, marginTop: 12, opacity: (!uName.trim() || !uPwd) ? 0.5 : 1 }, children: createUser.isPending ? t('creating') : t('create') })] }), _jsxs("section", { children: [_jsxs("h2", { style: { fontSize: 16, marginBottom: 12 }, children: [t('all_users'), " (", users.length, ")"] }), _jsxs("div", { style: { display: 'grid', gap: 8 }, children: [users.map((u) => (_jsxs(Fragment, { children: [_jsxs("div", { className: "owner-user-row", style: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }, children: [_jsxs("div", { className: "owner-user-info", style: { flex: 1, minWidth: 0 }, children: [_jsx("p", { style: { margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }, children: u.username }), _jsx("p", { style: { margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)', overflow: 'hidden', textOverflow: 'ellipsis' }, children: restaurants.find((r) => r.id === u.restaurantId)?.name ?? '—' })] }), _jsx("span", { className: "owner-user-badge", style: {
+                                                                    padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, flexShrink: 0,
+                                                                    background: u.role === 'ADMIN' ? '#2563eb' : u.role === 'OWNER' ? '#7c3aed' : '#16a34a',
+                                                                    color: '#fff'
+                                                                }, children: t(ROLE_LABEL_KEY[u.role]) }), u.role !== 'OWNER' && (_jsxs("select", { className: "owner-user-role-select", value: u.role, onChange: (e) => updateRole.mutate({ id: u.id, role: e.target.value }), style: { ...inputStyle, width: 130 }, children: [_jsx("option", { value: "ADMIN", children: t('administrator_role') }), _jsx("option", { value: "EMPLOYEE", children: t('employee_role') }), _jsx("option", { value: "KITCHEN", children: t('kitchen_role') })] })), _jsx("button", { onClick: () => setEditingUserId(editingUserId === u.id ? null : u.id), style: {
+                                                                    padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                                                                    borderRadius: 8,
+                                                                    background: editingUserId === u.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
+                                                                    color: '#c9a42c',
+                                                                    border: '1px solid rgba(201,164,44,0.35)',
+                                                                    cursor: 'pointer', flexShrink: 0,
+                                                                }, children: t('edit_credentials') }), u.role !== 'OWNER' && (_jsx("button", { onClick: () => { if (confirm(t('delete_user_confirm', { name: u.username })))
+                                                                    deleteUser.mutate(u.id); }, style: { ...btnStyle, background: '#dc2626', flexShrink: 0 }, children: t('delete') }))] }), editingUserId === u.id && (_jsx(EditCredentialsForm, { userId: u.id, currentUsername: u.username, onClose: () => setEditingUserId(null), invalidateKeys: [['owner-users']], locale: locale }))] }, u.id))), users.length === 0 && _jsx("p", { style: { color: 'rgba(226,232,240,0.5)' }, children: t('no_users_yet') })] })] })] }))] }), _jsx("style", { children: `
+        @media (max-width: 720px) {
+          .owner-company-header {
+            flex-wrap: wrap;
+            row-gap: 8px !important;
+          }
+          .owner-company-name {
+            flex: 1 1 calc(100% - 60px) !important;
+          }
+          .owner-company-logo-input {
+            order: 3;
+            width: 100% !important;
+            flex: 1 1 100% !important;
+          }
+          .owner-user-row {
+            flex-wrap: wrap;
+            row-gap: 8px !important;
+          }
+          .owner-user-info {
+            flex: 1 1 calc(100% - 110px) !important;
+          }
+          .owner-user-role-select {
+            order: 3;
+            flex: 1;
+            width: auto !important;
+            min-width: 0;
+          }
+        }
+      ` })] }));
 };
 const tabStyle = (active) => ({
     padding: '12px 20px', background: 'none', border: 'none',

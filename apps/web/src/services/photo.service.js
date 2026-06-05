@@ -1,10 +1,12 @@
 import { httpClient } from './http';
 export class PhotoService {
-    async uploadPhotos(category, files, dishCategory) {
+    async uploadPhotos(category, files, dishCategory, restaurantId) {
         const formData = new FormData();
         formData.append('category', category);
         if (dishCategory)
             formData.append('dishCategory', dishCategory);
+        if (restaurantId)
+            formData.append('restaurantId', restaurantId);
         files.forEach(file => formData.append('files', file));
         const response = await httpClient.post(`/photos/upload`, formData);
         return response.data.urls;

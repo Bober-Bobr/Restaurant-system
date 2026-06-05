@@ -18,6 +18,18 @@ export function isAdminSubdomain() {
 export function isCabinetSubdomain() {
     return window.location.hostname === `cabinet.${ROOT_DOMAIN}`;
 }
+export function isManagerSubdomain() {
+    return window.location.hostname === `manager.${ROOT_DOMAIN}`;
+}
+// Matches <slug>.invitation.v-menu.uz — returns the restaurant slug or null.
+export function getInvitationSubdomainSlug() {
+    const host = window.location.hostname;
+    const suffix = `.invitation.${ROOT_DOMAIN}`;
+    if (!host.endsWith(suffix))
+        return null;
+    const slug = host.slice(0, -suffix.length);
+    return slug || null;
+}
 export function getSubdomainSlug() {
     const host = window.location.hostname;
     if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || !host.endsWith(`.${ROOT_DOMAIN}`))
