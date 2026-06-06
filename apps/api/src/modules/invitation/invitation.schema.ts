@@ -40,6 +40,10 @@ const baseShape = {
   contactsTitle: z.string().max(120).optional().nullable(),
   contactVCardUrl: z.string().max(500).optional().nullable(),
 
+  accentColor: z.string().max(32).optional().nullable(),
+  backgroundColor: z.string().max(32).optional().nullable(),
+  backgroundImageUrl: z.string().max(500).optional().nullable(),
+
   isPublished: z.boolean().optional(),
 };
 

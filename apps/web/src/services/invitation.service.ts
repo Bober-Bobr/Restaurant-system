@@ -40,6 +40,10 @@ export type Invitation = {
   contactsTitle: string | null;
   contactVCardUrl: string | null;
 
+  accentColor: string | null;
+  backgroundColor: string | null;
+  backgroundImageUrl: string | null;
+
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;

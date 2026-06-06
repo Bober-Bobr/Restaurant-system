@@ -270,6 +270,11 @@ model Invitation {
   contactsTitle   String?
   contactVCardUrl String?
 
+  // Theme / palette
+  accentColor         String?
+  backgroundColor     String?
+  backgroundImageUrl  String?
+
   isPublished     Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

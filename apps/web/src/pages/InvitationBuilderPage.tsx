@@ -10,6 +10,17 @@ import { invitationService, type Invitation, type InvitationMenuItem } from '../
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { PhotoUploadField } from '../components/PhotoUploadField';
+import QRCode from 'qrcode';
+
+// Preset palettes for the invitation (accent + page background).
+const PALETTES: { name: string; accent: string; background: string }[] = [
+  { name: 'Gold', accent: '#c9a42c', background: '#fafaf7' },
+  { name: 'Emerald', accent: '#0f7b5a', background: '#f3faf6' },
+  { name: 'Rose', accent: '#c2185b', background: '#fdf4f7' },
+  { name: 'Royal', accent: '#3b3f9e', background: '#f4f5fc' },
+  { name: 'Sunset', accent: '#d2691e', background: '#fef7f0' },
+  { name: 'Charcoal', accent: '#b08d57', background: '#1a1a1a' },
+];
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)',
@@ -81,6 +92,7 @@ export const InvitationBuilderPage = () => {
   const [form, setForm] = useState<Partial<Invitation>>({});
   const [savedFlash, setSavedFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (existingQuery.data) {
@@ -127,6 +139,12 @@ export const InvitationBuilderPage = () => {
       setTimeout(() => setSavedFlash(false), 1500);
       queryClient.setQueryData(['invitation-by-event', eventId], inv);
       queryClient.invalidateQueries({ queryKey: ['manager-invitations', restaurantId] });
+      // Generate a QR code pointing at the public invitation URL.
+      if (publicUrl) {
+        QRCode.toDataURL(publicUrl, { width: 320, margin: 2, color: { dark: '#0f172a', light: '#ffffff' } })
+          .then(setQrDataUrl)
+          .catch(() => setQrDataUrl(null));
+      }
     },
     onError: (e) => {
       if (axios.isAxiosError(e)) {
@@ -249,6 +267,47 @@ export const InvitationBuilderPage = () => {
           </div>
         )}
 
+        {qrDataUrl && (
+          <div
+            onClick={() => setQrDataUrl(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 60,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="scale-in"
+              style={{
+                width: '100%', maxWidth: 360, borderRadius: 18,
+                background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(201,164,44,0.35)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.5)', padding: 22, textAlign: 'center',
+              }}
+            >
+              <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>Invitation ready</p>
+              <p style={{ margin: '0 0 16px', fontSize: 12, color: 'rgba(226,232,240,0.6)' }}>Scan to open the invitation</p>
+              <img src={qrDataUrl} alt="QR code" style={{ width: 220, height: 220, borderRadius: 12, background: '#fff', padding: 8 }} />
+              {publicUrl && (
+                <a href={publicUrl} target="_blank" rel="noreferrer"
+                  style={{ display: 'block', margin: '14px 0 0', fontSize: 12, color: '#c9a42c', wordBreak: 'break-all' }}>
+                  {publicUrl}
+                </a>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <a href={qrDataUrl} download={`invitation-${form.slug ?? 'qr'}.png`}
+                  className="adm-btn-primary" style={{ flex: 1, fontSize: 13, textAlign: 'center', textDecoration: 'none', padding: '9px 0' }}>
+                  Download QR
+                </a>
+                <button type="button" onClick={() => setQrDataUrl(null)}
+                  style={{ flex: 1, fontSize: 13, borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(226,232,240,0.8)', cursor: 'pointer' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Section title="Slug & link">
           <Field label="Slug">
             <input value={form.slug ?? ''} onChange={(e) => set('slug', e.target.value)}
@@ -264,6 +323,58 @@ export const InvitationBuilderPage = () => {
               onChange={(e) => set('isPublished', e.target.checked)} />
             Published (visible at the public URL)
           </label>
+        </Section>
+
+        <Section title="Design & palette">
+          <Field label="Palette presets">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {PALETTES.map((p) => {
+                const active = (form.accentColor ?? '#c9a42c') === p.accent && (form.backgroundColor ?? '#fafaf7') === p.background;
+                return (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, accentColor: p.accent, backgroundColor: p.background }))}
+                    title={p.name}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 10px', borderRadius: 10, cursor: 'pointer',
+                      background: 'rgba(15,23,42,0.5)',
+                      border: `1px solid ${active ? p.accent : 'rgba(255,255,255,0.12)'}`,
+                      color: '#e2e8f0', fontSize: 12,
+                    }}
+                  >
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: p.accent, border: '1px solid rgba(255,255,255,0.3)' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: 4, background: p.background, border: '1px solid rgba(255,255,255,0.3)' }} />
+                    {p.name}
+                    {active && <span style={{ color: p.accent }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            <Field label="Accent color">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="color" value={form.accentColor ?? '#c9a42c'} onChange={(e) => set('accentColor', e.target.value)}
+                  style={{ width: 42, height: 36, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer' }} />
+                <input value={form.accentColor ?? '#c9a42c'} onChange={(e) => set('accentColor', e.target.value)} style={inputStyle} />
+              </div>
+            </Field>
+            <Field label="Background color">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="color" value={form.backgroundColor ?? '#fafaf7'} onChange={(e) => set('backgroundColor', e.target.value)}
+                  style={{ width: 42, height: 36, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer' }} />
+                <input value={form.backgroundColor ?? '#fafaf7'} onChange={(e) => set('backgroundColor', e.target.value)} style={inputStyle} />
+              </div>
+            </Field>
+          </div>
+          <PhotoUploadField
+            label="Background photo (optional)"
+            value={form.backgroundImageUrl}
+            onChange={(url) => set('backgroundImageUrl', url)}
+            restaurantId={restaurantId}
+          />
         </Section>
 
         <Section title="Promo card (top hero)">

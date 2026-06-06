@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitationService, type Invitation } from '../services/invitation.service';
@@ -12,6 +12,13 @@ const PAGE_BG = `
 `;
 const PAPER_BG = '#fdfcf8';
 const TEXT = '#1a1a1a';
+
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  if (!m) return `rgba(201,164,44,${alpha})`;
+  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 function useCountdown(target: string | null | undefined) {
   const [now, setNow] = useState<number>(Date.now());
@@ -63,16 +70,26 @@ export const PublicInvitationPage = () => {
   const welcomeImg = invitation.welcomeImageUrl ? (getPhotoUrl(invitation.welcomeImageUrl) ?? invitation.welcomeImageUrl) : null;
   const restaurantLogo = invitation.restaurant?.logoUrl ? (getPhotoUrl(invitation.restaurant.logoUrl) ?? invitation.restaurant.logoUrl) : null;
 
+  // ── Theme from the invitation ──
+  const accent = invitation.accentColor || ACCENT;
+  const bgColor = invitation.backgroundColor || '#fafaf7';
+  const bgImage = invitation.backgroundImageUrl ? (getPhotoUrl(invitation.backgroundImageUrl) ?? invitation.backgroundImageUrl) : null;
+  const pageBackground = bgImage
+    ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${bgImage}) center / cover fixed, ${bgColor}`
+    : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
+
   return (
     <main style={{
       minHeight: '100vh',
-      background: PAGE_BG,
+      background: pageBackground,
       color: TEXT,
       fontFamily: '"Playfair Display", Georgia, serif',
       padding: '20px 16px',
       display: 'flex', justifyContent: 'center',
+      position: 'relative',
     }}>
-      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <FingerTrail accent={accent} />
+      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
 
         {/* Top promo / gift card */}
         <Block padded={false}>
@@ -80,7 +97,7 @@ export const PublicInvitationPage = () => {
             {promoImg ? (
               <img src={promoImg} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
             ) : (
-              <div style={{ aspectRatio: '4 / 3', background: `linear-gradient(135deg, ${ACCENT}40 0%, #b88e26 100%)`, position: 'relative' }}>
+              <div style={{ aspectRatio: '4 / 3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, position: 'relative' }}>
                 <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '0.05em' }}>
                   {invitation.promoTitle ?? 'Online invitation'}
                 </span>
@@ -89,7 +106,7 @@ export const PublicInvitationPage = () => {
             {invitation.promoCode && (
               <div style={{
                 position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
-                background: ACCENT, color: '#0f0f0f',
+                background: accent, color: '#0f0f0f',
                 padding: '6px 18px', borderRadius: 999,
                 fontWeight: 800, fontSize: 14, letterSpacing: '0.05em',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
@@ -99,7 +116,7 @@ export const PublicInvitationPage = () => {
             )}
             <span style={{
               position: 'absolute', top: 10, left: -2,
-              background: '#000', color: ACCENT,
+              background: '#000', color: accent,
               padding: '4px 12px', fontWeight: 800, fontSize: 11, letterSpacing: '0.15em',
               transform: 'rotate(-12deg)',
             }}>FREE</span>
@@ -144,16 +161,20 @@ export const PublicInvitationPage = () => {
 
         {/* Welcome card with countdown */}
         <Block padded={false}>
-          <div style={{ position: 'relative' }}>
-            {welcomeImg ? (
+          {welcomeImg && (
+            <div style={{ position: 'relative' }}>
               <img src={welcomeImg} alt="" style={{ width: '100%', display: 'block' }} />
-            ) : restaurantLogo ? (
-              <div style={{ padding: 30, textAlign: 'center', background: `linear-gradient(180deg, #f0e9d7 0%, #fdfcf8 100%)` }}>
-                <img src={restaurantLogo} alt={invitation.restaurant?.name ?? ''} style={{ maxWidth: 160, height: 'auto' }} />
-              </div>
-            ) : null}
-          </div>
-          <div style={{ padding: '8px 20px 22px', textAlign: 'center' }}>
+            </div>
+          )}
+          <div style={{ padding: '22px 20px', textAlign: 'center' }}>
+            {/* Restaurant logo above the congratulatory text */}
+            {restaurantLogo && (
+              <img
+                src={restaurantLogo}
+                alt={invitation.restaurant?.name ?? ''}
+                style={{ maxWidth: 150, maxHeight: 110, height: 'auto', width: 'auto', objectFit: 'contain', margin: '0 auto 16px', display: 'block' }}
+              />
+            )}
             {invitation.welcomeTitle && (
               <p style={{ margin: 0, fontSize: 26, fontStyle: 'italic', color: TEXT }}>{invitation.welcomeTitle}</p>
             )}
@@ -206,7 +227,7 @@ export const PublicInvitationPage = () => {
         {/* Menu showcase */}
         {invitation.menuItems.length > 0 && (
           <Block padded={false}>
-            <div style={{ background: '#000', color: ACCENT, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: 14, letterSpacing: '0.3em', fontFamily: 'system-ui, sans-serif' }}>
+            <div style={{ background: '#000', color: accent, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: 14, letterSpacing: '0.3em', fontFamily: 'system-ui, sans-serif' }}>
               МЕНЮ · MENU · МЕНЮ
             </div>
             <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -219,12 +240,12 @@ export const PublicInvitationPage = () => {
                       <div style={{
                         position: 'absolute', inset: 0, borderRadius: '50%',
                         background: imgSrc ? `url(${imgSrc}) center / cover` : '#eaeaea',
-                        border: `3px solid ${ACCENT}`,
+                        border: `3px solid ${accent}`,
                       }} />
                       <span style={{
                         position: 'absolute', top: -4, left: -4,
                         width: 26, height: 26, borderRadius: '50%',
-                        background: ACCENT, color: '#000',
+                        background: accent, color: '#000',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: 800, fontSize: 14,
                         fontFamily: 'system-ui, sans-serif',
@@ -236,7 +257,7 @@ export const PublicInvitationPage = () => {
                 );
               })}
             </div>
-            <div style={{ background: '#000', color: ACCENT, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: 12, letterSpacing: '0.25em', fontFamily: 'system-ui, sans-serif' }}>
+            <div style={{ background: '#000', color: accent, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: 12, letterSpacing: '0.25em', fontFamily: 'system-ui, sans-serif' }}>
               ★ {(invitation.restaurant?.name ?? 'RESTAURANT').toUpperCase()} RESTAURANT ★
             </div>
           </Block>
@@ -245,7 +266,7 @@ export const PublicInvitationPage = () => {
         {/* Photo gallery */}
         {invitation.galleryPhotos.length > 0 && (
           <Block padded={false}>
-            <GalleryCarousel photos={invitation.galleryPhotos} />
+            <GalleryCarousel photos={invitation.galleryPhotos} accent={accent} />
           </Block>
         )}
 
@@ -271,7 +292,7 @@ export const PublicInvitationPage = () => {
               </a>
             )}
             {invitation.contactVCardUrl && (
-              <a href={invitation.contactVCardUrl} download style={{ ...contactLinkStyle, background: '#000', color: ACCENT }}>
+              <a href={invitation.contactVCardUrl} download style={{ ...contactLinkStyle, background: '#000', color: accent }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <div style={{ textAlign: 'left' }}>
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em' }}>СОХРАНИТЬ КОНТАКТЫ</p>
@@ -304,7 +325,7 @@ const contactLinkStyle: React.CSSProperties = {
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
 };
 
-function GalleryCarousel({ photos }: { photos: string[] }) {
+function GalleryCarousel({ photos, accent }: { photos: string[]; accent: string }) {
   const [idx, setIdx] = useState(0);
   const prev = () => setIdx((i) => (i - 1 + photos.length) % photos.length);
   const next = () => setIdx((i) => (i + 1) % photos.length);
@@ -315,32 +336,119 @@ function GalleryCarousel({ photos }: { photos: string[] }) {
         <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         {photos.length > 1 && (
           <>
-            <button type="button" onClick={prev} style={carouselBtn('left')}>‹</button>
-            <button type="button" onClick={next} style={carouselBtn('right')}>›</button>
+            <button type="button" onClick={prev} style={carouselBtn('left', accent)}>‹</button>
+            <button type="button" onClick={next} style={carouselBtn('right', accent)}>›</button>
           </>
         )}
       </div>
-      <p style={{ margin: 0, padding: '12px 16px', textAlign: 'center', color: ACCENT, fontWeight: 700, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
+      <p style={{ margin: 0, padding: '12px 16px', textAlign: 'center', color: accent, fontWeight: 700, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
         НАЖМИТЕ ЧТОБЫ ПОСМОТРЕТЬ
       </p>
       {photos.length > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingBottom: 12 }}>
           {photos.map((_, i) => (
-            <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? ACCENT : '#ccc' }} />
+            <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? accent : '#ccc' }} />
           ))}
         </div>
       )}
     </div>
   );
 }
-function carouselBtn(side: 'left' | 'right'): React.CSSProperties {
+function carouselBtn(side: 'left' | 'right', accent: string): React.CSSProperties {
   return {
     position: 'absolute', top: '50%', transform: 'translateY(-50%)',
     [side]: 10,
     width: 38, height: 38, borderRadius: '50%',
-    background: ACCENT, color: '#fff', border: 'none',
+    background: accent, color: '#fff', border: 'none',
     fontSize: 24, fontWeight: 700, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   };
+}
+
+// ── Finger-trail effect ─────────────────────────────────────────────────────
+// A sparkly trail of accent-colored dots that follows the finger/cursor across
+// the invitation. Renders on a full-screen canvas behind the content.
+function FingerTrail({ accent }: { accent: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rgb = (() => {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(accent.trim());
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [201, 164, 44];
+    })();
+
+    type P = { x: number; y: number; vx: number; vy: number; life: number; size: number };
+    let particles: P[] = [];
+    let raf = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    let lastX = 0, lastY = 0, hasLast = false;
+    const emit = (x: number, y: number) => {
+      // Number of particles scales with how fast the finger moves.
+      const dist = hasLast ? Math.hypot(x - lastX, y - lastY) : 0;
+      const count = Math.min(6, 1 + Math.floor(dist / 8));
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6 - 0.3,
+          life: 1,
+          size: 2 + Math.random() * 3,
+        });
+      }
+      if (particles.length > 400) particles = particles.slice(-400);
+      lastX = x; lastY = y; hasLast = true;
+    };
+
+    const onMouse = (e: MouseEvent) => emit(e.clientX, e.clientY);
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) emit(t.clientX, t.clientY);
+    };
+    window.addEventListener('mousemove', onMouse, { passive: true });
+    window.addEventListener('touchmove', onTouch, { passive: true });
+
+    const tick = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+        if (p.life <= 0) continue;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${p.life * 0.85})`;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${p.life})`;
+        ctx.fill();
+      }
+      particles = particles.filter((p) => p.life > 0);
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('touchmove', onTouch);
+    };
+  }, [accent]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50 }}
+    />
+  );
 }
