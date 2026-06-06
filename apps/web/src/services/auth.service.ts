@@ -22,6 +22,15 @@ export type AdminUser = {
   createdAt: string;
 };
 
+export type DeviceSession = {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  isCurrent: boolean;
+};
+
 export const authService = {
   async login(username: string, password: string) {
     const { data } = await httpClient.post<AuthResponse>('/auth/login', { username, password });
@@ -73,5 +82,12 @@ export const authService = {
   async createUserAsChief(payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }) {
     const { data } = await httpClient.post<AdminUser>('/auth/users', payload);
     return data;
+  },
+  async listSessions() {
+    const { data } = await httpClient.get<DeviceSession[]>('/auth/sessions');
+    return data;
+  },
+  async revokeSession(id: string) {
+    await httpClient.delete(`/auth/sessions/${id}`);
   }
 };

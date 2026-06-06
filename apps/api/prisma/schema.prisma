@@ -102,8 +102,22 @@ model AdminUser {
   ownedRestaurants Restaurant[] @relation("OwnedRestaurants")
   restaurant       Restaurant?  @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
   companies        Company[]
+  sessions         Session[]
 
   @@index([restaurantId])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  user             AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Company {

@@ -48,12 +48,24 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
             {currentRestaurantName}
           </span>
         )}
+        <Link
+          to="/devices"
+          style={{
+            marginLeft: 'auto',
+            padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', whiteSpace: 'nowrap',
+            color: '#c9a42c', background: 'rgba(201,164,44,0.1)',
+            border: '1px solid rgba(201,164,44,0.35)',
+          }}
+        >
+          Devices
+        </Link>
         <button
           type="button"
           className="adm-btn-danger"
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
-          style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

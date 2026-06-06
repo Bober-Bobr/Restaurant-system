@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Fragment, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
 import { EditCredentialsForm } from '../components/EditCredentialsForm';
+import { DevicesPanel } from '../components/DevicesPanel';
 import { companyService, type CompanyWithDetails } from '../services/company.service';
 import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
@@ -19,7 +20,7 @@ const formatError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-type Tab = 'companies' | 'users';
+type Tab = 'companies' | 'users' | 'devices';
 
 export const ChiefAdminPage = () => {
   const username = useAuthStore((s) => s.username);
@@ -124,7 +125,7 @@ export const ChiefAdminPage = () => {
       </header>
 
       <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.5)' }}>
-        {(['companies', 'users'] as Tab[]).map((tabKey) => (
+        {(['companies', 'users', 'devices'] as Tab[]).map((tabKey) => (
           <button key={tabKey} onClick={() => setTab(tabKey)} style={{
             padding: '12px 20px', background: 'none', border: 'none',
             borderBottom: tab === tabKey ? '2px solid #c9a42c' : '2px solid transparent',
@@ -302,6 +303,8 @@ export const ChiefAdminPage = () => {
             </section>
           </>
         )}
+
+        {tab === 'devices' && <DevicesPanel locale="en" />}
       </main>
     </div>
   );

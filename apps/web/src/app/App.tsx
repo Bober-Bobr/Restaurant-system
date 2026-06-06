@@ -16,6 +16,7 @@ import { PublicInvitationPage } from '../pages/PublicInvitationPage';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
 import { CalendarPage } from '../pages/CalendarPage';
+import { DevicesPage } from '../pages/DevicesPage';
 import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
@@ -75,6 +76,7 @@ export const App = () => {
         <Route path="/" element={<ManagerPortalPage />} />
         <Route path="/restaurants/:restaurantId" element={<ManagerRestaurantEventsPage />} />
         <Route path="/restaurants/:restaurantId/events/:eventId/invitation" element={<InvitationBuilderPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -129,6 +131,7 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/" element={<OwnerCabinetPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -152,6 +155,7 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/" element={<ChiefAdminPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -172,6 +176,7 @@ export const App = () => {
         <Route element={<EmployeeLayout />}>
           <Route path="/" element={<EmployeeEventsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -188,6 +193,7 @@ export const App = () => {
       <Route element={<AdminLayout />}>
         <Route path="/" element={<AdminEventsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />
         <Route path="/admin/additional" element={<AdminAdditionalPage />} />
         <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />

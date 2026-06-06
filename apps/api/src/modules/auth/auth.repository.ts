@@ -112,4 +112,36 @@ export class AuthRepository {
   async deleteById(userId: string) {
     return prisma.adminUser.delete({ where: { id: userId } });
   }
+
+  // ── Sessions (per-device login) ──
+  async createSession(data: { userId: string; refreshTokenHash: string; userAgent?: string | null; ipAddress?: string | null }) {
+    return prisma.session.create({ data });
+  }
+
+  async findSessionById(id: string) {
+    return prisma.session.findUnique({ where: { id } });
+  }
+
+  async updateSessionToken(id: string, refreshTokenHash: string) {
+    return prisma.session.update({
+      where: { id },
+      data: { refreshTokenHash, lastSeenAt: new Date() },
+    });
+  }
+
+  async listSessionsByUser(userId: string) {
+    return prisma.session.findMany({
+      where: { userId },
+      orderBy: { lastSeenAt: 'desc' },
+      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastSeenAt: true },
+    });
+  }
+
+  async deleteSession(id: string) {
+    return prisma.session.delete({ where: { id } });
+  }
+
+  async deleteSessionsByUser(userId: string) {
+    return prisma.session.deleteMany({ where: { userId } });
+  }
 }

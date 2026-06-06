@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Fragment, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
 import { EditCredentialsForm } from '../components/EditCredentialsForm';
+import { DevicesPanel } from '../components/DevicesPanel';
 import { companyService, type Company } from '../services/company.service';
 import { restaurantService, type Restaurant } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
@@ -21,7 +22,7 @@ const formatError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-type Tab = 'companies' | 'users';
+type Tab = 'companies' | 'users' | 'devices';
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 export const OwnerCabinetPage = () => {
@@ -222,6 +223,9 @@ export const OwnerCabinetPage = () => {
         </button>
         <button onClick={() => setTab('users')} style={tabStyle(tab === 'users')}>
           {t('users')}
+        </button>
+        <button onClick={() => setTab('devices')} style={tabStyle(tab === 'devices')}>
+          {t('devices')}
         </button>
       </nav>
 
@@ -484,6 +488,8 @@ export const OwnerCabinetPage = () => {
             </section>
           </>
         )}
+
+        {tab === 'devices' && <DevicesPanel locale={locale} />}
       </main>
 
       <style>{`

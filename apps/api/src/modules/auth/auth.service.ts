@@ -18,13 +18,16 @@ export type AuthResponse = {
   restaurantName: string | null;
 };
 
+export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null };
+
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
   async register(
     username: string,
     password: string,
-    options: { restaurantName?: string }
+    options: { restaurantName?: string },
+    device: DeviceInfo = {}
   ): Promise<AuthResponse> {
     if (!options.restaurantName?.trim()) {
       throw createHttpError(400, 'Restaurant name is required.');
@@ -39,32 +42,51 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await this.authRepository.createAdminWithRestaurant(username, passwordHash, restaurantName);
-    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { device });
   }
 
-  async login(username: string, password: string): Promise<AuthResponse> {
+  async login(username: string, password: string, device: DeviceInfo = {}): Promise<AuthResponse> {
     const user = await this.authRepository.findByUsername(username);
     if (!user) throw createHttpError(401, 'Invalid username or password');
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw createHttpError(401, 'Invalid username or password');
 
-    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { device });
   }
 
-  async refreshAccessToken(userId: string, providedRefreshToken: string): Promise<AuthResponse> {
-    const user = await this.authRepository.findById(userId);
-    if (!user) throw createHttpError(401, 'User not found');
-    if (!user.refreshTokenHash) throw createHttpError(401, 'No refresh token stored');
+  async refreshAccessToken(sessionId: string, providedRefreshToken: string): Promise<AuthResponse> {
+    const session = await this.authRepository.findSessionById(sessionId);
+    if (!session) throw createHttpError(401, 'Session not found');
 
-    const valid = await bcrypt.compare(providedRefreshToken, user.refreshTokenHash);
+    const valid = await bcrypt.compare(providedRefreshToken, session.refreshTokenHash);
     if (!valid) throw createHttpError(401, 'Invalid or expired refresh token');
 
-    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId);
+    const user = await this.authRepository.findById(session.userId);
+    if (!user) throw createHttpError(401, 'User not found');
+
+    return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { sessionId });
   }
 
-  async logout(userId: string): Promise<void> {
-    await this.authRepository.updateRefreshToken(userId, null);
+  async logout(sessionId: string): Promise<void> {
+    try {
+      await this.authRepository.deleteSession(sessionId);
+    } catch {
+      // Session already gone — treat as success.
+    }
+  }
+
+  async listSessions(userId: string, currentSessionId: string | null) {
+    const sessions = await this.authRepository.listSessionsByUser(userId);
+    return sessions.map((s) => ({ ...s, isCurrent: s.id === currentSessionId }));
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<void> {
+    const session = await this.authRepository.findSessionById(sessionId);
+    if (!session || session.userId !== userId) {
+      throw createHttpError(404, 'Session not found');
+    }
+    await this.authRepository.deleteSession(sessionId);
   }
 
   async listUsers() {
@@ -203,22 +225,35 @@ export class AuthService {
     userId: string,
     username: string,
     role: AdminRole,
-    restaurantId: string | null
+    restaurantId: string | null,
+    opts: { sessionId?: string; device?: DeviceInfo }
   ): Promise<AuthResponse> {
+    // New login → create a session row; refresh → reuse the existing one.
+    let sessionId = opts.sessionId;
+    if (!sessionId) {
+      const session = await this.authRepository.createSession({
+        userId,
+        refreshTokenHash: '',
+        userAgent: opts.device?.userAgent ?? null,
+        ipAddress: opts.device?.ipAddress ?? null,
+      });
+      sessionId = session.id;
+    }
+
     const accessToken = jwt.sign(
-      { sub: userId, username, role, restaurantId, type: 'access' },
+      { sub: userId, username, role, restaurantId, sid: sessionId, type: 'access' },
       env.JWT_SECRET,
       { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
 
     const refreshToken = jwt.sign(
-      { sub: userId, type: 'refresh' },
+      { sub: userId, sid: sessionId, type: 'refresh' },
       env.JWT_SECRET,
       { expiresIn: REFRESH_TOKEN_EXPIRY }
     );
 
     const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
-    await this.authRepository.updateRefreshToken(userId, refreshTokenHash);
+    await this.authRepository.updateSessionToken(sessionId, refreshTokenHash);
 
     const decoded = jwt.decode(accessToken) as { exp?: number } | null;
     const expiresIn = decoded?.exp ? decoded.exp * 1000 - Date.now() : 15 * 60 * 1000;

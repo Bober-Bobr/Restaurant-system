@@ -8,23 +8,31 @@ import { AuthService } from './auth.service.js';
 type JwtPayload = {
   sub: string;
   username: string;
+  sid?: string;
   type?: string;
 };
 
 const authService = new AuthService(new AuthRepository());
+
+function deviceInfo(request: Request) {
+  const userAgent = request.header('user-agent') ?? null;
+  const fwd = request.header('x-forwarded-for');
+  const ipAddress = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() || request.ip || null;
+  return { userAgent, ipAddress };
+}
 
 export class AuthController {
   async register(request: Request, response: Response) {
     const payload = registerSchema.parse(request.body);
     const result = await authService.register(payload.username, payload.password, {
       restaurantName: payload.restaurantName
-    });
+    }, deviceInfo(request));
     response.status(201).json(result);
   }
 
   async login(request: Request, response: Response) {
     const payload = loginSchema.parse(request.body);
-    const result = await authService.login(payload.username, payload.password);
+    const result = await authService.login(payload.username, payload.password, deviceInfo(request));
     response.json(result);
   }
 
@@ -33,12 +41,12 @@ export class AuthController {
 
     try {
       const decoded = jwt.verify(payload.refreshToken, env.JWT_SECRET) as JwtPayload;
-      if (!decoded.sub || decoded.type !== 'refresh') {
+      if (!decoded.sub || decoded.type !== 'refresh' || !decoded.sid) {
         response.status(401).json({ message: 'Invalid refresh token' });
         return;
       }
 
-      const result = await authService.refreshAccessToken(decoded.sub, payload.refreshToken);
+      const result = await authService.refreshAccessToken(decoded.sid, payload.refreshToken);
       response.json(result);
     } catch (error) {
       response.status(401).json({ message: 'Invalid or expired refresh token' });
@@ -57,13 +65,25 @@ export class AuthController {
 
     try {
       const decoded = jwt.verify(bearerToken, env.JWT_SECRET) as JwtPayload;
-      if (decoded.sub) {
-        await authService.logout(decoded.sub);
+      if (decoded.sid) {
+        await authService.logout(decoded.sid);
       }
       response.json({ message: 'Logged out successfully' });
     } catch (error) {
       response.status(401).json({ message: 'Invalid token' });
     }
+  }
+
+  async listSessions(request: Request, response: Response) {
+    const admin = request.admin!;
+    const sessions = await authService.listSessions(admin.id, admin.sid ?? null);
+    response.json(sessions);
+  }
+
+  async revokeSession(request: Request, response: Response) {
+    const admin = request.admin!;
+    await authService.revokeSession(admin.id, String(request.params.id));
+    response.status(204).send();
   }
 
   async me(request: Request, response: Response) {

@@ -53,6 +53,7 @@ export const AdminLayout = () => {
     { to: '/admin/halls', label: t('halls') },
     { to: '/admin/photos', label: t('photos') },
     ...(role === 'ADMIN' ? [{ to: '/admin/users', label: t('users') }] : []),
+    { to: '/devices', label: t('devices') },
   ];
 
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);

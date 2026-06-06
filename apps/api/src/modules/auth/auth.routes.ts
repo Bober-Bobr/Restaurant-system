@@ -12,6 +12,10 @@ router.post('/refresh', controller.refresh.bind(controller));
 router.post('/logout', adminAuthMiddleware, controller.logout.bind(controller));
 router.get('/me', adminAuthMiddleware, controller.me.bind(controller));
 
+// Devices / sessions — any authenticated user manages their own.
+router.get('/sessions', adminAuthMiddleware, controller.listSessions.bind(controller));
+router.delete('/sessions/:id', adminAuthMiddleware, controller.revokeSession.bind(controller));
+
 router.get('/users', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.listUsers.bind(controller));
 router.delete('/users/:id', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.deleteUser.bind(controller));
 router.patch('/users/:id/role', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER), controller.updateRole.bind(controller));
