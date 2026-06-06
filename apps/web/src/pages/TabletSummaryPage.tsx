@@ -189,10 +189,15 @@ export const TabletSummaryPage = () => {
 
   const downloadBlob = async (url: string, filename: string) => {
     try {
+      // Dishes that come included with the chosen table category.
+      const includedDishes = (selectedTableCategory?.packageItems ?? []).map((pi) => ({
+        name: pi.menuItem.name,
+        category: pi.menuItem.category,
+      }));
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], pricing: exportPricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
+          guestCount, selectedItems, menuItems: menuItems || [], includedDishes, pricing: exportPricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));

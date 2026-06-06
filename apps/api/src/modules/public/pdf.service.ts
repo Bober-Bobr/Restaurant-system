@@ -25,6 +25,7 @@ interface SummaryData {
   guestCount: number;
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
+  includedDishes?: { name: string; category: string }[];
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -192,6 +193,18 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     labelValue(t('table_category'), data.tableCategoryName);
     labelValue(t('guest_count'), String(data.guestCount));
     doc.moveDown(1);
+
+    // ── Dishes included with the chosen table ───────────────────────────
+    const includedDishes = data.includedDishes ?? [];
+    if (includedDishes.length > 0) {
+      section(t('included_with_table'));
+      includedDishes.forEach((dish) => {
+        doc.fillColor(WHITE).font(fontRegular, 11)
+          .text(`•  ${dish.name}`, MARGIN, doc.y, { width: contentWidth });
+        doc.moveDown(0.2);
+      });
+      doc.moveDown(0.7);
+    }
 
     // ── Menu items ──────────────────────────────────────────────────────
     section(t('selected_menu_items'));

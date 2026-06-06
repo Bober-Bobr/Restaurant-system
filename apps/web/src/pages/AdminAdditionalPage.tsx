@@ -11,7 +11,7 @@ type MenuCategory = MenuItem['category'];
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
-  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'DRINKS', 'SWEETS', 'FRUITS',
+  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {

@@ -34,9 +34,8 @@ function quickSort(items: MenuItem[]): MenuItem[] {
 }
 
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
-  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'DRINKS', 'SWEETS', 'FRUITS',
+  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
-const COURSE_CATEGORIES: MenuCategory[] = ['FIRST_COURSE', 'SECOND_COURSE'];
 
 // ── Decorative background ─────────────────────────────────────────────────
 
@@ -441,9 +440,6 @@ export const TabletMenuPage = () => {
         (activeCategory === null || item.category === activeCategory)
     )
   );
-  const courseItems = quickSort(
-    (menuItems ?? []).filter((item) => COURSE_CATEGORIES.includes(item.category))
-  );
   const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
 
   return (
@@ -732,31 +728,6 @@ export const TabletMenuPage = () => {
                       </div>
                     </div>
                   ))}
-              </section>
-            )}
-
-            {/* Courses */}
-            {selectedTableCategory && courseItems.length > 0 && (
-              <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
-                <p className="rg-heading mb-1">{t('courses')}</p>
-                <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('browse_menu_items')}</p>
-                {COURSE_CATEGORIES.map((cat) => {
-                  const items = courseItems.filter((item) => item.category === cat);
-                  if (items.length === 0) return null;
-                  return (
-                    <div key={cat} className="mb-6 last:mb-0">
-                      <p className="mb-3 rg-label">{t(cat.toLowerCase() as Parameters<typeof translate>[0])}</p>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {items.map((item, i) => (
-                          <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-                            <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                              onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
               </section>
             )}
 
