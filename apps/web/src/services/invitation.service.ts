@@ -7,6 +7,13 @@ export type InvitationMenuItem = {
   photoUrl?: string | null;
 };
 
+// A gallery item is a still photo that links to an Instagram video.
+// Legacy data may store a plain string (photo URL only).
+export type InvitationGalleryItem = {
+  photoUrl: string;
+  videoUrl?: string | null;
+};
+
 export type Invitation = {
   id: string;
   slug: string;
@@ -32,7 +39,7 @@ export type Invitation = {
   countdownLabel: string | null;
 
   menuItems: InvitationMenuItem[];
-  galleryPhotos: string[];
+  galleryPhotos: Array<string | InvitationGalleryItem>;
 
   instagramUrl: string | null;
   instagramLabel: string | null;
@@ -54,6 +61,15 @@ export type Invitation = {
 
 const apiRoot = (): string =>
   (import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api').replace(/\/$/, '');
+
+// Normalize gallery entries (legacy strings or objects) to a consistent shape.
+export function normalizeGalleryItems(
+  items: Array<string | InvitationGalleryItem> | null | undefined
+): InvitationGalleryItem[] {
+  return (items ?? []).map((it) =>
+    typeof it === 'string' ? { photoUrl: it, videoUrl: null } : { photoUrl: it.photoUrl, videoUrl: it.videoUrl ?? null }
+  );
+}
 
 export const invitationService = {
   async listByRestaurant(restaurantId: string): Promise<Invitation[]> {

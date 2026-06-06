@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { invitationService, type Invitation } from '../services/invitation.service';
+import { invitationService, normalizeGalleryItems, type Invitation, type InvitationGalleryItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
 
 const ACCENT = '#c9a42c';
@@ -74,6 +74,7 @@ export const PublicInvitationPage = () => {
   const accent = invitation.accentColor || ACCENT;
   const bgColor = invitation.backgroundColor || '#fafaf7';
   const bgImage = invitation.backgroundImageUrl ? (getPhotoUrl(invitation.backgroundImageUrl) ?? invitation.backgroundImageUrl) : null;
+  const galleryItems = normalizeGalleryItems(invitation.galleryPhotos);
   const pageBackground = bgImage
     ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${bgImage}) center / cover fixed, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
@@ -263,10 +264,10 @@ export const PublicInvitationPage = () => {
           </Block>
         )}
 
-        {/* Photo gallery */}
-        {invitation.galleryPhotos.length > 0 && (
+        {/* Gallery — Instagram video stills */}
+        {galleryItems.length > 0 && (
           <Block padded={false}>
-            <GalleryCarousel photos={invitation.galleryPhotos} accent={accent} />
+            <GalleryCarousel items={galleryItems} accent={accent} />
           </Block>
         )}
 
@@ -325,28 +326,54 @@ const contactLinkStyle: React.CSSProperties = {
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
 };
 
-function GalleryCarousel({ photos, accent }: { photos: string[]; accent: string }) {
+function GalleryCarousel({ items, accent }: { items: InvitationGalleryItem[]; accent: string }) {
   const [idx, setIdx] = useState(0);
-  const prev = () => setIdx((i) => (i - 1 + photos.length) % photos.length);
-  const next = () => setIdx((i) => (i + 1) % photos.length);
-  const src = getPhotoUrl(photos[idx]) ?? photos[idx];
+  const prev = () => setIdx((i) => (i - 1 + items.length) % items.length);
+  const next = () => setIdx((i) => (i + 1) % items.length);
+  const current = items[idx];
+  const src = getPhotoUrl(current.photoUrl) ?? current.photoUrl;
+  const video = current.videoUrl || null;
+
+  const openVideo = () => { if (video) window.open(video, '_blank', 'noopener,noreferrer'); };
+
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ aspectRatio: '4 / 3', background: '#000', position: 'relative', overflow: 'hidden' }}>
+      <div
+        onClick={openVideo}
+        style={{ aspectRatio: '4 / 3', background: '#000', position: 'relative', overflow: 'hidden', cursor: video ? 'pointer' : 'default' }}
+      >
         <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        {photos.length > 1 && (
+        {video && (
+          // Play badge signalling this still opens an Instagram video
+          <span style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 22, paddingLeft: 4,
+            border: '2px solid rgba(255,255,255,0.85)',
+          }}>▶</span>
+        )}
+        {items.length > 1 && (
           <>
-            <button type="button" onClick={prev} style={carouselBtn('left', accent)}>‹</button>
-            <button type="button" onClick={next} style={carouselBtn('right', accent)}>›</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); prev(); }} style={carouselBtn('left', accent)}>‹</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); next(); }} style={carouselBtn('right', accent)}>›</button>
           </>
         )}
       </div>
-      <p style={{ margin: 0, padding: '12px 16px', textAlign: 'center', color: accent, fontWeight: 700, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
-        НАЖМИТЕ ЧТОБЫ ПОСМОТРЕТЬ
-      </p>
-      {photos.length > 1 && (
+      {video ? (
+        <a href={video} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'block', margin: 0, padding: '12px 16px', textAlign: 'center', color: accent, fontWeight: 700, fontSize: 13, fontFamily: 'system-ui, sans-serif', textDecoration: 'none' }}>
+          НАЖМИТЕ ЧТОБЫ ПОСМОТРЕТЬ
+        </a>
+      ) : (
+        <p style={{ margin: 0, padding: '12px 16px', textAlign: 'center', color: accent, fontWeight: 700, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
+          НАЖМИТЕ ЧТОБЫ ПОСМОТРЕТЬ
+        </p>
+      )}
+      {items.length > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingBottom: 12 }}>
-          {photos.map((_, i) => (
+          {items.map((_, i) => (
             <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? accent : '#ccc' }} />
           ))}
         </div>

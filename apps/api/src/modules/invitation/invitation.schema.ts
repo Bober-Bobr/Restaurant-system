@@ -32,7 +32,17 @@ const baseShape = {
   countdownLabel: z.string().max(60).optional().nullable(),
 
   menuItems: z.array(menuItem).max(50).optional(),
-  galleryPhotos: z.array(z.string().max(500)).max(50).optional(),
+  // Gallery items: a still photo + optional Instagram video link.
+  // Legacy plain-string entries are still accepted for backward compatibility.
+  galleryPhotos: z.array(
+    z.union([
+      z.string().max(500),
+      z.object({
+        photoUrl: z.string().max(500),
+        videoUrl: z.string().max(500).optional().nullable(),
+      }),
+    ])
+  ).max(50).optional(),
 
   instagramUrl: z.string().max(500).optional().nullable(),
   instagramLabel: z.string().max(60).optional().nullable(),

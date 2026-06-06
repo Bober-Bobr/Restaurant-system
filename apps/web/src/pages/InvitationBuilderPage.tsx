@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/auth.store';
 import { eventService } from '../services/event.service';
 import { restaurantService } from '../services/restaurant.service';
 import { publicMenuService } from '../services/publicMenu.service';
-import { invitationService, type Invitation, type InvitationMenuItem } from '../services/invitation.service';
+import { invitationService, normalizeGalleryItems, type Invitation, type InvitationMenuItem, type InvitationGalleryItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { PhotoUploadField } from '../components/PhotoUploadField';
@@ -196,13 +196,17 @@ export const InvitationBuilderPage = () => {
     set('menuItems', items.map((it, i) => ({ ...it, number: i + 1 })));
   };
 
+  const galleryItems = normalizeGalleryItems(form.galleryPhotos);
   const addGalleryPhoto = (url: string) => {
     if (!url.trim()) return;
-    set('galleryPhotos', [...(form.galleryPhotos ?? []), url.trim()]);
+    set('galleryPhotos', [...galleryItems, { photoUrl: url.trim(), videoUrl: null }]);
+  };
+  const setGalleryVideo = (index: number, videoUrl: string) => {
+    const next = galleryItems.map((it, i) => (i === index ? { ...it, videoUrl: videoUrl || null } : it));
+    set('galleryPhotos', next);
   };
   const removeGalleryPhoto = (index: number) => {
-    const next = [...(form.galleryPhotos ?? [])];
-    next.splice(index, 1);
+    const next = galleryItems.filter((_, i) => i !== index);
     set('galleryPhotos', next);
   };
 
@@ -427,11 +431,12 @@ export const InvitationBuilderPage = () => {
           />
         </Section>
 
-        <Section title="Photo gallery">
+        <Section title="Gallery (Instagram video stills)">
           <GalleryEditor
-            photos={form.galleryPhotos ?? []}
+            items={galleryItems}
             onAdd={addGalleryPhoto}
             onRemove={removeGalleryPhoto}
+            onSetVideo={setGalleryVideo}
             restaurantId={restaurantId}
           />
         </Section>
@@ -448,22 +453,43 @@ export const InvitationBuilderPage = () => {
   );
 };
 
-function GalleryEditor({ photos, onAdd, onRemove, restaurantId }: { photos: string[]; onAdd: (url: string) => void; onRemove: (i: number) => void; restaurantId: string }) {
+function GalleryEditor({ items, onAdd, onRemove, onSetVideo, restaurantId }: {
+  items: InvitationGalleryItem[];
+  onAdd: (url: string) => void;
+  onRemove: (i: number) => void;
+  onSetVideo: (i: number, videoUrl: string) => void;
+  restaurantId: string;
+}) {
   return (
     <>
+      <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
+        Upload a still frame, then paste the Instagram video link guests open by tapping it.
+      </p>
       <PhotoUploadField
+        label="Add a still frame"
         value={null}
         onChange={(url) => { if (url) onAdd(url); }}
         restaurantId={restaurantId}
         height={110}
       />
-      {photos.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-          {photos.map((p, i) => (
-            <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', aspectRatio: '4 / 3', background: 'rgba(15,23,42,0.5)' }}>
-              <img src={getPhotoUrl(p) ?? p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {items.map((it, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ position: 'relative', width: 84, height: 64, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#000' }}>
+                <img src={getPhotoUrl(it.photoUrl) ?? it.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {it.videoUrl && (
+                  <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.6)', fontSize: 22 }}>▶</span>
+                )}
+              </div>
+              <input
+                value={it.videoUrl ?? ''}
+                onChange={(e) => onSetVideo(i, e.target.value)}
+                placeholder="https://instagram.com/reel/..."
+                style={{ ...inputStyle, flex: 1 }}
+              />
               <button type="button" onClick={() => onRemove(i)}
-                style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
+                style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 15, lineHeight: 1, flexShrink: 0 }}>×</button>
             </div>
           ))}
         </div>
