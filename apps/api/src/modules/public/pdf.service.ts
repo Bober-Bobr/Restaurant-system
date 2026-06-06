@@ -28,6 +28,8 @@ interface SummaryData {
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
+    totalCents?: number;
+    originalTotalCents?: number;
     discountPercent?: number;
     hasDiscount?: boolean;
   };
@@ -212,23 +214,37 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     });
     doc.moveDown(0.7);
 
-    // ── Pricing (price per guest only) ──────────────────────────────────
+    // ── Pricing (price per guest + total) ───────────────────────────────
     section(t('pricing'));
     const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
-    if (hasDiscount && data.pricing.originalPerGuestCents != null) {
-      // Original per-guest price (crossed out)
+
+    // A right-aligned label row whose value is struck through.
+    const struckRow = (label: string, value: string) => {
       const oy = doc.y;
-      doc.fillColor(MUTED).font(fontRegular, 11).text(t('original_price'), MARGIN, oy, { width: contentWidth * 0.6 });
-      const origText = formatSom(data.pricing.originalPerGuestCents);
-      doc.fillColor(MUTED).font(fontRegular, 11).text(origText, MARGIN, oy, { width: contentWidth, align: 'right' });
-      const tw = doc.widthOfString(origText);
+      doc.fillColor(MUTED).font(fontRegular, 11).text(label, MARGIN, oy, { width: contentWidth * 0.6 });
+      doc.fillColor(MUTED).font(fontRegular, 11).text(value, MARGIN, oy, { width: contentWidth, align: 'right' });
+      const tw = doc.widthOfString(value);
       const lineY = oy + 7;
       doc.save();
       doc.moveTo(pageWidth - MARGIN - tw, lineY).lineTo(pageWidth - MARGIN, lineY).lineWidth(0.8).strokeColor(MUTED).stroke();
       doc.restore();
+    };
+
+    if (hasDiscount) {
       priceRow(t('discount'), `−${data.pricing.discountPercent}%`);
     }
+    // Price per guest
+    if (hasDiscount && data.pricing.originalPerGuestCents != null) {
+      struckRow(`${t('price_per_guest')} (${t('original_price')})`, formatSom(data.pricing.originalPerGuestCents));
+    }
     priceRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
+    doc.moveDown(0.3);
+    // Total
+    const totalCents = data.pricing.totalCents ?? data.pricing.perGuestCents;
+    if (hasDiscount && data.pricing.originalTotalCents != null) {
+      struckRow(`${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents));
+    }
+    priceRow(t('total'), formatSom(totalCents), true);
     doc.moveDown(1);
 
     // ── Footer ──────────────────────────────────────────────────────────
@@ -241,7 +257,7 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     doc.fillColor(WHITE).font(fontRegular, 11)
       .text(t('thank_you_message'), MARGIN + 18, fy + 16, { width: contentWidth - 36 });
     doc.fillColor(GOLD).font(fontBold, 14)
-      .text(`${t('price_per_guest')}: ${formatSom(data.pricing.perGuestCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
+      .text(`${t('total')}: ${formatSom(totalCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
 
     doc.end();
   });

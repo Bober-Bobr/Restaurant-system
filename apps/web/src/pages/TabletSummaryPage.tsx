@@ -140,13 +140,19 @@ export const TabletSummaryPage = () => {
     ? Math.min(100, Math.max(0, Math.round(Number(discountText) || 0)))
     : 0;
   const hasDiscount = discountPercent > 0;
-  const originalPerGuestCents = pricing.perGuestCents;
-  const finalPerGuestCents = Math.round(originalPerGuestCents * (1 - discountPercent / 100));
+  const factor = 1 - discountPercent / 100;
 
-  // Pricing payload for exports — only the per-guest figures.
+  const originalPerGuestCents = pricing.perGuestCents;
+  const finalPerGuestCents = Math.round(originalPerGuestCents * factor);
+  const originalTotalCents = pricing.subtotalCents;
+  const finalTotalCents = Math.round(originalTotalCents * factor);
+
+  // Pricing payload for exports — per-guest and total figures.
   const exportPricing = {
     perGuestCents: finalPerGuestCents,
     originalPerGuestCents,
+    totalCents: finalTotalCents,
+    originalTotalCents,
     discountPercent,
     hasDiscount,
     guestCount,
@@ -443,16 +449,40 @@ export const TabletSummaryPage = () => {
               </div>
 
               {/* Price per guest */}
+              <div className="px-4 sm:px-6 pt-3 sm:pt-4">
+                <div className="flex items-baseline justify-between gap-2 py-3"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.55)' }} className="text-sm">{t('price_per_guest')}</span>
+                  <div className="flex flex-col items-end">
+                    {hasDiscount && (
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                          {formatSum(originalPerGuestCents)}
+                        </span>
+                        <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                          style={{ background: '#dc2626', color: '#fff' }}>
+                          −{discountPercent}%
+                        </span>
+                      </span>
+                    )}
+                    <span className="font-semibold whitespace-nowrap text-white">
+                      {formatSum(finalPerGuestCents)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
                 <div className="rounded-2xl px-4 sm:px-5 py-3 sm:py-4"
                   style={{ background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.4)' }}>
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="rg-label">{t('price_per_guest')}</span>
+                    <span className="rg-label">{t('total')}</span>
                     <div className="flex flex-col items-end">
                       {hasDiscount && (
                         <span className="flex items-center gap-2">
                           <span className="text-sm whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                            {formatSum(originalPerGuestCents)}
+                            {formatSum(originalTotalCents)}
                           </span>
                           <span className="rounded-full px-2 py-0.5 text-xs font-bold"
                             style={{ background: '#dc2626', color: '#fff' }}>
@@ -461,7 +491,7 @@ export const TabletSummaryPage = () => {
                         </span>
                       )}
                       <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
-                        {formatSum(finalPerGuestCents)}
+                        {formatSum(finalTotalCents)}
                       </span>
                     </div>
                   </div>

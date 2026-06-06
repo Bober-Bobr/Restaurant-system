@@ -27,6 +27,8 @@ interface SummaryData {
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
+    totalCents?: number;
+    originalTotalCents?: number;
     discountPercent?: number;
     hasDiscount?: boolean;
   };
@@ -197,22 +199,37 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   };
 
   const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
-  if (hasDiscount && data.pricing.originalPerGuestCents != null) {
-    const origRow = worksheet.addRow([translate('original_price', data.locale), '', '', '', tiyinToSom(data.pricing.originalPerGuestCents)]);
-    origRow.getCell(1).font = { ...origRow.getCell(1).font, family: 2 };
-    // Strike-through the original per-guest price to show it's superseded
-    origRow.getCell(5).font = { family: 2, strike: true, color: { argb: 'FF888888' } };
-    origRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  const totalCents = data.pricing.totalCents ?? data.pricing.perGuestCents;
 
+  if (hasDiscount) {
     const discRow = worksheet.addRow([`${translate('discount', data.locale)} (−${data.pricing.discountPercent}%)`, '', '', '', '']);
     discRow.getCell(1).font = { family: 2, color: { argb: 'FFC00000' }, bold: true };
     discRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
   }
 
+  // Price per guest (with optional struck-through original)
+  if (hasDiscount && data.pricing.originalPerGuestCents != null) {
+    const origPg = worksheet.addRow([`${translate('price_per_guest', data.locale)} (${translate('original_price', data.locale)})`, '', '', '', tiyinToSom(data.pricing.originalPerGuestCents)]);
+    origPg.getCell(1).font = { family: 2 };
+    origPg.getCell(5).font = { family: 2, strike: true, color: { argb: 'FF888888' } };
+    origPg.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  }
   const perGuestRow = worksheet.addRow([translate('price_per_guest', data.locale), '', '', '', tiyinToSom(data.pricing.perGuestCents)]);
   perGuestRow.getCell(1).font = { bold: true, family: 2 };
   perGuestRow.getCell(5).font = { bold: true, family: 2 };
   perGuestRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+
+  // Total (with optional struck-through original)
+  if (hasDiscount && data.pricing.originalTotalCents != null) {
+    const origTot = worksheet.addRow([`${translate('total', data.locale)} (${translate('original_price', data.locale)})`, '', '', '', tiyinToSom(data.pricing.originalTotalCents)]);
+    origTot.getCell(1).font = { family: 2 };
+    origTot.getCell(5).font = { family: 2, strike: true, color: { argb: 'FF888888' } };
+    origTot.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  }
+  const totalRow = worksheet.addRow([translate('total', data.locale), '', '', '', tiyinToSom(totalCents)]);
+  totalRow.getCell(1).font = { bold: true, family: 2 };
+  totalRow.getCell(5).font = { bold: true, family: 2 };
+  totalRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
 
   // Summary
   worksheet.addRow([]);
@@ -234,9 +251,9 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   guestsRow.getCell(1).font = { family: 2 };
   guestsRow.getCell(1).alignment = { wrapText: true };
 
-  const perGuestSummaryRow = worksheet.addRow([`${translate('price_per_guest', data.locale)}: ${formatSom(data.pricing.perGuestCents)}`]);
-  perGuestSummaryRow.getCell(1).font = { bold: true, family: 2 };
-  perGuestSummaryRow.getCell(1).alignment = { wrapText: true };
+  const summaryTotalRow = worksheet.addRow([`${translate('total', data.locale)}: ${formatSom(totalCents)}`]);
+  summaryTotalRow.getCell(1).font = { bold: true, family: 2 };
+  summaryTotalRow.getCell(1).alignment = { wrapText: true };
 
   // Auto-fit columns
   worksheet.columns.forEach(column => {
