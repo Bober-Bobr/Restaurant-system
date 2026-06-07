@@ -4,6 +4,9 @@ export type Restaurant = {
   id: string;
   name: string;
   address: string | null;
+  phone: string | null;
+  email: string | null;
+  history: string | null;
   logoUrl: string | null;
   ownerId: string;
   companyId: string | null;
@@ -15,6 +18,9 @@ export type Restaurant = {
 export type CreateRestaurantPayload = {
   name: string;
   address?: string;
+  phone?: string | null;
+  email?: string | null;
+  history?: string | null;
   logoUrl?: string;
   companyId?: string;
 };

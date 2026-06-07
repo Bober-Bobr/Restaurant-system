@@ -6,15 +6,21 @@ import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
 import { InvitationController } from '../invitation/invitation.controller.js';
+import { ReviewController } from '../review/review.controller.js';
 
 const router = Router();
 const invitationController = new InvitationController();
+const reviewController = new ReviewController();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
+
+// Public reviews: submit + list approved.
+router.post('/reviews', reviewController.create.bind(reviewController));
+router.get('/reviews', reviewController.listApproved.bind(reviewController));
 
 router.get('/restaurants', async (_request, response, next) => {
   try {
@@ -23,6 +29,9 @@ router.get('/restaurants', async (_request, response, next) => {
       id: r.id,
       name: r.name,
       address: r.address ?? null,
+      phone: r.phone ?? null,
+      email: r.email ?? null,
+      history: r.history ?? null,
       logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
       companyName: r.company?.name ?? null,
     })));

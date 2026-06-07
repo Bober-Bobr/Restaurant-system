@@ -1,6 +1,15 @@
 import createHttpError from 'http-errors';
 import { RestaurantRepository } from './restaurant.repository.js';
 
+type RestaurantUpdateData = {
+  name?: string;
+  address?: string;
+  phone?: string | null;
+  email?: string | null;
+  history?: string | null;
+  logoUrl?: string;
+};
+
 export class RestaurantService {
   constructor(private readonly repo: RestaurantRepository) {}
 
@@ -26,14 +35,14 @@ export class RestaurantService {
     return this.repo.create(ownerId, data);
   }
 
-  async update(ownerId: string, id: string, data: { name?: string; address?: string; logoUrl?: string }) {
+  async update(ownerId: string, id: string, data: RestaurantUpdateData) {
     const restaurant = await this.repo.findById(id);
     if (!restaurant) throw createHttpError(404, 'Restaurant not found');
     if (restaurant.ownerId !== ownerId) throw createHttpError(403, 'Forbidden');
     return this.repo.update(id, data);
   }
 
-  async updateAsChief(id: string, data: { name?: string; address?: string; logoUrl?: string }) {
+  async updateAsChief(id: string, data: RestaurantUpdateData) {
     const restaurant = await this.repo.findById(id);
     if (!restaurant) throw createHttpError(404, 'Restaurant not found');
     return this.repo.update(id, data);

@@ -11,7 +11,7 @@ router.get('/', controller.list.bind(controller));
 
 // Mutations are OWNER-only
 router.post('/', requireRole(AdminRole.OWNER), controller.create.bind(controller));
-router.patch('/:id', requireRole(AdminRole.OWNER), controller.update.bind(controller));
+router.patch('/:id', requireRole(AdminRole.OWNER, AdminRole.CHIEF_ADMIN, AdminRole.MANAGER), controller.update.bind(controller));
 router.delete('/:id', requireRole(AdminRole.OWNER), controller.remove.bind(controller));
 
 export { router as restaurantRouter };

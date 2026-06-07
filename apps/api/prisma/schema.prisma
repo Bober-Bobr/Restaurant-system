@@ -137,6 +137,9 @@ model Restaurant {
   id              String          @id @default(cuid())
   name            String
   address         String?
+  phone           String?
+  email           String?
+  history         String?
   logoUrl         String?
   ownerId         String
   companyId       String?
@@ -148,11 +151,25 @@ model Restaurant {
   tableCategories TableCategory[]
   halls           Hall[]
   invitations     Invitation[]
+  reviews         Review[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   @@index([ownerId])
   @@index([companyId])
+}
+
+model Review {
+  id           String     @id @default(cuid())
+  restaurantId String
+  authorName   String
+  rating       Int
+  text         String?
+  isApproved   Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }
 
 model TableCategory {

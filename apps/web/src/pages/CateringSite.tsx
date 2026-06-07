@@ -1,14 +1,16 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantSummary } from '../services/publicRestaurant.service';
 import { publicMenuService } from '../services/publicMenu.service';
+import { publicHallService } from '../services/publicHall.service';
+import { reviewService } from '../services/review.service';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
-import type { MenuItem } from '../types/domain';
+import type { Hall, MenuItem } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
 
@@ -88,6 +90,8 @@ function CateringLayout({
 
           <nav style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexWrap: 'wrap' }}>
             <Link to="/" style={navLink}>{t('menu')}</Link>
+            <Link to="/halls" style={navLink}>{t('halls')}</Link>
+            <Link to="/reviews" style={navLink}>{t('reviews')}</Link>
             <Link to="/about" style={navLink}>{t('about_us')}</Link>
             <Link to="/contact" style={navLink}>{t('contact_us')}</Link>
           </nav>
@@ -211,12 +215,15 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
 function AboutPage({ restaurant, locale }: { restaurant?: PublicRestaurantSummary; locale: Locale }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
+  const history = restaurant?.history?.trim();
   return (
-    <div className="rg-card tablet-fade-up" style={{ padding: 28, textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
+    <div className="rg-card tablet-fade-up" style={{ padding: 28, textAlign: 'center', maxWidth: 680, margin: '0 auto' }}>
       {logo && <img src={logo ?? undefined} alt="" style={{ maxHeight: 120, maxWidth: '70%', objectFit: 'contain', margin: '0 auto 18px', display: 'block' }} />}
       <h1 style={{ margin: '0 0 6px', fontSize: 26, fontWeight: 800, color: '#c9a42c' }}>{restaurant?.name ?? ''}</h1>
-      <h2 className="rg-label" style={{ margin: '0 0 16px' }}>{t('about_us')}</h2>
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.8)' }}>{t('catering_welcome')}</p>
+      <h2 className="rg-label" style={{ margin: '0 0 16px' }}>{history ? t('our_history') : t('about_us')}</h2>
+      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.8)', whiteSpace: 'pre-wrap', textAlign: history ? 'left' : 'center' }}>
+        {history || t('catering_welcome')}
+      </p>
       {restaurant?.address && (
         <p style={{ margin: '18px 0 0', fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
           {t('address_label')}: {restaurant.address}
@@ -226,28 +233,181 @@ function AboutPage({ restaurant, locale }: { restaurant?: PublicRestaurantSummar
   );
 }
 
+// ── Halls ───────────────────────────────────────────────────────────────────
+function HallsPage({ restaurantId, locale }: { restaurantId: string; locale: Locale }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const { data: halls = [], isLoading } = useQuery({
+    queryKey: ['catering-halls', restaurantId],
+    queryFn: () => publicHallService.listActive(restaurantId),
+  });
+
+  return (
+    <>
+      <h1 style={{ margin: '0 0 22px', fontSize: 28, fontWeight: 800, color: '#fff' }}>{t('halls')}</h1>
+      {isLoading && <p style={{ color: 'rgba(255,255,255,0.5)' }}>...</p>}
+      {!isLoading && halls.length === 0 && <p style={{ color: 'rgba(255,255,255,0.5)' }}>—</p>}
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        {halls.map((h: Hall) => {
+          const src = h.photoUrl ? getPhotoUrl(h.photoUrl) : null;
+          return (
+            <div key={h.id} className="rg-card tablet-fade-up" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {src
+                ? <img src={src ?? undefined} alt={h.name} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: 180, background: 'rgba(0,0,0,0.25)' }} />}
+              <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#fff' }}>{h.name}</h3>
+                  <span style={{ color: '#c9a42c', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>{h.capacity} {t('seats')}</span>
+                </div>
+                {h.description && <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>{h.description}</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ── Reviews (approved, public) ──────────────────────────────────────────────
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <span style={{ color: '#c9a42c', letterSpacing: 1, fontSize: 15 }}>
+      {'★'.repeat(rating)}<span style={{ color: 'rgba(255,255,255,0.2)' }}>{'★'.repeat(5 - rating)}</span>
+    </span>
+  );
+}
+
+function ReviewsPage({ restaurantId, locale }: { restaurantId: string; locale: Locale }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const { data: reviews = [], isLoading } = useQuery({
+    queryKey: ['catering-reviews', restaurantId],
+    queryFn: () => reviewService.listApproved(restaurantId),
+  });
+
+  return (
+    <>
+      <h1 style={{ margin: '0 0 22px', fontSize: 28, fontWeight: 800, color: '#fff' }}>{t('reviews')}</h1>
+      {isLoading && <p style={{ color: 'rgba(255,255,255,0.5)' }}>...</p>}
+      {!isLoading && reviews.length === 0 && <p style={{ color: 'rgba(255,255,255,0.5)' }}>{t('no_reviews_yet')}</p>}
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        {reviews.map((rev) => (
+          <div key={rev.id} className="rg-card tablet-fade-up" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{rev.authorName}</span>
+              <StarRow rating={rev.rating} />
+            </div>
+            {rev.text && <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.75)' }}>{rev.text}</p>}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function ContactRow({ icon, label, value, href }: { icon: string; label: string; value: string; href?: string }) {
+  const inner = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <span style={{ color: '#c9a42c', fontSize: 20 }}>{icon}</span>
+      <div style={{ minWidth: 0 }}>
+        <p className="rg-label" style={{ margin: 0 }}>{label}</p>
+        <p style={{ margin: '2px 0 0', color: '#fff', fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+      </div>
+    </div>
+  );
+  return href ? <a href={href} style={{ textDecoration: 'none' }}>{inner}</a> : inner;
+}
+
 function ContactPage({ restaurant, locale }: { restaurant?: PublicRestaurantSummary; locale: Locale }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const address = restaurant?.address?.trim();
+  const phone = restaurant?.phone?.trim();
+  const email = restaurant?.email?.trim();
   const mapUrl = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null;
+
   return (
-    <div className="rg-card tablet-fade-up" style={{ padding: 28, maxWidth: 560, margin: '0 auto' }}>
-      <h1 style={{ margin: '0 0 18px', fontSize: 26, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{t('contact_us')}</h1>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <span style={{ color: '#c9a42c', fontSize: 20 }}>📍</span>
-          <div>
-            <p className="rg-label" style={{ margin: 0 }}>{t('address_label')}</p>
-            <p style={{ margin: '2px 0 0', color: '#fff', fontSize: 15 }}>{address || '—'}</p>
+    <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="rg-card tablet-fade-up" style={{ padding: 28 }}>
+        <h1 style={{ margin: '0 0 18px', fontSize: 26, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{t('contact_us')}</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {address && <ContactRow icon="📍" label={t('address_label')} value={address} href={mapUrl ?? undefined} />}
+          {phone && <ContactRow icon="📞" label={t('phone')} value={phone} href={`tel:${phone}`} />}
+          {email && <ContactRow icon="✉️" label={t('email')} value={email} href={`mailto:${email}`} />}
+          {!address && !phone && !email && <p style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>—</p>}
+        </div>
+      </div>
+
+      {restaurant && <ReviewForm restaurantId={restaurant.id} locale={locale} />}
+    </div>
+  );
+}
+
+// ── Review submission form ──────────────────────────────────────────────────
+function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Locale }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const [name, setName] = useState('');
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [text, setText] = useState('');
+
+  const submit = useMutation({
+    mutationFn: () => reviewService.submit({ restaurantId, authorName: name.trim(), rating, text: text.trim() || undefined }),
+  });
+
+  const canSubmit = name.trim().length > 0 && rating >= 1 && rating <= 5 && !submit.isPending;
+
+  if (submit.isSuccess) {
+    return (
+      <div className="rg-card tablet-fade-up" style={{ padding: 28, textAlign: 'center' }}>
+        <div style={{ fontSize: 40 }}>✓</div>
+        <p style={{ margin: '8px 0 0', color: '#fff', fontSize: 15 }}>{t('review_thanks')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rg-card tablet-fade-up" style={{ padding: 24 }}>
+      <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#fff' }}>{t('leave_a_review')}</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <label style={{ display: 'grid', gap: 5 }}>
+          <span className="rg-label">{t('your_name')}</span>
+          <input className="rg-input" value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
+
+        <div style={{ display: 'grid', gap: 5 }}>
+          <span className="rg-label">{t('your_rating')}</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} type="button"
+                onClick={() => setRating(n)}
+                onMouseEnter={() => setHover(n)}
+                onMouseLeave={() => setHover(0)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  fontSize: 32, lineHeight: 1,
+                  color: n <= (hover || rating) ? '#c9a42c' : 'rgba(255,255,255,0.22)',
+                  transition: 'color 0.12s, transform 0.12s',
+                  transform: n <= (hover || rating) ? 'scale(1.08)' : 'scale(1)',
+                }}
+                aria-label={`${n} stars`}
+              >★</button>
+            ))}
           </div>
         </div>
-        {mapUrl && (
-          <a href={mapUrl} target="_blank" rel="noreferrer"
-            className="tablet-fade-up"
-            style={{ textAlign: 'center', padding: '12px', borderRadius: 12, background: '#c9a42c', color: '#1a3320', fontWeight: 700, textDecoration: 'none' }}>
-            {t('address_label')} ↗
-          </a>
-        )}
+
+        <label style={{ display: 'grid', gap: 5 }}>
+          <span className="rg-label">{t('your_review')}</span>
+          <textarea className="rg-input" value={text} onChange={(e) => setText(e.target.value)} style={{ minHeight: 96, resize: 'vertical' }} />
+        </label>
+
+        <button type="button" disabled={!canSubmit} onClick={() => submit.mutate()}
+          style={{
+            marginTop: 4, padding: '12px', borderRadius: 12, border: 'none',
+            background: canSubmit ? '#c9a42c' : 'rgba(201,164,44,0.4)',
+            color: '#1a3320', fontWeight: 700, fontSize: 15, cursor: canSubmit ? 'pointer' : 'not-allowed',
+          }}>
+          {submit.isPending ? '...' : t('submit_review')}
+        </button>
       </div>
     </div>
   );
@@ -279,6 +439,8 @@ export const CateringSite = ({ slug }: { slug: string }) => {
       <Routes>
         <Route path="/" element={<MenuBlocks menuItems={menuItems} locale={locale} />} />
         <Route path="/category/:category" element={<CategoryDetail menuItems={menuItems} locale={locale} />} />
+        <Route path="/halls" element={<HallsPage restaurantId={restaurant!.id} locale={locale} />} />
+        <Route path="/reviews" element={<ReviewsPage restaurantId={restaurant!.id} locale={locale} />} />
         <Route path="/about" element={<AboutPage restaurant={restaurant} locale={locale} />} />
         <Route path="/contact" element={<ContactPage restaurant={restaurant} locale={locale} />} />
         <Route path="*" element={<Navigate to="/" replace />} />

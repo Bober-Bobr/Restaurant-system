@@ -1,0 +1,199 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuthStore } from '../store/auth.store';
+import { useAdminStore } from '../store/admin.store';
+import { restaurantService, type Restaurant } from '../services/restaurant.service';
+import { reviewService, type Review } from '../services/review.service';
+import { translate } from '../utils/translate';
+import { getPhotoUrl } from '../utils/photoUrl';
+import networkingLogoSrc from '../assets/networking-logo.png';
+import { authService } from '../services/auth.service';
+
+const inputStyle: React.CSSProperties = {
+  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+  color: '#e2e8f0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
+};
+const labelStyle: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span style={{ color: '#c9a42c', letterSpacing: 1 }}>
+      {'★'.repeat(rating)}<span style={{ color: 'rgba(255,255,255,0.2)' }}>{'★'.repeat(5 - rating)}</span>
+    </span>
+  );
+}
+
+function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'uz' }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const queryClient = useQueryClient();
+
+  const [phone, setPhone] = useState(r.phone ?? '');
+  const [email, setEmail] = useState(r.email ?? '');
+  const [history, setHistory] = useState(r.history ?? '');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setPhone(r.phone ?? ''); setEmail(r.email ?? ''); setHistory(r.history ?? '');
+  }, [r.id, r.phone, r.email, r.history]);
+
+  const saveInfo = useMutation({
+    mutationFn: () => restaurantService.update(r.id, {
+      phone: phone.trim() || null,
+      email: email.trim() || null,
+      history: history.trim() || null,
+    }),
+    onSuccess: () => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+      queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] });
+    },
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ['manager-reviews', r.id],
+    queryFn: () => reviewService.listAll(r.id),
+  });
+  const reviews = reviewsQuery.data ?? [];
+
+  const approve = useMutation({
+    mutationFn: ({ id, isApproved }: { id: string; isApproved: boolean }) => reviewService.setApproved(id, isApproved),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-reviews', r.id] }),
+  });
+  const removeReview = useMutation({
+    mutationFn: (id: string) => reviewService.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-reviews', r.id] }),
+  });
+
+  const logo = r.logoUrl ? getPhotoUrl(r.logoUrl) : null;
+
+  return (
+    <section className="adm-card tablet-fade-up" style={{ padding: 18 }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        {logo
+          ? <img src={logo ?? undefined} alt="" style={{ height: 44, width: 'auto', maxWidth: 80, objectFit: 'contain' }} />
+          : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a42c', fontWeight: 700 }}>{r.name.charAt(0)}</div>}
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{r.name}</h2>
+      </header>
+
+      {/* Info form */}
+      <p style={{ margin: '0 0 4px', ...labelStyle, fontSize: 12 }}>{t('restaurant_info')}</p>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('restaurant_info_help')}</p>
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: 10 }}>
+        <label style={{ display: 'grid', gap: 4 }}>
+          <span style={labelStyle}>{t('phone')}</span>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="+998 ..." />
+        </label>
+        <label style={{ display: 'grid', gap: 4 }}>
+          <span style={labelStyle}>{t('email')}</span>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} placeholder="info@..." />
+        </label>
+      </div>
+      <label style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
+        <span style={labelStyle}>{t('history_label')}</span>
+        <textarea value={history} onChange={(e) => setHistory(e.target.value)} style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }} />
+      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button type="button" className="adm-btn-primary" disabled={saveInfo.isPending} onClick={() => saveInfo.mutate()} style={{ fontSize: 13 }}>
+          {saveInfo.isPending ? t('saving') : t('save_info')}
+        </button>
+        {saved && <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓ {t('credentials_saved')}</span>}
+      </div>
+
+      {/* Reviews moderation */}
+      <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <p style={{ margin: '0 0 12px', ...labelStyle, fontSize: 12 }}>{t('moderate_reviews')} ({reviews.length})</p>
+        {reviewsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>...</p>}
+        {!reviewsQuery.isLoading && reviews.length === 0 && (
+          <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>{t('no_reviews_to_moderate')}</p>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {reviews.map((rev: Review) => (
+            <div key={rev.id} style={{
+              padding: '10px 12px', borderRadius: 10,
+              background: rev.isApproved ? 'rgba(34,197,94,0.08)' : 'rgba(15,23,42,0.5)',
+              border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600, color: '#f8fafc', fontSize: 14 }}>{rev.authorName}</span>
+                <Stars rating={rev.rating} />
+                <span className="adm-badge" style={{
+                  background: rev.isApproved ? 'rgba(34,197,94,0.15)' : 'rgba(201,164,44,0.15)',
+                  color: rev.isApproved ? '#4ade80' : '#c9a42c',
+                  border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(201,164,44,0.3)'}`,
+                }}>
+                  {rev.isApproved ? t('approved') : t('pending_moderation')}
+                </span>
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                  <button type="button" onClick={() => approve.mutate({ id: rev.id, isApproved: !rev.isApproved })}
+                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+                      border: '1px solid rgba(201,164,44,0.35)', background: 'rgba(201,164,44,0.1)', color: '#c9a42c' }}>
+                    {rev.isApproved ? t('unapprove') : t('approve')}
+                  </button>
+                  <button type="button" className="adm-btn-danger" onClick={() => removeReview.mutate(rev.id)} style={{ fontSize: 12 }}>
+                    {t('delete')}
+                  </button>
+                </span>
+              </div>
+              {rev.text && <p style={{ margin: '6px 0 0', fontSize: 13, color: 'rgba(226,232,240,0.75)', lineHeight: 1.5 }}>{rev.text}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export const ManagerRestaurantsPage = () => {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const role = useAuthStore((s) => s.role);
+  const { locale } = useAdminStore();
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+
+  const logoutMutation = useMutation({
+    mutationFn: () => authService.logout(),
+    onSettled: () => {
+      try { localStorage.removeItem('banquet-admin-auth'); } catch { /* ignore */ }
+      window.location.replace('https://v-menu.uz/login');
+    },
+  });
+
+  const restaurantsQuery = useQuery({
+    queryKey: ['manager-restaurants'],
+    queryFn: () => restaurantService.list(),
+    enabled: !!accessToken,
+  });
+
+  const restaurants = useMemo(() => restaurantsQuery.data ?? [], [restaurantsQuery.data]);
+
+  if (!accessToken) return <Navigate to="/login" replace />;
+  if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
+
+  return (
+    <div className="adm-bg">
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 30,
+        background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+            <img src={networkingLogoSrc} alt="" style={{ height: 40, width: 'auto' }} />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc' }}>{t('restaurant_info')}</p>
+          </Link>
+          <Link to="/" style={{ marginLeft: 'auto', padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: 'rgba(226,232,240,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            ← {t('events')}
+          </Link>
+          <button type="button" className="adm-btn-danger" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending} style={{ fontSize: 13 }}>
+            {logoutMutation.isPending ? t('logging_out') : t('logout')}
+          </button>
+        </div>
+      </nav>
+
+      <main className="tablet-fade-in" style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1, display: 'grid', gap: 18 }}>
+        {restaurantsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
+        {restaurants.map((r) => <RestaurantCard key={r.id} r={r} locale={locale} />)}
+      </main>
+    </div>
+  );
+};

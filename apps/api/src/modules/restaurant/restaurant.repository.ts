@@ -23,6 +23,9 @@ export class RestaurantRepository {
         id: true,
         name: true,
         address: true,
+        phone: true,
+        email: true,
+        history: true,
         logoUrl: true,
         company: { select: { name: true, logoUrl: true } },
       },
@@ -45,7 +48,7 @@ export class RestaurantRepository {
     return prisma.restaurant.create({ data: { ...data, ownerId } });
   }
 
-  async update(id: string, data: { name?: string; address?: string; logoUrl?: string }) {
+  async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string }) {
     return prisma.restaurant.update({ where: { id }, data });
   }
 
