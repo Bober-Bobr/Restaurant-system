@@ -36,11 +36,13 @@ export function getInvitationSubdomainSlug(): string | null {
   return slug || null;
 }
 
-// Matches public-catering.<restaurant>.v-menu.uz — returns the restaurant slug or null.
+// Matches <restaurant>.public-catering.v-menu.uz — returns the restaurant slug or null.
 export function getCateringSlug(): string | null {
   const host = window.location.hostname;
-  const m = new RegExp(`^public-catering\\.(.+)\\.${ROOT_DOMAIN.replace(/\./g, '\\.')}$`).exec(host);
-  return m ? m[1] : null;
+  const suffix = `.public-catering.${ROOT_DOMAIN}`;
+  if (!host.endsWith(suffix)) return null;
+  const slug = host.slice(0, -suffix.length);
+  return slug || null;
 }
 
 export function getSubdomainSlug(): string | null {
