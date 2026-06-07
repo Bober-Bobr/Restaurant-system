@@ -36,6 +36,13 @@ export function getInvitationSubdomainSlug(): string | null {
   return slug || null;
 }
 
+// Matches public-catering.<restaurant>.v-menu.uz — returns the restaurant slug or null.
+export function getCateringSlug(): string | null {
+  const host = window.location.hostname;
+  const m = new RegExp(`^public-catering\\.(.+)\\.${ROOT_DOMAIN.replace(/\./g, '\\.')}$`).exec(host);
+  return m ? m[1] : null;
+}
+
 export function getSubdomainSlug(): string | null {
   const host = window.location.hostname;
   if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || !host.endsWith(`.${ROOT_DOMAIN}`)) return null;

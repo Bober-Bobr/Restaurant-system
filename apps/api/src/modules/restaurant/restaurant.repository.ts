@@ -22,6 +22,7 @@ export class RestaurantRepository {
       select: {
         id: true,
         name: true,
+        address: true,
         logoUrl: true,
         company: { select: { name: true, logoUrl: true } },
       },

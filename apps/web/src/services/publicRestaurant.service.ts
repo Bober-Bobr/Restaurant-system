@@ -6,6 +6,7 @@ const apiRoot = (): string =>
 export type PublicRestaurantSummary = {
   id: string;
   name: string;
+  address?: string | null;
   logoUrl: string | null;
   companyName?: string | null;
 };

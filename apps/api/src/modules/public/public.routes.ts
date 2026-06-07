@@ -22,6 +22,7 @@ router.get('/restaurants', async (_request, response, next) => {
     response.json(list.map((r) => ({
       id: r.id,
       name: r.name,
+      address: r.address ?? null,
       logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
       companyName: r.company?.name ?? null,
     })));

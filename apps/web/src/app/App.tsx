@@ -13,6 +13,7 @@ import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
 import { ManagerPortalPage, ManagerRestaurantEventsPage } from '../pages/ManagerPortalPage';
 import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
 import { PublicInvitationPage } from '../pages/PublicInvitationPage';
+import { CateringSite } from '../pages/CateringSite';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
 import { CalendarPage } from '../pages/CalendarPage';
@@ -24,7 +25,7 @@ import { AdminLayout } from './AdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, getInvitationSubdomainSlug, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -43,6 +44,12 @@ export const App = () => {
       useAuthStore.getState().setAuth(at, rt, u, exp || 15 * 60 * 1000, r, rid || null, rn || null);
       window.history.replaceState({}, '', window.location.pathname);
     }
+  }
+
+  // Catering subdomain (public-catering.<restaurant>.v-menu.uz) → public menu site
+  const cateringSlug = getCateringSlug();
+  if (cateringSlug) {
+    return <CateringSite slug={cateringSlug} />;
   }
 
   // Invitation subdomain (<slug>.invitation.v-menu.uz) → public viewer

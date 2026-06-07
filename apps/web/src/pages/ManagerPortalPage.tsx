@@ -11,12 +11,14 @@ import networkingLogoSrc from '../assets/networking-logo.png';
 
 function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; currentRestaurantName?: string | null }) {
   const username = useAuthStore((s) => s.username);
-  const logout = useAuthStore((s) => s.logout);
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
     onSettled: () => {
-      logout();
-      window.location.href = 'https://v-menu.uz/login';
+      // Clear persisted auth WITHOUT calling the store action: calling logout()
+      // re-renders App, the manager guard returns null (white screen) and races
+      // the cross-origin redirect. Clearing storage directly avoids the re-render.
+      try { localStorage.removeItem('banquet-admin-auth'); } catch { /* ignore */ }
+      window.location.replace('https://v-menu.uz/login');
     },
   });
 
