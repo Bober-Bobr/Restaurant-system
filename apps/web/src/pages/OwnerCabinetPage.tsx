@@ -11,6 +11,7 @@ import type { AdminRole } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { locales, translate, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 const formatError = (error: unknown): string => {
@@ -236,18 +237,19 @@ export const OwnerCabinetPage = () => {
             {/* New company form */}
             <section className="adm-card tablet-fade-up adm-section" style={{ marginBottom: 24 }}>
               <h2 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('new_company')}</h2>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+              <div style={{ display: 'grid', gap: 12 }}>
                 <input
                   placeholder={t('company_name')}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   style={inputStyle}
                 />
-                <input
-                  placeholder={t('logo_url_hint')}
-                  value={newLogo}
-                  onChange={(e) => setNewLogo(e.target.value)}
-                  style={inputStyle}
+                <PhotoUploadField
+                  label={t('logo')}
+                  value={newLogo || null}
+                  onChange={(url) => setNewLogo(url || '')}
+                  restaurantId=""
+                  height={120}
                 />
               </div>
               {newError && <p style={{ color: '#f87171', marginTop: 8 }}>{newError}</p>}
@@ -267,15 +269,19 @@ export const OwnerCabinetPage = () => {
               {companies.map((company) => {
                 const restaurantsHere = restaurantsByCompany(company.id);
                 const showForm = activeForm === company.id;
-                const companyLogoSrc = company.logoUrl ? getPhotoUrl(company.logoUrl) : null;
 
                 return (
                   <div key={company.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden' }}>
                     {/* Company header */}
                     <div className="owner-company-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      {companyLogoSrc && (
-                        <img src={companyLogoSrc} alt={company.name} style={{ height: 36, width: 'auto', maxWidth: 80, objectFit: 'contain', flexShrink: 0 }} />
-                      )}
+                      <div className="owner-company-logo-input" style={{ width: 96, flexShrink: 0 }}>
+                        <PhotoUploadField
+                          value={company.logoUrl ?? null}
+                          onChange={(url) => updateCompany.mutate({ id: company.id, payload: { logoUrl: url || undefined } })}
+                          restaurantId=""
+                          height={64}
+                        />
+                      </div>
                       <div className="owner-company-name" style={{ flex: 1, minWidth: 0 }}>
                         <input
                           defaultValue={company.name}
@@ -288,18 +294,6 @@ export const OwnerCabinetPage = () => {
                           style={{ ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px', width: '100%' }}
                         />
                       </div>
-                      <input
-                        className="owner-company-logo-input"
-                        defaultValue={company.logoUrl ?? ''}
-                        placeholder={t('logo_url')}
-                        onBlur={(e) => {
-                          const newLogo = e.target.value.trim();
-                          if (newLogo !== (company.logoUrl ?? '')) {
-                            updateCompany.mutate({ id: company.id, payload: { logoUrl: newLogo || undefined } });
-                          }
-                        }}
-                        style={{ ...inputStyle, width: 220, padding: '4px 8px', fontSize: 12 }}
-                      />
                       <button
                         onClick={() => {
                           if (confirm(t('delete_company_confirm', { name: company.name }))) {
