@@ -205,8 +205,16 @@ export const TabletSummaryPage = () => {
         restaurantLogoUrl: restaurantLogoUrl ?? null,
       });
       reset();
-    } catch {
-      setSubmitError(t('event_create_error'));
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { errors?: { fieldErrors?: Record<string, string[]> } } } };
+      const fieldErrors = axiosErr?.response?.data?.errors?.fieldErrors;
+      if (fieldErrors) {
+        const details = Object.entries(fieldErrors).map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ');
+        console.error('[Event create 400]', details);
+        setSubmitError(`${t('event_create_error')} (${details})`);
+      } else {
+        setSubmitError(t('event_create_error'));
+      }
     } finally {
       setIsSubmitting(false);
     }
