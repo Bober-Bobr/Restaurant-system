@@ -184,7 +184,7 @@ function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Loca
               style={{ overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 150, background: 'rgba(0,0,0,0.3)' }}>
                 {coverSrc
-                  ? <img src={coverSrc ?? undefined} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(100%)', opacity: 0.95 }} />
+                  ? <img src={coverSrc ?? undefined} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.95 }} />
                   : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))' }} />}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
                 <span style={{ position: 'absolute', right: 12, top: 12, background: '#fff', color: '#000', borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
@@ -227,7 +227,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
             return (
               <div key={item.id} className="rg-card tablet-fade-up" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {src
-                  ? <img src={src ?? undefined} alt={item.name} style={{ width: '100%', height: 170, objectFit: 'cover', filter: 'grayscale(100%)' }} />
+                  ? <img src={src ?? undefined} alt={item.name} style={{ width: '100%', height: 170, objectFit: 'cover' }} />
                   : <div style={{ width: '100%', height: 170, background: 'rgba(0,0,0,0.25)' }} />}
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
@@ -291,7 +291,7 @@ function HallsPage({ restaurantId, locale }: { restaurantId: string; locale: Loc
               style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', textDecoration: 'none' }}>
               <div style={{ position: 'relative' }}>
                 {src
-                  ? <img src={src ?? undefined} alt={h.name} style={{ width: '100%', height: 180, objectFit: 'cover', filter: 'grayscale(100%)' }} />
+                  ? <img src={src ?? undefined} alt={h.name} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
                   : <div style={{ width: '100%', height: 180, background: 'rgba(0,0,0,0.25)' }} />}
                 {photos.length > 1 && (
                   <span style={{ position: 'absolute', right: 10, bottom: 10, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 999, padding: '2px 9px', fontSize: 12, fontWeight: 600 }}>
@@ -362,7 +362,7 @@ function HallDetail({ restaurantId, locale }: { restaurantId: string; locale: Lo
               return (
                 <button key={p} type="button" onClick={() => setLightbox(i)} className="rg-card tablet-fade-up"
                   style={{ overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.25)' }}>
-                  <img src={src ?? undefined} alt={`${hall.name} ${i + 1}`} style={{ width: '100%', height: 180, objectFit: 'cover', filter: 'grayscale(100%)', display: 'block' }} />
+                  <img src={src ?? undefined} alt={`${hall.name} ${i + 1}`} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
                 </button>
               );
             })}
@@ -383,7 +383,7 @@ function HallDetail({ restaurantId, locale }: { restaurantId: string; locale: Lo
               style={navArrow('left')}>‹</button>
           )}
           <img src={getPhotoUrl(photos[lightbox]) ?? undefined} alt="" onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '90%', maxHeight: '88vh', objectFit: 'contain', filter: 'grayscale(100%)', borderRadius: 8 }} />
+            style={{ maxWidth: '90%', maxHeight: '88vh', objectFit: 'contain', borderRadius: 8 }} />
           {photos.length > 1 && (
             <button type="button" onClick={(e) => { e.stopPropagation(); setLightbox((lightbox + 1) % photos.length); }}
               style={navArrow('right')}>›</button>
