@@ -7,7 +7,9 @@ import { restaurantService, type Restaurant } from '../services/restaurant.servi
 import { reviewService, type Review } from '../services/review.service';
 import { hallService } from '../services/hall.service';
 import type { Hall } from '../types/domain';
-import { translate } from '../utils/translate';
+import { translate, locales, type Locale } from '../utils/translate';
+
+const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
@@ -328,7 +330,7 @@ function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; res
 export const ManagerRestaurantsPage = () => {
   const accessToken = useAuthStore((s) => s.accessToken);
   const role = useAuthStore((s) => s.role);
-  const { locale } = useAdminStore();
+  const { locale, setLocale } = useAdminStore();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
 
   const logoutMutation = useMutation({
@@ -365,6 +367,25 @@ export const ManagerRestaurantsPage = () => {
           <Link to="/" style={{ marginLeft: 'auto', padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: 'rgba(226,232,240,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
             ← {t('events')}
           </Link>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {locales.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setLocale(loc)}
+                style={{
+                  padding: '5px 10px', border: '1px solid', borderRadius: 6, cursor: 'pointer',
+                  fontSize: 11, letterSpacing: '0.06em', transition: 'all 0.18s',
+                  borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                  background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
+                  color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                  fontWeight: locale === loc ? 700 : 500,
+                }}
+              >
+                {LOCALE_LABELS[loc]}
+              </button>
+            ))}
+          </div>
           <button type="button" className="adm-btn-danger" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending} style={{ fontSize: 13 }}>
             {logoutMutation.isPending ? t('logging_out') : t('logout')}
           </button>

@@ -7,17 +7,20 @@ import { eventService } from '../services/event.service';
 import { invitationService } from '../services/invitation.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
-import { translate } from '../utils/translate';
+import { translate, locales, type Locale } from '../utils/translate';
+
+const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
   pageTitle?: string;
   currentRestaurantName?: string | null;
-  locale: 'en' | 'ru' | 'uz';
+  locale: Locale;
 }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const username = useAuthStore((s) => s.username);
+  const { setLocale } = useAdminStore();
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
     onSettled: () => {
@@ -80,6 +83,25 @@ function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
         >
           {t('devices')}
         </Link>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {locales.map((loc) => (
+            <button
+              key={loc}
+              type="button"
+              onClick={() => setLocale(loc)}
+              style={{
+                padding: '5px 10px', border: '1px solid', borderRadius: 6, cursor: 'pointer',
+                fontSize: 11, letterSpacing: '0.06em', transition: 'all 0.18s',
+                borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
+                color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                fontWeight: locale === loc ? 700 : 500,
+              }}
+            >
+              {LOCALE_LABELS[loc]}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           className="adm-btn-danger"
