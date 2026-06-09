@@ -44,7 +44,7 @@ const binarySearchEventById = (events: Event[], targetId: number): Event | null 
   return null; // Event not found
 };
 
-const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
+const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE', 'FOTIHA_TUI', 'NACHOR_OSHI'];
 
 export const AdminEventsPage = () => {
   const queryClient = useQueryClient();

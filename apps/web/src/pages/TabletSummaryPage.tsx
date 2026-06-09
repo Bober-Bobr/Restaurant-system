@@ -12,7 +12,7 @@ import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
 
 type EventType = NonNullable<Event['eventType']>;
-const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE'];
+const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE', 'FOTIHA_TUI', 'NACHOR_OSHI'];
 
 // ── Decorative background (shared with menu page) ─────────────────────────
 
@@ -117,6 +117,14 @@ export const TabletSummaryPage = () => {
   const [submitError, setSubmitError]               = useState<string | null>(null);
   const [discountEnabled, setDiscountEnabled]       = useState(false);
   const [discountText, setDiscountText]             = useState('');
+  const [confirmedExportSnapshot, setConfirmedExportSnapshot] = useState<null | {
+    customerName: string; customerPhone: string; hallName: string; tableCategoryName: string;
+    guestCount: number; selectedItems: Record<string, number>; menuItems: typeof menuItems;
+    includedDishes: { name: string; category: string }[];
+    pricing: { perGuestCents: number; originalPerGuestCents: number; totalCents: number;
+      originalTotalCents: number; discountPercent: number; hasDiscount: boolean; guestCount: number };
+    locale: Locale; restaurantName: string; restaurantLogoUrl: string | null;
+  }>(null);
 
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -179,6 +187,23 @@ export const TabletSummaryPage = () => {
         honoreePersonName:   !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
       });
       setConfirmedEventId(event.id);
+      setConfirmedExportSnapshot({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        hallName: selectedHall?.name || '',
+        tableCategoryName: selectedTableCategory?.name || '',
+        guestCount,
+        selectedItems: { ...selectedItems },
+        menuItems,
+        includedDishes: (selectedTableCategory?.packageItems ?? []).map((pi) => ({
+          name: pi.menuItem.name,
+          category: pi.menuItem.category,
+        })),
+        pricing: exportPricing,
+        locale,
+        restaurantName: restaurantName ?? '',
+        restaurantLogoUrl: restaurantLogoUrl ?? null,
+      });
       reset();
     } catch {
       setSubmitError(t('event_create_error'));
@@ -212,6 +237,22 @@ export const TabletSummaryPage = () => {
     }
   };
 
+  const downloadConfirmedBlob = async (url: string, filename: string) => {
+    if (!confirmedExportSnapshot) return;
+    try {
+      const response = await httpClient.post(url, confirmedExportSnapshot, { responseType: 'blob' });
+      const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      alert(t('download_failed'));
+    }
+  };
+
   // ── Success screen ────────────────────────────────────────────────────────
   if (confirmedEventId !== null) {
     return (
@@ -232,20 +273,49 @@ export const TabletSummaryPage = () => {
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('thank_you')}</p>
               <p className="mt-3 font-mono text-sm" style={{ color: 'rgba(201,164,44,0.7)' }}>Event #{confirmedEventId}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setConfirmedEventId(null);
-                setCustomerName(''); setCustomerPhone(''); setEventDate(''); setEventTime('');
-                setEventNotes(''); setEventType('RESERVATION');
-                setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreeName('');
-                navigate('/tablet');
-              }}
-              className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
-              style={{ background: '#c9a42c', color: '#1a3320' }}
-            >
-              {t('start_new_booking')}
-            </button>
+            {confirmedExportSnapshot && (
+              <div className="grid gap-2 w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
+                {[
+                  { label: t('download_pdf'), fn: () => downloadConfirmedBlob('/public/export/pdf', 'booking-summary.pdf'),
+                    icon: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { label: t('download_excel'), fn: () => downloadConfirmedBlob('/public/export/excel', 'booking-summary.xlsx'),
+                    icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                ].map(({ label, fn, icon }) => (
+                  <button key={label} type="button" onClick={fn}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                    <svg className="h-4 w-4" style={{ color: 'rgba(201,164,44,0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+                    </svg>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="grid gap-2 w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmedEventId(null);
+                  setCustomerName(''); setCustomerPhone(''); setEventDate(''); setEventTime('');
+                  setEventNotes(''); setEventType('RESERVATION');
+                  setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreeName('');
+                  navigate('/tablet');
+                }}
+                className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
+                style={{ background: '#c9a42c', color: '#1a3320' }}
+              >
+                {t('start_new_booking')}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
+                style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                ← {t('back')}
+              </button>
+            </div>
           </div>
         </div>
       </main>

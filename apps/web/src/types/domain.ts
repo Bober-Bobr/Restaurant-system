@@ -12,7 +12,7 @@ export type Event = {
   eventDate: string;
   guestCount: number;
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
-  eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE';
+  eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE' | 'FOTIHA_TUI' | 'NACHOR_OSHI';
   birthdayPersonName?: string;
   brideName?: string;
   groomName?: string;

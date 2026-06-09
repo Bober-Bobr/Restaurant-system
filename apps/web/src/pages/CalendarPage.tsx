@@ -40,6 +40,8 @@ const EVENT_TYPE_KEY: Record<string, Parameters<typeof translate>[0]> = {
   BIRTHDAY: 'event_type_birthday',
   PRIVATE_PARTY: 'event_type_private_party',
   CORPORATE: 'event_type_corporate',
+  FOTIHA_TUI: 'event_type_fotiha_tui',
+  NACHOR_OSHI: 'event_type_nachor_oshi',
 };
 
 // Returns which slot an event time falls into (or null if outside the windows).

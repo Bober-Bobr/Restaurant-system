@@ -20,6 +20,8 @@ enum EventType {
   BIRTHDAY
   PRIVATE_PARTY
   CORPORATE
+  FOTIHA_TUI
+  NACHOR_OSHI
 }
 
 enum MenuCategory {

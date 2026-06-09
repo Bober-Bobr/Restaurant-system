@@ -15,6 +15,8 @@ const EVENT_TYPE_LABEL: Record<NonNullable<Event['eventType']>, string> = {
   BIRTHDAY: 'Birthday',
   PRIVATE_PARTY: 'Private party',
   CORPORATE: 'Corporate',
+  FOTIHA_TUI: 'Fotiha Tui',
+  NACHOR_OSHI: 'Nachor Oshi',
 };
 
 const STATUS_BADGE: Record<Event['status'], { bg: string; label: string }> = {
