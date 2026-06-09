@@ -405,7 +405,9 @@ export const TabletMenuPage = () => {
   const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
-    setQuantity, setHall, setTableCategory, setGuestCount, locale, setLocale,
+    selectedFirstCourseId, selectedSecondCourseId,
+    setQuantity, setHall, setTableCategory, setFirstCourse, setSecondCourse,
+    setGuestCount, locale, setLocale,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -686,21 +688,171 @@ export const TabletMenuPage = () => {
               </section>
             )}
 
-            {/* Included dishes */}
-            {selectedTableCategory && (selectedTableCategory.packageItems ?? []).length > 0 && (
-              <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
-                <div className="mb-5">
-                  <p className="rg-label">{selectedTableCategory.name}</p>
-                  <p className="rg-heading mt-1">{t('included_with_table')}</p>
-                </div>
-                {Object.entries(
-                  (selectedTableCategory.packageItems ?? []).reduce<Record<string, typeof selectedTableCategory.packageItems>>(
-                    (acc, pi) => { const cat = pi!.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi!); return acc; }, {}
-                  )
-                ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99))
-                  .map(([cat, items]) => (
-                    <div key={cat} className="mb-6 last:mb-0">
-                      <p className="mb-3 rg-label">{t(cat.toLowerCase() as Parameters<typeof translate>[0])}</p>
+            {/* Course choice (first + second course) */}
+            {selectedTableCategory && (() => {
+              const courseItems = (selectedTableCategory.packageItems ?? []).filter(
+                (pi) => pi!.menuItem.category === 'FIRST_COURSE' || pi!.menuItem.category === 'SECOND_COURSE'
+              );
+              const firstItems = courseItems.filter((pi) => pi!.menuItem.category === 'FIRST_COURSE');
+              const secondItems = courseItems.filter((pi) => pi!.menuItem.category === 'SECOND_COURSE');
+              if (courseItems.length === 0) return null;
+              return (
+                <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
+                  <div className="mb-5">
+                    <p className="rg-label">{selectedTableCategory.name}</p>
+                    <p className="rg-heading mt-1">{t('courses')}</p>
+                  </div>
+
+                  {firstItems.length > 0 && (
+                    <div className={secondItems.length > 0 ? 'mb-8' : ''}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
+                          {t('choose_first_course')}
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {firstItems.map((pi, i) => {
+                          const item = pi!.menuItem;
+                          const selected = selectedFirstCourseId === item.id;
+                          return (
+                            <button key={item.id} type="button"
+                              onClick={() => setFirstCourse(item.id)}
+                              className="tablet-fade-up"
+                              style={{
+                                animationDelay: `${i * 50}ms`,
+                                position: 'relative', textAlign: 'left', cursor: 'pointer',
+                                borderRadius: 16, overflow: 'hidden', border: 'none', padding: 0,
+                                outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
+                                outlineOffset: selected ? 2 : 0,
+                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.07)',
+                                transition: 'outline 0.18s, background 0.18s',
+                              }}>
+                              {selected && (
+                                <div style={{
+                                  position: 'absolute', top: 8, right: 8, zIndex: 2,
+                                  width: 24, height: 24, borderRadius: '50%',
+                                  background: '#c9a42c', color: '#1a3320',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: 13, fontWeight: 700,
+                                }}>✓</div>
+                              )}
+                              {item.photoUrl ? (
+                                <img src={getPhotoUrl(item.photoUrl) ?? undefined} alt={item.name}
+                                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                              ) : (
+                                <div style={{ height: 140, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div style={{ padding: '10px 12px' }}>
+                                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3 }}>{item.name}</p>
+                                {item.description && (
+                                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {secondItems.length > 0 && (
+                    <div style={{ paddingTop: firstItems.length > 0 ? 0 : 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
+                          {t('choose_second_course')}
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {secondItems.map((pi, i) => {
+                          const item = pi!.menuItem;
+                          const selected = selectedSecondCourseId === item.id;
+                          return (
+                            <button key={item.id} type="button"
+                              onClick={() => setSecondCourse(item.id)}
+                              className="tablet-fade-up"
+                              style={{
+                                animationDelay: `${i * 50}ms`,
+                                position: 'relative', textAlign: 'left', cursor: 'pointer',
+                                borderRadius: 16, overflow: 'hidden', border: 'none', padding: 0,
+                                outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
+                                outlineOffset: selected ? 2 : 0,
+                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.07)',
+                                transition: 'outline 0.18s, background 0.18s',
+                              }}>
+                              {selected && (
+                                <div style={{
+                                  position: 'absolute', top: 8, right: 8, zIndex: 2,
+                                  width: 24, height: 24, borderRadius: '50%',
+                                  background: '#c9a42c', color: '#1a3320',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: 13, fontWeight: 700,
+                                }}>✓</div>
+                              )}
+                              {item.photoUrl ? (
+                                <img src={getPhotoUrl(item.photoUrl) ?? undefined} alt={item.name}
+                                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                              ) : (
+                                <div style={{ height: 140, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div style={{ padding: '10px 12px' }}>
+                                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3 }}>{item.name}</p>
+                                {item.description && (
+                                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              );
+            })()}
+
+            {/* Included dishes (all categories except first/second course) */}
+            {selectedTableCategory && (() => {
+              const includedItems = (selectedTableCategory.packageItems ?? []).filter(
+                (pi) => pi!.menuItem.category !== 'FIRST_COURSE' && pi!.menuItem.category !== 'SECOND_COURSE'
+              );
+              if (includedItems.length === 0) return null;
+              const grouped = Object.entries(
+                includedItems.reduce<Record<string, typeof includedItems>>(
+                  (acc, pi) => { const cat = pi!.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi!); return acc; }, {}
+                )
+              ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
+              return (
+                <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '120ms' }}>
+                  <div className="mb-5">
+                    <p className="rg-label">{selectedTableCategory.name}</p>
+                    <p className="rg-heading mt-1">{t('included_with_table')}</p>
+                  </div>
+                  {grouped.map(([cat, items], catIndex) => (
+                    <div key={cat} style={{
+                      paddingTop: catIndex > 0 ? 20 : 0,
+                      marginTop: catIndex > 0 ? 20 : 0,
+                      borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                        <div style={{ width: 3, height: 16, borderRadius: 2, background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+                          {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+                        </p>
+                      </div>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {items!.map((pi, i) => (
                           <div key={pi!.id}
@@ -734,8 +886,9 @@ export const TabletMenuPage = () => {
                       </div>
                     </div>
                   ))}
-              </section>
-            )}
+                </section>
+              );
+            })()}
 
             {/* Additional */}
             <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '180ms' }}>
