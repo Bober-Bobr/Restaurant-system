@@ -92,7 +92,7 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, reset } = useTabletStore();
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, setGuestCount, reset } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -141,7 +141,7 @@ export const TabletSummaryPage = () => {
   );
 
   const pricing        = usePriceCalculator(menuItems ?? [], selectedItems, selectedTableCategory, guestCount);
-  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime;
+  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
   const discountPercent = discountEnabled
@@ -367,6 +367,21 @@ export const TabletSummaryPage = () => {
                     <input className="rg-input" type="time"
                       value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
                   </div>
+                </div>
+
+                <div className="grid gap-1.5">
+                  <label className="rg-label">
+                    {t('guest_count')}
+                    {guestCount < 1 && (
+                      <span className="ml-2 normal-case font-normal text-xs" style={{ color: '#fca5a5' }}>
+                        — {t('required')}
+                      </span>
+                    )}
+                  </label>
+                  <input className="rg-input" type="number" min={1} max={5000}
+                    value={guestCount || ''}
+                    onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+                    placeholder="0" />
                 </div>
 
                 <div className="grid gap-1.5">
