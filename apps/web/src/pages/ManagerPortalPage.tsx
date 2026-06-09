@@ -6,10 +6,17 @@ import { restaurantService } from '../services/restaurant.service';
 import { eventService } from '../services/event.service';
 import { invitationService } from '../services/invitation.service';
 import { useAuthStore } from '../store/auth.store';
+import { useAdminStore } from '../store/admin.store';
+import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
-function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; currentRestaurantName?: string | null }) {
+function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
+  pageTitle?: string;
+  currentRestaurantName?: string | null;
+  locale: 'en' | 'ru' | 'uz';
+}) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const username = useAuthStore((s) => s.username);
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
@@ -35,12 +42,12 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
           <img src={networkingLogoSrc} alt="" style={{ height: 40, width: 'auto' }} />
           <div>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc' }}>
-              {pageTitle ?? 'Manager Portal'}
+              {pageTitle ?? t('manager_portal')}
             </p>
             <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
               {username}
               <span className="adm-badge" style={{ background: 'rgba(139,92,246,0.18)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' }}>
-                MANAGER
+                {t('manager_role')}
               </span>
             </p>
           </div>
@@ -60,7 +67,7 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
             border: '1px solid rgba(201,164,44,0.35)',
           }}
         >
-          Restaurants
+          {t('my_restaurants')}
         </Link>
         <Link
           to="/devices"
@@ -71,7 +78,7 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
             border: '1px solid rgba(201,164,44,0.35)',
           }}
         >
-          Devices
+          {t('devices')}
         </Link>
         <button
           type="button"
@@ -85,7 +92,7 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
+          {logoutMutation.isPending ? t('logging_out') : t('logout')}
         </button>
       </div>
     </nav>
@@ -97,6 +104,8 @@ function ManagerNav({ pageTitle, currentRestaurantName }: { pageTitle?: string; 
 export const ManagerPortalPage = () => {
   const role = useAuthStore((s) => s.role);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const { locale } = useAdminStore();
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const navigate = useNavigate();
 
   const restaurantsQuery = useQuery({
@@ -112,13 +121,13 @@ export const ManagerPortalPage = () => {
 
   return (
     <div className="adm-bg">
-      <ManagerNav />
+      <ManagerNav locale={locale} />
       <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-        <h1 className="adm-title" style={{ marginBottom: 20 }}>Restaurants</h1>
+        <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('my_restaurants')}</h1>
 
         {restaurantsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
         {restaurants.length === 0 && !restaurantsQuery.isLoading && (
-          <p style={{ color: 'rgba(226,232,240,0.5)' }}>No restaurants yet.</p>
+          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_restaurants_yet')}</p>
         )}
 
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
@@ -163,6 +172,8 @@ export const ManagerRestaurantEventsPage = () => {
   const { restaurantId = '' } = useParams();
   const accessToken = useAuthStore((s) => s.accessToken);
   const role = useAuthStore((s) => s.role);
+  const { locale } = useAdminStore();
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const navigate = useNavigate();
   const [status, setStatus] = useState<'ALL' | 'DRAFT' | 'CONFIRMED' | 'CANCELLED'>('ALL');
 
@@ -196,12 +207,12 @@ export const ManagerRestaurantEventsPage = () => {
 
   return (
     <div className="adm-bg">
-      <ManagerNav pageTitle="Restaurant events" currentRestaurantName={restaurant?.name ?? null} />
+      <ManagerNav pageTitle={t('restaurant_events')} currentRestaurantName={restaurant?.name ?? null} locale={locale} />
       <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
           <div>
-            <Link to="/" style={{ fontSize: 12, color: 'rgba(226,232,240,0.6)', textDecoration: 'none' }}>← All restaurants</Link>
-            <h1 className="adm-title" style={{ margin: '6px 0 0' }}>{restaurant?.name ?? 'Restaurant'} — events</h1>
+            <Link to="/" style={{ fontSize: 12, color: 'rgba(226,232,240,0.6)', textDecoration: 'none' }}>← {t('all_restaurants')}</Link>
+            <h1 className="adm-title" style={{ margin: '6px 0 0' }}>{restaurant?.name ?? t('my_restaurants')} — {t('events')}</h1>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {(['ALL', 'DRAFT', 'CONFIRMED', 'CANCELLED'] as const).map((s) => (
@@ -224,7 +235,7 @@ export const ManagerRestaurantEventsPage = () => {
 
         {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
         {!eventsQuery.isLoading && filtered.length === 0 && (
-          <p style={{ color: 'rgba(226,232,240,0.5)' }}>No events.</p>
+          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_events')}</p>
         )}
 
         <div style={{ display: 'grid', gap: 10 }}>
@@ -248,7 +259,7 @@ export const ManagerRestaurantEventsPage = () => {
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
                     {new Date(e.eventDate).toLocaleString()}
                     {e.eventType ? ` · ${e.eventType}` : ''}
-                    {e.guestCount ? ` · ${e.guestCount} guests` : ''}
+                    {e.guestCount ? ` · ${e.guestCount} ${t('guests')}` : ''}
                   </p>
                 </div>
                 <span className="adm-badge" style={{

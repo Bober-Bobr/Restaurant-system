@@ -379,6 +379,11 @@ const resources = {
     choose_restaurant_to_view: 'Choose a restaurant',
     view_only_mode: 'View-only mode',
     no_restaurants_available: 'No restaurants available.',
+    manager_portal: 'Manager Portal',
+    restaurant_events: 'Restaurant events',
+    all_restaurants: 'All restaurants',
+    no_events: 'No events.',
+    back: 'Back',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -753,6 +758,11 @@ const resources = {
     choose_restaurant_to_view: 'Выберите ресторан',
     view_only_mode: 'Режим просмотра',
     no_restaurants_available: 'Нет доступных ресторанов.',
+    manager_portal: 'Портал менеджера',
+    restaurant_events: 'События ресторана',
+    all_restaurants: 'Все рестораны',
+    no_events: 'Нет событий.',
+    back: 'Назад',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -1127,6 +1137,11 @@ const resources = {
     choose_restaurant_to_view: 'Restoranni tanlang',
     view_only_mode: 'Faqat ko\'rish rejimi',
     no_restaurants_available: 'Restoranlar yo\'q.',
+    manager_portal: 'Menejer portali',
+    restaurant_events: 'Restoran tadbirlari',
+    all_restaurants: 'Barcha restoranlar',
+    no_events: 'Tadbirlar yo\'q.',
+    back: 'Orqaga',
   }
 } as const;
 
