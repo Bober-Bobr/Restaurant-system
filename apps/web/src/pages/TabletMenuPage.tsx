@@ -427,6 +427,12 @@ export const TabletMenuPage = () => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
 
+  // Reset table-category selection on every mount so the slide reappears
+  // each time a guest navigates back to this page (kiosk behavior).
+  useEffect(() => {
+    setTableCategory('');
+  }, []);
+
   const dismissWelcome = () => {
     startTabletMusic();
     markTabletWelcomeShown();
