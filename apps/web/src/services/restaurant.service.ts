@@ -8,6 +8,7 @@ export type Restaurant = {
   email: string | null;
   history: string | null;
   logoUrl: string | null;
+  backgroundImageUrl: string | null;
   ownerId: string;
   companyId: string | null;
   company: { id: string; name: string; logoUrl: string | null } | null;
@@ -22,6 +23,7 @@ export type CreateRestaurantPayload = {
   email?: string | null;
   history?: string | null;
   logoUrl?: string;
+  backgroundImageUrl?: string | null;
   companyId?: string;
 };
 

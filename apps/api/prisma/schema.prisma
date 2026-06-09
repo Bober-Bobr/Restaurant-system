@@ -141,6 +141,7 @@ model Restaurant {
   email           String?
   history         String?
   logoUrl         String?
+  backgroundImageUrl String?
   ownerId         String
   companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -210,6 +211,7 @@ model Hall {
   capacity     Int
   description  String?
   photoUrl     String?
+  photos       Json        @default("[]")
   isActive     Boolean     @default(true)
   restaurantId String?
   createdAt    DateTime    @default(now())

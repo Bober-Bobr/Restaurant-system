@@ -3,8 +3,9 @@ import { z } from 'zod';
 export const createHallSchema = z.object({
   name: z.string().min(1).max(100),
   capacity: z.number().int().positive().max(5000),
-  description: z.string().max(500).optional(),
-  photoUrl: z.string().min(1).optional(),
+  description: z.string().max(500).optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+  photos: z.array(z.string()).max(30).optional(),
   isActive: z.boolean().optional()
 });
 

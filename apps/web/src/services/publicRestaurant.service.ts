@@ -11,6 +11,7 @@ export type PublicRestaurantSummary = {
   email?: string | null;
   history?: string | null;
   logoUrl: string | null;
+  backgroundImageUrl?: string | null;
   companyName?: string | null;
 };
 

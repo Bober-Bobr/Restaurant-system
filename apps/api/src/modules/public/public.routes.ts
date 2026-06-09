@@ -33,6 +33,7 @@ router.get('/restaurants', async (_request, response, next) => {
       email: r.email ?? null,
       history: r.history ?? null,
       logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
+      backgroundImageUrl: r.backgroundImageUrl ?? null,
       companyName: r.company?.name ?? null,
     })));
   } catch (error) { next(error); }

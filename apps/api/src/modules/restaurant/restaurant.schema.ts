@@ -7,6 +7,7 @@ export const createRestaurantSchema = z.object({
   email: z.string().max(160).optional().nullable(),
   history: z.string().max(5000).optional().nullable(),
   logoUrl: z.string().min(1).optional(),
+  backgroundImageUrl: z.string().optional().nullable(),
   companyId: z.string().optional(),
 });
 

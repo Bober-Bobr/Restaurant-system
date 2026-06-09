@@ -5,10 +5,15 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { restaurantService, type Restaurant } from '../services/restaurant.service';
 import { reviewService, type Review } from '../services/review.service';
+import { hallService } from '../services/hall.service';
+import type { Hall } from '../types/domain';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { authService } from '../services/auth.service';
+
+type Lang = 'en' | 'ru' | 'uz';
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
@@ -48,6 +53,11 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
       setTimeout(() => setSaved(false), 1500);
       queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] });
     },
+  });
+
+  const updateBackground = useMutation({
+    mutationFn: (url: string | null) => restaurantService.update(r.id, { backgroundImageUrl: url }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] }),
   });
 
   const reviewsQuery = useQuery({
@@ -93,6 +103,19 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
         <span style={labelStyle}>{t('history_label')}</span>
         <textarea value={history} onChange={(e) => setHistory(e.target.value)} style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }} />
       </label>
+
+      {/* Background photo for the public catering site */}
+      <div style={{ marginBottom: 12 }}>
+        <span style={labelStyle}>{t('background_photo')}</span>
+        <p style={{ margin: '2px 0 6px', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('background_photo_help')}</p>
+        <PhotoUploadField
+          value={r.backgroundImageUrl ?? null}
+          onChange={(url) => updateBackground.mutate(url)}
+          restaurantId={r.id}
+          height={140}
+        />
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button type="button" className="adm-btn-primary" disabled={saveInfo.isPending} onClick={() => saveInfo.mutate()} style={{ fontSize: 13 }}>
           {saveInfo.isPending ? t('saving') : t('save_info')}
@@ -140,7 +163,165 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
           ))}
         </div>
       </div>
+
+      {/* Halls management */}
+      <HallsManager restaurantId={r.id} locale={locale} />
     </section>
+  );
+}
+
+// ── Halls management (info + photos) ────────────────────────────────────────
+function HallsManager({ restaurantId, locale }: { restaurantId: string; locale: Lang }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['manager-halls', restaurantId] });
+
+  const hallsQuery = useQuery({
+    queryKey: ['manager-halls', restaurantId],
+    queryFn: () => hallService.listForRestaurant(restaurantId),
+  });
+  const halls = hallsQuery.data ?? [];
+
+  const [newName, setNewName] = useState('');
+  const [newCapacity, setNewCapacity] = useState('');
+
+  const addHall = useMutation({
+    mutationFn: () => hallService.createForRestaurant(restaurantId, {
+      name: newName.trim(),
+      capacity: Number(newCapacity) || 1,
+    }),
+    onSuccess: () => { setNewName(''); setNewCapacity(''); invalidate(); },
+  });
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <p style={{ margin: '0 0 4px', ...labelStyle, fontSize: 12 }}>{t('manage_halls')} ({halls.length})</p>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('hall_info_help')}</p>
+
+      {hallsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>...</p>}
+      {!hallsQuery.isLoading && halls.length === 0 && (
+        <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>{t('no_halls')}</p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {halls.map((h) => (
+          <HallEditor key={h.id} hall={h} restaurantId={restaurantId} locale={locale} onChanged={invalidate} />
+        ))}
+      </div>
+
+      {/* Add hall */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ display: 'grid', gap: 4, flex: '1 1 160px' }}>
+          <span style={labelStyle}>{t('name')}</span>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} style={inputStyle} />
+        </label>
+        <label style={{ display: 'grid', gap: 4, width: 110 }}>
+          <span style={labelStyle}>{t('capacity')}</span>
+          <input value={newCapacity} onChange={(e) => setNewCapacity(e.target.value.replace(/[^0-9]/g, ''))} style={inputStyle} inputMode="numeric" />
+        </label>
+        <button type="button" className="adm-btn-primary" disabled={!newName.trim() || addHall.isPending}
+          onClick={() => addHall.mutate()} style={{ fontSize: 13, opacity: !newName.trim() ? 0.5 : 1 }}>
+          {addHall.isPending ? t('saving') : `+ ${t('add_hall')}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; restaurantId: string; locale: Lang; onChanged: () => void }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const [name, setName] = useState(hall.name);
+  const [capacity, setCapacity] = useState(String(hall.capacity));
+  const [description, setDescription] = useState(hall.description ?? '');
+  const [photos, setPhotos] = useState<string[]>(() => {
+    const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
+    return Array.from(new Set(all));
+  });
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setName(hall.name);
+    setCapacity(String(hall.capacity));
+    setDescription(hall.description ?? '');
+    const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
+    setPhotos(Array.from(new Set(all)));
+  }, [hall.id, hall.name, hall.capacity, hall.description, hall.photoUrl, hall.photos]);
+
+  const save = useMutation({
+    mutationFn: (nextPhotos?: string[]) => {
+      const list = nextPhotos ?? photos;
+      return hallService.updateForRestaurant(restaurantId, hall.id, {
+        name: name.trim() || hall.name,
+        capacity: Number(capacity) || hall.capacity,
+        description: description.trim() || null,
+        photoUrl: list[0] ?? null,
+        photos: list,
+      });
+    },
+    onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 1500); onChanged(); },
+  });
+
+  const remove = useMutation({
+    mutationFn: () => hallService.removeForRestaurant(restaurantId, hall.id),
+    onSuccess: onChanged,
+  });
+
+  const addPhoto = (url: string | null) => {
+    if (!url) return;
+    const next = Array.from(new Set([...photos, url]));
+    setPhotos(next);
+    save.mutate(next);
+  };
+  const removePhoto = (url: string) => {
+    const next = photos.filter((p) => p !== url);
+    setPhotos(next);
+    save.mutate(next);
+  };
+
+  return (
+    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ display: 'grid', gap: 4, flex: '1 1 160px' }}>
+          <span style={labelStyle}>{t('name')}</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        </label>
+        <label style={{ display: 'grid', gap: 4, width: 100 }}>
+          <span style={labelStyle}>{t('capacity')}</span>
+          <input value={capacity} onChange={(e) => setCapacity(e.target.value.replace(/[^0-9]/g, ''))} style={inputStyle} inputMode="numeric" />
+        </label>
+      </div>
+
+      <label style={{ display: 'grid', gap: 4, marginTop: 10 }}>
+        <span style={labelStyle}>{t('description')}</span>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} />
+      </label>
+
+      {/* Photo gallery */}
+      <p style={{ margin: '12px 0 6px', ...labelStyle }}>{t('photos')} ({photos.length})</p>
+      <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}>
+        {photos.map((p) => (
+          <div key={p} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', height: 72, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <img src={getPhotoUrl(p) ?? undefined} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <button type="button" onClick={() => removePhoto(p)}
+              style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(220,38,38,0.9)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</button>
+          </div>
+        ))}
+        <div style={{ height: 72 }}>
+          <PhotoUploadField value={null} onChange={addPhoto} restaurantId={restaurantId} height={72} label={undefined} />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+        <button type="button" className="adm-btn-primary" disabled={save.isPending} onClick={() => save.mutate(undefined)} style={{ fontSize: 13 }}>
+          {save.isPending ? t('saving') : t('save')}
+        </button>
+        <button type="button" className="adm-btn-danger" disabled={remove.isPending}
+          onClick={() => { if (confirm(`${t('delete')}?`)) remove.mutate(); }} style={{ fontSize: 13 }}>
+          {t('delete')}
+        </button>
+        {saved && <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓</span>}
+      </div>
+    </div>
   );
 }
 

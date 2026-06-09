@@ -8,6 +8,7 @@ type RestaurantUpdateData = {
   email?: string | null;
   history?: string | null;
   logoUrl?: string;
+  backgroundImageUrl?: string | null;
 };
 
 export class RestaurantService {

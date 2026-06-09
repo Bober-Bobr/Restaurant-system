@@ -32,6 +32,7 @@ export type Hall = {
   capacity: number;
   description?: string;
   photoUrl?: string;
+  photos?: string[];
   isActive: boolean;
 };
 

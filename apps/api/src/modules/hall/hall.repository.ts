@@ -4,8 +4,9 @@ import { prisma } from '../../db/prisma.js';
 export type CreateHallData = {
   name: string;
   capacity: number;
-  description?: string;
-  photoUrl?: string;
+  description?: string | null;
+  photoUrl?: string | null;
+  photos?: string[];
   isActive?: boolean;
 };
 
