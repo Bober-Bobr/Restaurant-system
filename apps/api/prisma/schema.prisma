@@ -25,9 +25,26 @@ enum EventType {
 }
 
 enum MenuCategory {
+  SOUPS
+  PIZZA
   COLD_APPETIZERS
+  GRILL
+  PASTRY
   HOT_APPETIZERS
-  SALADS
+  BEER_SNACKS
+  DESSERT
+  LAMB_DISHES
+  BEEF_DISHES
+  CHICKEN_DISHES
+  SIDE_DISHES
+  PASTA
+  SOFT_DRINKS
+  STEAKS
+  ENERGY_DRINKS
+  SALADS_OIL
+  SALADS_MAYO
+  COFFEE
+  // Legacy values kept for existing data and the tablet course-choice feature.
   FIRST_COURSE
   SECOND_COURSE
   DRINKS

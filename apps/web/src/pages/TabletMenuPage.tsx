@@ -14,8 +14,11 @@ type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
 
 const CATEGORY_ORDER: Record<MenuCategory, number> = {
-  COLD_APPETIZERS: 0, HOT_APPETIZERS: 1, SALADS: 2,
-  FIRST_COURSE: 3, SECOND_COURSE: 4, DRINKS: 5, SWEETS: 6, FRUITS: 7,
+  SOUPS: 0, PIZZA: 1, COLD_APPETIZERS: 2, GRILL: 3, PASTRY: 4, HOT_APPETIZERS: 5,
+  BEER_SNACKS: 6, DESSERT: 7, LAMB_DISHES: 8, BEEF_DISHES: 9, CHICKEN_DISHES: 10,
+  SIDE_DISHES: 11, PASTA: 12, SOFT_DRINKS: 13, STEAKS: 14, ENERGY_DRINKS: 15,
+  SALADS_OIL: 16, SALADS_MAYO: 17, COFFEE: 18,
+  FIRST_COURSE: 19, SECOND_COURSE: 20, DRINKS: 21, SWEETS: 22, FRUITS: 23,
 };
 
 function quickSort(items: MenuItem[]): MenuItem[] {
@@ -34,7 +37,11 @@ function quickSort(items: MenuItem[]): MenuItem[] {
 }
 
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
-  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
+  'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
+  'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
+  'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
 // ── Decorative background ─────────────────────────────────────────────────

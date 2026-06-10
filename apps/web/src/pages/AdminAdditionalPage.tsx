@@ -11,13 +11,33 @@ type MenuCategory = MenuItem['category'];
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
-  'COLD_APPETIZERS', 'HOT_APPETIZERS', 'SALADS', 'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
+  'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
+  'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
+  'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {
+  SOUPS: 'soups',
+  PIZZA: 'pizza',
   COLD_APPETIZERS: 'cold_appetizers',
+  GRILL: 'grill',
+  PASTRY: 'pastry',
   HOT_APPETIZERS: 'hot_appetizers',
-  SALADS: 'salads',
+  BEER_SNACKS: 'beer_snacks',
+  DESSERT: 'dessert',
+  LAMB_DISHES: 'lamb_dishes',
+  BEEF_DISHES: 'beef_dishes',
+  CHICKEN_DISHES: 'chicken_dishes',
+  SIDE_DISHES: 'side_dishes',
+  PASTA: 'pasta',
+  SOFT_DRINKS: 'soft_drinks',
+  STEAKS: 'steaks',
+  ENERGY_DRINKS: 'energy_drinks',
+  SALADS_OIL: 'salads_oil',
+  SALADS_MAYO: 'salads_mayo',
+  COFFEE: 'coffee',
   FIRST_COURSE: 'first_course',
   SECOND_COURSE: 'second_course',
   DRINKS: 'drinks',
