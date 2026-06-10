@@ -5,7 +5,7 @@ export const createMenuItemSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(500).optional(),
   category: z.nativeEnum(MenuCategory),
-  priceCents: z.number().int().positive().max(10000000),
+  priceCents: z.number().int().positive().max(10000000000),
   photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   showOnTablet: z.boolean().optional()
