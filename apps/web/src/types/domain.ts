@@ -63,6 +63,7 @@ export type MenuItem = {
     | 'BEER_SNACKS' | 'DESSERT' | 'LAMB_DISHES' | 'BEEF_DISHES' | 'CHICKEN_DISHES'
     | 'SIDE_DISHES' | 'PASTA' | 'SOFT_DRINKS' | 'STEAKS' | 'ENERGY_DRINKS'
     | 'SALADS_OIL' | 'SALADS_MAYO' | 'COFFEE' | 'SUSHI_ROLLS'
+    | 'DRIED_FRUITS' | 'CANDIES'
     | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'DRINKS' | 'SWEETS' | 'FRUITS';
   priceCents: number;
   photoUrl?: string;

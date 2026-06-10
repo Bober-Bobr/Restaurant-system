@@ -45,6 +45,8 @@ enum MenuCategory {
   SALADS_MAYO
   COFFEE
   SUSHI_ROLLS
+  DRIED_FRUITS
+  CANDIES
   // Legacy values kept for existing data and the tablet course-choice feature.
   FIRST_COURSE
   SECOND_COURSE

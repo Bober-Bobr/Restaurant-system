@@ -29,7 +29,7 @@ const CATEGORY_ORDER: MenuCategory[] = [
   'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
-  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS', 'DRIED_FRUITS', 'CANDIES',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {
@@ -53,6 +53,8 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   SALADS_MAYO: 'salads_mayo',
   COFFEE: 'coffee',
   SUSHI_ROLLS: 'sushi_rolls',
+  DRIED_FRUITS: 'dried_fruits',
+  CANDIES: 'candies',
   FIRST_COURSE: 'first_course',
   SECOND_COURSE: 'second_course',
   THIRD_COURSE: 'third_course',

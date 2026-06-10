@@ -13,13 +13,14 @@ type DishCategory =
   | 'beer_snacks' | 'dessert' | 'lamb_dishes' | 'beef_dishes' | 'chicken_dishes'
   | 'side_dishes' | 'pasta' | 'soft_drinks' | 'steaks' | 'energy_drinks'
   | 'salads_oil' | 'salads_mayo' | 'coffee' | 'sushi_rolls'
+  | 'dried_fruits' | 'candies'
   | 'first_course' | 'second_course' | 'third_course' | 'drinks' | 'sweets' | 'fruits';
 
 const DISH_CATEGORIES: DishCategory[] = [
   'soups', 'pizza', 'cold_appetizers', 'grill', 'pastry', 'hot_appetizers',
   'beer_snacks', 'dessert', 'lamb_dishes', 'beef_dishes', 'chicken_dishes',
   'side_dishes', 'pasta', 'soft_drinks', 'steaks', 'energy_drinks',
-  'salads_oil', 'salads_mayo', 'coffee', 'sushi_rolls',
+  'salads_oil', 'salads_mayo', 'coffee', 'sushi_rolls', 'dried_fruits', 'candies',
   'first_course', 'second_course', 'third_course', 'drinks', 'sweets', 'fruits',
 ];
 
@@ -44,6 +45,8 @@ const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>
   salads_mayo:     'salads_mayo',
   coffee:          'coffee',
   sushi_rolls:     'sushi_rolls',
+  dried_fruits:    'dried_fruits',
+  candies:         'candies',
   first_course:    'first_course',
   second_course:   'second_course',
   third_course:    'third_course',
