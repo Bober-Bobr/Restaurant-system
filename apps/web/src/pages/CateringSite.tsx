@@ -70,6 +70,18 @@ function hallPhotoList(hall: Hall): string[] {
   return Array.from(new Set(all));
 }
 
+// Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
+function BestsellerBadge({ on, size = 16, dark = false }: { on: boolean; size?: number; dark?: boolean }) {
+  const color = dark ? '#000' : '#f59e0b';
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      fill={on ? color : 'none'} stroke={color} strokeWidth={1.8} strokeLinejoin="round"
+      style={{ flexShrink: 0 }}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
 // ── Shared data hook ────────────────────────────────────────────────────────
 function useCateringData(slug: string) {
   const restaurantsQuery = useQuery({
@@ -235,16 +247,40 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const { category = '' } = useParams();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const cat = category as MenuCategory;
-  const items = menuItems.filter((m) => m.category === cat && m.isActive);
   const labelKey = CATEGORY_LABEL_KEY[cat];
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [bestsellersOnly, setBestsellersOnly] = useState(false);
+
+  const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
+  const hasBestsellers = allItems.some((m) => m.isBestseller);
+  const items = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : allItems;
 
   return (
     <>
       <Link to="/" style={{ fontSize: 13, color: C.textDim, textDecoration: 'none' }}>← {t('back_to_menu')}</Link>
-      <h1 style={{ margin: '10px 0 20px', fontSize: 26, fontWeight: 800, color: '#fff' }}>
-        {labelKey ? t(labelKey) : category}
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', margin: '10px 0 20px' }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: '#fff' }}>
+          {labelKey ? t(labelKey) : category}
+        </h1>
+        {hasBestsellers && (
+          <button
+            type="button"
+            onClick={() => setBestsellersOnly((v) => !v)}
+            aria-pressed={bestsellersOnly}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              background: bestsellersOnly ? '#f59e0b' : 'rgba(255,255,255,0.05)',
+              color: bestsellersOnly ? '#000' : '#fff',
+              border: `1px solid ${bestsellersOnly ? '#f59e0b' : C.line}`,
+              transition: 'all 0.15s',
+            }}
+          >
+            <BestsellerBadge on size={15} dark={bestsellersOnly} />
+            {t('bestsellers_only')}
+          </button>
+        )}
+      </div>
 
       {items.length === 0 ? (
         <p style={{ color: C.textFaint }}>{t('no_dishes_in_category')}</p>
@@ -253,7 +289,20 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
           {items.map((item) => {
             const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
             return (
-              <div key={item.id} className="rg-card reveal" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div key={item.id} className="rg-card reveal" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                {item.isBestseller && (
+                  <span style={{
+                    position: 'absolute', top: 10, left: 10, zIndex: 2,
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '4px 9px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+                    background: 'rgba(245,158,11,0.95)', color: '#000',
+                    boxShadow: '0 0 12px rgba(245,158,11,0.7)',
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                  }}>
+                    <BestsellerBadge on size={12} dark />
+                    {t('bestseller')}
+                  </span>
+                )}
                 {src
                   ? <button type="button" onClick={() => setLightboxSrc(src)}
                       style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}>

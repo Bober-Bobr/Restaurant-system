@@ -256,6 +256,7 @@ model MenuItem {
   photoUrl         String?
   isActive         Boolean                   @default(true)
   showOnTablet     Boolean                   @default(true)
+  isBestseller     Boolean                   @default(false)
   restaurantId     String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt

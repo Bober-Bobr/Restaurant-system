@@ -69,6 +69,7 @@ export type MenuItem = {
   photoUrl?: string;
   isActive: boolean;
   showOnTablet?: boolean;
+  isBestseller?: boolean;
 };
 
 export type PricingSummary = {

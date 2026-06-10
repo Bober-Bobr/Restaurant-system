@@ -71,6 +71,24 @@ function quickSort(items: MenuItem[]): MenuItem[] {
 const parsePriceToCents = parseSumToTiyin;
 const formatCents = formatSumInput;
 
+// Glowing star marking a bestseller dish.
+function BestsellerStar({ on, size = 18 }: { on: boolean; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={on ? '#f59e0b' : 'none'}
+      stroke={on ? '#f59e0b' : 'rgba(255,255,255,0.35)'}
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+      style={{ filter: on ? 'drop-shadow(0 0 4px rgba(245,158,11,0.85))' : 'none', transition: 'all 0.15s', flexShrink: 0 }}
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
 export const AdminMenuPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -104,6 +122,7 @@ export const AdminMenuPage = () => {
   const [category, setCategory] = useState<MenuItem['category']>('HOT_APPETIZERS');
   const [price, setPrice] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [isBestseller, setIsBestseller] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -117,7 +136,8 @@ export const AdminMenuPage = () => {
         description: description.trim() ? description.trim() : undefined,
         category,
         priceCents,
-        photoUrl: photoUrl.trim() ? photoUrl.trim() : undefined
+        photoUrl: photoUrl.trim() ? photoUrl.trim() : undefined,
+        isBestseller
       });
     },
     onSuccess: async () => {
@@ -126,6 +146,7 @@ export const AdminMenuPage = () => {
       setCategory('HOT_APPETIZERS');
       setPrice('');
       setPhotoUrl('');
+      setIsBestseller(false);
       await queryClient.invalidateQueries({ queryKey: ['menu-items', 'admin', 'all'] });
     }
   });
@@ -196,6 +217,15 @@ export const AdminMenuPage = () => {
           <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>
             {translate('description', locale)}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+
+          <label style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input type="checkbox" checked={isBestseller} onChange={(e) => setIsBestseller(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: '#f59e0b', cursor: 'pointer' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <BestsellerStar on={isBestseller} size={16} />
+              {translate('bestseller', locale)}
+            </span>
           </label>
 
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -273,6 +303,7 @@ export const AdminMenuPage = () => {
                     <th>{translate('category', locale)}</th>
                     <th>{translate('description', locale)}</th>
                     <th>{translate('price', locale)}</th>
+                    <th style={{ textAlign: 'center' }}>{translate('bestseller', locale)}</th>
                     <th>{translate('tables', locale)}</th>
                     <th></th>
                   </tr>
@@ -431,6 +462,23 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, is
         </div>
       )}
 
+      <button
+        type="button"
+        onClick={() => onPatch({ isBestseller: !item.isBestseller })}
+        disabled={isSaving}
+        aria-pressed={!!item.isBestseller}
+        className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
+        style={{
+          background: item.isBestseller ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${item.isBestseller ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'}`,
+          color: item.isBestseller ? '#f59e0b' : 'rgba(226,232,240,0.7)',
+          cursor: isSaving ? 'default' : 'pointer',
+        }}
+      >
+        <BestsellerStar on={!!item.isBestseller} size={16} />
+        {translate('bestseller', locale)}
+      </button>
+
       <div className="flex gap-2 pt-1">
         <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave} className="flex-1">
           {translate('save', locale)}
@@ -475,7 +523,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
   return (
     <>
-      <tr>
+      <tr style={item.isBestseller ? { background: 'rgba(245,158,11,0.06)' } : undefined}>
         {/* Photo thumbnail */}
         <td className="w-14 px-3 py-2">
           <button
@@ -526,6 +574,20 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
           <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="h-8 w-24 text-sm" />
         </td>
 
+        {/* Bestseller toggle */}
+        <td className="px-4 py-2.5 text-center">
+          <button
+            type="button"
+            onClick={() => onPatch({ isBestseller: !item.isBestseller })}
+            disabled={isSaving}
+            title={translate('bestseller', locale)}
+            aria-pressed={!!item.isBestseller}
+            style={{ background: 'none', border: 'none', cursor: isSaving ? 'default' : 'pointer', padding: 4, lineHeight: 0 }}
+          >
+            <BestsellerStar on={!!item.isBestseller} size={20} />
+          </button>
+        </td>
+
         {/* Table categories */}
         <td className="px-4 py-2.5">
           {assignedTableCategories.length === 0 ? (
@@ -567,7 +629,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={7} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={8} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={localCategory.toLowerCase()}

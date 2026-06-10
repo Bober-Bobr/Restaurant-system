@@ -8,7 +8,8 @@ export const createMenuItemSchema = z.object({
   priceCents: z.number().int().positive().max(10000000000),
   photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
-  showOnTablet: z.boolean().optional()
+  showOnTablet: z.boolean().optional(),
+  isBestseller: z.boolean().optional()
 });
 
 export const updateMenuItemSchema = createMenuItemSchema.partial();
