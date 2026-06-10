@@ -331,6 +331,9 @@ model Invitation {
   backgroundColor     String?
   backgroundImageUrl  String?
 
+  // Optional looping background music played on the public invitation
+  musicUrl            String?
+
   isPublished     Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

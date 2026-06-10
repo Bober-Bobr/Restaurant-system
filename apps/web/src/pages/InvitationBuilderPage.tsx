@@ -10,6 +10,7 @@ import { invitationService, normalizeGalleryItems, type Invitation, type Invitat
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { PhotoUploadField } from '../components/PhotoUploadField';
+import { AudioUploadField } from '../components/AudioUploadField';
 import QRCode from 'qrcode';
 
 // Preset palettes for the invitation (accent + page background).
@@ -379,6 +380,22 @@ export const InvitationBuilderPage = () => {
             onChange={(url) => set('backgroundImageUrl', url)}
             restaurantId={restaurantId}
           />
+        </Section>
+
+        <Section title="Background music">
+          <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
+            Plays softly on a loop while guests view the invitation. Upload an audio file or paste a direct link.
+          </p>
+          <AudioUploadField
+            label="Music file"
+            value={form.musicUrl}
+            onChange={(url) => set('musicUrl', url)}
+            restaurantId={restaurantId}
+          />
+          <Field label="Or paste a music URL">
+            <input value={form.musicUrl ?? ''} onChange={(e) => set('musicUrl', e.target.value || null)}
+              style={inputStyle} placeholder="https://example.com/song.mp3" />
+          </Field>
         </Section>
 
         <Section title="Promo card (top hero)">

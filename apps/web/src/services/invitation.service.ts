@@ -50,6 +50,7 @@ export type Invitation = {
   accentColor: string | null;
   backgroundColor: string | null;
   backgroundImageUrl: string | null;
+  musicUrl: string | null;
 
   isPublished: boolean;
   createdAt: string;

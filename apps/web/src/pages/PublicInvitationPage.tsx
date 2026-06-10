@@ -77,6 +77,7 @@ export const PublicInvitationPage = () => {
   const bgColor = invitation.backgroundColor || '#fafaf7';
   const bgImage = invitation.backgroundImageUrl ? (getPhotoUrl(invitation.backgroundImageUrl) ?? invitation.backgroundImageUrl) : null;
   const galleryItems = normalizeGalleryItems(invitation.galleryPhotos);
+  const musicSrc = invitation.musicUrl ? (getPhotoUrl(invitation.musicUrl) ?? invitation.musicUrl) : null;
   const pageBackground = bgImage
     ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${bgImage}) center / cover fixed, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
@@ -92,6 +93,7 @@ export const PublicInvitationPage = () => {
       position: 'relative',
     }}>
       <FingerTrail accent={accent} />
+      {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
       <div ref={revealRef} style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
 
         {/* Top promo / gift card */}
@@ -393,6 +395,76 @@ function carouselBtn(side: 'left' | 'right', accent: string): React.CSSPropertie
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   };
+}
+
+// ── Background music ────────────────────────────────────────────────────────
+// Loops quietly while the invitation is open. Browsers block sound until the
+// user interacts, so we attempt autoplay, fall back to starting on the first
+// gesture anywhere, and always expose a floating play/pause toggle.
+function MusicPlayer({ src, accent }: { src: string; accent: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const start = () => {
+      audio.play().then(() => setPlaying(true)).catch(() => { /* blocked until a gesture */ });
+    };
+
+    // Try immediately; most browsers will reject until the user interacts.
+    start();
+
+    const onFirstGesture = () => {
+      start();
+      window.removeEventListener('pointerdown', onFirstGesture);
+      window.removeEventListener('keydown', onFirstGesture);
+    };
+    window.addEventListener('pointerdown', onFirstGesture);
+    window.addEventListener('keydown', onFirstGesture);
+
+    return () => {
+      window.removeEventListener('pointerdown', onFirstGesture);
+      window.removeEventListener('keydown', onFirstGesture);
+      audio.pause();
+    };
+  }, [src]);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    } else {
+      audio.pause();
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <>
+      <audio ref={audioRef} src={src} loop preload="auto" />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? 'Pause music' : 'Play music'}
+        style={{
+          position: 'fixed', bottom: 18, right: 18, zIndex: 60,
+          width: 50, height: 50, borderRadius: '50%',
+          background: accent, color: '#1a1a1a', border: '2px solid rgba(255,255,255,0.85)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+        }}
+      >
+        {playing ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+        )}
+      </button>
+    </>
+  );
 }
 
 // ── Finger-trail effect ─────────────────────────────────────────────────────

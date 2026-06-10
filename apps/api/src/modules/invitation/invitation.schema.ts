@@ -53,6 +53,7 @@ const baseShape = {
   accentColor: z.string().max(32).optional().nullable(),
   backgroundColor: z.string().max(32).optional().nullable(),
   backgroundImageUrl: z.string().max(500).optional().nullable(),
+  musicUrl: z.string().max(500).optional().nullable(),
 
   isPublished: z.boolean().optional(),
 };

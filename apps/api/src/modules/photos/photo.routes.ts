@@ -22,8 +22,23 @@ const upload = multer({
   }
 });
 
+// Audio uploads (invitation background music). Larger limit, audio-only.
+const audioUpload = multer({
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only audio files are allowed'));
+    }
+  }
+});
+
 // Routes
 router.post('/upload', upload.fields([{ name: 'files', maxCount: 10 }]), (req, res) => photoController.uploadPhotos(req, res));
+router.post('/upload-audio', audioUpload.fields([{ name: 'files', maxCount: 1 }]), (req, res) => photoController.uploadAudio(req, res));
 router.get('/:category', (req, res) => photoController.listPhotos(req, res));
 router.delete('/:category/:filename', (req, res) => photoController.deletePhoto(req, res));
 
