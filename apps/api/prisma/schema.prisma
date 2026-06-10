@@ -44,6 +44,7 @@ enum MenuCategory {
   SALADS_OIL
   SALADS_MAYO
   COFFEE
+  SUSHI_ROLLS
   // Legacy values kept for existing data and the tablet course-choice feature.
   FIRST_COURSE
   SECOND_COURSE

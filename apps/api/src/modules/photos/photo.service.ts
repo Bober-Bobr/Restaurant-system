@@ -9,7 +9,7 @@ const DISH_CATEGORIES = [
   'soups', 'pizza', 'cold_appetizers', 'grill', 'pastry', 'hot_appetizers',
   'beer_snacks', 'dessert', 'lamb_dishes', 'beef_dishes', 'chicken_dishes',
   'side_dishes', 'pasta', 'soft_drinks', 'steaks', 'energy_drinks',
-  'salads_oil', 'salads_mayo', 'coffee',
+  'salads_oil', 'salads_mayo', 'coffee', 'sushi_rolls',
   // Legacy folders kept so existing photos remain visible.
   'first_course', 'second_course', 'third_course', 'drinks', 'sweets', 'fruits', 'salads',
 ] as const;

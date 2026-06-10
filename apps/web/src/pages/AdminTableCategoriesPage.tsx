@@ -18,7 +18,7 @@ const FOOD_PACKAGE_CATEGORIES: FoodCategory[] = [
   'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
-  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
@@ -42,6 +42,7 @@ const CATEGORY_LABEL_KEY: Record<FoodCategory, Parameters<typeof translate>[0]> 
   SALADS_OIL: 'salads_oil',
   SALADS_MAYO: 'salads_mayo',
   COFFEE: 'coffee',
+  SUSHI_ROLLS: 'sushi_rolls',
   FIRST_COURSE: 'first_course',
   SECOND_COURSE: 'second_course',
   THIRD_COURSE: 'third_course',

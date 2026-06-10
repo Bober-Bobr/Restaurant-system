@@ -34,19 +34,20 @@ const CATEGORY_ORDER: Record<MenuCategory, number> = {
   SALADS_OIL: 16,
   SALADS_MAYO: 17,
   COFFEE: 18,
-  FIRST_COURSE: 19,
-  SECOND_COURSE: 20,
-  THIRD_COURSE: 21,
-  DRINKS: 22,
-  SWEETS: 23,
-  FRUITS: 24,
+  SUSHI_ROLLS: 19,
+  FIRST_COURSE: 20,
+  SECOND_COURSE: 21,
+  THIRD_COURSE: 22,
+  DRINKS: 23,
+  SWEETS: 24,
+  FRUITS: 25,
 };
 
 const ALL_CATEGORIES: MenuCategory[] = [
   'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
-  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
@@ -328,6 +329,7 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'SALADS_OIL', key: 'salads_oil' },
   { value: 'SALADS_MAYO', key: 'salads_mayo' },
   { value: 'COFFEE', key: 'coffee' },
+  { value: 'SUSHI_ROLLS', key: 'sushi_rolls' },
   { value: 'FIRST_COURSE', key: 'first_course' },
   { value: 'SECOND_COURSE', key: 'second_course' },
   { value: 'THIRD_COURSE', key: 'third_course' },

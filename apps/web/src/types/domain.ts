@@ -62,7 +62,7 @@ export type MenuItem = {
     | 'SOUPS' | 'PIZZA' | 'COLD_APPETIZERS' | 'GRILL' | 'PASTRY' | 'HOT_APPETIZERS'
     | 'BEER_SNACKS' | 'DESSERT' | 'LAMB_DISHES' | 'BEEF_DISHES' | 'CHICKEN_DISHES'
     | 'SIDE_DISHES' | 'PASTA' | 'SOFT_DRINKS' | 'STEAKS' | 'ENERGY_DRINKS'
-    | 'SALADS_OIL' | 'SALADS_MAYO' | 'COFFEE'
+    | 'SALADS_OIL' | 'SALADS_MAYO' | 'COFFEE' | 'SUSHI_ROLLS'
     | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'DRINKS' | 'SWEETS' | 'FRUITS';
   priceCents: number;
   photoUrl?: string;

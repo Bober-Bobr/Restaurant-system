@@ -10,6 +10,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
+import { Lightbox } from '../components/ui/lightbox';
 import type { Hall, MenuItem } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
@@ -28,7 +29,7 @@ const CATEGORY_ORDER: MenuCategory[] = [
   'SOUPS', 'PIZZA', 'COLD_APPETIZERS', 'GRILL', 'PASTRY', 'HOT_APPETIZERS',
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
-  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
+  'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {
@@ -51,6 +52,7 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   SALADS_OIL: 'salads_oil',
   SALADS_MAYO: 'salads_mayo',
   COFFEE: 'coffee',
+  SUSHI_ROLLS: 'sushi_rolls',
   FIRST_COURSE: 'first_course',
   SECOND_COURSE: 'second_course',
   THIRD_COURSE: 'third_course',
@@ -231,6 +233,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const cat = category as MenuCategory;
   const items = menuItems.filter((m) => m.category === cat && m.isActive);
   const labelKey = CATEGORY_LABEL_KEY[cat];
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   return (
     <>
@@ -248,7 +251,10 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
             return (
               <div key={item.id} className="rg-card tablet-fade-up" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {src
-                  ? <img src={src ?? undefined} alt={item.name} style={{ width: '100%', height: 170, objectFit: 'cover' }} />
+                  ? <button type="button" onClick={() => setLightboxSrc(src)}
+                      style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}>
+                      <img src={src} alt={item.name} style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                    </button>
                   : <div style={{ width: '100%', height: 170, background: 'rgba(0,0,0,0.25)' }} />}
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
@@ -264,6 +270,8 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
           })}
         </div>
       )}
+
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </>
   );
 }
