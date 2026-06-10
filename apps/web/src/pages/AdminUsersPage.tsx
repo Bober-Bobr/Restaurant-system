@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   MANAGER: 'Manager',
   OWNER: 'Owner',
   ADMIN: 'Administrator',
+  CATERING_ADMIN: 'Catering Admin',
   EMPLOYEE: 'Employee',
   KITCHEN: 'Kitchen'
 };
@@ -24,6 +25,7 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   MANAGER: { background: '#8b5cf6', color: '#fff' },
   OWNER: { background: '#7c3aed', color: '#fff' },
   ADMIN: { background: '#2563eb', color: '#fff' },
+  CATERING_ADMIN: { background: '#0ea5e9', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' },
   KITCHEN: { background: '#ea580c', color: '#fff' }
 };
@@ -106,8 +108,8 @@ export const AdminUsersPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
   });
 
-  // OWNER can create ADMIN or EMPLOYEE; ADMIN can only create EMPLOYEE
-  const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'EMPLOYEE', 'KITCHEN'] : ['EMPLOYEE', 'KITCHEN'];
+  // OWNER can create ADMIN/CATERING_ADMIN/EMPLOYEE/KITCHEN; ADMIN & CATERING_ADMIN can only create EMPLOYEE/KITCHEN
+  const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'CATERING_ADMIN', 'EMPLOYEE', 'KITCHEN'] : ['EMPLOYEE', 'KITCHEN'];
   const requiresRestaurantPicker = currentRole === 'OWNER';
 
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
@@ -184,11 +186,11 @@ export const AdminUsersPage = () => {
               const canEditCreds =
                 currentRole === 'OWNER'
                   ? user.role !== 'CHIEF_ADMIN' && (user.role !== 'OWNER' || isSelf)
-                  : currentRole === 'ADMIN'
+                  : (currentRole === 'ADMIN' || currentRole === 'CATERING_ADMIN')
                     ? isSelf || user.role === 'EMPLOYEE' || user.role === 'KITCHEN'
                     : false;
               const canDelete =
-                !isSelf && !(currentRole === 'ADMIN' && user.role !== 'EMPLOYEE' && user.role !== 'KITCHEN');
+                !isSelf && !((currentRole === 'ADMIN' || currentRole === 'CATERING_ADMIN') && user.role !== 'EMPLOYEE' && user.role !== 'KITCHEN');
               return (
                 <Fragment key={user.id}>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -215,6 +217,7 @@ export const AdminUsersPage = () => {
                           style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 12, background: '#fff' }}
                         >
                           <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
+                          <option value="CATERING_ADMIN">{ROLE_LABELS.CATERING_ADMIN}</option>
                           <option value="EMPLOYEE">{ROLE_LABELS.EMPLOYEE}</option>
                           <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
                         </select>

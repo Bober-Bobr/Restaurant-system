@@ -134,6 +134,34 @@
   .reveal.is-visible { animation: none; }
 }
 
+/* ── Catering Admin: monochrome black & white theme (catering-site look) ──
+   Scoped overrides applied when the layout root carries `.cadm-theme`. Restyles
+   the shared `adm-*` tokens to greyscale and drops the gold/blue glow + bg. */
+.cadm-theme.adm-bg { background: #0a0a0a; }
+.cadm-theme.adm-bg::before,
+.cadm-theme.adm-bg::after { display: none; }
+
+.cadm-theme .adm-card { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+.cadm-theme .adm-card-hover:hover { border-color: rgba(255,255,255,0.4); }
+.cadm-theme .adm-heading { color: rgba(255,255,255,0.75); }
+.cadm-theme .adm-title { color: #ffffff; }
+.cadm-theme .adm-label { color: rgba(255,255,255,0.55); }
+
+.cadm-theme .adm-input { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: #fff; }
+.cadm-theme .adm-input::placeholder { color: rgba(255,255,255,0.3); }
+.cadm-theme .adm-input:focus { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); box-shadow: 0 0 0 3px rgba(255,255,255,0.12); }
+.cadm-theme .adm-input option { background: #1a1a1a; color: #fff; }
+
+.cadm-theme .adm-btn-primary { background: #ffffff; color: #0a0a0a; }
+.cadm-theme .adm-btn-primary:hover:not(:disabled) { box-shadow: 0 6px 16px rgba(255,255,255,0.2); }
+.cadm-theme .adm-btn-ghost:hover { border-color: rgba(255,255,255,0.4); }
+.cadm-theme .adm-link { color: #fff; }
+.cadm-theme .adm-link:hover { color: rgba(255,255,255,0.75); }
+
+/* Admin pages occasionally hardcode the gold accent inline; nudge a few
+   common ones toward white inside the catering theme. */
+.cadm-theme .adm-card-hover:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
+
 /* ── Admin dark-slate theme ── */
 .adm-bg {
   background: #0f172a;

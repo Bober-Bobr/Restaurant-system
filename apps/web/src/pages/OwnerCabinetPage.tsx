@@ -155,6 +155,7 @@ export const OwnerCabinetPage = () => {
     MANAGER: 'manager_role',
     OWNER: 'owner_role',
     ADMIN: 'administrator_role',
+    CATERING_ADMIN: 'catering_admin_role',
     EMPLOYEE: 'employee_role',
     KITCHEN: 'kitchen_role',
   };
@@ -395,6 +396,7 @@ export const OwnerCabinetPage = () => {
                 <input placeholder={t('password')} type="password" value={uPwd} onChange={(e) => setUPwd(e.target.value)} style={inputStyle} />
                 <select value={uRole} onChange={(e) => setURole(e.target.value as AdminRole)} style={inputStyle}>
                   <option value="ADMIN">{t('administrator_role')}</option>
+                  <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
                   <option value="EMPLOYEE">{t('employee_role')}</option>
                   <option value="KITCHEN">{t('kitchen_role')}</option>
                 </select>
@@ -427,7 +429,7 @@ export const OwnerCabinetPage = () => {
                     </div>
                     <span className="owner-user-badge" style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, flexShrink: 0,
-                      background: u.role === 'ADMIN' ? '#2563eb' : u.role === 'OWNER' ? '#7c3aed' : '#16a34a',
+                      background: u.role === 'ADMIN' ? '#2563eb' : u.role === 'CATERING_ADMIN' ? '#0ea5e9' : u.role === 'OWNER' ? '#7c3aed' : '#16a34a',
                       color: '#fff'
                     }}>
                       {t(ROLE_LABEL_KEY[u.role])}
@@ -440,6 +442,7 @@ export const OwnerCabinetPage = () => {
                         style={{ ...inputStyle, width: 130 }}
                       >
                         <option value="ADMIN">{t('administrator_role')}</option>
+                        <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
                         <option value="EMPLOYEE">{t('employee_role')}</option>
                         <option value="KITCHEN">{t('kitchen_role')}</option>
                       </select>

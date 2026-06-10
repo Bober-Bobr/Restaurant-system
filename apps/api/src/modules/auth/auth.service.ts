@@ -102,7 +102,7 @@ export class AuthService {
         throw createHttpError(403, 'Owners can only create Administrator, Employee, or Kitchen accounts.');
       }
     }
-    if (caller.role === AdminRole.ADMIN) {
+    if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
       if (payload.role !== AdminRole.EMPLOYEE && payload.role !== AdminRole.KITCHEN) {
         throw createHttpError(403, 'Administrators can only create Employee or Kitchen accounts.');
       }
@@ -140,7 +140,7 @@ export class AuthService {
     const target = await this.authRepository.findById(targetId);
     if (!target) throw createHttpError(404, 'User not found');
 
-    if (callerRole === AdminRole.ADMIN && target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+    if ((callerRole === AdminRole.ADMIN || callerRole === AdminRole.CATERING_ADMIN) && target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
       throw createHttpError(403, 'Administrators can only delete Employee or Kitchen accounts.');
     }
     if (callerRole === AdminRole.EMPLOYEE || callerRole === AdminRole.KITCHEN) {
@@ -175,7 +175,7 @@ export class AuthService {
           throw createHttpError(403, 'Cannot manage users outside your restaurants.');
         }
       }
-    } else if (caller.role === AdminRole.ADMIN) {
+    } else if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
       if (!isSelf) {
         if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
           throw createHttpError(403, 'Administrators can only edit Employee or Kitchen accounts.');

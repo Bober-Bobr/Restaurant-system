@@ -23,6 +23,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
+import { CateringAdminLayout } from './CateringAdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
@@ -170,8 +171,27 @@ export const App = () => {
     );
   }
 
-  // EMPLOYEE → simplified layout (with tablet); KITCHEN → same layout but no tablet access
+  // CATERING_ADMIN → restaurant admin dashboard limited to a few pages, in the
+  // monochrome catering-site theme.
   const role = useAuthStore((s) => s.role);
+  if (role === 'CATERING_ADMIN') {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<CateringAdminLayout />}>
+          <Route path="/" element={<Navigate to="/admin/menu" replace />} />
+          <Route path="/admin/menu" element={<AdminMenuPage />} />
+          <Route path="/admin/halls" element={<AdminHallsPage />} />
+          <Route path="/admin/photos" element={<AdminPhotosPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/admin/menu" replace />} />
+      </Routes>
+    );
+  }
+
+  // EMPLOYEE → simplified layout (with tablet); KITCHEN → same layout but no tablet access
   if (role === 'EMPLOYEE' || role === 'KITCHEN') {
     return (
       <Routes>

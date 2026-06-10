@@ -109,6 +109,7 @@ enum AdminRole {
   MANAGER
   OWNER
   ADMIN
+  CATERING_ADMIN
   EMPLOYEE
   KITCHEN
 }

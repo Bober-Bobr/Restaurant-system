@@ -16,10 +16,10 @@ router.get('/me', adminAuthMiddleware, controller.me.bind(controller));
 router.get('/sessions', adminAuthMiddleware, controller.listSessions.bind(controller));
 router.delete('/sessions/:id', adminAuthMiddleware, controller.revokeSession.bind(controller));
 
-router.get('/users', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.listUsers.bind(controller));
-router.delete('/users/:id', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.deleteUser.bind(controller));
+router.get('/users', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN, AdminRole.CATERING_ADMIN), controller.listUsers.bind(controller));
+router.delete('/users/:id', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN, AdminRole.CATERING_ADMIN), controller.deleteUser.bind(controller));
 router.patch('/users/:id/role', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER), controller.updateRole.bind(controller));
-router.patch('/users/:id/credentials', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.updateCredentials.bind(controller));
-router.post('/users', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN), controller.createUserAsChief.bind(controller));
+router.patch('/users/:id/credentials', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN, AdminRole.CATERING_ADMIN), controller.updateCredentials.bind(controller));
+router.post('/users', adminAuthMiddleware, requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.ADMIN, AdminRole.CATERING_ADMIN), controller.createUserAsChief.bind(controller));
 
 export { router as authRouter };

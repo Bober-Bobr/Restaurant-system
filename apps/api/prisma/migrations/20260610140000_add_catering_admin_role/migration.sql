@@ -1,0 +1,2 @@
+-- Add CATERING_ADMIN to AdminRole. SQLite stores enums as TEXT, so no DDL is
+-- required — this migration is a no-op recorded for parity with the schema.
