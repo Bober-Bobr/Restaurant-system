@@ -36,6 +36,11 @@ export function getInvitationSubdomainSlug(): string | null {
   return slug || null;
 }
 
+// Matches <restaurant>.catering-admin.v-menu.uz — true when on that subdomain.
+export function isCateringAdminSubdomain(): boolean {
+  return window.location.hostname.endsWith(`.catering-admin.${ROOT_DOMAIN}`);
+}
+
 // Matches <restaurant>.public-catering.v-menu.uz — returns the restaurant slug or null.
 export function getCateringSlug(): string | null {
   const host = window.location.hostname;

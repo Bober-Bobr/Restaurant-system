@@ -27,7 +27,7 @@ import { CateringAdminLayout } from './CateringAdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -105,6 +105,12 @@ export const App = () => {
       window.location.href = 'https://manager.v-menu.uz/';
       return null;
     }
+    // CATERING_ADMIN → catering-admin subdomain
+    if (accessToken && role === 'CATERING_ADMIN' && restaurantName && window.location.pathname !== '/login') {
+      const slug = `${toSubdomainSlug(restaurantName)}.catering-admin`;
+      window.location.href = `https://${slug}.v-menu.uz/`;
+      return null;
+    }
     // Authenticated user on root domain → send to their restaurant subdomain
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
       const slug = toSubdomainSlug(restaurantName);
@@ -169,6 +175,23 @@ export const App = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
+  }
+
+  // Catering-admin subdomain (<slug>.catering-admin.v-menu.uz) — requires CATERING_ADMIN auth.
+  if (isCateringAdminSubdomain()) {
+    const { accessToken, role: catRole } = useAuthStore.getState();
+    if (!accessToken || catRole !== 'CATERING_ADMIN') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = 'https://v-menu.uz/login';
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
   }
 
   // CATERING_ADMIN → restaurant admin dashboard limited to a few pages, in the

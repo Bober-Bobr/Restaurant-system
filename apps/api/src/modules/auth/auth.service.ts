@@ -99,7 +99,7 @@ export class AuthService {
   ) {
     if (caller.role === AdminRole.OWNER) {
       if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN || payload.role === AdminRole.MANAGER) {
-        throw createHttpError(403, 'Owners can only create Administrator, Employee, or Kitchen accounts.');
+        throw createHttpError(403, 'Owners can only create Administrator, Catering Admin, Employee, or Kitchen accounts.');
       }
     }
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
@@ -212,7 +212,7 @@ export class AuthService {
     }
     if (callerRole === AdminRole.OWNER) {
       if (newRole === AdminRole.CHIEF_ADMIN || newRole === AdminRole.MANAGER || newRole === AdminRole.OWNER) {
-        throw createHttpError(403, 'Owners can only assign Administrator, Employee, or Kitchen roles.');
+        throw createHttpError(403, 'Owners can only assign Administrator, Catering Admin, Employee, or Kitchen roles.');
       }
     }
     const target = await this.authRepository.findById(targetId);
