@@ -48,7 +48,7 @@ export const App = () => {
     }
   }
 
-  // Catering subdomain (public-catering.<restaurant>.v-menu.uz) → public menu site
+  // Catering subdomain (<restaurant>.v-menu.uz) → public catering site
   const cateringSlug = getCateringSlug();
   if (cateringSlug) {
     return <CateringSite slug={cateringSlug} />;
@@ -111,10 +111,10 @@ export const App = () => {
       window.location.href = `https://${slug}.v-menu.uz/`;
       return null;
     }
-    // Authenticated user on root domain → send to their restaurant subdomain
+    // Authenticated ADMIN/EMPLOYEE/KITCHEN on root domain → send to their banquet subdomain
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
       const slug = toSubdomainSlug(restaurantName);
-      window.location.href = `https://${slug}.v-menu.uz/`;
+      window.location.href = `https://${slug}.banquet.v-menu.uz/`;
       return null;
     }
     return (
