@@ -103,8 +103,9 @@ export const PhotoSelector = ({
         )}
 
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
-          maxHeight: 256, overflowY: 'auto',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 88px)', gap: 8,
+          justifyContent: 'space-between',
+          maxHeight: 188, overflowY: 'auto',
           border: '1px solid rgba(255,255,255,0.08)',
           background: 'rgba(15,23,42,0.4)',
           borderRadius: 10, padding: 8,
