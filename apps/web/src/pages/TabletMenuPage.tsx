@@ -18,7 +18,7 @@ const CATEGORY_ORDER: Record<MenuCategory, number> = {
   BEER_SNACKS: 6, DESSERT: 7, LAMB_DISHES: 8, BEEF_DISHES: 9, CHICKEN_DISHES: 10,
   SIDE_DISHES: 11, PASTA: 12, SOFT_DRINKS: 13, STEAKS: 14, ENERGY_DRINKS: 15,
   SALADS_OIL: 16, SALADS_MAYO: 17, COFFEE: 18,
-  FIRST_COURSE: 19, SECOND_COURSE: 20, DRINKS: 21, SWEETS: 22, FRUITS: 23,
+  FIRST_COURSE: 19, SECOND_COURSE: 20, THIRD_COURSE: 21, DRINKS: 22, SWEETS: 23, FRUITS: 24,
 };
 
 function quickSort(items: MenuItem[]): MenuItem[] {
@@ -41,7 +41,7 @@ const ADDITIONAL_CATEGORIES: MenuCategory[] = [
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
-  'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
 // ── Decorative background ─────────────────────────────────────────────────
@@ -412,8 +412,8 @@ export const TabletMenuPage = () => {
   const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
-    selectedFirstCourseId, selectedSecondCourseId,
-    setQuantity, setHall, setTableCategory, setFirstCourse, setSecondCourse,
+    selectedFirstCourseId, selectedSecondCourseId, selectedThirdCourseId,
+    setQuantity, setHall, setTableCategory, setFirstCourse, setSecondCourse, setThirdCourse,
     setGuestCount, locale, setLocale,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
@@ -695,14 +695,19 @@ export const TabletMenuPage = () => {
               </section>
             )}
 
-            {/* Course choice (first + second course) */}
+            {/* Course choice (first + second + third course) */}
             {selectedTableCategory && (() => {
-              const courseItems = (selectedTableCategory.packageItems ?? []).filter(
-                (pi) => pi!.menuItem.category === 'FIRST_COURSE' || pi!.menuItem.category === 'SECOND_COURSE'
-              );
-              const firstItems = courseItems.filter((pi) => pi!.menuItem.category === 'FIRST_COURSE');
-              const secondItems = courseItems.filter((pi) => pi!.menuItem.category === 'SECOND_COURSE');
-              if (courseItems.length === 0) return null;
+              const courseGroups = ([
+                { category: 'FIRST_COURSE',  labelKey: 'choose_first_course',  selectedId: selectedFirstCourseId,  onSelect: setFirstCourse },
+                { category: 'SECOND_COURSE', labelKey: 'choose_second_course', selectedId: selectedSecondCourseId, onSelect: setSecondCourse },
+                { category: 'THIRD_COURSE',  labelKey: 'choose_third_course',  selectedId: selectedThirdCourseId,  onSelect: setThirdCourse },
+              ] as const)
+                .map((cfg) => ({
+                  ...cfg,
+                  items: (selectedTableCategory.packageItems ?? []).filter((pi) => pi!.menuItem.category === cfg.category),
+                }))
+                .filter((group) => group.items.length > 0);
+              if (courseGroups.length === 0) return null;
               return (
                 <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
                   <div className="mb-5">
@@ -710,21 +715,21 @@ export const TabletMenuPage = () => {
                     <p className="rg-heading mt-1">{t('courses')}</p>
                   </div>
 
-                  {firstItems.length > 0 && (
-                    <div className={secondItems.length > 0 ? 'mb-8' : ''}>
+                  {courseGroups.map((group, gi) => (
+                    <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                         <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
                         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                          {t('choose_first_course')}
+                          {t(group.labelKey)}
                         </p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {firstItems.map((pi, i) => {
+                        {group.items.map((pi, i) => {
                           const item = pi!.menuItem;
-                          const selected = selectedFirstCourseId === item.id;
+                          const selected = group.selectedId === item.id;
                           return (
                             <button key={item.id} type="button"
-                              onClick={() => setFirstCourse(item.id)}
+                              onClick={() => group.onSelect(item.id)}
                               className="tablet-fade-up"
                               style={{
                                 animationDelay: `${i * 50}ms`,
@@ -767,74 +772,15 @@ export const TabletMenuPage = () => {
                         })}
                       </div>
                     </div>
-                  )}
-
-                  {secondItems.length > 0 && (
-                    <div style={{ paddingTop: firstItems.length > 0 ? 0 : 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                          {t('choose_second_course')}
-                        </p>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {secondItems.map((pi, i) => {
-                          const item = pi!.menuItem;
-                          const selected = selectedSecondCourseId === item.id;
-                          return (
-                            <button key={item.id} type="button"
-                              onClick={() => setSecondCourse(item.id)}
-                              className="tablet-fade-up"
-                              style={{
-                                animationDelay: `${i * 50}ms`,
-                                position: 'relative', textAlign: 'left', cursor: 'pointer',
-                                borderRadius: 16, overflow: 'hidden', border: 'none', padding: 0,
-                                outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
-                                outlineOffset: selected ? 2 : 0,
-                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.07)',
-                                transition: 'outline 0.18s, background 0.18s',
-                              }}>
-                              {selected && (
-                                <div style={{
-                                  position: 'absolute', top: 8, right: 8, zIndex: 2,
-                                  width: 24, height: 24, borderRadius: '50%',
-                                  background: '#c9a42c', color: '#1a3320',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: 13, fontWeight: 700,
-                                }}>✓</div>
-                              )}
-                              {item.photoUrl ? (
-                                <img src={getPhotoUrl(item.photoUrl) ?? undefined} alt={item.name}
-                                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
-                              ) : (
-                                <div style={{ height: 140, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                </div>
-                              )}
-                              <div style={{ padding: '10px 12px' }}>
-                                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3 }}>{item.name}</p>
-                                {item.description && (
-                                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {item.description}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </section>
               );
             })()}
 
-            {/* Included dishes (all categories except first/second course) */}
+            {/* Included dishes (all categories except the choosable courses) */}
             {selectedTableCategory && (() => {
               const includedItems = (selectedTableCategory.packageItems ?? []).filter(
-                (pi) => pi!.menuItem.category !== 'FIRST_COURSE' && pi!.menuItem.category !== 'SECOND_COURSE'
+                (pi) => pi!.menuItem.category !== 'FIRST_COURSE' && pi!.menuItem.category !== 'SECOND_COURSE' && pi!.menuItem.category !== 'THIRD_COURSE'
               );
               if (includedItems.length === 0) return null;
               const grouped = Object.entries(

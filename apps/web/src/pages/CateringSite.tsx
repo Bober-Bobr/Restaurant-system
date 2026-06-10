@@ -29,7 +29,7 @@ const CATEGORY_ORDER: MenuCategory[] = [
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
-  'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {
   SOUPS: 'soups',
@@ -53,6 +53,7 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   COFFEE: 'coffee',
   FIRST_COURSE: 'first_course',
   SECOND_COURSE: 'second_course',
+  THIRD_COURSE: 'third_course',
   DRINKS: 'drinks',
   SWEETS: 'sweets',
   FRUITS: 'fruits',

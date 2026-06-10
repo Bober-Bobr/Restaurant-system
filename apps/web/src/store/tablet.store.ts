@@ -7,6 +7,7 @@ type SelectionState = {
   selectedTableCategoryId?: string;
   selectedFirstCourseId?: string;
   selectedSecondCourseId?: string;
+  selectedThirdCourseId?: string;
   guestCount: number;
   locale: Locale;
   setQuantity: (menuItemId: string, quantity: number) => void;
@@ -14,6 +15,7 @@ type SelectionState = {
   setTableCategory: (tableCategoryId: string) => void;
   setFirstCourse: (menuItemId: string) => void;
   setSecondCourse: (menuItemId: string) => void;
+  setThirdCourse: (menuItemId: string) => void;
   setGuestCount: (count: number) => void;
   setLocale: (locale: Locale) => void;
   reset: () => void;
@@ -25,6 +27,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedTableCategoryId: undefined,
   selectedFirstCourseId: undefined,
   selectedSecondCourseId: undefined,
+  selectedThirdCourseId: undefined,
   guestCount: 0,
   locale: defaultLocale,
   setQuantity: (menuItemId, quantity) => {
@@ -39,13 +42,16 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set({ selectedHallId: hallId });
   },
   setTableCategory: (tableCategoryId) => {
-    set({ selectedTableCategoryId: tableCategoryId, selectedFirstCourseId: undefined, selectedSecondCourseId: undefined });
+    set({ selectedTableCategoryId: tableCategoryId, selectedFirstCourseId: undefined, selectedSecondCourseId: undefined, selectedThirdCourseId: undefined });
   },
   setFirstCourse: (menuItemId) => {
     set({ selectedFirstCourseId: menuItemId });
   },
   setSecondCourse: (menuItemId) => {
     set({ selectedSecondCourseId: menuItemId });
+  },
+  setThirdCourse: (menuItemId) => {
+    set({ selectedThirdCourseId: menuItemId });
   },
   setGuestCount: (count) => {
     set({ guestCount: Math.max(count, 0) });
@@ -60,6 +66,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedTableCategoryId: undefined,
       selectedFirstCourseId: undefined,
       selectedSecondCourseId: undefined,
+      selectedThirdCourseId: undefined,
       guestCount: 0,
       locale: defaultLocale
     });

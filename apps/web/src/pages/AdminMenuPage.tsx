@@ -36,9 +36,10 @@ const CATEGORY_ORDER: Record<MenuCategory, number> = {
   COFFEE: 18,
   FIRST_COURSE: 19,
   SECOND_COURSE: 20,
-  DRINKS: 21,
-  SWEETS: 22,
-  FRUITS: 23,
+  THIRD_COURSE: 21,
+  DRINKS: 22,
+  SWEETS: 23,
+  FRUITS: 24,
 };
 
 const ALL_CATEGORIES: MenuCategory[] = [
@@ -46,7 +47,7 @@ const ALL_CATEGORIES: MenuCategory[] = [
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE',
-  'FIRST_COURSE', 'SECOND_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
 ];
 
 function quickSort(items: MenuItem[]): MenuItem[] {
@@ -329,6 +330,7 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'COFFEE', key: 'coffee' },
   { value: 'FIRST_COURSE', key: 'first_course' },
   { value: 'SECOND_COURSE', key: 'second_course' },
+  { value: 'THIRD_COURSE', key: 'third_course' },
   { value: 'DRINKS', key: 'drinks' },
   { value: 'SWEETS', key: 'sweets' },
   { value: 'FRUITS', key: 'fruits' },

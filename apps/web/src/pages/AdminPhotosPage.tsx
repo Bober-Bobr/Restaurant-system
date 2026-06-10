@@ -9,20 +9,43 @@ import { Select } from '../components/ui/select';
 import { Lightbox } from '../components/ui/lightbox';
 
 type DishCategory =
-  | 'cold_appetizers' | 'hot_appetizers' | 'salads'
-  | 'first_course' | 'second_course' | 'drinks' | 'sweets' | 'fruits';
+  | 'soups' | 'pizza' | 'cold_appetizers' | 'grill' | 'pastry' | 'hot_appetizers'
+  | 'beer_snacks' | 'dessert' | 'lamb_dishes' | 'beef_dishes' | 'chicken_dishes'
+  | 'side_dishes' | 'pasta' | 'soft_drinks' | 'steaks' | 'energy_drinks'
+  | 'salads_oil' | 'salads_mayo' | 'coffee'
+  | 'first_course' | 'second_course' | 'third_course' | 'drinks' | 'sweets' | 'fruits';
 
 const DISH_CATEGORIES: DishCategory[] = [
-  'cold_appetizers', 'hot_appetizers', 'salads',
-  'first_course', 'second_course', 'drinks', 'sweets', 'fruits',
+  'soups', 'pizza', 'cold_appetizers', 'grill', 'pastry', 'hot_appetizers',
+  'beer_snacks', 'dessert', 'lamb_dishes', 'beef_dishes', 'chicken_dishes',
+  'side_dishes', 'pasta', 'soft_drinks', 'steaks', 'energy_drinks',
+  'salads_oil', 'salads_mayo', 'coffee',
+  'first_course', 'second_course', 'third_course', 'drinks', 'sweets', 'fruits',
 ];
 
 const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>[0]> = {
+  soups:           'soups',
+  pizza:           'pizza',
   cold_appetizers: 'cold_appetizers',
+  grill:           'grill',
+  pastry:          'pastry',
   hot_appetizers:  'hot_appetizers',
-  salads:          'salads',
+  beer_snacks:     'beer_snacks',
+  dessert:         'dessert',
+  lamb_dishes:     'lamb_dishes',
+  beef_dishes:     'beef_dishes',
+  chicken_dishes:  'chicken_dishes',
+  side_dishes:     'side_dishes',
+  pasta:           'pasta',
+  soft_drinks:     'soft_drinks',
+  steaks:          'steaks',
+  energy_drinks:   'energy_drinks',
+  salads_oil:      'salads_oil',
+  salads_mayo:     'salads_mayo',
+  coffee:          'coffee',
   first_course:    'first_course',
   second_course:   'second_course',
+  third_course:    'third_course',
   drinks:          'drinks',
   sweets:          'sweets',
   fruits:          'fruits',

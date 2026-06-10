@@ -47,6 +47,7 @@ enum MenuCategory {
   // Legacy values kept for existing data and the tablet course-choice feature.
   FIRST_COURSE
   SECOND_COURSE
+  THIRD_COURSE
   DRINKS
   SWEETS
   FRUITS
