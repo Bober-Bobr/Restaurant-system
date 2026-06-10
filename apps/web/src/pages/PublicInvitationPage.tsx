@@ -59,7 +59,7 @@ export const PublicInvitationPage = () => {
   });
 
   const cd = useCountdown(invitation?.countdownAt);
-  const revealRef = useScrollReveal<HTMLDivElement>();
+  const revealRef = useScrollReveal<HTMLDivElement>([invitation]);
 
   if (isLoading) {
     return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>...</main>;

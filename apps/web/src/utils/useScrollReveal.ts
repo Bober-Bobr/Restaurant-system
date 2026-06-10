@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react';
  * Respects `prefers-reduced-motion` and degrades gracefully where
  * IntersectionObserver is unavailable (everything is shown immediately).
  */
-export function useScrollReveal<T extends HTMLElement = HTMLDivElement>() {
+export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(deps: unknown[] = []) {
   const containerRef = useRef<T>(null);
 
   useEffect(() => {
@@ -58,7 +58,10 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>() {
       io.disconnect();
       mo.disconnect();
     };
-  }, []);
+    // The container ref may mount after async content loads; `deps` lets callers
+    // re-run the setup once their ref'd element is actually in the DOM.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 
   return containerRef;
 }
