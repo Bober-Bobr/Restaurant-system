@@ -11,6 +11,7 @@ import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
 import { Lightbox } from '../components/ui/lightbox';
+import { useScrollReveal } from '../utils/useScrollReveal';
 import type { Hall, MenuItem } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
@@ -107,6 +108,7 @@ function CateringLayout({
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
+  const revealRef = useScrollReveal<HTMLElement>();
 
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -168,7 +170,7 @@ function CateringLayout({
           </div>
         </header>
 
-        <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' }}>
+        <main ref={revealRef} style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' }}>
           {children}
         </main>
       </div>
@@ -205,7 +207,7 @@ function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Loca
           const cover = items.find((i) => i.photoUrl)?.photoUrl;
           const coverSrc = cover ? getPhotoUrl(cover) : null;
           return (
-            <Link key={cat} to={`/category/${cat}`} className="rg-card tablet-fade-up"
+            <Link key={cat} to={`/category/${cat}`} className="rg-card reveal"
               style={{ overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative', height: 150, background: 'rgba(0,0,0,0.3)' }}>
                 {coverSrc
@@ -251,7 +253,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
           {items.map((item) => {
             const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
             return (
-              <div key={item.id} className="rg-card tablet-fade-up" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div key={item.id} className="rg-card reveal" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {src
                   ? <button type="button" onClick={() => setLightboxSrc(src)}
                       style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}>
@@ -284,7 +286,7 @@ function AboutPage({ restaurant, locale }: { restaurant?: PublicRestaurantSummar
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const history = restaurant?.history?.trim();
   return (
-    <div className="rg-card tablet-fade-up" style={{ padding: 28, textAlign: 'center', maxWidth: 680, margin: '0 auto' }}>
+    <div className="rg-card reveal" style={{ padding: 28, textAlign: 'center', maxWidth: 680, margin: '0 auto' }}>
       {logo && <img src={logo ?? undefined} alt="" style={{ maxHeight: 120, maxWidth: '70%', objectFit: 'contain', margin: '0 auto 18px', display: 'block' }} />}
       <h1 style={{ margin: '0 0 6px', fontSize: 26, fontWeight: 800, color: '#fff' }}>{restaurant?.name ?? ''}</h1>
       <h2 className="rg-label" style={{ margin: '0 0 16px' }}>{history ? t('our_history') : t('about_us')}</h2>
@@ -318,7 +320,7 @@ function HallsPage({ restaurantId, locale }: { restaurantId: string; locale: Loc
           const photos = hallPhotoList(h);
           const src = photos[0] ? getPhotoUrl(photos[0]) : null;
           return (
-            <Link key={h.id} to={`/halls/${h.id}`} className="rg-card tablet-fade-up"
+            <Link key={h.id} to={`/halls/${h.id}`} className="rg-card reveal"
               style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', textDecoration: 'none' }}>
               <div style={{ position: 'relative' }}>
                 {src
@@ -379,7 +381,7 @@ function HallDetail({ restaurantId, locale }: { restaurantId: string; locale: Lo
       </div>
 
       {hall.description && (
-        <div className="rg-card tablet-fade-up" style={{ padding: 20, marginBottom: 20 }}>
+        <div className="rg-card reveal" style={{ padding: 20, marginBottom: 20 }}>
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.85)', whiteSpace: 'pre-wrap' }}>{hall.description}</p>
         </div>
       )}
@@ -391,7 +393,7 @@ function HallDetail({ restaurantId, locale }: { restaurantId: string; locale: Lo
             {photos.map((p, i) => {
               const src = getPhotoUrl(p);
               return (
-                <button key={p} type="button" onClick={() => setLightbox(i)} className="rg-card tablet-fade-up"
+                <button key={p} type="button" onClick={() => setLightbox(i)} className="rg-card reveal"
                   style={{ overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.25)' }}>
                   <img src={src ?? undefined} alt={`${hall.name} ${i + 1}`} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
                 </button>
@@ -456,7 +458,7 @@ function ReviewsPage({ restaurantId, locale }: { restaurantId: string; locale: L
       {!isLoading && reviews.length === 0 && <p style={{ color: C.textFaint }}>{t('no_reviews_yet')}</p>}
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
         {reviews.map((rev) => (
-          <div key={rev.id} className="rg-card tablet-fade-up" style={{ padding: 16 }}>
+          <div key={rev.id} className="rg-card reveal" style={{ padding: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <span style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{rev.authorName}</span>
               <StarRow rating={rev.rating} />
@@ -491,7 +493,7 @@ function ContactPage({ restaurant, locale }: { restaurant?: PublicRestaurantSumm
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="rg-card tablet-fade-up" style={{ padding: 28 }}>
+      <div className="rg-card reveal" style={{ padding: 28 }}>
         <h1 style={{ margin: '0 0 18px', fontSize: 26, fontWeight: 800, color: '#fff', textAlign: 'center' }}>{t('contact_us')}</h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {address && <ContactRow icon="📍" label={t('address_label')} value={address} href={mapUrl ?? undefined} />}
@@ -522,7 +524,7 @@ function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Lo
 
   if (submit.isSuccess) {
     return (
-      <div className="rg-card tablet-fade-up" style={{ padding: 28, textAlign: 'center' }}>
+      <div className="rg-card reveal" style={{ padding: 28, textAlign: 'center' }}>
         <div style={{ fontSize: 40 }}>✓</div>
         <p style={{ margin: '8px 0 0', color: '#fff', fontSize: 15 }}>{t('review_thanks')}</p>
       </div>
@@ -530,7 +532,7 @@ function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Lo
   }
 
   return (
-    <div className="rg-card tablet-fade-up" style={{ padding: 24 }}>
+    <div className="rg-card reveal" style={{ padding: 24 }}>
       <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#fff' }}>{t('leave_a_review')}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <label style={{ display: 'grid', gap: 5 }}>

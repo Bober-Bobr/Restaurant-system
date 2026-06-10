@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitationService, normalizeGalleryItems, type Invitation, type InvitationGalleryItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { useScrollReveal } from '../utils/useScrollReveal';
 
 const ACCENT = '#c9a42c';
 const PAGE_BG = `
@@ -37,7 +38,7 @@ function useCountdown(target: string | null | undefined) {
 
 function Block({ children, padded = true }: { children: React.ReactNode; padded?: boolean }) {
   return (
-    <div style={{
+    <div className="reveal" style={{
       background: PAPER_BG,
       borderRadius: 16,
       boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
@@ -58,6 +59,7 @@ export const PublicInvitationPage = () => {
   });
 
   const cd = useCountdown(invitation?.countdownAt);
+  const revealRef = useScrollReveal<HTMLDivElement>();
 
   if (isLoading) {
     return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>...</main>;
@@ -90,7 +92,7 @@ export const PublicInvitationPage = () => {
       position: 'relative',
     }}>
       <FingerTrail accent={accent} />
-      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
+      <div ref={revealRef} style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
 
         {/* Top promo / gift card */}
         <Block padded={false}>
@@ -143,7 +145,7 @@ export const PublicInvitationPage = () => {
 
         {/* Telegram CTA */}
         {invitation.telegramUrl && (
-          <a href={invitation.telegramUrl} target="_blank" rel="noreferrer"
+          <a href={invitation.telegramUrl} target="_blank" rel="noreferrer" className="reveal"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               padding: '14px 16px',
