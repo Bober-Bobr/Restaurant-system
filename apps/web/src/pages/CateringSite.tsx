@@ -11,6 +11,7 @@ import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
 import { Lightbox } from '../components/ui/lightbox';
+import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import type { Hall, MenuItem } from '../types/domain';
 
@@ -129,6 +130,9 @@ function CateringLayout({
 
   return (
     <div className="cs-root" style={{ minHeight: '100vh', position: 'relative', background: '#0a0a0a', color: C.text }}>
+      {/* Sparkly white cursor/finger trail (matches the invitation effect) */}
+      <FingerTrail accent="#ffffff" />
+
       {/* Full-site background photo (grayscale, dimmed) */}
       {bg && (
         <>
