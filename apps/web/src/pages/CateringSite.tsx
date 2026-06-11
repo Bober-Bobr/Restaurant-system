@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantSummary } from '../services/publicRestaurant.service';
@@ -70,6 +70,23 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
 function hallPhotoList(hall: Hall): string[] {
   const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
   return Array.from(new Set(all));
+}
+
+// Live height of the sticky site header, so sub-headers can stick just below it.
+// The header height changes when the nav/locale buttons wrap on narrow screens.
+function useHeaderHeight(): number {
+  const [height, setHeight] = useState(64);
+  useEffect(() => {
+    const el = document.getElementById('cs-header');
+    if (!el) return;
+    const update = () => setHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
+  }, []);
+  return height;
 }
 
 // Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
@@ -150,7 +167,7 @@ function CateringLayout({
       )}
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <header style={{
+        <header id="cs-header" style={{
           position: 'sticky', top: 0, zIndex: 20,
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${C.line}`,
@@ -259,35 +276,44 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [bestsellersOnly, setBestsellersOnly] = useState(false);
 
+  const headerH = useHeaderHeight();
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
   const hasBestsellers = allItems.some((m) => m.isBestseller);
   const items = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : allItems;
 
   return (
     <>
-      <Link to="/" style={{ fontSize: 13, color: C.textDim, textDecoration: 'none' }}>← {t('back_to_menu')}</Link>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', margin: '10px 0 20px' }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: '#fff' }}>
-          {labelKey ? t(labelKey) : category}
-        </h1>
-        {hasBestsellers && (
-          <button
-            type="button"
-            onClick={() => setBestsellersOnly((v) => !v)}
-            aria-pressed={bestsellersOnly}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              background: bestsellersOnly ? '#f59e0b' : 'rgba(255,255,255,0.05)',
-              color: bestsellersOnly ? '#000' : '#fff',
-              border: `1px solid ${bestsellersOnly ? '#f59e0b' : C.line}`,
-              transition: 'all 0.15s',
-            }}
-          >
-            <BestsellerBadge on size={15} dark={bestsellersOnly} />
-            {t('bestsellers_only')}
-          </button>
-        )}
+      {/* Sticky sub-header: back link + category name + bestseller filter */}
+      <div style={{
+        position: 'sticky', top: headerH, zIndex: 15,
+        margin: '-24px -16px 20px', padding: '12px 16px',
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${C.line}`,
+      }}>
+        <Link to="/" style={{ fontSize: 13, color: C.textDim, textDecoration: 'none' }}>← {t('back_to_menu')}</Link>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: '#fff' }}>
+            {labelKey ? t(labelKey) : category}
+          </h1>
+          {hasBestsellers && (
+            <button
+              type="button"
+              onClick={() => setBestsellersOnly((v) => !v)}
+              aria-pressed={bestsellersOnly}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                background: bestsellersOnly ? '#f59e0b' : 'rgba(255,255,255,0.05)',
+                color: bestsellersOnly ? '#000' : '#fff',
+                border: `1px solid ${bestsellersOnly ? '#f59e0b' : C.line}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              <BestsellerBadge on size={15} dark={bestsellersOnly} />
+              {t('bestsellers_only')}
+            </button>
+          )}
+        </div>
       </div>
 
       {items.length === 0 ? (
