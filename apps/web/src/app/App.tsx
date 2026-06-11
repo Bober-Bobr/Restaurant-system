@@ -105,9 +105,9 @@ export const App = () => {
       window.location.href = 'https://manager.v-menu.uz/';
       return null;
     }
-    // CATERING_ADMIN → catering-admin subdomain
+    // CATERING_ADMIN → food-admin subdomain
     if (accessToken && role === 'CATERING_ADMIN' && restaurantName && window.location.pathname !== '/login') {
-      const slug = `${toSubdomainSlug(restaurantName)}.catering-admin`;
+      const slug = `${toSubdomainSlug(restaurantName)}.food-admin`;
       window.location.href = `https://${slug}.v-menu.uz/`;
       return null;
     }
@@ -177,7 +177,7 @@ export const App = () => {
     );
   }
 
-  // Catering-admin subdomain (<slug>.catering-admin.v-menu.uz) — requires CATERING_ADMIN auth.
+  // Food-admin subdomain (<slug>.food-admin.v-menu.uz) — requires CATERING_ADMIN auth.
   if (isCateringAdminSubdomain()) {
     const { accessToken, role: catRole } = useAuthStore.getState();
     if (!accessToken || catRole !== 'CATERING_ADMIN') {

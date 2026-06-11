@@ -63,7 +63,7 @@ export const LoginPage = () => {
         _rid: data.restaurantId ?? '', _rn: data.restaurantName ?? '', _exp: String(data.expiresIn),
       });
     } else if ((isRootDomain() || isCateringAdminSubdomain()) && data.role === 'CATERING_ADMIN' && data.restaurantName) {
-      const slug = `${toSubdomainSlug(data.restaurantName)}.catering-admin`;
+      const slug = `${toSubdomainSlug(data.restaurantName)}.food-admin`;
       window.location.href = buildSubdomainUrl(slug, {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: data.restaurantId ?? '', _rn: data.restaurantName ?? '', _exp: String(data.expiresIn),

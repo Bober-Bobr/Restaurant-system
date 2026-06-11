@@ -39,9 +39,9 @@ export function getInvitationSubdomainSlug(): string | null {
   return slug || null;
 }
 
-// Matches <restaurant>.catering-admin.v-menu.uz — true when on that subdomain.
+// Matches <restaurant>.food-admin.v-menu.uz — true when on that subdomain.
 export function isCateringAdminSubdomain(): boolean {
-  return window.location.hostname.endsWith(`.catering-admin.${ROOT_DOMAIN}`);
+  return window.location.hostname.endsWith(`.food-admin.${ROOT_DOMAIN}`);
 }
 
 // Matches <restaurant>.banquet.v-menu.uz — the restaurant admin/employee/kitchen app.
