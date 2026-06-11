@@ -285,10 +285,10 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
     <>
       {/* Sticky sub-header: back link + category name + bestseller filter */}
       <div style={{
-        position: 'sticky', top: headerH, zIndex: 15,
-        margin: '-24px -16px 20px', padding: '12px 16px',
+        position: 'sticky', top: headerH + 12, zIndex: 15,
+        margin: '0 0 20px', padding: '12px 16px',
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
-        borderBottom: `1px solid ${C.line}`,
+        border: `1px solid ${C.line}`, borderRadius: 14,
       }}>
         <Link to="/" style={{ fontSize: 13, color: C.textDim, textDecoration: 'none' }}>← {t('back_to_menu')}</Link>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
