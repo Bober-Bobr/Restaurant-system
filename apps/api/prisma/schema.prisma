@@ -190,6 +190,7 @@ model Review {
   authorName   String
   rating       Int
   text         String?
+  photoUrl     String?
   isApproved   Boolean    @default(false)
   createdAt    DateTime   @default(now())
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -257,6 +258,7 @@ model MenuItem {
   isActive         Boolean                   @default(true)
   showOnTablet     Boolean                   @default(true)
   isBestseller     Boolean                   @default(false)
+  isOutOfStock     Boolean                   @default(false)
   restaurantId     String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt

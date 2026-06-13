@@ -9,7 +9,8 @@ export const createMenuItemSchema = z.object({
   photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   showOnTablet: z.boolean().optional(),
-  isBestseller: z.boolean().optional()
+  isBestseller: z.boolean().optional(),
+  isOutOfStock: z.boolean().optional()
 });
 
 export const updateMenuItemSchema = createMenuItemSchema.partial();

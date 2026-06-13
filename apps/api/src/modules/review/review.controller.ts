@@ -13,6 +13,7 @@ export class ReviewController {
       authorName: data.authorName.trim(),
       rating: data.rating,
       text: data.text?.trim() || null,
+      photoUrl: data.photoUrl?.trim() || null,
     });
     response.status(201).json({ id: review.id });
   }

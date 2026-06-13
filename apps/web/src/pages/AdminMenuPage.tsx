@@ -304,6 +304,7 @@ export const AdminMenuPage = () => {
                     <th>{translate('description', locale)}</th>
                     <th>{translate('price', locale)}</th>
                     <th style={{ textAlign: 'center' }}>{translate('bestseller', locale)}</th>
+                    <th style={{ textAlign: 'center' }}>{translate('out_of_stock', locale)}</th>
                     <th>{translate('tables', locale)}</th>
                     <th></th>
                   </tr>
@@ -462,22 +463,39 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, is
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => onPatch({ isBestseller: !item.isBestseller })}
-        disabled={isSaving}
-        aria-pressed={!!item.isBestseller}
-        className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
-        style={{
-          background: item.isBestseller ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${item.isBestseller ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'}`,
-          color: item.isBestseller ? '#f59e0b' : 'rgba(226,232,240,0.7)',
-          cursor: isSaving ? 'default' : 'pointer',
-        }}
-      >
-        <BestsellerStar on={!!item.isBestseller} size={16} />
-        {translate('bestseller', locale)}
-      </button>
+      <div className="flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => onPatch({ isBestseller: !item.isBestseller })}
+          disabled={isSaving}
+          aria-pressed={!!item.isBestseller}
+          className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
+          style={{
+            background: item.isBestseller ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${item.isBestseller ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            color: item.isBestseller ? '#f59e0b' : 'rgba(226,232,240,0.7)',
+            cursor: isSaving ? 'default' : 'pointer',
+          }}
+        >
+          <BestsellerStar on={!!item.isBestseller} size={16} />
+          {translate('bestseller', locale)}
+        </button>
+        <button
+          type="button"
+          onClick={() => onPatch({ isOutOfStock: !item.isOutOfStock })}
+          disabled={isSaving}
+          aria-pressed={!!item.isOutOfStock}
+          className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
+          style={{
+            background: item.isOutOfStock ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${item.isOutOfStock ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            color: item.isOutOfStock ? '#f87171' : 'rgba(226,232,240,0.7)',
+            cursor: isSaving ? 'default' : 'pointer',
+          }}
+        >
+          🚫 {translate('out_of_stock', locale)}
+        </button>
+      </div>
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave} className="flex-1">
@@ -588,6 +606,24 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
           </button>
         </td>
 
+        {/* Out of stock toggle */}
+        <td className="px-4 py-2.5 text-center">
+          <button
+            type="button"
+            onClick={() => onPatch({ isOutOfStock: !item.isOutOfStock })}
+            disabled={isSaving}
+            title={translate('out_of_stock', locale)}
+            aria-pressed={!!item.isOutOfStock}
+            style={{
+              background: 'none', border: 'none', cursor: isSaving ? 'default' : 'pointer', padding: '4px 8px',
+              fontSize: 18, lineHeight: 1, opacity: item.isOutOfStock ? 1 : 0.25,
+              filter: item.isOutOfStock ? 'none' : undefined,
+            }}
+          >
+            🚫
+          </button>
+        </td>
+
         {/* Table categories */}
         <td className="px-4 py-2.5">
           {assignedTableCategories.length === 0 ? (
@@ -629,7 +665,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={8} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={9} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={localCategory.toLowerCase()}

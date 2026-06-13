@@ -300,7 +300,14 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
         {/* Photo */}
         {src && (
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img src={src} alt={item.name} style={{ width: '100%', maxHeight: '55vh', objectFit: 'cover', display: 'block' }} />
+            <img src={src} alt={item.name} style={{ width: '100%', maxHeight: '55vh', objectFit: 'cover', display: 'block', filter: item.isOutOfStock ? 'grayscale(100%) brightness(0.5)' : undefined }} />
+            {item.isOutOfStock && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(0,0,0,0.7)', padding: '6px 16px', borderRadius: 999 }}>
+                  {t('out_of_stock')}
+                </span>
+              </div>
+            )}
             {item.isBestseller && (
               <span style={{
                 position: 'absolute', top: 12, left: 12,
@@ -448,9 +455,21 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
                     {t('bestseller')}
                   </span>
                 )}
-                {src
-                  ? <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
+                <div style={{ position: 'relative' }}>
+                  {src
+                    ? <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block', filter: item.isOutOfStock ? 'grayscale(100%) brightness(0.5)' : undefined }} />
+                    : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
+                  {item.isOutOfStock && (
+                    <div style={{
+                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.45)',
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'rgba(0,0,0,0.65)', padding: '4px 10px', borderRadius: 999 }}>
+                        {t('out_of_stock')}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
                     <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{item.name}</h3>
@@ -650,15 +669,23 @@ function ReviewsPage({ restaurantId, locale }: { restaurantId: string; locale: L
       {isLoading && <p style={{ color: C.textFaint }}>...</p>}
       {!isLoading && reviews.length === 0 && <p style={{ color: C.textFaint }}>{t('no_reviews_yet')}</p>}
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', marginBottom: 32 }}>
-        {reviews.map((rev) => (
-          <div key={rev.id} className="rg-card reveal" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{rev.authorName}</span>
-              <StarRow rating={rev.rating} />
+        {reviews.map((rev) => {
+          const photoSrc = rev.photoUrl ? getPhotoUrl(rev.photoUrl) : null;
+          return (
+            <div key={rev.id} className="rg-card reveal" style={{ overflow: 'hidden' }}>
+              {photoSrc && (
+                <img src={photoSrc} alt="" style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
+              )}
+              <div style={{ padding: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{rev.authorName}</span>
+                  <StarRow rating={rev.rating} />
+                </div>
+                {rev.text && <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.78)' }}>{rev.text}</p>}
+              </div>
             </div>
-            {rev.text && <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'rgba(255,255,255,0.78)' }}>{rev.text}</p>}
-          </div>
-        ))}
+          );
+        })}
       </div>
       <ReviewForm restaurantId={restaurantId} locale={locale} />
     </>
@@ -708,12 +735,34 @@ function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Lo
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [text, setText] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPhotoFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPhotoPreview(url);
+    } else {
+      setPhotoPreview(null);
+    }
+  };
 
   const submit = useMutation({
-    mutationFn: () => reviewService.submit({ restaurantId, authorName: name.trim(), rating, text: text.trim() || undefined }),
+    mutationFn: async () => {
+      let photoUrl: string | undefined;
+      if (photoFile) {
+        setUploading(true);
+        try { photoUrl = await reviewService.uploadPhoto(photoFile); }
+        finally { setUploading(false); }
+      }
+      await reviewService.submit({ restaurantId, authorName: name.trim(), rating, text: text.trim() || undefined, photoUrl });
+    },
   });
 
-  const canSubmit = name.trim().length > 0 && rating >= 1 && rating <= 5 && !submit.isPending;
+  const canSubmit = name.trim().length > 0 && rating >= 1 && rating <= 5 && !submit.isPending && !uploading;
 
   if (submit.isSuccess) {
     return (
@@ -759,13 +808,37 @@ function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Lo
           <textarea className="rg-input" value={text} onChange={(e) => setText(e.target.value)} style={{ minHeight: 96, resize: 'vertical' }} />
         </label>
 
+        {/* Photo attachment */}
+        <div style={{ display: 'grid', gap: 5 }}>
+          <span className="rg-label">{t('attach_photo')}</span>
+          {photoPreview && (
+            <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden' }}>
+              <img src={photoPreview} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', display: 'block' }} />
+              <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+          )}
+          {!photoPreview && (
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px', borderRadius: 10, cursor: 'pointer',
+              border: `1px dashed ${C.line}`, background: 'rgba(255,255,255,0.03)',
+              color: C.textDim, fontSize: 14, fontWeight: 500,
+            }}>
+              <span>📷</span>
+              <span>{t('attach_photo')}</span>
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+            </label>
+          )}
+        </div>
+
         <button type="button" disabled={!canSubmit} onClick={() => submit.mutate()}
           style={{
             marginTop: 4, padding: '12px', borderRadius: 12, border: 'none',
             background: canSubmit ? '#fff' : 'rgba(255,255,255,0.35)',
             color: '#000', fontWeight: 700, fontSize: 15, cursor: canSubmit ? 'pointer' : 'not-allowed',
           }}>
-          {submit.isPending ? '...' : t('submit_review')}
+          {(submit.isPending || uploading) ? '...' : t('submit_review')}
         </button>
       </div>
     </div>

@@ -1,0 +1,2 @@
+ALTER TABLE "Review" ADD COLUMN "photoUrl" TEXT;
+ALTER TABLE "MenuItem" ADD COLUMN "isOutOfStock" BOOLEAN NOT NULL DEFAULT false;

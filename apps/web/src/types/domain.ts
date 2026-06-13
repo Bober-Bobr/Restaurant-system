@@ -70,6 +70,7 @@ export type MenuItem = {
   isActive: boolean;
   showOnTablet?: boolean;
   isBestseller?: boolean;
+  isOutOfStock?: boolean;
 };
 
 export type PricingSummary = {

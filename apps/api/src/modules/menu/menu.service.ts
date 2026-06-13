@@ -26,6 +26,7 @@ export class MenuService {
     isActive?: boolean;
     showOnTablet?: boolean;
     isBestseller?: boolean;
+    isOutOfStock?: boolean;
   }) {
     return this.menuRepository.create(restaurantId, payload);
   }
@@ -39,6 +40,7 @@ export class MenuService {
     isActive?: boolean;
     showOnTablet?: boolean;
     isBestseller?: boolean;
+    isOutOfStock?: boolean;
   }) {
     const existingItem = await this.menuRepository.getById(menuItemId);
     if (!existingItem) throw createHttpError(404, 'Menu item not found');

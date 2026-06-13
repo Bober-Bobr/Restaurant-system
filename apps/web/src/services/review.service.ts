@@ -16,6 +16,7 @@ export type PublicReview = {
   authorName: string;
   rating: number;
   text: string | null;
+  photoUrl: string | null;
   createdAt: string;
 };
 
@@ -24,7 +25,13 @@ const apiRoot = (): string =>
 
 export const reviewService = {
   // ── Public ──
-  async submit(payload: { restaurantId: string; authorName: string; rating: number; text?: string }) {
+  async uploadPhoto(file: File): Promise<string> {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await axios.post<{ url: string }>(`${apiRoot()}/public/review-photo`, form);
+    return data.url;
+  },
+  async submit(payload: { restaurantId: string; authorName: string; rating: number; text?: string; photoUrl?: string }) {
     await axios.post(`${apiRoot()}/public/reviews`, payload);
   },
   async listApproved(restaurantId: string): Promise<PublicReview[]> {

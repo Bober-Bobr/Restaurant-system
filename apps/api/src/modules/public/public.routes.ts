@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { MenuRepository } from '../menu/menu.repository.js';
 import { HallRepository } from '../hall/hall.repository.js';
 import { TableCategoryRepository } from '../tableCategory/tableCategory.repository.js';
@@ -7,6 +11,15 @@ import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
 import { InvitationController } from '../invitation/invitation.controller.js';
 import { ReviewController } from '../review/review.controller.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const reviewPhotoUpload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+});
 
 const router = Router();
 const invitationController = new InvitationController();
@@ -21,6 +34,19 @@ router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitati
 // Public reviews: submit + list approved.
 router.post('/reviews', reviewController.create.bind(reviewController));
 router.get('/reviews', reviewController.listApproved.bind(reviewController));
+
+// Public review photo upload (no auth — photo is uploaded before review is submitted).
+router.post('/review-photo', reviewPhotoUpload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) { res.status(400).json({ message: 'No file provided' }); return; }
+    const dir = path.resolve(__dirname, '..', '..', '..', 'uploads', 'reviews');
+    await fs.mkdir(dir, { recursive: true });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    await fs.writeFile(path.join(dir, filename), req.file.buffer);
+    res.json({ url: `/uploads/reviews/${filename}` });
+  } catch (err) { next(err); }
+});
 
 router.get('/restaurants', async (_request, response, next) => {
   try {

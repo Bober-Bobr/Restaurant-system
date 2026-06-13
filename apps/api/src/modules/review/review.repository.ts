@@ -1,7 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 
 export class ReviewRepository {
-  async create(data: { restaurantId: string; authorName: string; rating: number; text?: string | null }) {
+  async create(data: { restaurantId: string; authorName: string; rating: number; text?: string | null; photoUrl?: string | null }) {
     return prisma.review.create({ data });
   }
 
@@ -10,7 +10,7 @@ export class ReviewRepository {
     return prisma.review.findMany({
       where: { restaurantId, isApproved: true },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, authorName: true, rating: true, text: true, createdAt: true },
+      select: { id: true, authorName: true, rating: true, text: true, photoUrl: true, createdAt: true },
     });
   }
 

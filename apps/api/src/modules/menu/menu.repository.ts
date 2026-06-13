@@ -25,6 +25,7 @@ export class MenuRepository {
     isActive?: boolean;
     showOnTablet?: boolean;
     isBestseller?: boolean;
+    isOutOfStock?: boolean;
   }) {
     return prisma.menuItem.create({ data: { ...payload, restaurantId } });
   }
@@ -42,6 +43,7 @@ export class MenuRepository {
     isActive?: boolean;
     showOnTablet?: boolean;
     isBestseller?: boolean;
+    isOutOfStock?: boolean;
   }) {
     return prisma.menuItem.update({ where: { id: menuItemId }, data: payload });
   }
