@@ -697,7 +697,6 @@ function ContactPage({ restaurant, locale }: { restaurant?: PublicRestaurantSumm
         </div>
       </div>
 
-      {restaurant && <ReviewForm restaurantId={restaurant.id} locale={locale} />}
     </div>
   );
 }
