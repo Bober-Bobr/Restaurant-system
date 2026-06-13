@@ -38,6 +38,7 @@ export type Hall = {
 
 export type TableCategoryPackageItem = {
   id: string;
+  servings: number;
   menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'category' | 'priceCents' | 'photoUrl'>;
 };
 

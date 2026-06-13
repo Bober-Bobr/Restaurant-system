@@ -231,6 +231,7 @@ model TableCategoryMenuItem {
   id              String        @id @default(cuid())
   tableCategoryId String
   menuItemId      String
+  servings        Int           @default(1)
   tableCategory   TableCategory @relation(fields: [tableCategoryId], references: [id], onDelete: Cascade)
   menuItem        MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 

@@ -56,11 +56,11 @@ export class TableCategoryRepository {
     return prisma.tableCategory.update({ where: { id }, data: payload, include: packageItemsInclude });
   }
 
-  async setPackageItems(tableCategoryId: string, menuItemIds: string[]) {
+  async setPackageItems(tableCategoryId: string, items: { menuItemId: string; servings: number }[]) {
     await prisma.tableCategoryMenuItem.deleteMany({ where: { tableCategoryId } });
-    if (menuItemIds.length > 0) {
+    if (items.length > 0) {
       await prisma.tableCategoryMenuItem.createMany({
-        data: menuItemIds.map((menuItemId) => ({ tableCategoryId, menuItemId }))
+        data: items.map(({ menuItemId, servings }) => ({ tableCategoryId, menuItemId, servings }))
       });
     }
     return prisma.tableCategory.findUnique({ where: { id: tableCategoryId }, include: packageItemsInclude });

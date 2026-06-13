@@ -9,7 +9,7 @@ export const tableCategoryService = {
   async create(payload: {
     name: string;
     includedCategories: string;
-    menuItemIds?: string[];
+    packageItems?: { menuItemId: string; servings: number }[];
     ratePerPerson: number;
     discountPercent?: number;
     description?: string;
@@ -20,7 +20,7 @@ export const tableCategoryService = {
     const { data } = await httpClient.post<TableCategory>('/table-categories', payload);
     return data;
   },
-  async update(id: string, payload: Partial<Omit<TableCategory, 'id'>> & { menuItemIds?: string[] }) {
+  async update(id: string, payload: Partial<Omit<TableCategory, 'id' | 'packageItems'>> & { packageItems?: { menuItemId: string; servings: number }[] }) {
     const { data } = await httpClient.patch<TableCategory>(`/table-categories/${id}`, payload);
     return data;
   },

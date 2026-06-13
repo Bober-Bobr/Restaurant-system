@@ -120,7 +120,7 @@ export const TabletSummaryPage = () => {
   const [confirmedExportSnapshot, setConfirmedExportSnapshot] = useState<null | {
     customerName: string; customerPhone: string; hallName: string; tableCategoryName: string;
     guestCount: number; selectedItems: Record<string, number>; menuItems: typeof menuItems;
-    includedDishes: { name: string; category: string }[];
+    includedDishes: { name: string; category: string; categoryLabel: string; servings: number }[];
     pricing: { perGuestCents: number; originalPerGuestCents: number; totalCents: number;
       originalTotalCents: number; discountPercent: number; hasDiscount: boolean; guestCount: number };
     locale: Locale; restaurantName: string; restaurantLogoUrl: string | null;
@@ -142,6 +142,16 @@ export const TabletSummaryPage = () => {
 
   const pricing        = usePriceCalculator(menuItems ?? [], selectedItems, selectedTableCategory, guestCount);
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
+
+  // Dishes included with the chosen table category — with localized category
+  // labels and per-table serving counts, for grouping/printing in the export.
+  const buildIncludedDishes = () =>
+    (selectedTableCategory?.packageItems ?? []).map((pi) => ({
+      name: pi.menuItem.name,
+      category: pi.menuItem.category,
+      categoryLabel: t(pi.menuItem.category.toLowerCase() as Parameters<typeof translate>[0]),
+      servings: pi.servings ?? 1,
+    }));
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
   const discountPercent = discountEnabled
@@ -195,10 +205,7 @@ export const TabletSummaryPage = () => {
         guestCount,
         selectedItems: { ...selectedItems },
         menuItems,
-        includedDishes: (selectedTableCategory?.packageItems ?? []).map((pi) => ({
-          name: pi.menuItem.name,
-          category: pi.menuItem.category,
-        })),
+        includedDishes: buildIncludedDishes(),
         pricing: exportPricing,
         locale,
         restaurantName: restaurantName ?? '',
@@ -223,10 +230,7 @@ export const TabletSummaryPage = () => {
   const downloadBlob = async (url: string, filename: string) => {
     try {
       // Dishes that come included with the chosen table category.
-      const includedDishes = (selectedTableCategory?.packageItems ?? []).map((pi) => ({
-        name: pi.menuItem.name,
-        category: pi.menuItem.category,
-      }));
+      const includedDishes = buildIncludedDishes();
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',

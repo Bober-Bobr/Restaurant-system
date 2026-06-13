@@ -25,7 +25,7 @@ interface SummaryData {
   guestCount: number;
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
-  includedDishes?: { name: string; category: string }[];
+  includedDishes?: { name: string; category: string; categoryLabel?: string; servings?: number }[];
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -194,14 +194,49 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     labelValue(t('guest_count'), String(data.guestCount));
     doc.moveDown(1);
 
-    // ── Dishes included with the chosen table ───────────────────────────
+    // ── Dishes included with the chosen table (grouped into category blocks) ─
     const includedDishes = data.includedDishes ?? [];
     if (includedDishes.length > 0) {
       section(t('included_with_table'));
-      includedDishes.forEach((dish) => {
-        doc.fillColor(WHITE).font(fontRegular, 11)
-          .text(`•  ${dish.name}`, MARGIN, doc.y, { width: contentWidth });
-        doc.moveDown(0.2);
+
+      // Group dishes into category blocks, preserving first-seen order.
+      type IncludedBlock = { label: string; dishes: typeof includedDishes };
+      const blocks: IncludedBlock[] = [];
+      const blockByCat = new Map<string, IncludedBlock>();
+      for (const dish of includedDishes) {
+        let block = blockByCat.get(dish.category);
+        if (!block) {
+          block = { label: dish.categoryLabel || dish.category, dishes: [] };
+          blockByCat.set(dish.category, block);
+          blocks.push(block);
+        }
+        block.dishes.push(dish);
+      }
+
+      blocks.forEach((block, bi) => {
+        if (doc.y > pageHeight - 90) doc.addPage();
+        // Category (block) heading
+        doc.fillColor(GOLD).font(fontBold, 11).text(block.label, MARGIN, doc.y, { width: contentWidth });
+        doc.moveDown(0.25);
+        block.dishes.forEach((dish) => {
+          const servings = dish.servings ?? 1;
+          const y = doc.y;
+          doc.fillColor(WHITE).font(fontRegular, 11)
+            .text(`•  ${dish.name}`, MARGIN + 8, y, { width: contentWidth * 0.72 });
+          doc.fillColor(GOLD).font(fontBold, 11)
+            .text(`× ${servings}`, MARGIN, y, { width: contentWidth - 4, align: 'right' });
+          doc.moveDown(0.2);
+        });
+        // Separator between category blocks (not after the last one).
+        if (bi < blocks.length - 1) {
+          doc.moveDown(0.35);
+          const sy = doc.y;
+          doc.save();
+          doc.moveTo(MARGIN, sy).lineTo(pageWidth - MARGIN, sy).lineWidth(0.5).strokeColor(DIVIDER).dash(2, { space: 2 }).stroke();
+          doc.undash();
+          doc.restore();
+          doc.moveDown(0.45);
+        }
       });
       doc.moveDown(0.7);
     }

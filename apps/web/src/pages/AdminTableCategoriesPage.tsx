@@ -76,6 +76,8 @@ function FoodPackageSection({
   onCatsChange,
   selectedItemIds,
   onItemIdsChange,
+  servingsById,
+  onServingsChange,
   allMenuItems,
   locale,
 }: {
@@ -83,6 +85,8 @@ function FoodPackageSection({
   onCatsChange: (cats: FoodCategory[]) => void;
   selectedItemIds: string[];
   onItemIdsChange: (ids: string[]) => void;
+  servingsById: Record<string, number>;
+  onServingsChange: (id: string, servings: number) => void;
   allMenuItems: MenuItem[];
   locale: 'en' | 'ru' | 'uz';
 }) {
@@ -166,27 +170,47 @@ function FoodPackageSection({
               {grouped[cat].map((item) => {
                 const active = selectedItemIds.includes(item.id);
                 return (
-                  <label
+                  <div
                     key={item.id}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '4px 12px', borderRadius: 999,
+                      padding: active ? '3px 6px 3px 12px' : '4px 12px', borderRadius: 999,
                       border: `1px solid ${active ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)'}`,
                       background: active ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
                       color: active ? '#c9a42c' : '#cbd5e1',
-                      cursor: 'pointer', fontSize: 12, userSelect: 'none',
-                      transition: 'all 0.15s',
+                      fontSize: 12, transition: 'all 0.15s',
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      style={{ display: 'none' }}
-                      checked={active}
-                      onChange={() => toggleItem(item.id, cat)}
-                    />
-                    {item.name}
-                    <span style={{ color: 'rgba(226,232,240,0.4)' }}>{formatSum(item.priceCents)}</span>
-                  </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+                      <input
+                        type="checkbox"
+                        style={{ display: 'none' }}
+                        checked={active}
+                        onChange={() => toggleItem(item.id, cat)}
+                      />
+                      {item.name}
+                      <span style={{ color: 'rgba(226,232,240,0.4)' }}>{formatSum(item.priceCents)}</span>
+                    </label>
+                    {active && (
+                      <span
+                        title={t('servings_per_table')}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, paddingLeft: 6, borderLeft: '1px solid rgba(201,164,44,0.3)' }}
+                      >
+                        <span style={{ color: 'rgba(226,232,240,0.55)' }}>×</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={servingsById[item.id] ?? 1}
+                          onChange={(e) => onServingsChange(item.id, Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                          style={{
+                            width: 44, textAlign: 'center', padding: '2px 4px', borderRadius: 6,
+                            border: '1px solid rgba(201,164,44,0.4)', background: 'rgba(15,23,42,0.6)',
+                            color: '#f8fafc', fontSize: 12, outline: 'none', MozAppearance: 'textfield',
+                          }}
+                        />
+                      </span>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -290,6 +314,7 @@ export const AdminTableCategoriesPage = () => {
   const [name, setName] = useState('');
   const [selectedCats, setSelectedCats] = useState<FoodCategory[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [servingsById, setServingsById] = useState<Record<string, number>>({});
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
@@ -299,6 +324,7 @@ export const AdminTableCategoriesPage = () => {
   const [editName, setEditName] = useState('');
   const [editSelectedCats, setEditSelectedCats] = useState<FoodCategory[]>([]);
   const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
+  const [editServingsById, setEditServingsById] = useState<Record<string, number>>({});
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
@@ -328,7 +354,7 @@ export const AdminTableCategoriesPage = () => {
       return tableCategoryService.create({
         name: name.trim(),
         includedCategories: serializeCats(selectedCats),
-        menuItemIds: selectedItemIds,
+        packageItems: selectedItemIds.map((id) => ({ menuItemId: id, servings: servingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
         description: description.trim() || undefined,
         photos,
@@ -339,6 +365,7 @@ export const AdminTableCategoriesPage = () => {
       setName('');
       setSelectedCats([]);
       setSelectedItemIds([]);
+      setServingsById({});
       setRatePerPersonText('0');
       setDescription('');
       setPhotos([]);
@@ -347,7 +374,7 @@ export const AdminTableCategoriesPage = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<TableCategory> & { menuItemIds?: string[] } }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<TableCategory, 'packageItems'>> & { packageItems?: { menuItemId: string; servings: number }[] } }) =>
       tableCategoryService.update(id, data),
     onSuccess: async () => {
       setEditingId(null);
@@ -367,6 +394,7 @@ export const AdminTableCategoriesPage = () => {
     setEditName(category.name);
     setEditSelectedCats(parseCats(category.includedCategories));
     setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
+    setEditServingsById(Object.fromEntries((category.packageItems ?? []).map((pi) => [pi.menuItem.id, pi.servings ?? 1])));
     setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
@@ -380,7 +408,7 @@ export const AdminTableCategoriesPage = () => {
       data: {
         name: editName.trim(),
         includedCategories: serializeCats(editSelectedCats),
-        menuItemIds: editSelectedItemIds,
+        packageItems: editSelectedItemIds.map((id) => ({ menuItemId: id, servings: editServingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
         description: editDescription.trim() || undefined,
         photos: editPhotos,
@@ -419,6 +447,8 @@ export const AdminTableCategoriesPage = () => {
             onCatsChange={setSelectedCats}
             selectedItemIds={selectedItemIds}
             onItemIdsChange={setSelectedItemIds}
+            servingsById={servingsById}
+            onServingsChange={(id, n) => setServingsById((prev) => ({ ...prev, [id]: n }))}
             allMenuItems={allMenuItems}
             locale={locale}
           />
@@ -475,6 +505,8 @@ export const AdminTableCategoriesPage = () => {
                         onCatsChange={setEditSelectedCats}
                         selectedItemIds={editSelectedItemIds}
                         onItemIdsChange={setEditSelectedItemIds}
+                        servingsById={editServingsById}
+                        onServingsChange={(id, n) => setEditServingsById((prev) => ({ ...prev, [id]: n }))}
                         allMenuItems={allMenuItems}
                         locale={locale}
                       />
@@ -550,6 +582,7 @@ export const AdminTableCategoriesPage = () => {
                               {(category.packageItems ?? []).map((pi) => (
                                 <span key={pi.id} className="adm-badge" style={{ background: 'rgba(34,197,94,0.15)', color: '#86efac', border: '1px solid rgba(34,197,94,0.3)' }}>
                                   {pi.menuItem.name}
+                                  <span style={{ marginLeft: 4, color: 'rgba(134,239,172,0.7)', fontWeight: 700 }}>× {pi.servings ?? 1}</span>
                                 </span>
                               ))}
                             </div>
