@@ -374,6 +374,8 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [bestsellersOnly, setBestsellersOnly] = useState(false);
 
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [cat]);
+
   const headerH = useHeaderHeight();
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
   const hasBestsellers = allItems.some((m) => m.isBestseller);
