@@ -14,14 +14,16 @@ type DishCategory =
   | 'side_dishes' | 'pasta' | 'soft_drinks' | 'steaks' | 'energy_drinks'
   | 'salads_oil' | 'salads_mayo' | 'coffee' | 'sushi_rolls'
   | 'dried_fruits' | 'candies'
-  | 'first_course' | 'second_course' | 'third_course' | 'drinks' | 'sweets' | 'fruits';
+  | 'first_course' | 'second_course' | 'third_course' | 'sweets' | 'fruits'
+  | 'alcohol' | 'lemonades' | 'non_alcoholic_cocktails' | 'alcoholic_cocktails';
 
 const DISH_CATEGORIES: DishCategory[] = [
   'soups', 'pizza', 'cold_appetizers', 'grill', 'pastry', 'hot_appetizers',
   'beer_snacks', 'dessert', 'lamb_dishes', 'beef_dishes', 'chicken_dishes',
   'side_dishes', 'pasta', 'soft_drinks', 'steaks', 'energy_drinks',
   'salads_oil', 'salads_mayo', 'coffee', 'sushi_rolls', 'dried_fruits', 'candies',
-  'first_course', 'second_course', 'third_course', 'drinks', 'sweets', 'fruits',
+  'first_course', 'second_course', 'third_course', 'sweets', 'fruits',
+  'alcohol', 'lemonades', 'non_alcoholic_cocktails', 'alcoholic_cocktails',
 ];
 
 const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>[0]> = {
@@ -50,9 +52,12 @@ const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>
   first_course:    'first_course',
   second_course:   'second_course',
   third_course:    'third_course',
-  drinks:          'drinks',
-  sweets:          'sweets',
-  fruits:          'fruits',
+  sweets:                   'sweets',
+  fruits:                   'fruits',
+  alcohol:                  'alcohol',
+  lemonades:                'lemonades',
+  non_alcoholic_cocktails:  'non_alcoholic_cocktails',
+  alcoholic_cocktails:      'alcoholic_cocktails',
 };
 
 export const AdminPhotosPage = () => {

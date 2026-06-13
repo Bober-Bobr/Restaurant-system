@@ -40,7 +40,6 @@ const CATEGORY_ORDER: Record<MenuCategory, number> = {
   FIRST_COURSE: 22,
   SECOND_COURSE: 23,
   THIRD_COURSE: 24,
-  DRINKS: 25,
   SWEETS: 26,
   FRUITS: 27,
   ALCOHOL: 28,
@@ -54,7 +53,7 @@ const ALL_CATEGORIES: MenuCategory[] = [
   'BEER_SNACKS', 'DESSERT', 'LAMB_DISHES', 'BEEF_DISHES', 'CHICKEN_DISHES',
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS', 'DRIED_FRUITS', 'CANDIES',
-  'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'SWEETS', 'FRUITS',
   'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
 ];
 
@@ -374,7 +373,6 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'FIRST_COURSE', key: 'first_course' },
   { value: 'SECOND_COURSE', key: 'second_course' },
   { value: 'THIRD_COURSE', key: 'third_course' },
-  { value: 'DRINKS', key: 'drinks' },
   { value: 'SWEETS', key: 'sweets' },
   { value: 'FRUITS', key: 'fruits' },
   { value: 'ALCOHOL', key: 'alcohol' },
