@@ -4,6 +4,7 @@ import { hallService } from '../services/hall.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
+import { useAuthStore } from '../store/auth.store';
 import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { httpClient } from '../services/http';
@@ -34,6 +35,7 @@ const formatDate = (iso: string, locale: string) => {
 
 export const EmployeeEventsPage = () => {
   const { locale } = useAdminStore();
+  const role = useAuthStore((s) => s.role);
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
 
@@ -127,10 +129,25 @@ export const EmployeeEventsPage = () => {
                 {tc && <Detail label={t('table_category')} value={tc.name} />}
               </div>
 
+              {role === 'KITCHEN' && tc && (tc.packageItems ?? []).length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
+                  <p className="adm-label" style={{ marginBottom: 6 }}>
+                    {t('table_category_dishes')} ({(tc.packageItems ?? []).length})
+                  </p>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
+                    {(tc.packageItems ?? []).map((pi) => (
+                      <li key={pi.id} style={{ fontSize: 13, color: '#cbd5e1' }}>
+                        {pi.menuItem.name} <span style={{ color: 'rgba(226,232,240,0.45)' }}>× {pi.servings ?? 1}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {selections.length > 0 && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
                   <p className="adm-label" style={{ marginBottom: 6 }}>
-                    {t('selected_dishes')} ({selections.length})
+                    {role === 'KITCHEN' ? t('additional_dishes') : t('selected_dishes')} ({selections.length})
                   </p>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
                     {selections.map((s) => (
