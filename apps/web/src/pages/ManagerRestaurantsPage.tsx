@@ -4,7 +4,6 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { restaurantService, type Restaurant } from '../services/restaurant.service';
-import { reviewService, type Review } from '../services/review.service';
 import { hallService } from '../services/hall.service';
 import type { Hall } from '../types/domain';
 import { translate, locales, type Locale } from '../utils/translate';
@@ -62,21 +61,6 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] }),
   });
 
-  const reviewsQuery = useQuery({
-    queryKey: ['manager-reviews', r.id],
-    queryFn: () => reviewService.listAll(r.id),
-  });
-  const reviews = reviewsQuery.data ?? [];
-
-  const approve = useMutation({
-    mutationFn: ({ id, isApproved }: { id: string; isApproved: boolean }) => reviewService.setApproved(id, isApproved),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-reviews', r.id] }),
-  });
-  const removeReview = useMutation({
-    mutationFn: (id: string) => reviewService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-reviews', r.id] }),
-  });
-
   const logo = r.logoUrl ? getPhotoUrl(r.logoUrl) : null;
 
   return (
@@ -123,47 +107,6 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
           {saveInfo.isPending ? t('saving') : t('save_info')}
         </button>
         {saved && <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓ {t('credentials_saved')}</span>}
-      </div>
-
-      {/* Reviews moderation */}
-      <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <p style={{ margin: '0 0 12px', ...labelStyle, fontSize: 12 }}>{t('moderate_reviews')} ({reviews.length})</p>
-        {reviewsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>...</p>}
-        {!reviewsQuery.isLoading && reviews.length === 0 && (
-          <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>{t('no_reviews_to_moderate')}</p>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {reviews.map((rev: Review) => (
-            <div key={rev.id} style={{
-              padding: '10px 12px', borderRadius: 10,
-              background: rev.isApproved ? 'rgba(34,197,94,0.08)' : 'rgba(15,23,42,0.5)',
-              border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 600, color: '#f8fafc', fontSize: 14 }}>{rev.authorName}</span>
-                <Stars rating={rev.rating} />
-                <span className="adm-badge" style={{
-                  background: rev.isApproved ? 'rgba(34,197,94,0.15)' : 'rgba(201,164,44,0.15)',
-                  color: rev.isApproved ? '#4ade80' : '#c9a42c',
-                  border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(201,164,44,0.3)'}`,
-                }}>
-                  {rev.isApproved ? t('approved') : t('pending_moderation')}
-                </span>
-                <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                  <button type="button" onClick={() => approve.mutate({ id: rev.id, isApproved: !rev.isApproved })}
-                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
-                      border: '1px solid rgba(201,164,44,0.35)', background: 'rgba(201,164,44,0.1)', color: '#c9a42c' }}>
-                    {rev.isApproved ? t('unapprove') : t('approve')}
-                  </button>
-                  <button type="button" className="adm-btn-danger" onClick={() => removeReview.mutate(rev.id)} style={{ fontSize: 12 }}>
-                    {t('delete')}
-                  </button>
-                </span>
-              </div>
-              {rev.text && <p style={{ margin: '6px 0 0', fontSize: 13, color: 'rgba(226,232,240,0.75)', lineHeight: 1.5 }}>{rev.text}</p>}
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Halls management */}

@@ -47,6 +47,7 @@ export const CateringAdminLayout = () => {
     { to: '/admin/halls', label: t('halls') },
     { to: '/admin/photos', label: t('photos') },
     { to: '/admin/users', label: t('users') },
+    { to: '/admin/reviews', label: t('reviews') },
     { to: '/devices', label: t('devices') },
   ];
 

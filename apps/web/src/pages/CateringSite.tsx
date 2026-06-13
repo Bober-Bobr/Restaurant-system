@@ -283,30 +283,24 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '0',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 520,
-          background: '#111', borderRadius: '20px 20px 0 0',
-          border: `1px solid ${C.line}`, borderBottom: 'none',
+          width: '100%', height: '100%',
+          background: '#0d0d0d',
           overflow: 'hidden',
-          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+          display: 'flex', flexDirection: 'column',
         }}
       >
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
-          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-        </div>
-
         {/* Photo */}
         {src && (
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img src={src} alt={item.name} style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+            <img src={src} alt={item.name} style={{ width: '100%', maxHeight: '55vh', objectFit: 'cover', display: 'block' }} />
             {item.isBestseller && (
               <span style={{
                 position: 'absolute', top: 12, left: 12,
@@ -324,7 +318,7 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
         )}
 
         {/* Content */}
-        <div style={{ padding: '18px 20px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '20px 24px 40px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* No photo but bestseller */}
           {!src && item.isBestseller && (
             <span style={{
@@ -340,12 +334,12 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
           )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{item.name}</h2>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 18, whiteSpace: 'nowrap', flexShrink: 0 }}>{formatSum(item.priceCents)}</span>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{item.name}</h2>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{formatSum(item.priceCents)}</span>
           </div>
 
           {item.description && (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'rgba(255,255,255,0.8)' }}>{item.description}</p>
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.82)' }}>{item.description}</p>
           )}
         </div>
 
@@ -354,10 +348,11 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
           type="button"
           onClick={onClose}
           style={{
-            position: 'absolute', top: 14, right: 16,
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)', border: 'none',
-            color: '#fff', fontSize: 18, cursor: 'pointer', lineHeight: 1,
+            position: 'fixed', top: 16, right: 16, zIndex: 101,
+            width: 38, height: 38, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)',
+            border: `1px solid ${C.line}`,
+            color: '#fff', fontSize: 20, cursor: 'pointer', lineHeight: 1,
           }}
         >×</button>
       </div>
@@ -654,7 +649,7 @@ function ReviewsPage({ restaurantId, locale }: { restaurantId: string; locale: L
       <h1 style={{ margin: '0 0 22px', fontSize: 28, fontWeight: 800, color: '#fff' }}>{t('reviews')}</h1>
       {isLoading && <p style={{ color: C.textFaint }}>...</p>}
       {!isLoading && reviews.length === 0 && <p style={{ color: C.textFaint }}>{t('no_reviews_yet')}</p>}
-      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', marginBottom: 32 }}>
         {reviews.map((rev) => (
           <div key={rev.id} className="rg-card reveal" style={{ padding: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -665,6 +660,7 @@ function ReviewsPage({ restaurantId, locale }: { restaurantId: string; locale: L
           </div>
         ))}
       </div>
+      <ReviewForm restaurantId={restaurantId} locale={locale} />
     </>
   );
 }

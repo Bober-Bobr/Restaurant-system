@@ -15,7 +15,7 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   MANAGER: 'Manager',
   OWNER: 'Owner',
   ADMIN: 'Administrator',
-  CATERING_ADMIN: 'Catering Admin',
+  CATERING_ADMIN: 'Food Admin',
   EMPLOYEE: 'Employee',
   KITCHEN: 'Kitchen'
 };
