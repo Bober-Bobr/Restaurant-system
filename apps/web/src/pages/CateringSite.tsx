@@ -239,14 +239,14 @@ function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Loca
         <p style={{ color: C.textFaint }}>{t('no_dishes_in_category')}</p>
       )}
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
         {categories.map(({ cat, items }) => {
           const cover = items.find((i) => i.photoUrl)?.photoUrl;
           const coverSrc = cover ? getPhotoUrl(cover) : null;
           return (
             <Link key={cat} to={`/category/${cat}`} className="rg-card reveal"
               style={{ overflow: 'hidden', textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ position: 'relative', height: 150, background: 'rgba(0,0,0,0.3)' }}>
+              <div style={{ position: 'relative', height: 110, background: 'rgba(0,0,0,0.3)' }}>
                 {coverSrc
                   ? <img src={coverSrc ?? undefined} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.95 }} />
                   : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))' }} />}
@@ -255,9 +255,9 @@ function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Loca
                   {items.length}
                 </span>
               </div>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{t(CATEGORY_LABEL_KEY[cat])}</span>
-                <span style={{ color: '#fff', fontSize: 18 }}>→</span>
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{t(CATEGORY_LABEL_KEY[cat])}</span>
+                <span style={{ color: '#fff', fontSize: 16, flexShrink: 0 }}>→</span>
               </div>
             </Link>
           );
@@ -319,37 +319,37 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
       {items.length === 0 ? (
         <p style={{ color: C.textFaint }}>{t('no_dishes_in_category')}</p>
       ) : (
-        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
           {items.map((item) => {
             const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
             return (
               <div key={item.id} className="rg-card reveal" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 {item.isBestseller && (
                   <span style={{
-                    position: 'absolute', top: 10, left: 10, zIndex: 2,
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '4px 9px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+                    position: 'absolute', top: 8, left: 8, zIndex: 2,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '3px 7px', borderRadius: 999, fontSize: 10, fontWeight: 800,
                     background: 'rgba(245,158,11,0.95)', color: '#000',
-                    boxShadow: '0 0 12px rgba(245,158,11,0.7)',
+                    boxShadow: '0 0 10px rgba(245,158,11,0.7)',
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>
-                    <BestsellerBadge on size={12} dark />
+                    <BestsellerBadge on size={10} dark />
                     {t('bestseller')}
                   </span>
                 )}
                 {src
                   ? <button type="button" onClick={() => setLightboxSrc(src)}
                       style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}>
-                      <img src={src} alt={item.name} style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+                      <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }} />
                     </button>
-                  : <div style={{ width: '100%', height: 170, background: 'rgba(0,0,0,0.25)' }} />}
-                <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{item.name}</h3>
-                    <span style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>{formatSum(item.priceCents)}</span>
+                  : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
+                <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
+                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{item.name}</h3>
+                    <span style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', fontSize: 13 }}>{formatSum(item.priceCents)}</span>
                   </div>
                   {item.description && (
-                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: C.textDim }}>{item.description}</p>
+                    <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                   )}
                 </div>
               </div>
