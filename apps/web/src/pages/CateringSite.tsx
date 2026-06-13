@@ -10,7 +10,6 @@ import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
-import { Lightbox } from '../components/ui/lightbox';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { useScrollReveal } from '../utils/useScrollReveal';
@@ -267,19 +266,124 @@ function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Loca
   );
 }
 
+// ── Dish detail modal ────────────────────────────────────────────────────────
+function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; onClose: () => void }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '0',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 520,
+          background: '#111', borderRadius: '20px 20px 0 0',
+          border: `1px solid ${C.line}`, borderBottom: 'none',
+          overflow: 'hidden',
+          maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        </div>
+
+        {/* Photo */}
+        {src && (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img src={src} alt={item.name} style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+            {item.isBestseller && (
+              <span style={{
+                position: 'absolute', top: 12, left: 12,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+                background: 'rgba(245,158,11,0.95)', color: '#000',
+                boxShadow: '0 0 12px rgba(245,158,11,0.7)',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                <BestsellerBadge on size={12} dark />
+                {t('bestseller')}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Content */}
+        <div style={{ padding: '18px 20px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* No photo but bestseller */}
+          {!src && item.isBestseller && (
+            <span style={{
+              alignSelf: 'flex-start',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+              background: 'rgba(245,158,11,0.95)', color: '#000',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+            }}>
+              <BestsellerBadge on size={12} dark />
+              {t('bestseller')}
+            </span>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{item.name}</h2>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 18, whiteSpace: 'nowrap', flexShrink: 0 }}>{formatSum(item.priceCents)}</span>
+          </div>
+
+          {item.description && (
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'rgba(255,255,255,0.8)' }}>{item.description}</p>
+          )}
+        </div>
+
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 14, right: 16,
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)', border: 'none',
+            color: '#fff', fontSize: 18, cursor: 'pointer', lineHeight: 1,
+          }}
+        >×</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Category detail ─────────────────────────────────────────────────────────
 function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: Locale }) {
   const { category = '' } = useParams();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const cat = category as MenuCategory;
   const labelKey = CATEGORY_LABEL_KEY[cat];
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [bestsellersOnly, setBestsellersOnly] = useState(false);
 
   const headerH = useHeaderHeight();
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
   const hasBestsellers = allItems.some((m) => m.isBestseller);
-  const items = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : allItems;
+
+  // Bestsellers first, then the rest
+  const sorted = [
+    ...allItems.filter((m) => m.isBestseller),
+    ...allItems.filter((m) => !m.isBestseller),
+  ];
+  const items = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : sorted;
 
   return (
     <>
@@ -323,7 +427,17 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
           {items.map((item) => {
             const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
             return (
-              <div key={item.id} className="rg-card reveal" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedItem(item)}
+                className="rg-card reveal"
+                style={{
+                  overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                  position: 'relative', cursor: 'pointer',
+                  padding: 0, border: 'none', textAlign: 'left', width: '100%',
+                }}
+              >
                 {item.isBestseller && (
                   <span style={{
                     position: 'absolute', top: 8, left: 8, zIndex: 2,
@@ -338,10 +452,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
                   </span>
                 )}
                 {src
-                  ? <button type="button" onClick={() => setLightboxSrc(src)}
-                      style={{ display: 'block', width: '100%', padding: 0, border: 'none', background: 'none', cursor: 'zoom-in' }}>
-                      <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }} />
-                    </button>
+                  ? <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block' }} />
                   : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
                 <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
@@ -352,13 +463,15 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
                     <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       )}
 
-      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {selectedItem && (
+        <DishModal item={selectedItem} locale={locale} onClose={() => setSelectedItem(null)} />
+      )}
     </>
   );
 }
