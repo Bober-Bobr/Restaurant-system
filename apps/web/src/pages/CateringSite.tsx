@@ -33,6 +33,7 @@ const CATEGORY_ORDER: MenuCategory[] = [
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS', 'DRIED_FRUITS', 'CANDIES',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
 ];
 const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> = {
   SOUPS: 'soups',
@@ -63,6 +64,10 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   DRINKS: 'drinks',
   SWEETS: 'sweets',
   FRUITS: 'fruits',
+  ALCOHOL: 'alcohol',
+  LEMONADES: 'lemonades',
+  NON_ALCOHOLIC_COCKTAILS: 'non_alcoholic_cocktails',
+  ALCOHOLIC_COCKTAILS: 'alcoholic_cocktails',
 };
 
 // Combine a hall's single photoUrl + photos array into a unique, ordered list.

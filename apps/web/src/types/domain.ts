@@ -64,7 +64,8 @@ export type MenuItem = {
     | 'SIDE_DISHES' | 'PASTA' | 'SOFT_DRINKS' | 'STEAKS' | 'ENERGY_DRINKS'
     | 'SALADS_OIL' | 'SALADS_MAYO' | 'COFFEE' | 'SUSHI_ROLLS'
     | 'DRIED_FRUITS' | 'CANDIES'
-    | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'DRINKS' | 'SWEETS' | 'FRUITS';
+    | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'DRINKS' | 'SWEETS' | 'FRUITS'
+    | 'ALCOHOL' | 'LEMONADES' | 'NON_ALCOHOLIC_COCKTAILS' | 'ALCOHOLIC_COCKTAILS';
   priceCents: number;
   photoUrl?: string;
   isActive: boolean;

@@ -43,6 +43,10 @@ const CATEGORY_ORDER: Record<MenuCategory, number> = {
   DRINKS: 25,
   SWEETS: 26,
   FRUITS: 27,
+  ALCOHOL: 28,
+  LEMONADES: 29,
+  NON_ALCOHOLIC_COCKTAILS: 30,
+  ALCOHOLIC_COCKTAILS: 31,
 };
 
 const ALL_CATEGORIES: MenuCategory[] = [
@@ -51,6 +55,7 @@ const ALL_CATEGORIES: MenuCategory[] = [
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS', 'DRIED_FRUITS', 'CANDIES',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
 ];
 
 function quickSort(items: MenuItem[]): MenuItem[] {
@@ -372,6 +377,10 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'DRINKS', key: 'drinks' },
   { value: 'SWEETS', key: 'sweets' },
   { value: 'FRUITS', key: 'fruits' },
+  { value: 'ALCOHOL', key: 'alcohol' },
+  { value: 'LEMONADES', key: 'lemonades' },
+  { value: 'NON_ALCOHOLIC_COCKTAILS', key: 'non_alcoholic_cocktails' },
+  { value: 'ALCOHOLIC_COCKTAILS', key: 'alcoholic_cocktails' },
 ];
 
 const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {

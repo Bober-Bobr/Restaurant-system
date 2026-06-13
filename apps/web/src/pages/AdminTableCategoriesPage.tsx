@@ -20,6 +20,7 @@ const FOOD_PACKAGE_CATEGORIES: FoodCategory[] = [
   'SIDE_DISHES', 'PASTA', 'SOFT_DRINKS', 'STEAKS', 'ENERGY_DRINKS',
   'SALADS_OIL', 'SALADS_MAYO', 'COFFEE', 'SUSHI_ROLLS', 'DRIED_FRUITS', 'CANDIES',
   'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE', 'DRINKS', 'SWEETS', 'FRUITS',
+  'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
 ];
 
 const CATEGORY_LABEL_KEY: Record<FoodCategory, Parameters<typeof translate>[0]> = {
@@ -51,6 +52,10 @@ const CATEGORY_LABEL_KEY: Record<FoodCategory, Parameters<typeof translate>[0]> 
   DRINKS: 'drinks',
   SWEETS: 'sweets',
   FRUITS: 'fruits',
+  ALCOHOL: 'alcohol',
+  LEMONADES: 'lemonades',
+  NON_ALCOHOLIC_COCKTAILS: 'non_alcoholic_cocktails',
+  ALCOHOLIC_COCKTAILS: 'alcoholic_cocktails',
 };
 
 const parseCats = (raw: string): FoodCategory[] =>
