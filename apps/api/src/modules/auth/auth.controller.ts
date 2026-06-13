@@ -25,7 +25,8 @@ export class AuthController {
   async register(request: Request, response: Response) {
     const payload = registerSchema.parse(request.body);
     const result = await authService.register(payload.username, payload.password, {
-      restaurantName: payload.restaurantName
+      restaurantName: payload.restaurantName,
+      role: payload.role,
     }, deviceInfo(request));
     response.status(201).json(result);
   }

@@ -26,9 +26,22 @@ export class AuthService {
   async register(
     username: string,
     password: string,
-    options: { restaurantName?: string },
+    options: { restaurantName?: string; role?: AdminRole },
     device: DeviceInfo = {}
   ): Promise<AuthResponse> {
+    const role = options.role ?? AdminRole.ADMIN;
+    const platformRoles: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER];
+
+    const taken = await this.authRepository.findByUsername(username);
+    if (taken) throw createHttpError(409, 'Username already taken');
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    if (platformRoles.includes(role)) {
+      const user = await this.authRepository.create(username, passwordHash, role);
+      return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { device });
+    }
+
     if (!options.restaurantName?.trim()) {
       throw createHttpError(400, 'Restaurant name is required.');
     }
@@ -37,10 +50,6 @@ export class AuthService {
     const existing = await this.authRepository.findRestaurantByName(restaurantName);
     if (existing) throw createHttpError(409, 'An admin for this restaurant already exists.');
 
-    const taken = await this.authRepository.findByUsername(username);
-    if (taken) throw createHttpError(409, 'Username already taken');
-
-    const passwordHash = await bcrypt.hash(password, 12);
     const user = await this.authRepository.createAdminWithRestaurant(username, passwordHash, restaurantName);
     return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { device });
   }
