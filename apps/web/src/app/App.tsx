@@ -24,6 +24,7 @@ import { TabletMenuPage } from '../pages/TabletMenuPage';
 import { TabletSummaryPage } from '../pages/TabletSummaryPage';
 import { AdminLayout } from './AdminLayout';
 import { AdminReviewsPage } from '../pages/AdminReviewsPage';
+import { AdminArrangementPage } from '../pages/AdminArrangementPage';
 import { CateringAdminLayout } from './CateringAdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
@@ -205,6 +206,7 @@ export const App = () => {
         <Route element={<CateringAdminLayout />}>
           <Route path="/" element={<Navigate to="/admin/menu" replace />} />
           <Route path="/admin/menu" element={<AdminMenuPage />} />
+          <Route path="/admin/arrangement" element={<AdminArrangementPage />} />
           <Route path="/admin/halls" element={<AdminHallsPage />} />
           <Route path="/admin/photos" element={<AdminPhotosPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />

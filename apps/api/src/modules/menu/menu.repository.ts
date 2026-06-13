@@ -5,15 +5,37 @@ export class MenuRepository {
   async listAll(restaurantId: string) {
     return prisma.menuItem.findMany({
       where: { restaurantId },
-      orderBy: [{ category: 'asc' }, { name: 'asc' }]
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
     });
   }
 
   async listActive(restaurantId: string) {
     return prisma.menuItem.findMany({
       where: { restaurantId, isActive: true },
-      orderBy: [{ category: 'asc' }, { name: 'asc' }]
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
     });
+  }
+
+  // Persist the catering-site arrangement: the restaurant's category order plus
+  // each dish's position within its category. Dish updates are scoped to the
+  // restaurant so a client can't reorder another tenant's items.
+  async saveArrangement(
+    restaurantId: string,
+    categoryOrder: string[],
+    dishOrder: { id: string; sortOrder: number }[]
+  ) {
+    await prisma.$transaction([
+      prisma.restaurant.update({
+        where: { id: restaurantId },
+        data: { categoryOrder: JSON.stringify(categoryOrder) },
+      }),
+      ...dishOrder.map((d) =>
+        prisma.menuItem.updateMany({
+          where: { id: d.id, restaurantId },
+          data: { sortOrder: d.sortOrder },
+        })
+      ),
+    ]);
   }
 
   async create(restaurantId: string, payload: {
@@ -26,6 +48,7 @@ export class MenuRepository {
     showOnTablet?: boolean;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
+    sortOrder?: number;
   }) {
     return prisma.menuItem.create({ data: { ...payload, restaurantId } });
   }
@@ -44,6 +67,7 @@ export class MenuRepository {
     showOnTablet?: boolean;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
+    sortOrder?: number;
   }) {
     return prisma.menuItem.update({ where: { id: menuItemId }, data: payload });
   }

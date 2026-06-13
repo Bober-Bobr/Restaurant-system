@@ -74,6 +74,15 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   LIQUEURS: 'liqueurs',
 };
 
+// Apply the restaurant's saved category order, then append any categories it
+// doesn't mention (e.g. newly added ones) in the default order.
+function orderCategories(saved: string[] | null | undefined): MenuCategory[] {
+  const known = CATEGORY_ORDER as string[];
+  const valid = (saved ?? []).filter((c): c is MenuCategory => known.includes(c));
+  const remaining = CATEGORY_ORDER.filter((c) => !valid.includes(c));
+  return [...valid, ...remaining];
+}
+
 // Combine a hall's single photoUrl + photos array into a unique, ordered list.
 function hallPhotoList(hall: Hall): string[] {
   const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
@@ -229,9 +238,9 @@ function CateringLayout({
 }
 
 // ── Menu page (category blocks) ─────────────────────────────────────────────
-function MenuBlocks({ menuItems, locale }: { menuItems: MenuItem[]; locale: Locale }) {
+function MenuBlocks({ menuItems, locale, categoryOrder }: { menuItems: MenuItem[]; locale: Locale; categoryOrder?: string[] | null }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
-  const categories = CATEGORY_ORDER
+  const categories = orderCategories(categoryOrder)
     .map((cat) => ({
       cat,
       items: menuItems.filter((m) => m.category === cat && m.isActive),
@@ -878,7 +887,7 @@ export const CateringSite = ({ slug }: { slug: string }) => {
   return (
     <CateringLayout restaurant={restaurant} locale={locale} setLocale={setLocale}>
       <Routes>
-        <Route path="/" element={<MenuBlocks menuItems={menuItems} locale={locale} />} />
+        <Route path="/" element={<MenuBlocks menuItems={menuItems} locale={locale} categoryOrder={restaurant?.categoryOrder} />} />
         <Route path="/category/:category" element={<CategoryDetail menuItems={menuItems} locale={locale} />} />
         <Route path="/halls" element={<HallsPage restaurantId={restaurant!.id} locale={locale} />} />
         <Route path="/halls/:hallId" element={<HallDetail restaurantId={restaurant!.id} locale={locale} />} />

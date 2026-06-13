@@ -73,6 +73,7 @@ export type MenuItem = {
   showOnTablet?: boolean;
   isBestseller?: boolean;
   isOutOfStock?: boolean;
+  sortOrder?: number;
 };
 
 export type PricingSummary = {

@@ -7,6 +7,7 @@ const controller = new MenuController();
 router.get('/', controller.list.bind(controller));
 router.get('/admin/all', controller.listAll.bind(controller));
 router.post('/', controller.create.bind(controller));
+router.put('/arrangement', controller.saveArrangement.bind(controller));
 router.delete('/:menuItemId', controller.remove.bind(controller));
 router.patch('/:menuItemId', controller.update.bind(controller));
 router.post('/events/:eventId/selections', controller.assignSelection.bind(controller));

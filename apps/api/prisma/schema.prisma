@@ -173,6 +173,7 @@ model Restaurant {
   history         String?
   logoUrl         String?
   backgroundImageUrl String?
+  categoryOrder   String?
   ownerId         String
   companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -266,6 +267,7 @@ model MenuItem {
   showOnTablet     Boolean                   @default(true)
   isBestseller     Boolean                   @default(false)
   isOutOfStock     Boolean                   @default(false)
+  sortOrder        Int                       @default(0)
   restaurantId     String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { EventRepository } from '../events/event.repository.js';
 import { eventIdSchema } from '../events/event.schema.js';
-import { assignSelectionSchema, createMenuItemSchema, menuItemIdSchema, updateMenuItemSchema } from './menu.schema.js';
+import { arrangementSchema, assignSelectionSchema, createMenuItemSchema, menuItemIdSchema, updateMenuItemSchema } from './menu.schema.js';
 import { MenuRepository } from './menu.repository.js';
 import { MenuService } from './menu.service.js';
 
@@ -25,6 +25,11 @@ export class MenuController {
     const { menuItemId } = menuItemIdSchema.parse(request.params);
     const payload = updateMenuItemSchema.parse(request.body);
     response.json(await menuService.updateMenuItem(menuItemId, payload));
+  }
+
+  async saveArrangement(request: Request, response: Response) {
+    const payload = arrangementSchema.parse(request.body);
+    response.json(await menuService.saveArrangement(request.restaurantId!, payload));
   }
 
   async remove(request: Request, response: Response) {

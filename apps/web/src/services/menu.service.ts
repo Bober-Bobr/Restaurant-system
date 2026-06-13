@@ -23,5 +23,11 @@ export const menuService = {
   },
   async assignToEvent(eventId: number, menuItemId: string, quantity: number) {
     await httpClient.post(`/menu-items/events/${eventId}/selections`, { menuItemId, quantity });
+  },
+  async saveArrangement(payload: {
+    categoryOrder: MenuItem['category'][];
+    dishOrder: { id: string; sortOrder: number }[];
+  }) {
+    await httpClient.put('/menu-items/arrangement', payload);
   }
 };

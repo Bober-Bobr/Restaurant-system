@@ -9,6 +9,7 @@ export type Restaurant = {
   history: string | null;
   logoUrl: string | null;
   backgroundImageUrl: string | null;
+  categoryOrder: string | null;
   ownerId: string;
   companyId: string | null;
   company: { id: string; name: string; logoUrl: string | null } | null;

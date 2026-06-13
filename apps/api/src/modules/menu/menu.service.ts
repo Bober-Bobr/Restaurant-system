@@ -27,8 +27,17 @@ export class MenuService {
     showOnTablet?: boolean;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
+    sortOrder?: number;
   }) {
     return this.menuRepository.create(restaurantId, payload);
+  }
+
+  async saveArrangement(
+    restaurantId: string,
+    payload: { categoryOrder: MenuCategory[]; dishOrder: { id: string; sortOrder: number }[] }
+  ) {
+    await this.menuRepository.saveArrangement(restaurantId, payload.categoryOrder, payload.dishOrder);
+    return { ok: true };
   }
 
   async updateMenuItem(menuItemId: string, payload: {
@@ -41,6 +50,7 @@ export class MenuService {
     showOnTablet?: boolean;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
+    sortOrder?: number;
   }) {
     const existingItem = await this.menuRepository.getById(menuItemId);
     if (!existingItem) throw createHttpError(404, 'Menu item not found');

@@ -45,6 +45,7 @@ export const CateringAdminLayout = () => {
 
   const navItems: { to: string; label: string }[] = [
     { to: '/admin/menu', label: t('menu') },
+    { to: '/admin/arrangement', label: t('arrangement') },
     { to: '/admin/halls', label: t('halls') },
     { to: '/admin/photos', label: t('photos') },
     { to: '/admin/users', label: t('users') },

@@ -10,10 +10,19 @@ export const createMenuItemSchema = z.object({
   isActive: z.boolean().optional(),
   showOnTablet: z.boolean().optional(),
   isBestseller: z.boolean().optional(),
-  isOutOfStock: z.boolean().optional()
+  isOutOfStock: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional()
 });
 
 export const updateMenuItemSchema = createMenuItemSchema.partial();
+
+export const arrangementSchema = z.object({
+  categoryOrder: z.array(z.nativeEnum(MenuCategory)),
+  dishOrder: z.array(z.object({
+    id: z.string().cuid(),
+    sortOrder: z.number().int().min(0)
+  }))
+});
 
 export const menuItemIdSchema = z.object({
   menuItemId: z.string().cuid()

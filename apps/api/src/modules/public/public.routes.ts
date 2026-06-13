@@ -21,6 +21,17 @@ const reviewPhotoUpload = multer({
   },
 });
 
+// Category order is stored as a JSON array string; parse defensively for the public API.
+function parseCategoryOrder(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((c): c is string => typeof c === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 const router = Router();
 const invitationController = new InvitationController();
 const reviewController = new ReviewController();
@@ -60,6 +71,7 @@ router.get('/restaurants', async (_request, response, next) => {
       history: r.history ?? null,
       logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
       backgroundImageUrl: r.backgroundImageUrl ?? null,
+      categoryOrder: parseCategoryOrder(r.categoryOrder),
       companyName: r.company?.name ?? null,
     })));
   } catch (error) { next(error); }
