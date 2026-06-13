@@ -15,7 +15,8 @@ type DishCategory =
   | 'salads_oil' | 'salads_mayo' | 'coffee' | 'sushi_rolls'
   | 'dried_fruits' | 'candies'
   | 'first_course' | 'second_course' | 'third_course' | 'sweets' | 'fruits'
-  | 'alcohol' | 'lemonades' | 'non_alcoholic_cocktails' | 'alcoholic_cocktails';
+  | 'alcohol' | 'lemonades' | 'non_alcoholic_cocktails' | 'alcoholic_cocktails'
+  | 'milkshakes' | 'tea_menu' | 'fresh_juices' | 'liqueurs';
 
 const DISH_CATEGORIES: DishCategory[] = [
   'soups', 'pizza', 'cold_appetizers', 'grill', 'pastry', 'hot_appetizers',
@@ -24,6 +25,7 @@ const DISH_CATEGORIES: DishCategory[] = [
   'salads_oil', 'salads_mayo', 'coffee', 'sushi_rolls', 'dried_fruits', 'candies',
   'first_course', 'second_course', 'third_course', 'sweets', 'fruits',
   'alcohol', 'lemonades', 'non_alcoholic_cocktails', 'alcoholic_cocktails',
+  'milkshakes', 'tea_menu', 'fresh_juices', 'liqueurs',
 ];
 
 const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>[0]> = {
@@ -58,6 +60,10 @@ const DISH_CATEGORY_LABEL_KEY: Record<DishCategory, Parameters<typeof translate>
   lemonades:                'lemonades',
   non_alcoholic_cocktails:  'non_alcoholic_cocktails',
   alcoholic_cocktails:      'alcoholic_cocktails',
+  milkshakes:               'milkshakes',
+  tea_menu:                 'tea_menu',
+  fresh_juices:             'fresh_juices',
+  liqueurs:                 'liqueurs',
 };
 
 export const AdminPhotosPage = () => {

@@ -65,7 +65,8 @@ export type MenuItem = {
     | 'SALADS_OIL' | 'SALADS_MAYO' | 'COFFEE' | 'SUSHI_ROLLS'
     | 'DRIED_FRUITS' | 'CANDIES'
     | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'SWEETS' | 'FRUITS'
-    | 'ALCOHOL' | 'LEMONADES' | 'NON_ALCOHOLIC_COCKTAILS' | 'ALCOHOLIC_COCKTAILS';
+    | 'ALCOHOL' | 'LEMONADES' | 'NON_ALCOHOLIC_COCKTAILS' | 'ALCOHOLIC_COCKTAILS'
+    | 'MILKSHAKES' | 'TEA_MENU' | 'FRESH_JUICES' | 'LIQUEURS';
   priceCents: number;
   photoUrl?: string;
   isActive: boolean;
