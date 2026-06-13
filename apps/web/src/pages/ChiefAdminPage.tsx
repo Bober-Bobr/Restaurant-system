@@ -312,7 +312,7 @@ export const ChiefAdminPage = () => {
 };
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6,
+  padding: '8px 12px', height: 40, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6,
   color: '#e2e8f0', fontSize: 14, fontFamily: 'inherit',
 };
 

@@ -19,7 +19,7 @@ type Lang = 'en' | 'ru' | 'uz';
 
 const inputStyle: React.CSSProperties = {
   background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
-  color: '#e2e8f0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
+  color: '#e2e8f0', padding: '9px 12px', height: 40, fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
 };
 const labelStyle: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
 
@@ -88,7 +88,7 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
       </div>
       <label style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
         <span style={labelStyle}>{t('history_label')}</span>
-        <textarea value={history} onChange={(e) => setHistory(e.target.value)} style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }} />
+        <textarea value={history} onChange={(e) => setHistory(e.target.value)} style={{ ...inputStyle, height: 'auto', minHeight: 110, resize: 'vertical' }} />
       </label>
 
       {/* Background photo for the public catering site */}
@@ -239,7 +239,7 @@ function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; res
 
       <label style={{ display: 'grid', gap: 4, marginTop: 10 }}>
         <span style={labelStyle}>{t('description')}</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, height: 'auto', minHeight: 70, resize: 'vertical' }} />
       </label>
 
       {/* Photo gallery */}

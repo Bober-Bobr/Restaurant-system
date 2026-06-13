@@ -30,6 +30,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   color: '#e2e8f0',
   padding: '9px 12px',
+  height: 40,
   fontSize: 13,
   fontFamily: 'inherit',
   outline: 'none',
@@ -410,7 +411,7 @@ export const InvitationBuilderPage = () => {
             restaurantId={restaurantId}
           />
           <Field label="Alt promo code"><input value={form.promoCodeAlt ?? ''} onChange={(e) => set('promoCodeAlt', e.target.value)} style={inputStyle} placeholder="#MARJON77" /></Field>
-          <Field label="Description"><textarea value={form.promoDescription ?? ''} onChange={(e) => set('promoDescription', e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} /></Field>
+          <Field label="Description"><textarea value={form.promoDescription ?? ''} onChange={(e) => set('promoDescription', e.target.value)} style={{ ...inputStyle, height: 'auto', minHeight: 80, resize: 'vertical' }} /></Field>
         </Section>
 
         <Section title="Telegram CTA">
@@ -427,7 +428,7 @@ export const InvitationBuilderPage = () => {
             onChange={(url) => set('welcomeImageUrl', url)}
             restaurantId={restaurantId}
           />
-          <Field label="Message"><textarea value={form.welcomeMessage ?? ''} onChange={(e) => set('welcomeMessage', e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} /></Field>
+          <Field label="Message"><textarea value={form.welcomeMessage ?? ''} onChange={(e) => set('welcomeMessage', e.target.value)} style={{ ...inputStyle, height: 'auto', minHeight: 80, resize: 'vertical' }} /></Field>
         </Section>
 
         <Section title="Countdown">

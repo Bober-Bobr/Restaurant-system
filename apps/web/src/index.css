@@ -251,6 +251,13 @@
   outline: none;
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
 }
+/* Fixed single-line height so <input> and <select> always match. Placed in the
+   components layer so explicit Tailwind height utilities (e.g. h-8 on the compact
+   inline-edit rows) still override it; multi-line <textarea> opts back out. */
+@layer components {
+  .adm-input { height: 42px; }
+  textarea.adm-input { height: auto; }
+}
 .adm-input::placeholder { color: rgba(226, 232, 240, 0.3); }
 .adm-input:focus {
   border-color: #c9a42c;
@@ -439,6 +446,11 @@
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.15s;
+}
+/* Fixed single-line height so <input> and <select> always match (textarea opts out). */
+@layer components {
+  .rg-input { height: 42px; }
+  textarea.rg-input { height: auto; }
 }
 .rg-input::placeholder { color: rgba(255,255,255,0.3); }
 .rg-input:focus { border-color: #c9a42c; }

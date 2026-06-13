@@ -45,6 +45,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 10,
   color: '#e2e8f0',
   padding: '0.6rem 0.9rem',
+  height: 42,
   fontSize: 14,
   fontFamily: 'inherit',
   outline: 'none',
