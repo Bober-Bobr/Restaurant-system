@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
@@ -37,12 +38,12 @@ export const AdminLayout = () => {
     mutationFn: () => authService.logout(),
     onSettled: () => {
       logout();
-      window.location.href = 'https://v-menu.uz/login';
+      window.location.href = buildAbsoluteUrl('/login');
     }
   });
 
   if (!accessToken) return <Navigate to="/login" replace />;
-  if (role === 'OWNER') { window.location.href = 'https://cabinet.v-menu.uz/'; return null; }
+  if (role === 'OWNER') { window.location.href = buildSubdomainBase('cabinet'); return null; }
 
   const navItems: { to: string; label: string }[] = [
     { to: '/', label: t('events') },

@@ -1,4 +1,14 @@
-const ROOT_DOMAIN = 'v-menu.uz';
+const ROOT_DOMAIN: string = (import.meta.env.VITE_ROOT_DOMAIN as string | undefined) ?? 'v-menu.uz';
+
+// Build an absolute URL on the root domain, e.g. https://v-menu.local/login
+export function buildAbsoluteUrl(path = '/'): string {
+  return `https://${ROOT_DOMAIN}${path}`;
+}
+
+// Build an absolute URL on a subdomain, e.g. https://admin.v-menu.local/
+export function buildSubdomainBase(subdomain: string, path = '/'): string {
+  return `https://${subdomain}.${ROOT_DOMAIN}${path}`;
+}
 
 // Single-label subdomains reserved for platform roles — never treated as a restaurant slug.
 const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'www']);
@@ -15,7 +25,7 @@ export function toSubdomainSlug(name: string): string {
 
 export function isRootDomain(): boolean {
   const host = window.location.hostname;
-  return host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || host === 'localhost';
+  return host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || host === 'localhost' || host === 'v-menu.local';
 }
 
 export function isAdminSubdomain(): boolean {

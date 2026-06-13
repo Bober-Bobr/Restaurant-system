@@ -10,6 +10,7 @@ import { translate, locales, type Locale } from '../utils/translate';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildAbsoluteUrl } from '../utils/subdomain';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { authService } from '../services/auth.service';
@@ -280,7 +281,7 @@ export const ManagerRestaurantsPage = () => {
     mutationFn: () => authService.logout(),
     onSettled: () => {
       try { localStorage.removeItem('banquet-admin-auth'); } catch { /* ignore */ }
-      window.location.replace('https://v-menu.uz/login');
+      window.location.replace(buildAbsoluteUrl('/login'));
     },
   });
 

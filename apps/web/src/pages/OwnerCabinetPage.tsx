@@ -11,6 +11,7 @@ import type { AdminRole } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { locales, translate, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildAbsoluteUrl } from '../utils/subdomain';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
@@ -147,7 +148,7 @@ export const OwnerCabinetPage = () => {
   const handleLogout = async () => {
     try { await authService.logout(); } catch {}
     logout();
-    window.location.href = 'https://v-menu.uz/login';
+    window.location.href = buildAbsoluteUrl('/login');
   };
 
   const ROLE_LABEL_KEY: Record<AdminRole, Parameters<typeof translate>[0]> = {

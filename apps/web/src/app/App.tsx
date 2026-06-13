@@ -28,7 +28,7 @@ import { CateringAdminLayout } from './CateringAdminLayout';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -71,7 +71,7 @@ export const App = () => {
     const { accessToken, role } = useAuthStore.getState();
     if (!accessToken || (role !== 'MANAGER' && role !== 'CHIEF_ADMIN')) {
       if (window.location.pathname !== '/login') {
-        window.location.href = 'https://v-menu.uz/login';
+        window.location.href = buildAbsoluteUrl('/login');
         return null;
       }
       return (
@@ -98,24 +98,24 @@ export const App = () => {
     const { accessToken, role, restaurantName } = useAuthStore.getState();
     // CHIEF_ADMIN → admin.v-menu.uz
     if (accessToken && role === 'CHIEF_ADMIN' && window.location.pathname !== '/login') {
-      window.location.href = 'https://admin.v-menu.uz/';
+      window.location.href = buildSubdomainBase('admin');
       return null;
     }
     // MANAGER → manager.v-menu.uz
     if (accessToken && role === 'MANAGER' && window.location.pathname !== '/login') {
-      window.location.href = 'https://manager.v-menu.uz/';
+      window.location.href = buildSubdomainBase('manager');
       return null;
     }
     // CATERING_ADMIN → food-admin subdomain
     if (accessToken && role === 'CATERING_ADMIN' && restaurantName && window.location.pathname !== '/login') {
       const slug = `${toSubdomainSlug(restaurantName)}.food-admin`;
-      window.location.href = `https://${slug}.v-menu.uz/`;
+      window.location.href = buildSubdomainBase(slug);
       return null;
     }
     // Authenticated ADMIN/EMPLOYEE/KITCHEN on root domain → send to their banquet subdomain
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
       const slug = toSubdomainSlug(restaurantName);
-      window.location.href = `https://${slug}.banquet.v-menu.uz/`;
+      window.location.href = buildSubdomainBase(`${slug}.banquet`);
       return null;
     }
     return (
@@ -135,7 +135,7 @@ export const App = () => {
     const { accessToken, role } = useAuthStore.getState();
     if (!accessToken || role !== 'OWNER') {
       if (window.location.pathname !== '/login') {
-        window.location.href = 'https://v-menu.uz/login';
+        window.location.href = buildAbsoluteUrl('/login');
         return null;
       }
       return (
@@ -159,7 +159,7 @@ export const App = () => {
     const { accessToken, role } = useAuthStore.getState();
     if (!accessToken || role !== 'CHIEF_ADMIN') {
       if (window.location.pathname !== '/login') {
-        window.location.href = 'https://v-menu.uz/login';
+        window.location.href = buildAbsoluteUrl('/login');
         return null;
       }
       return (
@@ -183,7 +183,7 @@ export const App = () => {
     const { accessToken, role: catRole } = useAuthStore.getState();
     if (!accessToken || catRole !== 'CATERING_ADMIN') {
       if (window.location.pathname !== '/login') {
-        window.location.href = 'https://v-menu.uz/login';
+        window.location.href = buildAbsoluteUrl('/login');
         return null;
       }
       return (

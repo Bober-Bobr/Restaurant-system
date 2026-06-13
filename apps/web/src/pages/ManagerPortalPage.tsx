@@ -11,6 +11,7 @@ import { translate, locales, type Locale } from '../utils/translate';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildAbsoluteUrl } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
@@ -28,7 +29,7 @@ function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
       // re-renders App, the manager guard returns null (white screen) and races
       // the cross-origin redirect. Clearing storage directly avoids the re-render.
       try { localStorage.removeItem('banquet-admin-auth'); } catch { /* ignore */ }
-      window.location.replace('https://v-menu.uz/login');
+      window.location.replace(buildAbsoluteUrl('/login'));
     },
   });
 

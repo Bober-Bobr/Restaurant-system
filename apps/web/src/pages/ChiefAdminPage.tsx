@@ -9,6 +9,7 @@ import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildAbsoluteUrl } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 const formatError = (error: unknown): string => {
@@ -80,7 +81,7 @@ export const ChiefAdminPage = () => {
   const handleLogout = async () => {
     try { await authService.logout(); } catch {}
     logout();
-    window.location.href = 'https://v-menu.uz/login';
+    window.location.href = buildAbsoluteUrl('/login');
   };
 
   // Collect all restaurant IDs that belong to a company

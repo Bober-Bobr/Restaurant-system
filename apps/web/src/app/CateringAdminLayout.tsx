@@ -6,6 +6,7 @@ import { restaurantService } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
+import { buildAbsoluteUrl } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
@@ -36,7 +37,7 @@ export const CateringAdminLayout = () => {
     mutationFn: () => authService.logout(),
     onSettled: () => {
       logout();
-      window.location.href = 'https://v-menu.uz/login';
+      window.location.href = buildAbsoluteUrl('/login');
     },
   });
 

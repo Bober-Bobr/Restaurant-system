@@ -8,6 +8,7 @@ import { restaurantService } from '../services/restaurant.service';
 import { publicMenuService } from '../services/publicMenu.service';
 import { invitationService, normalizeGalleryItems, type Invitation, type InvitationMenuItem, type InvitationGalleryItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { buildSubdomainBase } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
@@ -175,7 +176,7 @@ export const InvitationBuilderPage = () => {
     return restaurant.name.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 63);
   }, [restaurant]);
   const publicUrl = form.slug && restaurantSlug
-    ? `https://${restaurantSlug}.invitation.v-menu.uz/${form.slug}`
+    ? buildSubdomainBase(`${restaurantSlug}.invitation`, `/${form.slug}`)
     : '';
 
   // Toggle a restaurant menu item in the invitation. Numbering is auto-assigned.
