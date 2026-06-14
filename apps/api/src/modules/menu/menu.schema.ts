@@ -9,6 +9,7 @@ export const createMenuItemSchema = z.object({
   photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   showOnTablet: z.boolean().optional(),
+  tabletStatus: z.enum(['NONE', 'FREE', 'PAID']).optional(),
   isBestseller: z.boolean().optional(),
   isOutOfStock: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional()

@@ -62,6 +62,7 @@ export class MenuRepository {
     photoUrl?: string;
     isActive?: boolean;
     showOnTablet?: boolean;
+    tabletStatus?: string;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
     sortOrder?: number;
@@ -81,6 +82,7 @@ export class MenuRepository {
     photoUrl?: string;
     isActive?: boolean;
     showOnTablet?: boolean;
+    tabletStatus?: string;
     isBestseller?: boolean;
     isOutOfStock?: boolean;
     sortOrder?: number;

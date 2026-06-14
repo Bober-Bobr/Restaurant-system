@@ -92,7 +92,7 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, locale, setLocale, setGuestCount, reset } = useTabletStore();
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements, locale, setLocale, setGuestCount, reset } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -146,12 +146,17 @@ export const TabletSummaryPage = () => {
   // Dishes included with the chosen table category — with localized category
   // labels and per-table serving counts, for grouping/printing in the export.
   const buildIncludedDishes = () =>
-    (selectedTableCategory?.packageItems ?? []).map((pi) => ({
-      name: pi.menuItem.name,
-      category: pi.menuItem.category,
-      categoryLabel: t(pi.menuItem.category.toLowerCase() as Parameters<typeof translate>[0]),
-      servings: pi.servings ?? 1,
-    }));
+    (selectedTableCategory?.packageItems ?? []).map((pi) => {
+      // If the guest swapped this included dish for a free alternative, show that instead.
+      const swapId = replacements[pi.id];
+      const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
+      return {
+        name: dish.name,
+        category: dish.category,
+        categoryLabel: t(dish.category.toLowerCase() as Parameters<typeof translate>[0]),
+        servings: pi.servings ?? 1,
+      };
+    });
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
   const discountPercent = discountEnabled

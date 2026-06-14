@@ -4,7 +4,7 @@ import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
-import type { MenuItem, TableCategory } from '../types/domain';
+import type { MenuItem, TableCategory, TabletStatus } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
@@ -48,6 +48,13 @@ const ADDITIONAL_CATEGORIES: MenuCategory[] = [
   'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
   'MILKSHAKES', 'TEA_MENU', 'FRESH_JUICES', 'LIQUEURS',
 ];
+
+// Tablet status of a menu item, with a fallback for pre-migration items that
+// only have the old showOnTablet boolean (shown → PAID, hidden → NONE).
+function tabletStatusOf(item: MenuItem): TabletStatus {
+  if (item.tabletStatus) return item.tabletStatus;
+  return item.showOnTablet === false ? 'NONE' : 'PAID';
+}
 
 // ── Decorative background ─────────────────────────────────────────────────
 
@@ -419,6 +426,7 @@ export const TabletMenuPage = () => {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
     selectedFirstCourseId, selectedSecondCourseId, selectedThirdCourseId,
     setQuantity, setHall, setTableCategory, setFirstCourse, setSecondCourse, setThirdCourse,
+    replacements, setReplacement,
     setGuestCount, locale, setLocale,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
@@ -456,7 +464,7 @@ export const TabletMenuPage = () => {
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(
       (item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
-        item.showOnTablet !== false &&
+        tabletStatusOf(item) === 'PAID' &&
         (activeCategory === null || item.category === activeCategory)
     )
   );
@@ -812,15 +820,23 @@ export const TabletMenuPage = () => {
                         </p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {items!.map((pi, i) => (
+                        {items!.map((pi, i) => {
+                          // Free alternatives the guest may swap this included dish for, at no cost.
+                          const freeAlts = (menuItems ?? []).filter(
+                            (m) => m.category === pi!.menuItem.category && tabletStatusOf(m) === 'FREE' && m.id !== pi!.menuItem.id
+                          );
+                          const chosenId = replacements[pi!.id];
+                          const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi!.menuItem) : pi!.menuItem;
+                          const isSwapped = displayItem.id !== pi!.menuItem.id;
+                          return (
                           <div key={pi!.id}
                             className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-                            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                            {pi!.menuItem.photoUrl ? (
+                            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.07)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
+                            {displayItem.photoUrl ? (
                               <button type="button"
-                                onClick={() => setLightboxSrc(getPhotoUrl(pi!.menuItem.photoUrl) ?? null)}
+                                onClick={() => setLightboxSrc(getPhotoUrl(displayItem.photoUrl) ?? null)}
                                 className="block w-full overflow-hidden">
-                                <img src={getPhotoUrl(pi!.menuItem.photoUrl)} alt={pi!.menuItem.name}
+                                <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
                                   className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
                               </button>
                             ) : (
@@ -832,15 +848,42 @@ export const TabletMenuPage = () => {
                               </div>
                             )}
                             <div className="p-3">
-                              <p className="text-sm font-semibold leading-snug text-white">{pi!.menuItem.name}</p>
-                              {pi!.menuItem.description && (
+                              <p className="text-sm font-semibold leading-snug text-white">{displayItem.name}</p>
+                              {displayItem.description && (
                                 <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                                  {pi!.menuItem.description}
+                                  {displayItem.description}
                                 </p>
+                              )}
+                              {!viewOnly && freeAlts.length > 0 && (
+                                <div className="mt-2.5">
+                                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.85)', marginBottom: 5 }}>
+                                    {t('swap_free')}
+                                  </label>
+                                  <select
+                                    value={chosenId ?? pi!.menuItem.id}
+                                    onChange={(e) => setReplacement(pi!.id, e.target.value === pi!.menuItem.id ? null : e.target.value)}
+                                    style={{
+                                      width: '100%', padding: '7px 9px', borderRadius: 9,
+                                      background: 'rgba(0,0,0,0.35)', color: '#fff',
+                                      border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                    }}
+                                  >
+                                    <option value={pi!.menuItem.id} style={{ background: '#1a2e20', color: '#fff' }}>
+                                      {pi!.menuItem.name} ({t('included_default')})
+                                    </option>
+                                    {freeAlts.map((alt) => (
+                                      <option key={alt.id} value={alt.id} style={{ background: '#1a2e20', color: '#fff' }}>
+                                        {alt.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               )}
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -855,7 +898,7 @@ export const TabletMenuPage = () => {
 
               {/* Category pills */}
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
-                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && item.showOnTablet !== false))].map((cat) => (
+                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && tabletStatusOf(item) === 'PAID'))].map((cat) => (
                   <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
                     className="shrink-0 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200"
                     style={activeCategory === cat

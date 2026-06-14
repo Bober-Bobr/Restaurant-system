@@ -5,9 +5,26 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
-import type { MenuItem } from '../types/domain';
+import type { MenuItem, TabletStatus } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
+
+// An item created before this feature has no tabletStatus; fall back to the old
+// showOnTablet boolean (shown → PAID, hidden → NONE).
+function effectiveStatus(item: MenuItem): TabletStatus {
+  if (item.tabletStatus) return item.tabletStatus;
+  return item.showOnTablet === false ? 'NONE' : 'PAID';
+}
+
+const STATUS_OPTIONS: {
+  value: TabletStatus;
+  labelKey: Parameters<typeof translate>[0];
+  solid: string; solidText: string; bg: string; border: string;
+}[] = [
+  { value: 'NONE', labelKey: 'status_dont_show', solid: 'rgba(148,163,184,0.9)', solidText: '#0f172a', bg: 'rgba(15,23,42,0.5)', border: 'rgba(255,255,255,0.08)' },
+  { value: 'FREE', labelKey: 'status_free', solid: '#3b82f6', solidText: '#fff', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.3)' },
+  { value: 'PAID', labelKey: 'status_paid', solid: '#22c55e', solidText: '#0f172a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' },
+];
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
@@ -68,15 +85,16 @@ export const AdminAdditionalPage = () => {
     queryFn: () => menuService.listAllForAdmin(),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, showOnTablet }: { id: string; showOnTablet: boolean }) =>
-      menuService.update(id, { showOnTablet }),
-    // Optimistic toggle
-    onMutate: async ({ id, showOnTablet }) => {
+  const statusMutation = useMutation({
+    mutationFn: ({ id, tabletStatus }: { id: string; tabletStatus: TabletStatus }) =>
+      // Keep showOnTablet in sync for any legacy reader (true only when PAID).
+      menuService.update(id, { tabletStatus, showOnTablet: tabletStatus === 'PAID' }),
+    // Optimistic update
+    onMutate: async ({ id, tabletStatus }) => {
       await queryClient.cancelQueries({ queryKey: ['menu-items', 'admin', 'all'] });
       const prev = queryClient.getQueryData<MenuItem[]>(['menu-items', 'admin', 'all']);
       queryClient.setQueryData<MenuItem[]>(['menu-items', 'admin', 'all'], (old) =>
-        (old ?? []).map((it) => (it.id === id ? { ...it, showOnTablet } : it))
+        (old ?? []).map((it) => (it.id === id ? { ...it, tabletStatus, showOnTablet: tabletStatus === 'PAID' } : it))
       );
       return { prev };
     },
@@ -115,41 +133,53 @@ export const AdminAdditionalPage = () => {
             <h2 className="adm-heading" style={{ margin: '0 0 12px' }}>{t(CATEGORY_LABEL_KEY[cat])}</h2>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {items.map((item) => {
-                const shown = item.showOnTablet !== false;
+                const status = effectiveStatus(item);
                 const photo = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+                const accent = STATUS_OPTIONS.find((o) => o.value === status)!;
                 return (
                   <div key={item.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
+                    display: 'flex', flexDirection: 'column', gap: 10,
                     padding: '10px 12px', borderRadius: 12,
-                    background: shown ? 'rgba(34,197,94,0.08)' : 'rgba(15,23,42,0.5)',
-                    border: `1px solid ${shown ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    background: accent.bg,
+                    border: `1px solid ${accent.border}`,
                   }}>
-                    {photo
-                      ? <img src={photo ?? undefined} alt="" style={{ width: 44, height: 44, borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: 44, height: 44, borderRadius: 9, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
-                    }
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                      <p style={{ margin: '2px 0 0', fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{formatSum(item.priceCents)}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {photo
+                        ? <img src={photo ?? undefined} alt="" style={{ width: 44, height: 44, borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: 44, height: 44, borderRadius: 9, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{formatSum(item.priceCents)}</p>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleMutation.mutate({ id: item.id, showOnTablet: !shown })}
-                      title={shown ? t('shown') : t('hidden')}
-                      style={{
-                        flexShrink: 0,
-                        width: 50, height: 28, borderRadius: 999,
-                        border: 'none', cursor: 'pointer', position: 'relative',
-                        background: shown ? '#22c55e' : 'rgba(255,255,255,0.15)',
-                        transition: 'background 0.18s',
-                      }}
-                    >
-                      <span style={{
-                        position: 'absolute', top: 3, left: shown ? 25 : 3,
-                        width: 22, height: 22, borderRadius: '50%', background: '#fff',
-                        transition: 'left 0.18s',
-                      }} />
-                    </button>
+                    <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'rgba(0,0,0,0.25)' }}>
+                      {STATUS_OPTIONS.map((opt) => {
+                        const active = status === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => { if (!active) statusMutation.mutate({ id: item.id, tabletStatus: opt.value }); }}
+                            style={{
+                              flex: 1,
+                              padding: '6px 8px',
+                              borderRadius: 7,
+                              border: 'none',
+                              cursor: active ? 'default' : 'pointer',
+                              fontSize: 12,
+                              fontWeight: 700,
+                              letterSpacing: '0.01em',
+                              background: active ? opt.solid : 'transparent',
+                              color: active ? opt.solidText : 'rgba(226,232,240,0.6)',
+                              transition: 'background 0.15s, color 0.15s',
+                            }}
+                          >
+                            {t(opt.labelKey)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}

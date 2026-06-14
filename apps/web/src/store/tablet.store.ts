@@ -8,6 +8,9 @@ type SelectionState = {
   selectedFirstCourseId?: string;
   selectedSecondCourseId?: string;
   selectedThirdCourseId?: string;
+  // Free replacements: included package-item id → chosen FREE menu-item id.
+  // Absence means the original included dish is kept.
+  replacements: Record<string, string>;
   guestCount: number;
   locale: Locale;
   setQuantity: (menuItemId: string, quantity: number) => void;
@@ -16,6 +19,7 @@ type SelectionState = {
   setFirstCourse: (menuItemId: string) => void;
   setSecondCourse: (menuItemId: string) => void;
   setThirdCourse: (menuItemId: string) => void;
+  setReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setGuestCount: (count: number) => void;
   setLocale: (locale: Locale) => void;
   reset: () => void;
@@ -28,6 +32,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedFirstCourseId: undefined,
   selectedSecondCourseId: undefined,
   selectedThirdCourseId: undefined,
+  replacements: {},
   guestCount: 0,
   locale: defaultLocale,
   setQuantity: (menuItemId, quantity) => {
@@ -42,7 +47,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set({ selectedHallId: hallId });
   },
   setTableCategory: (tableCategoryId) => {
-    set({ selectedTableCategoryId: tableCategoryId, selectedFirstCourseId: undefined, selectedSecondCourseId: undefined, selectedThirdCourseId: undefined });
+    set({ selectedTableCategoryId: tableCategoryId, selectedFirstCourseId: undefined, selectedSecondCourseId: undefined, selectedThirdCourseId: undefined, replacements: {} });
   },
   setFirstCourse: (menuItemId) => {
     set({ selectedFirstCourseId: menuItemId });
@@ -52,6 +57,14 @@ export const useTabletStore = create<SelectionState>((set) => ({
   },
   setThirdCourse: (menuItemId) => {
     set({ selectedThirdCourseId: menuItemId });
+  },
+  setReplacement: (packageItemId, menuItemId) => {
+    set((state) => {
+      const next = { ...state.replacements };
+      if (menuItemId === null) delete next[packageItemId];
+      else next[packageItemId] = menuItemId;
+      return { replacements: next };
+    });
   },
   setGuestCount: (count) => {
     set({ guestCount: Math.max(count, 0) });
@@ -67,6 +80,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedFirstCourseId: undefined,
       selectedSecondCourseId: undefined,
       selectedThirdCourseId: undefined,
+      replacements: {},
       guestCount: 0,
       locale: defaultLocale
     });

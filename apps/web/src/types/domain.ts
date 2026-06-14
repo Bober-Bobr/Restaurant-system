@@ -56,6 +56,8 @@ export type TableCategory = {
   packageItems?: TableCategoryPackageItem[];
 };
 
+export type TabletStatus = 'NONE' | 'FREE' | 'PAID';
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -73,6 +75,7 @@ export type MenuItem = {
   photoUrl?: string;
   isActive: boolean;
   showOnTablet?: boolean;
+  tabletStatus?: TabletStatus;
   isBestseller?: boolean;
   isOutOfStock?: boolean;
   sortOrder?: number;

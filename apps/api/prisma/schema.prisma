@@ -269,6 +269,8 @@ model MenuItem {
   photoUrl         String?
   isActive         Boolean                   @default(true)
   showOnTablet     Boolean                   @default(true)
+  // Tablet "Additional" status: NONE (hidden), FREE (free replacement only), PAID (paid additional item).
+  tabletStatus     String                    @default("PAID")
   isBestseller     Boolean                   @default(false)
   isOutOfStock     Boolean                   @default(false)
   sortOrder        Int                       @default(0)
