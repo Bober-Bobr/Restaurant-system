@@ -333,6 +333,7 @@ export const AdminEventsPage = () => {
               <option value="DRAFT">DRAFT</option>
               <option value="CONFIRMED">CONFIRMED</option>
               <option value="CANCELLED">CANCELLED</option>
+              <option value="COMPLETED">COMPLETED</option>
             </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>

@@ -48,6 +48,7 @@ export const AdminLayout = () => {
   const navItems: { to: string; label: string }[] = [
     { to: '/', label: t('events') },
     { to: '/calendar', label: t('calendar') },
+    ...(role === 'ADMIN' ? [{ to: '/admin/invoices', label: t('invoices') }] : []),
     { to: '/admin/menu', label: t('menu') },
     { to: '/admin/additional', label: t('additional') },
     { to: '/admin/table-categories', label: t('tables') },

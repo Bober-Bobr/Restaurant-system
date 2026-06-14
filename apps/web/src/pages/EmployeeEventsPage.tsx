@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<Event['status'], { bg: string; label: string }> = {
   DRAFT: { bg: '#9ca3af', label: 'Draft' },
   CONFIRMED: { bg: '#16a34a', label: 'Confirmed' },
   CANCELLED: { bg: '#dc2626', label: 'Cancelled' },
+  COMPLETED: { bg: '#2563eb', label: 'Completed' },
 };
 
 const formatDate = (iso: string, locale: string) => {

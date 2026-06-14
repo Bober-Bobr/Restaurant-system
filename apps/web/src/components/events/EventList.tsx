@@ -14,6 +14,7 @@ const statusStyle: Record<string, React.CSSProperties> = {
   DRAFT:     { background: 'rgba(148,163,184,0.15)', color: '#cbd5e1', border: '1px solid rgba(148,163,184,0.3)' },
   CONFIRMED: { background: 'rgba(34,197,94,0.15)',   color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' },
   CANCELLED: { background: 'rgba(220,38,38,0.15)',   color: '#fca5a5', border: '1px solid rgba(220,38,38,0.3)' },
+  COMPLETED: { background: 'rgba(37,99,235,0.15)',   color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)' },
 };
 
 const eventTypeLabel: Record<string, string> = {

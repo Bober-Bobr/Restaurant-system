@@ -11,6 +11,7 @@ enum EventStatus {
   DRAFT
   CONFIRMED
   CANCELLED
+  COMPLETED
 }
 
 enum EventType {
