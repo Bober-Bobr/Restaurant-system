@@ -25,6 +25,12 @@ interface SummaryData {
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
   includedDishes?: { name: string; category: string; categoryLabel?: string; servings?: number }[];
+  // Optional children's table add-on.
+  childrenTableName?: string;
+  childrenCount?: number;
+  childrenRateCents?: number;
+  childrenSubtotalCents?: number;
+  childrenDishes?: { name: string; category: string; categoryLabel?: string; servings?: number }[];
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -273,6 +279,34 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
       }
     }
 
+    // ── Children's table section (optional add-on) ────────────────────────
+    const childrenDishes = data.childrenDishes ?? [];
+    if (data.childrenTableName && (childrenDishes.length > 0 || (data.childrenCount ?? 0) > 0)) {
+      const heading = `${t('children_table')} — ${data.childrenTableName}` +
+        ((data.childrenCount ?? 0) > 0 ? ` (${t('children_count')}: ${data.childrenCount})` : '');
+      curY = sectionRow(ML, curY, heading.toUpperCase());
+      // Group children's dishes by category label.
+      type CBlock = { label: string; dishes: typeof childrenDishes };
+      const cBlocks: CBlock[] = [];
+      const cByCat = new Map<string, CBlock>();
+      for (const dish of childrenDishes) {
+        let block = cByCat.get(dish.category);
+        if (!block) {
+          block = { label: dish.categoryLabel || dish.category, dishes: [] };
+          cByCat.set(dish.category, block);
+          cBlocks.push(block);
+        }
+        block.dishes.push(dish);
+      }
+      for (const block of cBlocks) {
+        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        for (const dish of block.dishes) {
+          curY = dataRow(ML, curY, dish.name, String(dish.servings ?? 1), shade);
+          shade = !shade;
+        }
+      }
+    }
+
     // ── Pricing rows at the bottom of the table ───────────────────────────
     const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
     const totalCents = data.pricing.totalCents ?? data.pricing.perGuestCents;
@@ -287,6 +321,10 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     curY = dataRow(ML, curY, t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
     if (hasDiscount) {
       curY = dataRow(ML, curY, t('discount'), `−${data.pricing.discountPercent}%`, false);
+    }
+    if (data.childrenTableName && (data.childrenSubtotalCents ?? 0) > 0) {
+      const per = data.childrenRateCents != null ? ` (${data.childrenCount} × ${formatSom(data.childrenRateCents)})` : '';
+      curY = dataRow(ML, curY, `${t('children_table')}${per}`, formatSom(data.childrenSubtotalCents ?? 0), false);
     }
     if (hasDiscount && data.pricing.originalTotalCents != null) {
       curY = dataRow(ML, curY, `${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents), false);

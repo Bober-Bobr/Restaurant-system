@@ -12,6 +12,7 @@ export const tableCategoryService = {
     packageItems?: { menuItemId: string; servings: number }[];
     ratePerPerson: number;
     discountPercent?: number;
+    tableType?: 'ADULT' | 'CHILDREN';
     description?: string;
     photoUrl?: string;
     photos?: string[];

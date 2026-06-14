@@ -36,7 +36,9 @@ const resources = {
     total_guests: 'Total guests',
     estimated_total: 'Estimated total',
     original_price: 'Original price',
-    discount: 'Discount'
+    discount: 'Discount',
+    children_table: "Children's table",
+    children_count: 'Number of children'
   },
   ru: {
     selection_summary: 'Сводка выбора',
@@ -69,7 +71,9 @@ const resources = {
     total_guests: 'Всего гостей',
     estimated_total: 'Предполагаемая сумма',
     original_price: 'Цена без скидки',
-    discount: 'Скидка'
+    discount: 'Скидка',
+    children_table: 'Детский стол',
+    children_count: 'Количество детей'
   },
   uz: {
     selection_summary: 'Tanlov xulosasi',
@@ -102,7 +106,9 @@ const resources = {
     total_guests: 'Jami mehmonlar',
     estimated_total: 'Taxminiy summa',
     original_price: 'Chegirmasiz narx',
-    discount: 'Chegirma'
+    discount: 'Chegirma',
+    children_table: 'Bolalar stoli',
+    children_count: 'Bolalar soni'
   }
 } as const;
 

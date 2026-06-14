@@ -11,6 +11,8 @@ export type CreateEventData = {
   region?: Region;
   hallId?: string;
   tableCategoryId?: string;
+  childrenTableCategoryId?: string;
+  childrenCount?: number;
   notes?: string;
   birthdayPersonName?: string;
   brideName?: string;

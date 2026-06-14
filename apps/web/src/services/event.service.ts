@@ -16,6 +16,8 @@ export const eventService = {
     region?: Event['region'];
     hallId?: string;
     tableCategoryId?: string;
+    childrenTableCategoryId?: string;
+    childrenCount?: number;
     notes?: string;
     birthdayPersonName?: string;
     brideName?: string;

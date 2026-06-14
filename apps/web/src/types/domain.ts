@@ -20,6 +20,8 @@ export type Event = {
   region?: 'US' | 'CA' | 'GB' | 'DE' | 'FR' | 'IT' | 'ES' | 'RU' | 'CN' | 'JP' | 'KR' | 'AU' | 'UZ' | 'EU';
   hallId?: string;
   tableCategoryId?: string;
+  childrenTableCategoryId?: string;
+  childrenCount?: number;
   hall?: Hall;
   tableCategory?: TableCategory;
   selections?: EventMenuSelection[];
@@ -42,12 +44,15 @@ export type TableCategoryPackageItem = {
   menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'category' | 'priceCents' | 'photoUrl'>;
 };
 
+export type TableType = 'ADULT' | 'CHILDREN';
+
 export type TableCategory = {
   id: string;
   name: string;
   includedCategories: string;
   ratePerPerson: number;
   discountPercent?: number;
+  tableType?: TableType;
   description?: string;
   photoUrl?: string;
   photos?: string[];

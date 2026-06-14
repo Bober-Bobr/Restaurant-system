@@ -31,6 +31,8 @@ export const createEventSchema = z
     region: z.nativeEnum(Region).optional(),
     hallId: z.string().cuid().optional(),
     tableCategoryId: z.string().cuid().optional(),
+    childrenTableCategoryId: z.string().cuid().optional(),
+    childrenCount: z.number().int().min(0).max(5000).optional(),
     notes: z.string().max(2000).optional(),
     birthdayPersonName: z.string().max(120).optional(),
     brideName: z.string().max(120).optional(),

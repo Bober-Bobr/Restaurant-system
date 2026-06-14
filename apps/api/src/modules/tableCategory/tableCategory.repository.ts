@@ -6,6 +6,7 @@ export type CreateTableCategoryData = {
   includedCategories: string;
   ratePerPerson: number;
   discountPercent?: number;
+  tableType?: string;
   description?: string;
   photoUrl?: string;
   photos?: string[];

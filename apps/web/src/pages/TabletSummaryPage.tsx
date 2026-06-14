@@ -94,7 +94,9 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements, locale, setLocale, setGuestCount, reset } = useTabletStore();
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
+    childrenTableSelected, childrenCount, childReplacements,
+    locale, setLocale, setGuestCount, reset } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -128,6 +130,8 @@ export const TabletSummaryPage = () => {
     includedDishes: { name: string; category: string; categoryLabel: string; servings: number }[];
     pricing: { perGuestCents: number; originalPerGuestCents: number; totalCents: number;
       originalTotalCents: number; discountPercent: number; hasDiscount: boolean; guestCount: number };
+    childrenTableName?: string; childrenCount?: number; childrenRateCents?: number; childrenSubtotalCents?: number;
+    childrenDishes?: { name: string; category: string; categoryLabel: string; servings: number }[];
     locale: Locale; restaurantName: string; restaurantLogoUrl: string | null;
   }>(null);
 
@@ -139,6 +143,9 @@ export const TabletSummaryPage = () => {
   }, [loadPublicData, restaurantId]);
 
   const selectedTableCategory = tableCategories.find((tc) => tc.id === selectedTableCategoryId);
+  const childrenTableCategory = tableCategories.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
+  const childrenActive        = childrenTableSelected && !!childrenTableCategory;
+  const childrenSubtotalCents = childrenActive ? (childrenTableCategory!.ratePerPerson * childrenCount) : 0;
   const selectedHall          = halls.find((h) => h.id === selectedHallId);
   const selectedMenuItems     = useMemo(
     () => (menuItems || []).filter((item) => selectedItems[item.id] > 0),
@@ -170,10 +177,28 @@ export const TabletSummaryPage = () => {
   const hasDiscount = discountPercent > 0;
   const factor = 1 - discountPercent / 100;
 
+  // Children's dishes for the export (its own package + free swaps), built only
+  // when the children's table is included.
+  const buildChildrenDishes = () =>
+    childrenActive
+      ? (childrenTableCategory!.packageItems ?? []).map((pi) => {
+          const swapId = childReplacements[pi.id];
+          const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
+          return {
+            name: dish.name,
+            category: dish.category,
+            categoryLabel: t(dish.category.toLowerCase() as Parameters<typeof translate>[0]),
+            servings: pi.servings ?? 1,
+          };
+        })
+      : [];
+
   const originalPerGuestCents = pricing.perGuestCents;
   const finalPerGuestCents = Math.round(originalPerGuestCents * factor);
-  const originalTotalCents = pricing.subtotalCents;
+  // Total includes the optional children's table (adult per-guest figure is unchanged).
+  const originalTotalCents = pricing.subtotalCents + childrenSubtotalCents;
   const finalTotalCents = Math.round(originalTotalCents * factor);
+  const finalChildrenSubtotalCents = Math.round(childrenSubtotalCents * factor);
 
   // Pricing payload for exports — per-guest and total figures.
   const exportPricing = {
@@ -185,6 +210,17 @@ export const TabletSummaryPage = () => {
     hasDiscount,
     guestCount,
   };
+
+  // Children's-table fields for the event record and exports (empty when off).
+  const childrenExport = childrenActive
+    ? {
+        childrenTableName: childrenTableCategory!.name,
+        childrenCount,
+        childrenRateCents: childrenTableCategory!.ratePerPerson,
+        childrenSubtotalCents: finalChildrenSubtotalCents,
+        childrenDishes: buildChildrenDishes(),
+      }
+    : {};
 
   const handleConfirm = async () => {
     if (confirmDisabled || isSubmitting) return;
@@ -200,6 +236,8 @@ export const TabletSummaryPage = () => {
         eventType,
         hallId: selectedHallId || undefined,
         tableCategoryId: selectedTableCategoryId || undefined,
+        childrenTableCategoryId: childrenActive ? childrenTableCategory!.id : undefined,
+        childrenCount: childrenActive ? childrenCount : undefined,
         notes: eventNotes.trim() || undefined,
         birthdayPersonName:  eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
         brideName:           eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
@@ -217,6 +255,7 @@ export const TabletSummaryPage = () => {
         menuItems,
         includedDishes: buildIncludedDishes(),
         pricing: exportPricing,
+        ...childrenExport,
         locale,
         restaurantName: restaurantName ?? '',
         restaurantLogoUrl: restaurantLogoUrl ?? null,
@@ -244,7 +283,7 @@ export const TabletSummaryPage = () => {
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], includedDishes, pricing: exportPricing, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
+          guestCount, selectedItems, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -473,6 +512,7 @@ export const TabletSummaryPage = () => {
                   { label: t('hall'), value: selectedHall?.name || t('not_selected') },
                   { label: t('table_category'), value: selectedTableCategory?.name || t('not_selected') },
                   { label: t('guest_count'), value: String(guestCount) },
+                  ...(childrenActive ? [{ label: t('children_table'), value: `${childrenTableCategory!.name} · ${childrenCount}` }] : []),
                   ...(eventDate ? [{ label: t('event_date'), value: new Date(eventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) }] : []),
                   ...(eventTime ? [{ label: t('event_time'), value: eventTime }] : []),
                   ...(eventType === 'BIRTHDAY' && birthdayPersonName ? [{ label: t('birthday_person_name'), value: birthdayPersonName }] : []),
@@ -584,6 +624,22 @@ export const TabletSummaryPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Children's table line */}
+              {childrenActive && (
+                <div className="px-4 sm:px-6 pt-3">
+                  <div className="flex items-baseline justify-between gap-2 py-3"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }} className="text-sm">
+                      {t('children_table')}
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {childrenCount} × {formatSum(childrenTableCategory!.ratePerPerson)}</span>
+                    </span>
+                    <span className="font-semibold whitespace-nowrap text-white">
+                      {formatSum(finalChildrenSubtotalCents)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Total */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">

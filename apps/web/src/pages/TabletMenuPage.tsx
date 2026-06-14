@@ -417,6 +417,359 @@ function CategorySlide({
   );
 }
 
+// ── Reusable: course choice (first/second/third) for a table category ─────
+// Shared by the adult table and the optional children's table so both behave
+// identically. `card` wraps the content in its own rg-card section.
+
+function CourseChoiceSection({
+  tableCategory, t, onLightbox, card = false, showName = true,
+  firstSelectedId, secondSelectedIds, thirdSelectedIds,
+  onFirst, onToggleSecond, onToggleThird,
+}: {
+  tableCategory: TableCategory;
+  t: TFn;
+  onLightbox: (src: string | null) => void;
+  card?: boolean;
+  showName?: boolean;
+  firstSelectedId?: string;
+  secondSelectedIds: string[];
+  thirdSelectedIds: string[];
+  onFirst: (id: string) => void;
+  onToggleSecond: (id: string) => void;
+  onToggleThird: (id: string) => void;
+}) {
+  const courseGroups = [
+    { category: 'FIRST_COURSE' as const, labelKey: 'choose_first_course' as const, multi: false,
+      isSelected: (id: string) => firstSelectedId === id, onToggle: onFirst },
+    { category: 'SECOND_COURSE' as const, labelKey: 'choose_second_course' as const, multi: true,
+      isSelected: (id: string) => secondSelectedIds.includes(id), onToggle: onToggleSecond },
+    { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, multi: true,
+      isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
+  ]
+    .map((cfg) => ({ ...cfg, items: (tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category) }))
+    .filter((group) => group.items.length > 0);
+  if (courseGroups.length === 0) return null;
+
+  const inner = (
+    <>
+      <div className="mb-6" style={{ textAlign: 'center' }}>
+        {showName && <p className="rg-label">{tableCategory.name}</p>}
+        <h2 style={{
+          margin: '6px 0 0', fontSize: 28, fontWeight: 800,
+          letterSpacing: '0.04em', textTransform: 'uppercase',
+          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 60%, #b8941f 100%)',
+          WebkitBackgroundClip: 'text', backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent', color: '#c9a42c',
+          textShadow: '0 2px 18px rgba(201,164,44,0.25)',
+        }}>{t('courses')}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 }}>
+          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, transparent, rgba(201,164,44,0.7))' }} />
+          <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: '#c9a42c', boxShadow: '0 0 10px rgba(201,164,44,0.85)' }} />
+          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, rgba(201,164,44,0.7), transparent)' }} />
+        </div>
+      </div>
+
+      {courseGroups.map((group, gi) => (
+        <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 100%)',
+              color: '#1a3320', fontWeight: 800, fontSize: 20,
+              boxShadow: '0 6px 18px rgba(201,164,44,0.45)',
+              border: '2px solid rgba(255,255,255,0.3)',
+            }}>{gi + 1}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
+                {t(group.labelKey)}
+              </h3>
+              {group.multi && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
+                  padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700,
+                  letterSpacing: '0.03em',
+                  color: '#e0c25a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.34)',
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {t('multi_select')}
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
+            {group.items.map((pi, i) => {
+              const item = pi.menuItem;
+              const selected = group.isSelected(item.id);
+              const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+              return (
+                <div key={item.id}
+                  className="tablet-fade-up"
+                  style={{
+                    animationDelay: `${i * 50}ms`,
+                    position: 'relative', borderRadius: 14, overflow: 'hidden',
+                    outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
+                    outlineOffset: selected ? 2 : 0,
+                    background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.06)',
+                    transition: 'outline 0.18s, background 0.18s',
+                  }}>
+                  {photoSrc ? (
+                    <button type="button"
+                      onClick={() => onLightbox(photoSrc)}
+                      style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'zoom-in', background: 'transparent', position: 'relative' }}>
+                      <img src={photoSrc} alt={item.name}
+                        style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  ) : (
+                    <div style={{ height: 120, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="30" height="30" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <button type="button"
+                    onClick={() => group.onToggle(item.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      width: '100%', padding: '8px 10px',
+                      border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                    }}>
+                    <div style={{
+                      flexShrink: 0,
+                      width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
+                      border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.3)'}`,
+                      background: selected ? '#c9a42c' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}>
+                      {selected && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                      {item.description && (
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+
+  return card ? <section className="rg-card p-4 sm:p-6 reveal">{inner}</section> : <>{inner}</>;
+}
+
+// ── Reusable: included dishes (non-course categories) with free swaps ──────
+
+function IncludedDishesSection({
+  tableCategory, menuItems, t, onLightbox, viewOnly, card = false, showName = true,
+  replacements, onReplacement,
+}: {
+  tableCategory: TableCategory;
+  menuItems: MenuItem[];
+  t: TFn;
+  onLightbox: (src: string | null) => void;
+  viewOnly: boolean;
+  card?: boolean;
+  showName?: boolean;
+  replacements: Record<string, string>;
+  onReplacement: (packageItemId: string, menuItemId: string | null) => void;
+}) {
+  const includedItems = (tableCategory.packageItems ?? []).filter(
+    (pi) => pi.menuItem.category !== 'FIRST_COURSE' && pi.menuItem.category !== 'SECOND_COURSE' && pi.menuItem.category !== 'THIRD_COURSE'
+  );
+  if (includedItems.length === 0) return null;
+  const grouped = Object.entries(
+    includedItems.reduce<Record<string, typeof includedItems>>(
+      (acc, pi) => { const cat = pi.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi); return acc; }, {}
+    )
+  ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
+
+  const inner = (
+    <>
+      <div className="mb-5">
+        {showName && <p className="rg-label">{tableCategory.name}</p>}
+        <p className="rg-heading mt-1">{t('included_with_table')}</p>
+      </div>
+      {grouped.map(([cat, items], catIndex) => (
+        <div key={cat} style={{
+          paddingTop: catIndex > 0 ? 20 : 0,
+          marginTop: catIndex > 0 ? 20 : 0,
+          borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
+            <span style={{
+              display: 'inline-block', padding: '3px 10px', borderRadius: 999,
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: '#d9b84a', background: 'rgba(201,164,44,0.12)', border: '1px solid rgba(201,164,44,0.28)',
+            }}>
+              {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
+            {items!.map((pi, i) => {
+              const freeAlts = (menuItems ?? []).filter(
+                (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' && m.id !== pi.menuItem.id
+              );
+              const chosenId = replacements[pi.id];
+              const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
+              const isSwapped = displayItem.id !== pi.menuItem.id;
+              return (
+                <div key={pi.id}
+                  className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
+                  style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
+                  {displayItem.photoUrl ? (
+                    <button type="button"
+                      onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
+                      className="block w-full overflow-hidden">
+                      <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
+                        className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                    </button>
+                  ) : (
+                    <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                      <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="p-2.5">
+                    <p className="text-sm font-semibold leading-snug text-white">{displayItem.name}</p>
+                    {displayItem.description && (
+                      <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {displayItem.description}
+                      </p>
+                    )}
+                    {!viewOnly && freeAlts.length > 0 && (
+                      <div className="mt-2.5">
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.85)', marginBottom: 5 }}>
+                          {t('swap_free')}
+                        </label>
+                        <select
+                          value={chosenId ?? pi.menuItem.id}
+                          onChange={(e) => onReplacement(pi.id, e.target.value === pi.menuItem.id ? null : e.target.value)}
+                          style={{
+                            width: '100%', padding: '7px 9px', borderRadius: 9,
+                            background: 'rgba(0,0,0,0.35)', color: '#fff',
+                            border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.15)'}`,
+                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <option value={pi.menuItem.id} style={{ background: '#1a2e20', color: '#fff' }}>
+                            {pi.menuItem.name} ({t('included_default')})
+                          </option>
+                          {freeAlts.map((alt) => (
+                            <option key={alt.id} value={alt.id} style={{ background: '#1a2e20', color: '#fff' }}>
+                              {alt.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+
+  return card ? <section className="rg-card p-4 sm:p-6 reveal">{inner}</section> : <>{inner}</>;
+}
+
+// ── Optional children's table: toggle + count + full course/dish selection ──
+
+function ChildrenTableSection({
+  tableCategory, menuItems, t, onLightbox, viewOnly,
+}: {
+  tableCategory: TableCategory;
+  menuItems: MenuItem[];
+  t: TFn;
+  onLightbox: (src: string | null) => void;
+  viewOnly: boolean;
+}) {
+  const {
+    childrenTableSelected, childrenCount,
+    childFirstCourseId, childSecondCourseIds, childThirdCourseIds, childReplacements,
+    setChildrenTableSelected, setChildrenCount,
+    setChildFirstCourse, toggleChildSecondCourse, toggleChildThirdCourse, setChildReplacement,
+  } = useTabletStore();
+
+  return (
+    <section className="rg-card p-4 sm:p-6 reveal">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <span style={{
+            display: 'inline-block', marginBottom: 6, padding: '3px 12px', borderRadius: 999,
+            fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: '#f9a8d4', background: 'rgba(236,72,153,0.14)', border: '1px solid rgba(236,72,153,0.4)',
+          }}>{t('children_table')}</span>
+          <p className="rg-heading">{tableCategory.name}</p>
+          <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            {formatSum(tableCategory.ratePerPerson)} / {t('person')}
+          </p>
+        </div>
+        {!viewOnly && (
+          <button type="button"
+            onClick={() => setChildrenTableSelected(!childrenTableSelected)}
+            className="rounded-xl px-5 py-2.5 text-sm font-bold transition-all"
+            style={childrenTableSelected
+              ? { background: '#22c55e', color: '#0f172a', boxShadow: '0 4px 14px rgba(34,197,94,0.35)' }
+              : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            {childrenTableSelected ? `✓ ${t('children_table_included')}` : t('add_children_table')}
+          </button>
+        )}
+      </div>
+
+      {childrenTableSelected && (
+        <div className="tablet-fade-in">
+          {/* Children count */}
+          <div className="mb-6" style={{ maxWidth: 260 }}>
+            <p className="rg-label" style={{ marginBottom: 6 }}>{t('children_count')}</p>
+            <input type="number" min={0} value={childrenCount || ''}
+              disabled={viewOnly}
+              onChange={(e) => setChildrenCount(e.target.value === '' ? 0 : Number(e.target.value))}
+              className="rg-input" />
+          </div>
+
+          <CourseChoiceSection
+            tableCategory={tableCategory} t={t} onLightbox={onLightbox} showName={false}
+            firstSelectedId={childFirstCourseId}
+            secondSelectedIds={childSecondCourseIds}
+            thirdSelectedIds={childThirdCourseIds}
+            onFirst={setChildFirstCourse}
+            onToggleSecond={toggleChildSecondCourse}
+            onToggleThird={toggleChildThirdCourse}
+          />
+
+          <div className="mt-6">
+            <IncludedDishesSection
+              tableCategory={tableCategory} menuItems={menuItems} t={t} onLightbox={onLightbox}
+              viewOnly={viewOnly} showName={false}
+              replacements={childReplacements} onReplacement={setChildReplacement}
+            />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export const TabletMenuPage = () => {
@@ -475,6 +828,8 @@ export const TabletMenuPage = () => {
     )
   );
   const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
+  // Single active children's table (if any) — shown as an optional add-on table.
+  const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8">
@@ -579,9 +934,9 @@ export const TabletMenuPage = () => {
       )}
 
       {welcomeShown && !selectedTableCategoryId && !isLoading &&
-        tableCategories.filter((tc) => tc.isActive).length > 0 && (
+        tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN').length > 0 && (
           <TableCategoryFullscreen
-            tableCategories={tableCategories.filter((tc) => tc.isActive)}
+            tableCategories={tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN')}
             onSelect={(id) => setTableCategory(id)}
             onLightbox={setLightboxSrc}
             locale={locale}
@@ -650,7 +1005,7 @@ export const TabletMenuPage = () => {
                       ...halls.filter((h) => h.isActive).map((h) => ({ value: h.id, label: `${h.name} · ${t('capacity')}: ${h.capacity}` }))] },
                   { label: t('select_table_category'), value: selectedTableCategoryId || '', onChange: setTableCategory,
                     options: [{ value: '', label: t('choose_table_category') },
-                      ...tableCategories.filter((tc) => tc.isActive).map((tc) => ({ value: tc.id, label: tc.name }))] },
+                      ...tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN').map((tc) => ({ value: tc.id, label: tc.name }))] },
                 ].map(({ label, value, onChange, options }) => (
                   <div key={label} className="space-y-1.5">
                     <p className="rg-label">{label}</p>
@@ -715,278 +1070,35 @@ export const TabletMenuPage = () => {
               </section>
             )}
 
-            {/* Course choice (first + second + third course) */}
-            {selectedTableCategory && (() => {
-              const courseGroups = [
-                {
-                  category: 'FIRST_COURSE' as const,
-                  labelKey: 'choose_first_course' as const,
-                  multi: false,
-                  isSelected: (id: string) => selectedFirstCourseId === id,
-                  onToggle: (id: string) => setFirstCourse(id),
-                },
-                {
-                  category: 'SECOND_COURSE' as const,
-                  labelKey: 'choose_second_course' as const,
-                  multi: true,
-                  isSelected: (id: string) => selectedSecondCourseIds.includes(id),
-                  onToggle: toggleSecondCourse,
-                },
-                {
-                  category: 'THIRD_COURSE' as const,
-                  labelKey: 'choose_third_course' as const,
-                  multi: true,
-                  isSelected: (id: string) => selectedThirdCourseIds.includes(id),
-                  onToggle: toggleThirdCourse,
-                },
-              ]
-                .map((cfg) => ({
-                  ...cfg,
-                  items: (selectedTableCategory.packageItems ?? []).filter((pi) => pi!.menuItem.category === cfg.category),
-                }))
-                .filter((group) => group.items.length > 0);
-              if (courseGroups.length === 0) return null;
-              return (
-                <section className="rg-card p-4 sm:p-6 reveal">
-                  {/* Decorated courses heading */}
-                  <div className="mb-6" style={{ textAlign: 'center' }}>
-                    <p className="rg-label">{selectedTableCategory.name}</p>
-                    <h2 style={{
-                      margin: '6px 0 0', fontSize: 28, fontWeight: 800,
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                      backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 60%, #b8941f 100%)',
-                      WebkitBackgroundClip: 'text', backgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent', color: '#c9a42c',
-                      textShadow: '0 2px 18px rgba(201,164,44,0.25)',
-                    }}>{t('courses')}</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 }}>
-                      <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, transparent, rgba(201,164,44,0.7))' }} />
-                      <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: '#c9a42c', boxShadow: '0 0 10px rgba(201,164,44,0.85)' }} />
-                      <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, rgba(201,164,44,0.7), transparent)' }} />
-                    </div>
-                  </div>
+            {/* Course choice — shared component (adult table) */}
+            {selectedTableCategory && (
+              <CourseChoiceSection
+                tableCategory={selectedTableCategory} t={t} onLightbox={setLightboxSrc} card
+                firstSelectedId={selectedFirstCourseId}
+                secondSelectedIds={selectedSecondCourseIds}
+                thirdSelectedIds={selectedThirdCourseIds}
+                onFirst={setFirstCourse}
+                onToggleSecond={toggleSecondCourse}
+                onToggleThird={toggleThirdCourse}
+              />
+            )}
 
-                  {courseGroups.map((group, gi) => (
-                    <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                        {/* Numbered gold badge */}
-                        <div style={{
-                          width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 100%)',
-                          color: '#1a3320', fontWeight: 800, fontSize: 20,
-                          boxShadow: '0 6px 18px rgba(201,164,44,0.45)',
-                          border: '2px solid rgba(255,255,255,0.3)',
-                        }}>{gi + 1}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
-                            {t(group.labelKey)}
-                          </h3>
-                          {group.multi && (
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
-                              padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700,
-                              letterSpacing: '0.03em',
-                              color: '#e0c25a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.34)',
-                            }}>
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                              {t('multi_select')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-                        {group.items.map((pi, i) => {
-                          const item = pi!.menuItem;
-                          const selected = group.isSelected(item.id);
-                          const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
-                          return (
-                            <div key={item.id}
-                              className="tablet-fade-up"
-                              style={{
-                                animationDelay: `${i * 50}ms`,
-                                position: 'relative', borderRadius: 14, overflow: 'hidden',
-                                outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
-                                outlineOffset: selected ? 2 : 0,
-                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.06)',
-                                transition: 'outline 0.18s, background 0.18s',
-                              }}>
-                              {/* Photo — click to open lightbox */}
-                              {photoSrc ? (
-                                <button type="button"
-                                  onClick={() => setLightboxSrc(photoSrc)}
-                                  style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'zoom-in', background: 'transparent', position: 'relative' }}>
-                                  <img src={photoSrc} alt={item.name}
-                                    style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
-                                  <div style={{
-                                    position: 'absolute', inset: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: 'rgba(0,0,0,0)', transition: 'background 0.18s',
-                                  }}
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.25)'; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0)'; }}
-                                  >
-                                    <svg width="28" height="28" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ opacity: 0, transition: 'opacity 0.18s' }}
-                                      className="zoom-icon">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                    </svg>
-                                  </div>
-                                </button>
-                              ) : (
-                                <div style={{ height: 120, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="30" height="30" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                </div>
-                              )}
-                              {/* Name + checkbox row */}
-                              <button type="button"
-                                onClick={() => group.onToggle(item.id)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 8,
-                                  width: '100%', padding: '8px 10px',
-                                  border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                                }}>
-                                {/* Checkbox/radio indicator */}
-                                <div style={{
-                                  flexShrink: 0,
-                                  width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
-                                  border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.3)'}`,
-                                  background: selected ? '#c9a42c' : 'transparent',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  transition: 'all 0.15s',
-                                }}>
-                                  {selected && (
-                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                      <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                                  {item.description && (
-                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {item.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              );
-            })()}
+            {/* Included dishes — shared component (adult table) */}
+            {selectedTableCategory && (
+              <IncludedDishesSection
+                tableCategory={selectedTableCategory} menuItems={menuItems ?? []} t={t}
+                onLightbox={setLightboxSrc} viewOnly={viewOnly} card
+                replacements={replacements} onReplacement={setReplacement}
+              />
+            )}
 
-            {/* Included dishes (all categories except the choosable courses) */}
-            {selectedTableCategory && (() => {
-              const includedItems = (selectedTableCategory.packageItems ?? []).filter(
-                (pi) => pi!.menuItem.category !== 'FIRST_COURSE' && pi!.menuItem.category !== 'SECOND_COURSE' && pi!.menuItem.category !== 'THIRD_COURSE'
-              );
-              if (includedItems.length === 0) return null;
-              const grouped = Object.entries(
-                includedItems.reduce<Record<string, typeof includedItems>>(
-                  (acc, pi) => { const cat = pi!.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi!); return acc; }, {}
-                )
-              ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
-              return (
-                <section className="rg-card p-4 sm:p-6 reveal">
-                  <div className="mb-5">
-                    <p className="rg-label">{selectedTableCategory.name}</p>
-                    <p className="rg-heading mt-1">{t('included_with_table')}</p>
-                  </div>
-                  {grouped.map(([cat, items], catIndex) => (
-                    <div key={cat} style={{
-                      paddingTop: catIndex > 0 ? 20 : 0,
-                      marginTop: catIndex > 0 ? 20 : 0,
-                      borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
-                        <span style={{
-                          display: 'inline-block', padding: '3px 10px', borderRadius: 999,
-                          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                          color: '#d9b84a', background: 'rgba(201,164,44,0.12)', border: '1px solid rgba(201,164,44,0.28)',
-                        }}>
-                          {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
-                        </span>
-                      </div>
-                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-                        {items!.map((pi, i) => {
-                          // Free alternatives the guest may swap this included dish for, at no cost.
-                          const freeAlts = (menuItems ?? []).filter(
-                            (m) => m.category === pi!.menuItem.category && tabletStatusOf(m) === 'FREE' && m.id !== pi!.menuItem.id
-                          );
-                          const chosenId = replacements[pi!.id];
-                          const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi!.menuItem) : pi!.menuItem;
-                          const isSwapped = displayItem.id !== pi!.menuItem.id;
-                          return (
-                          <div key={pi!.id}
-                            className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-                            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
-                            {displayItem.photoUrl ? (
-                              <button type="button"
-                                onClick={() => setLightboxSrc(getPhotoUrl(displayItem.photoUrl) ?? null)}
-                                className="block w-full overflow-hidden">
-                                <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
-                                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
-                              </button>
-                            ) : (
-                              <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                                <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                            <div className="p-2.5">
-                              <p className="text-sm font-semibold leading-snug text-white">{displayItem.name}</p>
-                              {displayItem.description && (
-                                <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                                  {displayItem.description}
-                                </p>
-                              )}
-                              {!viewOnly && freeAlts.length > 0 && (
-                                <div className="mt-2.5">
-                                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.85)', marginBottom: 5 }}>
-                                    {t('swap_free')}
-                                  </label>
-                                  <select
-                                    value={chosenId ?? pi!.menuItem.id}
-                                    onChange={(e) => setReplacement(pi!.id, e.target.value === pi!.menuItem.id ? null : e.target.value)}
-                                    style={{
-                                      width: '100%', padding: '7px 9px', borderRadius: 9,
-                                      background: 'rgba(0,0,0,0.35)', color: '#fff',
-                                      border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                    }}
-                                  >
-                                    <option value={pi!.menuItem.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                                      {pi!.menuItem.name} ({t('included_default')})
-                                    </option>
-                                    {freeAlts.map((alt) => (
-                                      <option key={alt.id} value={alt.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                                        {alt.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              );
-            })()}
+            {/* Children's table — optional add-on, shown before Additional */}
+            {selectedTableCategory && childrenTableCategory && (
+              <ChildrenTableSection
+                tableCategory={childrenTableCategory} menuItems={menuItems ?? []} t={t}
+                onLightbox={setLightboxSrc} viewOnly={viewOnly}
+              />
+            )}
 
             {/* Additional */}
             <section className="rg-card p-4 sm:p-6 reveal">

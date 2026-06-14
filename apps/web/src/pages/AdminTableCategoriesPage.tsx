@@ -319,6 +319,7 @@ export const AdminTableCategoriesPage = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [servingsById, setServingsById] = useState<Record<string, number>>({});
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
+  const [tableType, setTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -329,6 +330,7 @@ export const AdminTableCategoriesPage = () => {
   const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
   const [editServingsById, setEditServingsById] = useState<Record<string, number>>({});
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
+  const [editTableType, setEditTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -359,6 +361,7 @@ export const AdminTableCategoriesPage = () => {
         includedCategories: serializeCats(selectedCats),
         packageItems: selectedItemIds.map((id) => ({ menuItemId: id, servings: servingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
+        tableType,
         description: description.trim() || undefined,
         photos,
         isActive: true,
@@ -370,6 +373,7 @@ export const AdminTableCategoriesPage = () => {
       setSelectedItemIds([]);
       setServingsById({});
       setRatePerPersonText('0');
+      setTableType('ADULT');
       setDescription('');
       setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
@@ -399,6 +403,7 @@ export const AdminTableCategoriesPage = () => {
     setEditSelectedItemIds((category.packageItems ?? []).map((pi) => pi.menuItem.id));
     setEditServingsById(Object.fromEntries((category.packageItems ?? []).map((pi) => [pi.menuItem.id, pi.servings ?? 1])));
     setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
+    setEditTableType(category.tableType === 'CHILDREN' ? 'CHILDREN' : 'ADULT');
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -413,6 +418,7 @@ export const AdminTableCategoriesPage = () => {
         includedCategories: serializeCats(editSelectedCats),
         packageItems: editSelectedItemIds.map((id) => ({ menuItemId: id, servings: editServingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
+        tableType: editTableType,
         description: editDescription.trim() || undefined,
         photos: editPhotos,
         isActive: editIsActive,
@@ -444,6 +450,15 @@ export const AdminTableCategoriesPage = () => {
               <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
             </label>
           </div>
+
+          <label style={{ display: 'grid', gap: 6, maxWidth: 320 }}>
+            {t('table_type')}
+            <select className="adm-input" value={tableType}
+              onChange={(e) => setTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
+              <option value="ADULT">{t('table_type_adult')}</option>
+              <option value="CHILDREN">{t('table_type_children')}</option>
+            </select>
+          </label>
 
           <FoodPackageSection
             selectedCats={selectedCats}
@@ -502,6 +517,15 @@ export const AdminTableCategoriesPage = () => {
                           <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
                         </label>
                       </div>
+
+                      <label style={{ display: 'grid', gap: 4, maxWidth: 320 }}>
+                        {t('table_type')}
+                        <select className="adm-input" value={editTableType}
+                          onChange={(e) => setEditTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
+                          <option value="ADULT">{t('table_type_adult')}</option>
+                          <option value="CHILDREN">{t('table_type_children')}</option>
+                        </select>
+                      </label>
 
                       <FoodPackageSection
                         selectedCats={editSelectedCats}
@@ -566,7 +590,14 @@ export const AdminTableCategoriesPage = () => {
                           </div>
                         )}
                         <div>
-                          <strong style={{ color: '#f8fafc', fontSize: 15 }}>{category.name}</strong>
+                          <strong style={{ color: '#f8fafc', fontSize: 15 }}>
+                            {category.name}
+                            {category.tableType === 'CHILDREN' && (
+                              <span className="adm-badge" style={{ marginLeft: 8, background: 'rgba(236,72,153,0.16)', color: '#f9a8d4', border: '1px solid rgba(236,72,153,0.35)' }}>
+                                {t('table_type_children')}
+                              </span>
+                            )}
+                          </strong>
                           <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
                             {t('rate')}: <span style={{ color: '#c9a42c', fontWeight: 600 }}>{formatSum(category.ratePerPerson)}</span>
                             {!category.isActive && <span style={{ color: '#fca5a5' }}> • {t('inactive')}</span>}

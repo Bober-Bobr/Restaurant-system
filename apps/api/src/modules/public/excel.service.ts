@@ -24,6 +24,10 @@ interface SummaryData {
   guestCount: number;
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
+  childrenTableName?: string;
+  childrenCount?: number;
+  childrenRateCents?: number;
+  childrenSubtotalCents?: number;
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -218,6 +222,15 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   perGuestRow.getCell(1).font = { bold: true, family: 2 };
   perGuestRow.getCell(5).font = { bold: true, family: 2 };
   perGuestRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+
+  // Children's table line
+  if (data.childrenTableName && (data.childrenSubtotalCents ?? 0) > 0) {
+    const per = data.childrenRateCents != null ? ` (${data.childrenCount} × ${formatSom(data.childrenRateCents)})` : '';
+    const childRow = worksheet.addRow([`${translate('children_table', data.locale)}${per}`, '', '', '', tiyinToSom(data.childrenSubtotalCents ?? 0)]);
+    childRow.getCell(1).font = { family: 2 };
+    childRow.getCell(5).font = { family: 2 };
+    childRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  }
 
   // Total (with optional struck-through original)
   if (hasDiscount && data.pricing.originalTotalCents != null) {
