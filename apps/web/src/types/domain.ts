@@ -52,6 +52,7 @@ export type TableCategory = {
   photoUrl?: string;
   photos?: string[];
   isActive: boolean;
+  sortOrder?: number;
   packageItems?: TableCategoryPackageItem[];
 };
 

@@ -49,6 +49,7 @@ export const AdminLayout = () => {
     { to: '/', label: t('events') },
     { to: '/calendar', label: t('calendar') },
     ...(role === 'ADMIN' ? [{ to: '/admin/invoices', label: t('invoices') }] : []),
+    ...(role === 'ADMIN' ? [{ to: '/admin/arrangement', label: t('arrangement') }] : []),
     { to: '/admin/menu', label: t('menu') },
     { to: '/admin/additional', label: t('additional') },
     { to: '/admin/table-categories', label: t('tables') },

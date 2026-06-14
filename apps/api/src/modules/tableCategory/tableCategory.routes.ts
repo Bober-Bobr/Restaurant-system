@@ -5,6 +5,8 @@ const router = Router();
 const controller = new TableCategoryController();
 
 router.get('/', controller.list.bind(controller));
+router.get('/all', controller.listAll.bind(controller));
+router.put('/arrangement', controller.saveArrangement.bind(controller));
 router.post('/', controller.create.bind(controller));
 router.get('/:id', controller.getById.bind(controller));
 router.patch('/:id', controller.update.bind(controller));

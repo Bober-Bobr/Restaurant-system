@@ -24,6 +24,13 @@ export const tableCategoryService = {
     const { data } = await httpClient.patch<TableCategory>(`/table-categories/${id}`, payload);
     return data;
   },
+  async listAll() {
+    const { data } = await httpClient.get<TableCategory[]>('/table-categories/all');
+    return data;
+  },
+  async saveArrangement(order: { id: string; sortOrder: number }[]) {
+    await httpClient.put('/table-categories/arrangement', { order });
+  },
   async remove(id: string) {
     await httpClient.delete(`/table-categories/${id}`);
   }

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
+import { AdminArrangementAdminPage } from '../pages/AdminArrangementAdminPage';
 import { AdminMenuPage } from '../pages/AdminMenuPage';
 import { AdminAdditionalPage } from '../pages/AdminAdditionalPage';
 import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
@@ -261,6 +262,7 @@ export const App = () => {
         <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
+        <Route path="/admin/arrangement" element={<AdminArrangementAdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

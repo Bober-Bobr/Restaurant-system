@@ -24,6 +24,15 @@ export class TableCategoryService {
     return this.tableCategoryRepository.list(restaurantId, params);
   }
 
+  async listAllTableCategories(restaurantId: string) {
+    return this.tableCategoryRepository.listAll(restaurantId);
+  }
+
+  async saveArrangement(restaurantId: string, order: { id: string; sortOrder: number }[]) {
+    await this.tableCategoryRepository.saveArrangement(restaurantId, order);
+    return { ok: true };
+  }
+
   async countTableCategories(restaurantId: string) {
     return this.tableCategoryRepository.count(restaurantId);
   }

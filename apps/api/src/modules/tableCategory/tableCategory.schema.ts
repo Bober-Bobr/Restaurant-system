@@ -19,6 +19,13 @@ export const createTableCategorySchema = z.object({
 
 export const updateTableCategorySchema = createTableCategorySchema.partial();
 
+export const tableCategoryArrangementSchema = z.object({
+  order: z.array(z.object({
+    id: z.string().cuid(),
+    sortOrder: z.number().int().min(0)
+  }))
+});
+
 export const tableCategoryIdSchema = z.object({
   id: z.string().cuid()
 });

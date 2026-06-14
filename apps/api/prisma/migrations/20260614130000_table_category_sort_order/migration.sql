@@ -1,0 +1,1 @@
+ALTER TABLE "TableCategory" ADD COLUMN "sortOrder" INTEGER NOT NULL DEFAULT 0;

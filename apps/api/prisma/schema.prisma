@@ -218,6 +218,7 @@ model TableCategory {
   photoUrl           String?
   photos             Json                      @default("[]")
   isActive           Boolean                   @default(true)
+  sortOrder          Int                       @default(0)
   restaurantId       String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt

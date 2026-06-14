@@ -27,7 +27,7 @@ export class TableCategoryRepository {
     return prisma.tableCategory.findMany({
       ...params,
       where: { restaurantId },
-      orderBy: { name: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude
     });
   }
@@ -35,9 +35,28 @@ export class TableCategoryRepository {
   async listActive(restaurantId: string) {
     return prisma.tableCategory.findMany({
       where: { restaurantId, isActive: true },
-      orderBy: { name: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude
     });
+  }
+
+  async listAll(restaurantId: string) {
+    return prisma.tableCategory.findMany({
+      where: { restaurantId },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      include: packageItemsInclude
+    });
+  }
+
+  async saveArrangement(restaurantId: string, order: { id: string; sortOrder: number }[]) {
+    await prisma.$transaction(
+      order.map((item) =>
+        prisma.tableCategory.updateMany({
+          where: { id: item.id, restaurantId },
+          data: { sortOrder: item.sortOrder },
+        })
+      )
+    );
   }
 
   async count(restaurantId: string) {

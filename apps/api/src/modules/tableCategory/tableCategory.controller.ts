@@ -3,6 +3,7 @@ import { getPagination } from '../../utils/http.js';
 import { TableCategoryRepository } from './tableCategory.repository.js';
 import {
   createTableCategorySchema,
+  tableCategoryArrangementSchema,
   tableCategoryIdSchema,
   updateTableCategorySchema
 } from './tableCategory.schema.js';
@@ -14,6 +15,15 @@ export class TableCategoryController {
   async list(request: Request, response: Response) {
     const pagination = getPagination(request);
     response.json(await tableCategoryService.listTableCategories(request.restaurantId!, pagination));
+  }
+
+  async listAll(request: Request, response: Response) {
+    response.json(await tableCategoryService.listAllTableCategories(request.restaurantId!));
+  }
+
+  async saveArrangement(request: Request, response: Response) {
+    const { order } = tableCategoryArrangementSchema.parse(request.body);
+    response.json(await tableCategoryService.saveArrangement(request.restaurantId!, order));
   }
 
   async create(request: Request, response: Response) {
