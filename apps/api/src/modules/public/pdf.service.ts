@@ -6,7 +6,6 @@ import { translate, type Locale } from '../../utils/translate.js';
 import { formatSom } from '../../utils/currency.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// When compiled: dist/modules/public/ → three levels up → apps/api/
 const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
 
 interface MenuItem {
@@ -39,12 +38,11 @@ interface SummaryData {
   restaurantLogoUrl?: string | null;
 }
 
-// Resolve a "/uploads/..." URL to an on-disk path, guarding against traversal.
 function resolveUploadPath(url: string | null | undefined): string | null {
   if (!url) return null;
   const marker = '/uploads/';
   const idx = url.indexOf(marker);
-  if (idx === -1) return null; // external URL or unrecognised — caller falls back
+  if (idx === -1) return null;
   const relative = url.slice(idx + marker.length);
   if (relative.includes('..')) return null;
   const full = path.join(UPLOADS_DIR, relative);
@@ -52,17 +50,14 @@ function resolveUploadPath(url: string | null | undefined): string | null {
   return full;
 }
 
-// Load the logo buffer: restaurant upload (local file) → remote URL → system logo.
 export async function loadLogoBuffer(
   restaurantLogoUrl: string | null | undefined,
   uploadsDir: string,
 ): Promise<Buffer | null> {
-  // 1. Local uploaded file
   const localPath = resolveUploadPath(restaurantLogoUrl);
   if (localPath) {
     try { return fs.readFileSync(localPath); } catch { /* fall through */ }
   }
-  // 2. Remote http(s) URL
   if (restaurantLogoUrl && /^https?:\/\//i.test(restaurantLogoUrl)) {
     try {
       const res = await fetch(restaurantLogoUrl);
@@ -72,7 +67,6 @@ export async function loadLogoBuffer(
       }
     } catch { /* fall through */ }
   }
-  // 3. Bundled system logo (try dist-relative then cwd-relative)
   const candidates = [
     path.resolve(uploadsDir, '..', 'src', 'assets', 'logo.png'),
     path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png'),
@@ -83,229 +77,231 @@ export async function loadLogoBuffer(
   return null;
 }
 
-// ── Tablet-page theme ──────────────────────────────────────────────────────
-const PAGE_BG = '#0a1f12';   // deep green
-const PANEL_BG = '#15301f';  // lighter green card
-const GOLD = '#c9a42c';
-const WHITE = '#f4f7f5';
-const MUTED = '#9fb8a6';
-const DIVIDER = '#2a4d36';
-
-const MARGIN = 50;
-
 export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
   const logoImage = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: MARGIN, bufferPages: true });
+    const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
     const buffers: Buffer[] = [];
-
     doc.on('data', buffers.push.bind(buffers));
     doc.on('end', () => resolve(Buffer.concat(buffers)));
     doc.on('error', reject);
 
-    // Fonts (Cyrillic-capable on Linux; fallback handled by pdfkit itself)
-    let fontRegular = 'Helvetica';
-    let fontBold = 'Helvetica-Bold';
+    // Register Cyrillic-capable fonts
+    let R = 'Helvetica';
+    let B = 'Helvetica-Bold';
     try {
-      doc.registerFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
-      doc.registerFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf');
-      fontRegular = 'DejaVu';
-      fontBold = 'DejaVu-Bold';
-    } catch {
-      // keep Helvetica
-    }
-
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-    const contentWidth = pageWidth - MARGIN * 2;
-
-    const paintBackground = () => {
-      doc.save();
-      doc.rect(0, 0, pageWidth, pageHeight).fill(PAGE_BG);
-      doc.restore();
-    };
-    doc.on('pageAdded', paintBackground);
-    paintBackground();
+      doc.registerFont('R', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+      doc.registerFont('B', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf');
+      R = 'R'; B = 'B';
+    } catch { /* keep Helvetica */ }
 
     const t = (key: Parameters<typeof translate>[0]) => translate(key, data.locale);
 
-    // ── Header band ──────────────────────────────────────────────────────
-    const headerH = 110;
-    doc.save();
-    doc.roundedRect(MARGIN, MARGIN, contentWidth, headerH, 14).fill(PANEL_BG);
-    doc.restore();
+    const ML = 40;  // margin left
+    const MR = 40;  // margin right
+    const PW = doc.page.width;
+    const PH = doc.page.height;
+    const TW = PW - ML - MR; // total content width
 
-    const padX = MARGIN + 22;
-    let textX = padX;
+    // Table column widths
+    const COL1 = TW * 0.78;
+    const COL2 = TW * 0.22;
+    const ROW_H = 18;
+    const SECTION_H = 20;
+    const HEADER_H = 22;
+
+    let curY = ML;
+
+    // ── Table drawing helpers ─────────────────────────────────────────────
+
+    // Check if we need a new page (with some bottom margin)
+    const ensureSpace = (needed: number) => {
+      if (curY + needed > PH - 50) {
+        doc.addPage();
+        curY = ML;
+      }
+    };
+
+    // Draw a single bordered cell
+    const cell = (x: number, y: number, w: number, h: number, text: string, opts: {
+      font?: string; fontSize?: number; align?: 'left' | 'center' | 'right';
+      bold?: boolean; fillColor?: string; textColor?: string; paddingLeft?: number;
+      border?: boolean;
+    } = {}) => {
+      const {
+        font, fontSize = 9, align = 'left',
+        fillColor = '#ffffff', textColor = '#000000',
+        paddingLeft = 4, border = true,
+      } = opts;
+      doc.save();
+      doc.rect(x, y, w, h).fillColor(fillColor).fill();
+      if (border) {
+        doc.rect(x, y, w, h).lineWidth(0.5).strokeColor('#000000').stroke();
+      }
+      const f = font ?? (opts.bold ? B : R);
+      doc.fillColor(textColor).font(f, fontSize)
+        .text(text, x + paddingLeft, y + (h - fontSize * 1.1) / 2 + 1, {
+          width: w - paddingLeft * 2, align, lineBreak: false, ellipsis: true,
+        });
+      doc.restore();
+    };
+
+    // Draw a table header row (two columns with labels)
+    const tableHeader = (x: number, y: number, label1: string, label2: string) => {
+      cell(x, y, COL1, HEADER_H, label1, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
+      cell(x + COL1, y, COL2, HEADER_H, label2, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
+      return y + HEADER_H;
+    };
+
+    // Draw a section sub-header spanning both columns
+    const sectionRow = (x: number, y: number, label: string) => {
+      ensureSpace(SECTION_H);
+      cell(x, y, TW, SECTION_H, label, { bold: true, fontSize: 9, align: 'center', fillColor: '#e8e8e8' });
+      return y + SECTION_H;
+    };
+
+    // Draw a data row
+    const dataRow = (x: number, y: number, name: string, qty: string, shade = false) => {
+      ensureSpace(ROW_H);
+      cell(x, y, COL1, ROW_H, name, { fontSize: 9, fillColor: shade ? '#fafafa' : '#ffffff' });
+      cell(x + COL1, y, COL2, ROW_H, qty, { fontSize: 9, align: 'center', fillColor: shade ? '#fafafa' : '#ffffff' });
+      return y + ROW_H;
+    };
+
+    // ── Page top: logo + restaurant name + document title ─────────────────
+
     if (logoImage) {
       try {
-        doc.image(logoImage, padX, MARGIN + 22, { fit: [66, 66] });
-        textX = padX + 84;
+        doc.image(logoImage, ML, curY, { fit: [50, 50] });
       } catch { /* ignore */ }
     }
 
-    doc.fillColor(GOLD).font(fontBold, 22)
-      .text(data.restaurantName || 'Restaurant', textX, MARGIN + 30, { width: contentWidth - (textX - MARGIN) - 22 });
-    doc.fillColor(MUTED).font(fontRegular, 12)
-      .text(t('selection_summary'), textX, MARGIN + 62, { width: contentWidth - (textX - MARGIN) - 22 });
+    const titleX = logoImage ? ML + 58 : ML;
+    const titleW = logoImage ? TW - 58 : TW;
 
-    doc.y = MARGIN + headerH + 24;
+    doc.font(B, 14).fillColor('#000000')
+      .text(data.restaurantName || 'Restaurant', titleX, curY + 4, { width: titleW, align: 'center' });
+    doc.font(B, 12).fillColor('#000000')
+      .text(t('menu_for_banquet'), titleX, curY + 22, { width: titleW, align: 'center' });
 
-    // ── Section helper: gold title with accent bar + divider ─────────────
-    const section = (title: string) => {
-      if (doc.y > pageHeight - 120) doc.addPage();
-      const y = doc.y;
-      doc.save();
-      doc.roundedRect(MARGIN, y, 4, 16, 2).fill(GOLD);
-      doc.restore();
-      doc.fillColor(GOLD).font(fontBold, 14).text(title, MARGIN + 14, y, { width: contentWidth - 14 });
-      doc.moveDown(0.4);
-      const ly = doc.y;
-      doc.save();
-      doc.moveTo(MARGIN, ly).lineTo(pageWidth - MARGIN, ly).lineWidth(0.6).strokeColor(DIVIDER).stroke();
-      doc.restore();
-      doc.moveDown(0.5);
-    };
+    curY = Math.max(curY + 55, (logoImage ? curY + 58 : curY + 40));
 
-    const labelValue = (label: string, value: string) => {
-      const y = doc.y;
-      doc.fillColor(MUTED).font(fontRegular, 11).text(`${label}:`, MARGIN, y, { continued: true });
-      doc.fillColor(WHITE).font(fontBold, 11).text(`  ${value}`);
-    };
+    // ── Info block (two-column label/value grid) ──────────────────────────
 
-    const priceRow = (label: string, value: string, emphasize = false) => {
-      const y = doc.y;
-      doc.fillColor(emphasize ? GOLD : MUTED).font(emphasize ? fontBold : fontRegular, emphasize ? 13 : 11)
-        .text(label, MARGIN, y, { width: contentWidth * 0.6, continued: false });
-      doc.fillColor(emphasize ? GOLD : WHITE).font(fontBold, emphasize ? 13 : 11)
-        .text(value, MARGIN, y, { width: contentWidth, align: 'right' });
-    };
+    const today = new Date().toLocaleDateString(
+      data.locale === 'ru' ? 'ru-RU' : data.locale === 'uz' ? 'uz-UZ' : 'en-GB',
+      { day: '2-digit', month: '2-digit', year: '2-digit' }
+    );
 
-    // ── Customer ──────────────────────────────────────────────────────────
-    section(t('customer_information'));
-    labelValue(t('name'), data.customerName);
-    labelValue(t('phone'), data.customerPhone);
-    doc.moveDown(1);
+    const infoRows = [
+      [t('hall') + ':', data.hallName, t('date') + ':', today],
+      [t('name') + ':', data.customerName, t('phone') + ':', data.customerPhone],
+      [t('table_category') + ':', data.tableCategoryName, t('guest_count') + ':', String(data.guestCount)],
+    ];
 
-    // ── Event details ───────────────────────────────────────────────────
-    section(t('event_details'));
-    labelValue(t('hall'), data.hallName);
-    labelValue(t('table_category'), data.tableCategoryName);
-    labelValue(t('guest_count'), String(data.guestCount));
-    doc.moveDown(1);
+    const halfW = TW / 2 - 4;
+    for (const [lbl1, val1, lbl2, val2] of infoRows) {
+      ensureSpace(16);
+      doc.font(B, 8).fillColor('#555').text(lbl1!, ML, curY + 1, { width: 70, lineBreak: false });
+      doc.font(R, 9).fillColor('#000').text(val1!, ML + 72, curY + 1, { width: halfW - 72, lineBreak: false });
+      doc.font(B, 8).fillColor('#555').text(lbl2!, ML + halfW + 8, curY + 1, { width: 60, lineBreak: false });
+      doc.font(R, 9).fillColor('#000').text(val2!, ML + halfW + 70, curY + 1, { width: halfW - 70, lineBreak: false });
+      curY += 14;
+    }
 
-    // ── Dishes included with the chosen table (grouped into category blocks) ─
+    curY += 8;
+
+    // ── Main table ────────────────────────────────────────────────────────
+
+    curY = tableHeader(ML, curY, t('dish_name'), t('qty_pcs'));
+
+    // Group included dishes by category
     const includedDishes = data.includedDishes ?? [];
-    if (includedDishes.length > 0) {
-      section(t('included_with_table'));
-
-      // Group dishes into category blocks, preserving first-seen order.
-      type IncludedBlock = { label: string; dishes: typeof includedDishes };
-      const blocks: IncludedBlock[] = [];
-      const blockByCat = new Map<string, IncludedBlock>();
-      for (const dish of includedDishes) {
-        let block = blockByCat.get(dish.category);
-        if (!block) {
-          block = { label: dish.categoryLabel || dish.category, dishes: [] };
-          blockByCat.set(dish.category, block);
-          blocks.push(block);
-        }
-        block.dishes.push(dish);
+    type Block = { label: string; dishes: typeof includedDishes };
+    const blocks: Block[] = [];
+    const blockByCat = new Map<string, Block>();
+    for (const dish of includedDishes) {
+      let block = blockByCat.get(dish.category);
+      if (!block) {
+        block = { label: dish.categoryLabel || dish.category, dishes: [] };
+        blockByCat.set(dish.category, block);
+        blocks.push(block);
       }
+      block.dishes.push(dish);
+    }
 
-      blocks.forEach((block, bi) => {
-        if (doc.y > pageHeight - 90) doc.addPage();
-        // Category (block) heading
-        doc.fillColor(GOLD).font(fontBold, 11).text(block.label, MARGIN, doc.y, { width: contentWidth });
-        doc.moveDown(0.25);
-        block.dishes.forEach((dish) => {
+    // Render included dish blocks
+    let shade = false;
+    if (blocks.length > 0) {
+      for (const block of blocks) {
+        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        for (const dish of block.dishes) {
           const servings = dish.servings ?? 1;
-          const y = doc.y;
-          doc.fillColor(WHITE).font(fontRegular, 11)
-            .text(`•  ${dish.name}`, MARGIN + 8, y, { width: contentWidth * 0.72 });
-          doc.fillColor(GOLD).font(fontBold, 11)
-            .text(`× ${servings}`, MARGIN, y, { width: contentWidth - 4, align: 'right' });
-          doc.moveDown(0.2);
-        });
-        // Separator between category blocks (not after the last one).
-        if (bi < blocks.length - 1) {
-          doc.moveDown(0.35);
-          const sy = doc.y;
-          doc.save();
-          doc.moveTo(MARGIN, sy).lineTo(pageWidth - MARGIN, sy).lineWidth(0.5).strokeColor(DIVIDER).dash(2, { space: 2 }).stroke();
-          doc.undash();
-          doc.restore();
-          doc.moveDown(0.45);
+          curY = dataRow(ML, curY, dish.name, String(servings), shade);
+          shade = !shade;
         }
-      });
-      doc.moveDown(0.7);
-    }
-
-    // ── Menu items ──────────────────────────────────────────────────────
-    section(t('selected_menu_items'));
-    const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id] > 0);
-    if (selectedMenuItems.length === 0) {
-      doc.fillColor(MUTED).font(fontRegular, 11).text('—', MARGIN);
-    }
-    selectedMenuItems.forEach((item) => {
-      const quantity = data.selectedItems[item.id];
-      const itemTotal = item.priceCents * quantity;
-      const y = doc.y;
-      doc.fillColor(WHITE).font(fontRegular, 11)
-        .text(`${item.name}  ×${quantity}`, MARGIN, y, { width: contentWidth * 0.65, continued: false });
-      doc.fillColor(GOLD).font(fontBold, 11)
-        .text(formatSom(itemTotal), MARGIN, y, { width: contentWidth, align: 'right' });
-      if (item.description) {
-        doc.fillColor(MUTED).font(fontRegular, 9).text(item.description, MARGIN + 12, doc.y, { width: contentWidth - 12 });
       }
-      doc.moveDown(0.3);
-    });
-    doc.moveDown(0.7);
+    }
 
-    // ── Pricing (price per guest + total) ───────────────────────────────
-    section(t('pricing'));
+    // Additional paid items
+    const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id] > 0);
+    if (selectedMenuItems.length > 0) {
+      // Group by category label
+      type AdditionalBlock = { label: string; items: typeof selectedMenuItems };
+      const addBlocks: AdditionalBlock[] = [];
+      const addByCat = new Map<string, AdditionalBlock>();
+      for (const item of selectedMenuItems) {
+        let block = addByCat.get(item.category);
+        if (!block) {
+          // Use the translated category key from the category enum
+          const catKey = item.category.toLowerCase() as Parameters<typeof translate>[0];
+          let catLabel = item.category;
+          try { catLabel = translate(catKey, data.locale); } catch { /* keep enum */ }
+          block = { label: catLabel, items: [] };
+          addByCat.set(item.category, block);
+          addBlocks.push(block);
+        }
+        block.items.push(item);
+      }
+      for (const block of addBlocks) {
+        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        for (const item of block.items) {
+          const qty = data.selectedItems[item.id];
+          curY = dataRow(ML, curY, item.name, String(qty), shade);
+          shade = !shade;
+        }
+      }
+    }
+
+    // ── Pricing rows at the bottom of the table ───────────────────────────
     const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
-
-    // A right-aligned label row whose value is struck through.
-    const struckRow = (label: string, value: string) => {
-      const oy = doc.y;
-      doc.fillColor(MUTED).font(fontRegular, 11).text(label, MARGIN, oy, { width: contentWidth * 0.6 });
-      doc.fillColor(MUTED).font(fontRegular, 11).text(value, MARGIN, oy, { width: contentWidth, align: 'right' });
-      const tw = doc.widthOfString(value);
-      const lineY = oy + 7;
-      doc.save();
-      doc.moveTo(pageWidth - MARGIN - tw, lineY).lineTo(pageWidth - MARGIN, lineY).lineWidth(0.8).strokeColor(MUTED).stroke();
-      doc.restore();
-    };
-
-    if (hasDiscount) {
-      priceRow(t('discount'), `−${data.pricing.discountPercent}%`);
-    }
-    // Price per guest
-    if (hasDiscount && data.pricing.originalPerGuestCents != null) {
-      struckRow(`${t('price_per_guest')} (${t('original_price')})`, formatSom(data.pricing.originalPerGuestCents));
-    }
-    priceRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
-    doc.moveDown(0.3);
-    // Total
     const totalCents = data.pricing.totalCents ?? data.pricing.perGuestCents;
-    if (hasDiscount && data.pricing.originalTotalCents != null) {
-      struckRow(`${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents));
-    }
-    priceRow(t('total'), formatSom(totalCents), true);
-    doc.moveDown(1);
 
-    // ── Footer ──────────────────────────────────────────────────────────
-    if (doc.y > pageHeight - 140) doc.addPage();
-    const fy = doc.y;
-    const footerH = 84;
-    doc.save();
-    doc.roundedRect(MARGIN, fy, contentWidth, footerH, 12).fill(PANEL_BG);
-    doc.restore();
-    doc.fillColor(WHITE).font(fontRegular, 11)
-      .text(t('thank_you_message'), MARGIN + 18, fy + 16, { width: contentWidth - 36 });
-    doc.fillColor(GOLD).font(fontBold, 14)
-      .text(`${t('total')}: ${formatSom(totalCents)}`, MARGIN + 18, fy + 50, { width: contentWidth - 36 });
+    ensureSpace(SECTION_H + ROW_H * 3 + 20);
+
+    curY = sectionRow(ML, curY, t('pricing').toUpperCase());
+
+    if (hasDiscount && data.pricing.originalPerGuestCents != null) {
+      curY = dataRow(ML, curY, `${t('price_per_guest')} (${t('original_price')})`, formatSom(data.pricing.originalPerGuestCents), false);
+    }
+    curY = dataRow(ML, curY, t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
+    if (hasDiscount) {
+      curY = dataRow(ML, curY, t('discount'), `−${data.pricing.discountPercent}%`, false);
+    }
+    if (hasDiscount && data.pricing.originalTotalCents != null) {
+      curY = dataRow(ML, curY, `${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents), false);
+    }
+    // Total row — bold, slightly taller
+    ensureSpace(ROW_H + 4);
+    cell(ML, curY, COL1, ROW_H + 4, t('total'), { bold: true, fontSize: 10, fillColor: '#f0f0f0' });
+    cell(ML + COL1, curY, COL2, ROW_H + 4, formatSom(totalCents), { bold: true, fontSize: 10, align: 'center', fillColor: '#f0f0f0' });
+    curY += ROW_H + 4;
+
+    // ── Footer note ───────────────────────────────────────────────────────
+    curY += 14;
+    ensureSpace(30);
+    doc.font(R, 8).fillColor('#555')
+      .text(t('thank_you_message'), ML, curY, { width: TW, align: 'center' });
 
     doc.end();
   });

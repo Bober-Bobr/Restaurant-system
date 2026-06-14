@@ -7,6 +7,10 @@ export const defaultLocale: Locale = 'uz';
 const resources = {
   en: {
     selection_summary: 'Selection Summary',
+    menu_for_banquet: 'MENU FOR BANQUET',
+    dish_name: 'Dish name',
+    qty_pcs: 'Qty (pcs)',
+    date: 'Date',
     customer_information: 'Customer Information',
     name: 'Name',
     phone: 'Phone',
@@ -36,6 +40,10 @@ const resources = {
   },
   ru: {
     selection_summary: 'Сводка выбора',
+    menu_for_banquet: 'МЕНЮ НА БАНКЕТ',
+    dish_name: 'Наименование',
+    qty_pcs: 'Количество (шт)',
+    date: 'Дата',
     customer_information: 'Информация о клиенте',
     name: 'Имя',
     phone: 'Телефон',
@@ -65,6 +73,10 @@ const resources = {
   },
   uz: {
     selection_summary: 'Tanlov xulosasi',
+    menu_for_banquet: 'BANKET MENYUSI',
+    dish_name: 'Taom nomi',
+    qty_pcs: 'Miqdor (dona)',
+    date: 'Sana',
     customer_information: 'Mijoz maʼlumotlari',
     name: 'Ism',
     phone: 'Telefon',
