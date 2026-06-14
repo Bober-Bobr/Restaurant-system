@@ -869,10 +869,14 @@ export const TabletMenuPage = () => {
                       borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                        <div style={{ width: 3, height: 16, borderRadius: 2, background: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
+                        <span style={{
+                          display: 'inline-block', padding: '3px 10px', borderRadius: 999,
+                          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                          color: '#d9b84a', background: 'rgba(201,164,44,0.12)', border: '1px solid rgba(201,164,44,0.28)',
+                        }}>
                           {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
-                        </p>
+                        </span>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {items!.map((pi, i) => {
@@ -955,10 +959,10 @@ export const TabletMenuPage = () => {
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
                 {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && tabletStatusOf(item) === 'PAID'))].map((cat) => (
                   <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
-                    className="shrink-0 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200"
+                    className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200"
                     style={activeCategory === cat
-                      ? { background: '#c9a42c', color: '#1a3320' }
-                      : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                      ? { background: '#c9a42c', color: '#1a3320', boxShadow: '0 4px 14px rgba(201,164,44,0.35)' }
+                      : { background: 'rgba(201,164,44,0.08)', color: 'rgba(217,184,74,0.9)', border: '1px solid rgba(201,164,44,0.28)' }}>
                     {cat === null ? t('filter_all') : t(cat.toLowerCase() as Parameters<typeof translate>[0])}
                   </button>
                 ))}
@@ -973,7 +977,7 @@ export const TabletMenuPage = () => {
               ) : error ? (
                 <div className="rounded-2xl p-6 text-sm" style={{ background: 'rgba(220,38,38,0.15)', color: '#fca5a5' }}>{error}</div>
               ) : sortedAndFiltered.length > 0 ? (
-                <div key={activeCategory ?? 'all'} className="tablet-fade-in grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div key={activeCategory ?? 'all'} className="tablet-fade-in grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
