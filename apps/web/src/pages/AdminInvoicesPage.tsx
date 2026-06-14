@@ -8,7 +8,7 @@ import type { Event } from '../types/domain';
 
 // 1,000,000 so'm expressed in tiyin (amounts are stored as tiyin = 1/100 so'm).
 const MILLION_TIYIN = 100_000_000;
-const roundUpToMillion = (tiyin: number) => Math.ceil(tiyin / MILLION_TIYIN) * MILLION_TIYIN;
+const roundDownToMillion = (tiyin: number) => Math.floor(tiyin / MILLION_TIYIN) * MILLION_TIYIN;
 
 // Total billable price of an event: the table package (rate per guest × guests)
 // plus every additional dish (quantity × unit price snapshot).
@@ -106,7 +106,7 @@ export const AdminInvoicesPage = () => {
           const dishes = (event.selections ?? []).reduce((sum, s) => sum + s.quantity * s.unitPriceCents, 0);
           const exactTotal = eventTotalCents(event);
           const rounded = roundedIds.has(event.id);
-          const shownTotal = rounded ? roundUpToMillion(exactTotal) : exactTotal;
+          const shownTotal = rounded ? roundDownToMillion(exactTotal) : exactTotal;
           const isRounded = rounded && shownTotal !== exactTotal;
           const isPaid = event.status === 'COMPLETED';
           const isCancelled = event.status === 'CANCELLED';
