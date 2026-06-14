@@ -55,6 +55,7 @@ export const AdminLayout = () => {
     { to: '/admin/halls', label: t('halls') },
     { to: '/admin/photos', label: t('photos') },
     ...(role === 'ADMIN' ? [{ to: '/admin/users', label: t('users') }] : []),
+    ...(role === 'ADMIN' ? [{ to: '/admin/settings', label: t('settings') }] : []),
     { to: '/devices', label: t('devices') },
   ];
 

@@ -24,6 +24,10 @@ export const arrangementSchema = z.object({
   }))
 });
 
+export const settingsSchema = z.object({
+  excludedCategories: z.array(z.nativeEnum(MenuCategory))
+});
+
 export const menuItemIdSchema = z.object({
   menuItemId: z.string().cuid()
 });

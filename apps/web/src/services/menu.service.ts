@@ -29,5 +29,13 @@ export const menuService = {
     dishOrder: { id: string; sortOrder: number }[];
   }) {
     await httpClient.put('/menu-items/arrangement', payload);
+  },
+  async getSettings() {
+    const { data } = await httpClient.get<{ excludedCategories: MenuItem['category'][] }>('/menu-items/settings');
+    return data;
+  },
+  async saveSettings(excludedCategories: MenuItem['category'][]) {
+    const { data } = await httpClient.put<{ excludedCategories: MenuItem['category'][] }>('/menu-items/settings', { excludedCategories });
+    return data;
   }
 };

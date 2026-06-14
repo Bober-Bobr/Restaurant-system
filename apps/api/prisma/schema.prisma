@@ -175,6 +175,7 @@ model Restaurant {
   logoUrl         String?
   backgroundImageUrl String?
   categoryOrder   String?
+  excludedCategories String?
   ownerId         String
   companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)

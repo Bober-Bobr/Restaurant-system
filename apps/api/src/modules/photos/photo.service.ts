@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
+import { getExcludedCategories } from '../../utils/excludedCategories.js';
 
 export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 
@@ -82,8 +83,13 @@ export class PhotoService {
     }
 
     if (category === 'menu') {
+      // Hide photos belonging to dish categories the restaurant has excluded.
+      const excluded = restaurantId
+        ? new Set((await getExcludedCategories(restaurantId)).map((c) => c.toLowerCase()))
+        : new Set<string>();
       const all: string[] = await this.listFilesInDir(categoryDir, `/uploads/${slug}/${category}`);
       for (const dishCat of DISH_CATEGORIES) {
+        if (excluded.has(dishCat)) continue;
         const sub = await this.listFilesInDir(
           path.join(categoryDir, dishCat),
           `/uploads/${slug}/${category}/${dishCat}`

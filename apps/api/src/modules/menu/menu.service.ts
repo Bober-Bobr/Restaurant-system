@@ -40,6 +40,15 @@ export class MenuService {
     return { ok: true };
   }
 
+  async getSettings(restaurantId: string) {
+    return { excludedCategories: await this.menuRepository.getExcludedCategories(restaurantId) };
+  }
+
+  async saveSettings(restaurantId: string, payload: { excludedCategories: MenuCategory[] }) {
+    const excludedCategories = await this.menuRepository.saveExcludedCategories(restaurantId, payload.excludedCategories);
+    return { excludedCategories };
+  }
+
   async updateMenuItem(menuItemId: string, payload: {
     name?: string;
     description?: string;

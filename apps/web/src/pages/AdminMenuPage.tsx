@@ -11,6 +11,7 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { useExcludedCategories } from '../hooks/useExcludedCategories';
 
 type MenuCategory = MenuItem['category'];
 
@@ -101,6 +102,7 @@ function BestsellerStar({ on, size = 18 }: { on: boolean; size?: number }) {
 export const AdminMenuPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
+  const excluded = useExcludedCategories();
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
 
   const { data, isLoading, isError } = useQuery({
@@ -184,6 +186,17 @@ export const AdminMenuPage = () => {
     return true;
   }, [name, price]);
 
+  // Excluded categories can't be chosen for new dishes.
+  const availableCategoryOptions = useMemo(
+    () => CATEGORY_OPTIONS.filter((o) => !excluded.has(o.value)),
+    [excluded]
+  );
+  useEffect(() => {
+    if (excluded.has(category) && availableCategoryOptions.length > 0) {
+      setCategory(availableCategoryOptions[0].value);
+    }
+  }, [excluded, category, availableCategoryOptions]);
+
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
       <h1 className="adm-title" style={{ marginBottom: 20 }}>{translate('menu_management', locale)}</h1>
@@ -205,7 +218,7 @@ export const AdminMenuPage = () => {
           <label style={{ display: 'grid', gap: 6 }}>
             {translate('category', locale)}
             <Select value={category} onChange={(e) => setCategory(e.target.value as MenuItem['category'])}>
-              {CATEGORY_OPTIONS.map((o) => (
+              {availableCategoryOptions.map((o) => (
                 <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
               ))}
             </Select>

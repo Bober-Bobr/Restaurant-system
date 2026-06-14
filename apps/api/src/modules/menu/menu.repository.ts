@@ -1,19 +1,35 @@
 import { MenuCategory } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
+import { getExcludedCategories, parseExcludedCategories } from '../../utils/excludedCategories.js';
 
 export class MenuRepository {
   async listAll(restaurantId: string) {
+    const excluded = await getExcludedCategories(restaurantId);
     return prisma.menuItem.findMany({
-      where: { restaurantId },
+      where: { restaurantId, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
     });
   }
 
   async listActive(restaurantId: string) {
+    const excluded = await getExcludedCategories(restaurantId);
     return prisma.menuItem.findMany({
-      where: { restaurantId, isActive: true },
+      where: { restaurantId, isActive: true, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
     });
+  }
+
+  // Settings: the list of dish categories the restaurant has hidden everywhere.
+  async getExcludedCategories(restaurantId: string): Promise<MenuCategory[]> {
+    return getExcludedCategories(restaurantId);
+  }
+
+  async saveExcludedCategories(restaurantId: string, categories: MenuCategory[]) {
+    await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: { excludedCategories: JSON.stringify(categories) },
+    });
+    return parseExcludedCategories(JSON.stringify(categories));
   }
 
   // Persist the catering-site arrangement: the restaurant's category order plus

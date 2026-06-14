@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
+import { useExcludedCategories } from '../hooks/useExcludedCategories';
 import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
 
 type FoodCategory = MenuItem['category'];
@@ -91,8 +92,10 @@ function FoodPackageSection({
   locale: 'en' | 'ru' | 'uz';
 }) {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
+  const excluded = useExcludedCategories();
+  const categories = FOOD_PACKAGE_CATEGORIES.filter((cat) => !excluded.has(cat));
 
-  const grouped = FOOD_PACKAGE_CATEGORIES.reduce<Record<FoodCategory, MenuItem[]>>(
+  const grouped = categories.reduce<Record<FoodCategory, MenuItem[]>>(
     (acc, cat) => {
       acc[cat] = allMenuItems.filter((item) => item.isActive && item.category === cat);
       return acc;
@@ -132,7 +135,7 @@ function FoodPackageSection({
     <div style={{ display: 'grid', gap: 10 }}>
       <span className="adm-label" style={{ marginBottom: 2 }}>{t('food_package')}</span>
 
-      {FOOD_PACKAGE_CATEGORIES.map((cat) => (
+      {categories.map((cat) => (
         <div
           key={cat}
           style={{
