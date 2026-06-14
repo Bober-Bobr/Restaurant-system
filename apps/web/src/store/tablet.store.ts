@@ -5,11 +5,12 @@ type SelectionState = {
   selectedItems: Record<string, number>;
   selectedHallId?: string;
   selectedTableCategoryId?: string;
+  // First course: single-select (radio)
   selectedFirstCourseId?: string;
-  selectedSecondCourseId?: string;
-  selectedThirdCourseId?: string;
+  // Second and third course: multi-select (checkboxes)
+  selectedSecondCourseIds: string[];
+  selectedThirdCourseIds: string[];
   // Free replacements: included package-item id → chosen FREE menu-item id.
-  // Absence means the original included dish is kept.
   replacements: Record<string, string>;
   guestCount: number;
   locale: Locale;
@@ -17,8 +18,8 @@ type SelectionState = {
   setHall: (hallId: string) => void;
   setTableCategory: (tableCategoryId: string) => void;
   setFirstCourse: (menuItemId: string) => void;
-  setSecondCourse: (menuItemId: string) => void;
-  setThirdCourse: (menuItemId: string) => void;
+  toggleSecondCourse: (menuItemId: string) => void;
+  toggleThirdCourse: (menuItemId: string) => void;
   setReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setGuestCount: (count: number) => void;
   setLocale: (locale: Locale) => void;
@@ -30,8 +31,8 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedHallId: undefined,
   selectedTableCategoryId: undefined,
   selectedFirstCourseId: undefined,
-  selectedSecondCourseId: undefined,
-  selectedThirdCourseId: undefined,
+  selectedSecondCourseIds: [],
+  selectedThirdCourseIds: [],
   replacements: {},
   guestCount: 0,
   locale: defaultLocale,
@@ -47,16 +48,36 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set({ selectedHallId: hallId });
   },
   setTableCategory: (tableCategoryId) => {
-    set({ selectedTableCategoryId: tableCategoryId, selectedFirstCourseId: undefined, selectedSecondCourseId: undefined, selectedThirdCourseId: undefined, replacements: {} });
+    set({
+      selectedTableCategoryId: tableCategoryId,
+      selectedFirstCourseId: undefined,
+      selectedSecondCourseIds: [],
+      selectedThirdCourseIds: [],
+      replacements: {},
+    });
   },
   setFirstCourse: (menuItemId) => {
     set({ selectedFirstCourseId: menuItemId });
   },
-  setSecondCourse: (menuItemId) => {
-    set({ selectedSecondCourseId: menuItemId });
+  toggleSecondCourse: (menuItemId) => {
+    set((state) => {
+      const ids = state.selectedSecondCourseIds;
+      return {
+        selectedSecondCourseIds: ids.includes(menuItemId)
+          ? ids.filter((id) => id !== menuItemId)
+          : [...ids, menuItemId],
+      };
+    });
   },
-  setThirdCourse: (menuItemId) => {
-    set({ selectedThirdCourseId: menuItemId });
+  toggleThirdCourse: (menuItemId) => {
+    set((state) => {
+      const ids = state.selectedThirdCourseIds;
+      return {
+        selectedThirdCourseIds: ids.includes(menuItemId)
+          ? ids.filter((id) => id !== menuItemId)
+          : [...ids, menuItemId],
+      };
+    });
   },
   setReplacement: (packageItemId, menuItemId) => {
     set((state) => {
@@ -78,8 +99,8 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedHallId: undefined,
       selectedTableCategoryId: undefined,
       selectedFirstCourseId: undefined,
-      selectedSecondCourseId: undefined,
-      selectedThirdCourseId: undefined,
+      selectedSecondCourseIds: [],
+      selectedThirdCourseIds: [],
       replacements: {},
       guestCount: 0,
       locale: defaultLocale

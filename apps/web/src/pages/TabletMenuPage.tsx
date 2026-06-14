@@ -424,8 +424,8 @@ export const TabletMenuPage = () => {
   const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
-    selectedFirstCourseId, selectedSecondCourseId, selectedThirdCourseId,
-    setQuantity, setHall, setTableCategory, setFirstCourse, setSecondCourse, setThirdCourse,
+    selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
+    setQuantity, setHall, setTableCategory, setFirstCourse, toggleSecondCourse, toggleThirdCourse,
     replacements, setReplacement,
     setGuestCount, locale, setLocale,
   } = useTabletStore();
@@ -710,11 +710,29 @@ export const TabletMenuPage = () => {
 
             {/* Course choice (first + second + third course) */}
             {selectedTableCategory && (() => {
-              const courseGroups = ([
-                { category: 'FIRST_COURSE',  labelKey: 'choose_first_course',  selectedId: selectedFirstCourseId,  onSelect: setFirstCourse },
-                { category: 'SECOND_COURSE', labelKey: 'choose_second_course', selectedId: selectedSecondCourseId, onSelect: setSecondCourse },
-                { category: 'THIRD_COURSE',  labelKey: 'choose_third_course',  selectedId: selectedThirdCourseId,  onSelect: setThirdCourse },
-              ] as const)
+              const courseGroups = [
+                {
+                  category: 'FIRST_COURSE' as const,
+                  labelKey: 'choose_first_course' as const,
+                  multi: false,
+                  isSelected: (id: string) => selectedFirstCourseId === id,
+                  onToggle: (id: string) => setFirstCourse(id),
+                },
+                {
+                  category: 'SECOND_COURSE' as const,
+                  labelKey: 'choose_second_course' as const,
+                  multi: true,
+                  isSelected: (id: string) => selectedSecondCourseIds.includes(id),
+                  onToggle: toggleSecondCourse,
+                },
+                {
+                  category: 'THIRD_COURSE' as const,
+                  labelKey: 'choose_third_course' as const,
+                  multi: true,
+                  isSelected: (id: string) => selectedThirdCourseIds.includes(id),
+                  onToggle: toggleThirdCourse,
+                },
+              ]
                 .map((cfg) => ({
                   ...cfg,
                   items: (selectedTableCategory.packageItems ?? []).filter((pi) => pi!.menuItem.category === cfg.category),
@@ -734,37 +752,50 @@ export const TabletMenuPage = () => {
                         <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
                         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
                           {t(group.labelKey)}
+                          {group.multi && (
+                            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 500, letterSpacing: '0.04em', color: 'rgba(201,164,44,0.75)', textTransform: 'none' }}>
+                              ({t('multi_select')})
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {group.items.map((pi, i) => {
                           const item = pi!.menuItem;
-                          const selected = group.selectedId === item.id;
+                          const selected = group.isSelected(item.id);
+                          const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
                           return (
-                            <button key={item.id} type="button"
-                              onClick={() => group.onSelect(item.id)}
+                            <div key={item.id}
                               className="tablet-fade-up"
                               style={{
                                 animationDelay: `${i * 50}ms`,
-                                position: 'relative', textAlign: 'left', cursor: 'pointer',
-                                borderRadius: 16, overflow: 'hidden', border: 'none', padding: 0,
+                                position: 'relative', borderRadius: 16, overflow: 'hidden',
                                 outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
                                 outlineOffset: selected ? 2 : 0,
                                 background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.07)',
                                 transition: 'outline 0.18s, background 0.18s',
                               }}>
-                              {selected && (
-                                <div style={{
-                                  position: 'absolute', top: 8, right: 8, zIndex: 2,
-                                  width: 24, height: 24, borderRadius: '50%',
-                                  background: '#c9a42c', color: '#1a3320',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: 13, fontWeight: 700,
-                                }}>✓</div>
-                              )}
-                              {item.photoUrl ? (
-                                <img src={getPhotoUrl(item.photoUrl) ?? undefined} alt={item.name}
-                                  style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                              {/* Photo — click to open lightbox */}
+                              {photoSrc ? (
+                                <button type="button"
+                                  onClick={() => setLightboxSrc(photoSrc)}
+                                  style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'zoom-in', background: 'transparent', position: 'relative' }}>
+                                  <img src={photoSrc} alt={item.name}
+                                    style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                                  <div style={{
+                                    position: 'absolute', inset: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: 'rgba(0,0,0,0)', transition: 'background 0.18s',
+                                  }}
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.25)'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0)'; }}
+                                  >
+                                    <svg width="28" height="28" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ opacity: 0, transition: 'opacity 0.18s' }}
+                                      className="zoom-icon">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                    </svg>
+                                  </div>
+                                </button>
                               ) : (
                                 <div style={{ height: 140, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
@@ -772,15 +803,39 @@ export const TabletMenuPage = () => {
                                   </svg>
                                 </div>
                               )}
-                              <div style={{ padding: '10px 12px' }}>
-                                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3 }}>{item.name}</p>
-                                {item.description && (
-                                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {item.description}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
+                              {/* Name + checkbox row */}
+                              <button type="button"
+                                onClick={() => group.onToggle(item.id)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 10,
+                                  width: '100%', padding: '10px 12px',
+                                  border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                                }}>
+                                {/* Checkbox/radio indicator */}
+                                <div style={{
+                                  flexShrink: 0,
+                                  width: 22, height: 22, borderRadius: group.multi ? 6 : '50%',
+                                  border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.3)'}`,
+                                  background: selected ? '#c9a42c' : 'transparent',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'all 0.15s',
+                                }}>
+                                  {selected && (
+                                    <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                                      <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                                  {item.description && (
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
