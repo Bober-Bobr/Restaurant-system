@@ -33,14 +33,14 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
           <>
             <button type="button" onClick={() => setLightboxOpen(true)} className="block w-full overflow-hidden">
               <img src={photoSrc} alt={item.name}
-                className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
               <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
             </button>
             {lightboxOpen && <Lightbox src={photoSrc} alt={item.name} onClose={() => setLightboxOpen(false)} />}
           </>
         ) : (
           <div
-            className="flex h-36 items-center justify-center"
+            className="flex h-32 items-center justify-center"
             style={dark ? { background: 'rgba(0,0,0,0.25)' } : { background: '#f8f7f5' }}
           >
             <svg className="h-9 w-9" style={{ color: dark ? 'rgba(255,255,255,0.15)' : '#d6d3d1' }}

@@ -341,14 +341,14 @@ export const TabletSummaryPage = () => {
 
   // ── Main summary screen ───────────────────────────────────────────────────
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
 
       <PageBackground />
 
-      <div className="relative mx-auto max-w-5xl space-y-6">
+      <div className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
 
           {/* ── Left column ── */}
           <div className="space-y-6">

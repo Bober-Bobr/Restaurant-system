@@ -471,7 +471,7 @@ export const TabletMenuPage = () => {
   const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
 
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8">
       {!welcomeShown && (
         <div
           style={{
@@ -624,10 +624,10 @@ export const TabletMenuPage = () => {
         </header>
 
         {/* ── Main grid ── */}
-        <section className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+        <section className="grid gap-4 lg:gap-6 lg:grid-cols-[1.35fr_0.65fr]">
 
           {/* ── Left column ── */}
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
 
             {/* Settings — hidden in view-only mode */}
             {!viewOnly && (
@@ -691,8 +691,8 @@ export const TabletMenuPage = () => {
                   {(selectedTableCategory.photos ?? []).map((url, i) => (
                     <button key={i} type="button"
                       onClick={() => setLightboxSrc(getPhotoUrl(url) ?? null)}
-                      className="group relative shrink-0 overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-xl tablet-fade-up"
-                      style={{ animationDelay: `${i * 60}ms`, width: 200, height: 140 }}>
+                      className="group relative shrink-0 overflow-hidden rounded-xl transition-all duration-300 hover:shadow-xl tablet-fade-up"
+                      style={{ animationDelay: `${i * 60}ms`, width: 150, height: 104 }}>
                       <img src={getPhotoUrl(url)} alt=""
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/20">
@@ -759,7 +759,7 @@ export const TabletMenuPage = () => {
                           )}
                         </p>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
                         {group.items.map((pi, i) => {
                           const item = pi!.menuItem;
                           const selected = group.isSelected(item.id);
@@ -769,10 +769,10 @@ export const TabletMenuPage = () => {
                               className="tablet-fade-up"
                               style={{
                                 animationDelay: `${i * 50}ms`,
-                                position: 'relative', borderRadius: 16, overflow: 'hidden',
+                                position: 'relative', borderRadius: 14, overflow: 'hidden',
                                 outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
                                 outlineOffset: selected ? 2 : 0,
-                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.07)',
+                                background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.06)',
                                 transition: 'outline 0.18s, background 0.18s',
                               }}>
                               {/* Photo — click to open lightbox */}
@@ -781,7 +781,7 @@ export const TabletMenuPage = () => {
                                   onClick={() => setLightboxSrc(photoSrc)}
                                   style={{ display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'zoom-in', background: 'transparent', position: 'relative' }}>
                                   <img src={photoSrc} alt={item.name}
-                                    style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                                    style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
                                   <div style={{
                                     position: 'absolute', inset: 0,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -797,8 +797,8 @@ export const TabletMenuPage = () => {
                                   </div>
                                 </button>
                               ) : (
-                                <div style={{ height: 140, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <svg width="32" height="32" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                                <div style={{ height: 120, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="30" height="30" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                   </svg>
                                 </div>
@@ -807,29 +807,29 @@ export const TabletMenuPage = () => {
                               <button type="button"
                                 onClick={() => group.onToggle(item.id)}
                                 style={{
-                                  display: 'flex', alignItems: 'center', gap: 10,
-                                  width: '100%', padding: '10px 12px',
+                                  display: 'flex', alignItems: 'center', gap: 8,
+                                  width: '100%', padding: '8px 10px',
                                   border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
                                 }}>
                                 {/* Checkbox/radio indicator */}
                                 <div style={{
                                   flexShrink: 0,
-                                  width: 22, height: 22, borderRadius: group.multi ? 6 : '50%',
+                                  width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
                                   border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.3)'}`,
                                   background: selected ? '#c9a42c' : 'transparent',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   transition: 'all 0.15s',
                                 }}>
                                   {selected && (
-                                    <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                                       <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
                                   {item.description && (
-                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {item.description}
                                     </p>
                                   )}
@@ -878,7 +878,7 @@ export const TabletMenuPage = () => {
                           {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
                         </span>
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
                         {items!.map((pi, i) => {
                           // Free alternatives the guest may swap this included dish for, at no cost.
                           const freeAlts = (menuItems ?? []).filter(
@@ -890,23 +890,23 @@ export const TabletMenuPage = () => {
                           return (
                           <div key={pi!.id}
                             className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-                            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.07)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
+                            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
                             {displayItem.photoUrl ? (
                               <button type="button"
                                 onClick={() => setLightboxSrc(getPhotoUrl(displayItem.photoUrl) ?? null)}
                                 className="block w-full overflow-hidden">
                                 <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
-                                  className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
                               </button>
                             ) : (
-                              <div className="flex h-36 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                              <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
                                 <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                               </div>
                             )}
-                            <div className="p-3">
+                            <div className="p-2.5">
                               <p className="text-sm font-semibold leading-snug text-white">{displayItem.name}</p>
                               {displayItem.description && (
                                 <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -969,15 +969,16 @@ export const TabletMenuPage = () => {
               </div>
 
               {isLoading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="rg-shimmer h-72 rounded-3xl" style={{ animationDelay: `${i * 80}ms` }} />
+                    <div key={i} className="rg-shimmer h-52 rounded-2xl" style={{ animationDelay: `${i * 80}ms` }} />
                   ))}
                 </div>
               ) : error ? (
                 <div className="rounded-2xl p-6 text-sm" style={{ background: 'rgba(220,38,38,0.15)', color: '#fca5a5' }}>{error}</div>
               ) : sortedAndFiltered.length > 0 ? (
-                <div key={activeCategory ?? 'all'} className="tablet-fade-in grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div key={activeCategory ?? 'all'} className="tablet-fade-in"
+                  style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
@@ -998,9 +999,9 @@ export const TabletMenuPage = () => {
             </section>
           </div>
 
-          {/* ── Sidebar — hidden in view-only mode ── */}
+          {/* ── Sidebar — desktop only, hidden in view-only mode ── */}
           {!viewOnly && (
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="hidden space-y-4 lg:block lg:sticky lg:top-6 lg:self-start">
             {/* CTA */}
             <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('review_and_confirm')}</p>
@@ -1014,6 +1015,23 @@ export const TabletMenuPage = () => {
           )}
         </section>
       </div>
+
+      {/* ── Mobile sticky CTA — hidden on desktop & in view-only mode ── */}
+      {!viewOnly && (
+        <div className="lg:hidden"
+          style={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
+            padding: '10px 12px calc(10px + env(safe-area-inset-bottom))',
+            background: 'rgba(8,18,12,0.85)', backdropFilter: 'blur(14px)',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+          }}>
+          <button type="button" onClick={() => navigate('/tablet/summary')}
+            className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99]"
+            style={{ background: '#c9a42c', color: '#1a3320', boxShadow: '0 6px 20px rgba(201,164,44,0.35)' }}>
+            {t('view_summary')} →
+          </button>
+        </div>
+      )}
     </main>
   );
 };
