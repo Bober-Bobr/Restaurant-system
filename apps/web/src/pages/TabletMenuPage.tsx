@@ -9,6 +9,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
+import { FingerTrail } from '../components/FingerTrail';
+import { useScrollReveal } from '../utils/useScrollReveal';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0]) => string;
@@ -442,6 +444,10 @@ export const TabletMenuPage = () => {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(isTabletWelcomeShown());
 
+  // Reveal-on-scroll: re-scan when major content swaps in (table category chosen,
+  // data finishes loading, category filter changes).
+  const revealRef = useScrollReveal<HTMLDivElement>([selectedTableCategoryId, isLoading, activeCategory, welcomeShown]);
+
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
 
@@ -585,9 +591,10 @@ export const TabletMenuPage = () => {
         )}
 
       <PageBackground />
+      <FingerTrail accent="#c9a42c" />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
-      <div className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
+      <div ref={revealRef} className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
 
         {/* ── Header ── */}
         <header className="tablet-fade-in overflow-hidden rounded-2xl sm:rounded-[28px] px-4 sm:px-8 py-4 sm:py-5 shadow-2xl"
@@ -631,7 +638,7 @@ export const TabletMenuPage = () => {
 
             {/* Settings — hidden in view-only mode */}
             {!viewOnly && (
-            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
+            <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading">{t('room_table_settings')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {t('choose_room_table_details')}
@@ -682,7 +689,7 @@ export const TabletMenuPage = () => {
 
             {/* Table category photos */}
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
-              <section className="rg-card overflow-hidden tablet-fade-up" style={{ animationDelay: '90ms' }}>
+              <section className="rg-card overflow-hidden reveal">
                 <div className="px-6 pt-5 pb-3">
                   <p className="rg-label">{selectedTableCategory.name}</p>
                   <p className="rg-heading mt-1">{t('table_photos')}</p>
@@ -740,24 +747,55 @@ export const TabletMenuPage = () => {
                 .filter((group) => group.items.length > 0);
               if (courseGroups.length === 0) return null;
               return (
-                <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
-                  <div className="mb-5">
+                <section className="rg-card p-4 sm:p-6 reveal">
+                  {/* Decorated courses heading */}
+                  <div className="mb-6" style={{ textAlign: 'center' }}>
                     <p className="rg-label">{selectedTableCategory.name}</p>
-                    <p className="rg-heading mt-1">{t('courses')}</p>
+                    <h2 style={{
+                      margin: '6px 0 0', fontSize: 28, fontWeight: 800,
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                      backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 60%, #b8941f 100%)',
+                      WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent', color: '#c9a42c',
+                      textShadow: '0 2px 18px rgba(201,164,44,0.25)',
+                    }}>{t('courses')}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 }}>
+                      <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, transparent, rgba(201,164,44,0.7))' }} />
+                      <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: '#c9a42c', boxShadow: '0 0 10px rgba(201,164,44,0.85)' }} />
+                      <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, rgba(201,164,44,0.7), transparent)' }} />
+                    </div>
                   </div>
 
                   {courseGroups.map((group, gi) => (
                     <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                        <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                          {t(group.labelKey)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                        {/* Numbered gold badge */}
+                        <div style={{
+                          width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 100%)',
+                          color: '#1a3320', fontWeight: 800, fontSize: 20,
+                          boxShadow: '0 6px 18px rgba(201,164,44,0.45)',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                        }}>{gi + 1}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
+                            {t(group.labelKey)}
+                          </h3>
                           {group.multi && (
-                            <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 500, letterSpacing: '0.04em', color: 'rgba(201,164,44,0.75)', textTransform: 'none' }}>
-                              ({t('multi_select')})
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
+                              padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700,
+                              letterSpacing: '0.03em',
+                              color: '#e0c25a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.34)',
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              {t('multi_select')}
                             </span>
                           )}
-                        </p>
+                        </div>
                       </div>
                       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                         {group.items.map((pi, i) => {
@@ -827,9 +865,9 @@ export const TabletMenuPage = () => {
                                   )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
+                                  <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
                                   {item.description && (
-                                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                       {item.description}
                                     </p>
                                   )}
@@ -857,7 +895,7 @@ export const TabletMenuPage = () => {
                 )
               ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
               return (
-                <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '120ms' }}>
+                <section className="rg-card p-4 sm:p-6 reveal">
                   <div className="mb-5">
                     <p className="rg-label">{selectedTableCategory.name}</p>
                     <p className="rg-heading mt-1">{t('included_with_table')}</p>
@@ -951,7 +989,7 @@ export const TabletMenuPage = () => {
             })()}
 
             {/* Additional */}
-            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '180ms' }}>
+            <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading mb-1">{t('additional')}</p>
               <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('browse_menu_items')}</p>
 
@@ -1003,7 +1041,7 @@ export const TabletMenuPage = () => {
           {!viewOnly && (
           <aside className="hidden min-w-0 space-y-4 lg:block lg:sticky lg:top-6 lg:self-start">
             {/* CTA */}
-            <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
+            <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('review_and_confirm')}</p>
               <button type="button" onClick={() => navigate('/tablet/summary')}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"

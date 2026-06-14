@@ -10,6 +10,8 @@ import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
+import { FingerTrail } from '../components/FingerTrail';
+import { useScrollReveal } from '../utils/useScrollReveal';
 
 type EventType = NonNullable<Event['eventType']>;
 const eventTypes: EventType[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE', 'FOTIHA_TUI', 'NACHOR_OSHI'];
@@ -101,6 +103,9 @@ export const TabletSummaryPage = () => {
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
+
+  // Reveal-on-scroll: re-scan once data finishes loading and sections render.
+  const revealRef = useScrollReveal<HTMLDivElement>([isLoading]);
 
   const [customerName, setCustomerName]             = useState('');
   const [customerPhone, setCustomerPhone]           = useState('');
@@ -344,8 +349,9 @@ export const TabletSummaryPage = () => {
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
 
       <PageBackground />
+      <FingerTrail accent="#c9a42c" />
 
-      <div className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
+      <div ref={revealRef} className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
         <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
@@ -354,7 +360,7 @@ export const TabletSummaryPage = () => {
           <div className="min-w-0 space-y-6">
 
             {/* Customer details */}
-            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
+            <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading">{t('customer_details')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {t('enter_customer_information')}
@@ -459,7 +465,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Event overview */}
-            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '100ms' }}>
+            <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading mb-4">{t('event_details')}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
@@ -485,7 +491,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Selected items */}
-            <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '140ms' }}>
+            <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading mb-4">{t('selected_menu_items')}</p>
               {isLoading ? (
                 <div className="space-y-3">
@@ -521,7 +527,7 @@ export const TabletSummaryPage = () => {
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
 
             {/* Pricing */}
-            <section className="overflow-hidden rounded-2xl sm:rounded-3xl tablet-fade-up" style={{ animationDelay: '80ms',
+            <section className="overflow-hidden rounded-2xl sm:rounded-3xl reveal" style={{
               background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
               <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="rg-label">{t('pricing')}</p>
@@ -607,7 +613,7 @@ export const TabletSummaryPage = () => {
             </section>
 
             {/* Actions */}
-            <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '120ms' }}>
+            <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
               <p className="rg-label">{t('actions')}</p>
 
               <button type="button" onClick={() => navigate('/tablet')}
