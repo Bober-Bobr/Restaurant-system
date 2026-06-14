@@ -624,10 +624,10 @@ export const TabletMenuPage = () => {
         </header>
 
         {/* ── Main grid ── */}
-        <section className="grid gap-4 lg:gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+        <section className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.35fr_0.65fr]">
 
           {/* ── Left column ── */}
-          <div className="space-y-4 lg:space-y-6">
+          <div className="min-w-0 space-y-4 lg:space-y-6">
 
             {/* Settings — hidden in view-only mode */}
             {!viewOnly && (
@@ -759,7 +759,7 @@ export const TabletMenuPage = () => {
                           )}
                         </p>
                       </div>
-                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                         {group.items.map((pi, i) => {
                           const item = pi!.menuItem;
                           const selected = group.isSelected(item.id);
@@ -878,7 +878,7 @@ export const TabletMenuPage = () => {
                           {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
                         </span>
                       </div>
-                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                         {items!.map((pi, i) => {
                           // Free alternatives the guest may swap this included dish for, at no cost.
                           const freeAlts = (menuItems ?? []).filter(
@@ -969,7 +969,7 @@ export const TabletMenuPage = () => {
               </div>
 
               {isLoading ? (
-                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="rg-shimmer h-52 rounded-2xl" style={{ animationDelay: `${i * 80}ms` }} />
                   ))}
@@ -978,7 +978,7 @@ export const TabletMenuPage = () => {
                 <div className="rounded-2xl p-6 text-sm" style={{ background: 'rgba(220,38,38,0.15)', color: '#fca5a5' }}>{error}</div>
               ) : sortedAndFiltered.length > 0 ? (
                 <div key={activeCategory ?? 'all'} className="tablet-fade-in"
-                  style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                  style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
@@ -1001,7 +1001,7 @@ export const TabletMenuPage = () => {
 
           {/* ── Sidebar — desktop only, hidden in view-only mode ── */}
           {!viewOnly && (
-          <aside className="hidden space-y-4 lg:block lg:sticky lg:top-6 lg:self-start">
+          <aside className="hidden min-w-0 space-y-4 lg:block lg:sticky lg:top-6 lg:self-start">
             {/* CTA */}
             <section className="rg-card p-4 sm:p-5 space-y-3 tablet-fade-up" style={{ animationDelay: '220ms' }}>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('review_and_confirm')}</p>

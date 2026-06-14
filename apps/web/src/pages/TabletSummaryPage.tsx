@@ -348,10 +348,10 @@ export const TabletSummaryPage = () => {
       <div className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
-        <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
 
           {/* ── Left column ── */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
 
             {/* Customer details */}
             <section className="rg-card p-4 sm:p-6 tablet-fade-up" style={{ animationDelay: '60ms' }}>
@@ -518,7 +518,7 @@ export const TabletSummaryPage = () => {
           </div>
 
           {/* ── Sidebar ── */}
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
 
             {/* Pricing */}
             <section className="overflow-hidden rounded-2xl sm:rounded-3xl tablet-fade-up" style={{ animationDelay: '80ms',
