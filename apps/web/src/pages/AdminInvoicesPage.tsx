@@ -39,7 +39,15 @@ export const AdminInvoicesPage = () => {
     translate(key, locale, params);
 
   const [filter, setFilter] = useState<InvoiceFilter>('ALL');
-  const [roundUp, setRoundUp] = useState(false);
+  // Round-up is decided per invoice: this holds the event ids that are rounded.
+  const [roundedIds, setRoundedIds] = useState<Set<number>>(new Set());
+  const toggleRounded = (eventId: number) =>
+    setRoundedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
 
   const eventsQuery = useQuery<Event[]>({ queryKey: ['events'], queryFn: () => eventService.list() });
   const events = eventsQuery.data ?? [];
@@ -68,30 +76,24 @@ export const AdminInvoicesPage = () => {
         {visibleEvents.length} {visibleEvents.length === 1 ? t('invoice_one') : t('invoice_many')}
       </p>
 
-      {/* Controls: filter + round-up toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className="adm-badge"
-              style={{
-                cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600,
-                background: filter === f.id ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-                color: filter === f.id ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                border: `1px solid ${filter === f.id ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 'auto', fontSize: 13, color: 'rgba(226,232,240,0.85)', cursor: 'pointer', userSelect: 'none' }}>
-          <input type="checkbox" checked={roundUp} onChange={(e) => setRoundUp(e.target.checked)} style={{ accentColor: '#c9a42c', width: 16, height: 16 }} />
-          {t('round_up_to_million')}
-        </label>
+      {/* Controls: status filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 20 }}>
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilter(f.id)}
+            className="adm-badge"
+            style={{
+              cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600,
+              background: filter === f.id ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
+              color: filter === f.id ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${filter === f.id ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_events')}</p>}
@@ -103,8 +105,9 @@ export const AdminInvoicesPage = () => {
           const tableRate = (event.tableCategory?.ratePerPerson ?? 0) * event.guestCount;
           const dishes = (event.selections ?? []).reduce((sum, s) => sum + s.quantity * s.unitPriceCents, 0);
           const exactTotal = eventTotalCents(event);
-          const shownTotal = roundUp ? roundUpToMillion(exactTotal) : exactTotal;
-          const isRounded = roundUp && shownTotal !== exactTotal;
+          const rounded = roundedIds.has(event.id);
+          const shownTotal = rounded ? roundUpToMillion(exactTotal) : exactTotal;
+          const isRounded = rounded && shownTotal !== exactTotal;
           const isPaid = event.status === 'COMPLETED';
           const isCancelled = event.status === 'CANCELLED';
 
@@ -146,7 +149,11 @@ export const AdminInvoicesPage = () => {
               </div>
 
               {/* Action */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, marginTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, marginTop: 12 }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(226,232,240,0.85)', cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={rounded} onChange={() => toggleRounded(event.id)} style={{ accentColor: '#c9a42c', width: 16, height: 16 }} />
+                  {t('round_up_to_million')}
+                </label>
                 {isCancelled ? (
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(226,232,240,0.4)' }}>—</span>
                 ) : isPaid ? (
