@@ -12,7 +12,9 @@ export const createMenuItemSchema = z.object({
   tabletStatus: z.enum(['NONE', 'FREE', 'PAID']).optional(),
   isBestseller: z.boolean().optional(),
   isOutOfStock: z.boolean().optional(),
-  sortOrder: z.number().int().min(0).optional()
+  sortOrder: z.number().int().min(0).optional(),
+  // Optional subcategory assignment (null clears it).
+  subcategoryId: z.string().cuid().nullable().optional()
 });
 
 export const updateMenuItemSchema = createMenuItemSchema.partial();

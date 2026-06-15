@@ -84,6 +84,15 @@ export type MenuItem = {
   isBestseller?: boolean;
   isOutOfStock?: boolean;
   sortOrder?: number;
+  subcategoryId?: string | null;
+  subcategory?: Subcategory | null;
+};
+
+export type Subcategory = {
+  id: string;
+  name: string;
+  category: MenuItem['category'];
+  sortOrder?: number;
 };
 
 export type PricingSummary = {

@@ -7,7 +7,8 @@ export class MenuRepository {
     const excluded = await getExcludedCategories(restaurantId);
     return prisma.menuItem.findMany({
       where: { restaurantId, category: { notIn: excluded } },
-      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true } } }
     });
   }
 
@@ -15,7 +16,8 @@ export class MenuRepository {
     const excluded = await getExcludedCategories(restaurantId);
     return prisma.menuItem.findMany({
       where: { restaurantId, isActive: true, category: { notIn: excluded } },
-      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }]
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true } } }
     });
   }
 
@@ -66,6 +68,7 @@ export class MenuRepository {
     isBestseller?: boolean;
     isOutOfStock?: boolean;
     sortOrder?: number;
+    subcategoryId?: string | null;
   }) {
     return prisma.menuItem.create({ data: { ...payload, restaurantId } });
   }
@@ -86,6 +89,7 @@ export class MenuRepository {
     isBestseller?: boolean;
     isOutOfStock?: boolean;
     sortOrder?: number;
+    subcategoryId?: string | null;
   }) {
     return prisma.menuItem.update({ where: { id: menuItemId }, data: payload });
   }

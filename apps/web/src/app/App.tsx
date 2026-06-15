@@ -5,6 +5,7 @@ import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AdminArrangementAdminPage } from '../pages/AdminArrangementAdminPage';
 import { AdminMenuPage } from '../pages/AdminMenuPage';
+import { AdminSubcategoriesPage } from '../pages/AdminSubcategoriesPage';
 import { AdminAdditionalPage } from '../pages/AdminAdditionalPage';
 import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
@@ -209,6 +210,7 @@ export const App = () => {
         <Route element={<CateringAdminLayout />}>
           <Route path="/" element={<Navigate to="/admin/menu" replace />} />
           <Route path="/admin/menu" element={<AdminMenuPage />} />
+          <Route path="/admin/subcategories" element={<AdminSubcategoriesPage />} />
           <Route path="/admin/arrangement" element={<AdminArrangementPage />} />
           <Route path="/admin/halls" element={<AdminHallsPage />} />
           <Route path="/admin/photos" element={<AdminPhotosPage />} />

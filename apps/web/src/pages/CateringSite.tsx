@@ -386,6 +386,62 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
 }
 
 // ── Category detail ─────────────────────────────────────────────────────────
+// A single dish card on the catering category page.
+function CateringDishCard({ item, locale, onSelect }: { item: MenuItem; locale: Locale; onSelect: () => void }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="rg-card reveal"
+      style={{
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+        position: 'relative', cursor: 'pointer',
+        padding: 0, border: 'none', textAlign: 'left', width: '100%',
+      }}
+    >
+      {item.isBestseller && (
+        <span style={{
+          position: 'absolute', top: 8, left: 8, zIndex: 2,
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '3px 7px', borderRadius: 999, fontSize: 10, fontWeight: 800,
+          background: 'rgba(245,158,11,0.95)', color: '#000',
+          boxShadow: '0 0 10px rgba(245,158,11,0.7)',
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+        }}>
+          <BestsellerBadge on size={10} dark />
+          {t('bestseller')}
+        </span>
+      )}
+      <div style={{ position: 'relative' }}>
+        {src
+          ? <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block', filter: item.isOutOfStock ? 'grayscale(100%) brightness(0.5)' : undefined }} />
+          : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
+        {item.isOutOfStock && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.45)',
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'rgba(0,0,0,0.65)', padding: '4px 10px', borderRadius: 999 }}>
+              {t('out_of_stock')}
+            </span>
+          </div>
+        )}
+      </div>
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{item.name}</h3>
+          <span style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', fontSize: 13 }}>{formatSum(item.priceCents)}</span>
+        </div>
+        {item.description && (
+          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: Locale }) {
   const { category = '' } = useParams();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
@@ -400,12 +456,33 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
   const hasBestsellers = allItems.some((m) => m.isBestseller);
 
-  // Bestsellers first, then the rest
-  const sorted = [
-    ...allItems.filter((m) => m.isBestseller),
-    ...allItems.filter((m) => !m.isBestseller),
-  ];
-  const items = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : sorted;
+  const visible = bestsellersOnly ? allItems.filter((m) => m.isBestseller) : allItems;
+
+  // Divide the category's dishes into subcategory groups. Ungrouped dishes go
+  // into a trailing "Other" group. Within each group, bestsellers come first.
+  const NONE = '__none__';
+  const groups = (() => {
+    const map = new Map<string, { id: string; name: string | null; sortOrder: number; items: MenuItem[] }>();
+    for (const m of visible) {
+      // Only honor a subcategory that actually belongs to this category.
+      const sub = m.subcategory && m.subcategory.category === cat ? m.subcategory : null;
+      const key = sub?.id ?? NONE;
+      if (!map.has(key)) map.set(key, { id: key, name: sub?.name ?? null, sortOrder: sub?.sortOrder ?? 99999, items: [] });
+      map.get(key)!.items.push(m);
+    }
+    const list = [...map.values()].sort((a, b) => {
+      if (a.id === NONE) return 1;
+      if (b.id === NONE) return -1;
+      return (a.sortOrder - b.sortOrder) || (a.name ?? '').localeCompare(b.name ?? '');
+    });
+    for (const g of list) {
+      g.items = [...g.items.filter((i) => i.isBestseller), ...g.items.filter((i) => !i.isBestseller)];
+    }
+    return list;
+  })();
+  // Show a subcategory header when there is a real named group (i.e. not just a
+  // single block of ungrouped dishes).
+  const showHeaders = groups.some((g) => g.id !== NONE);
 
   return (
     <>
@@ -416,7 +493,14 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
         border: `1px solid ${C.line}`, borderRadius: 14,
       }}>
-        <Link to="/" style={{ fontSize: 13, color: C.textDim, textDecoration: 'none' }}>← {t('back_to_menu')}</Link>
+        <Link to="/" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '10px 18px', borderRadius: 12,
+          fontSize: 15, fontWeight: 700, color: '#fff', textDecoration: 'none',
+          background: 'rgba(255,255,255,0.08)', border: `1px solid ${C.line}`,
+        }}>
+          <span style={{ fontSize: 18, lineHeight: 1 }}>←</span> {t('back_to_menu')}
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: '#fff' }}>
             {labelKey ? t(labelKey) : category}
@@ -442,64 +526,29 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {visible.length === 0 ? (
         <p style={{ color: C.textFaint }}>{t('no_dishes_in_category')}</p>
       ) : (
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
-          {items.map((item) => {
-            const src = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedItem(item)}
-                className="rg-card reveal"
-                style={{
-                  overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                  position: 'relative', cursor: 'pointer',
-                  padding: 0, border: 'none', textAlign: 'left', width: '100%',
-                }}
-              >
-                {item.isBestseller && (
-                  <span style={{
-                    position: 'absolute', top: 8, left: 8, zIndex: 2,
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '3px 7px', borderRadius: 999, fontSize: 10, fontWeight: 800,
-                    background: 'rgba(245,158,11,0.95)', color: '#000',
-                    boxShadow: '0 0 10px rgba(245,158,11,0.7)',
-                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                  }}>
-                    <BestsellerBadge on size={10} dark />
-                    {t('bestseller')}
-                  </span>
-                )}
-                <div style={{ position: 'relative' }}>
-                  {src
-                    ? <img src={src} alt={item.name} style={{ width: '100%', height: 130, objectFit: 'cover', display: 'block', filter: item.isOutOfStock ? 'grayscale(100%) brightness(0.5)' : undefined }} />
-                    : <div style={{ width: '100%', height: 130, background: 'rgba(0,0,0,0.25)' }} />}
-                  {item.isOutOfStock && (
-                    <div style={{
-                      position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(0,0,0,0.45)',
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'rgba(0,0,0,0.65)', padding: '4px 10px', borderRadius: 999 }}>
-                        {t('out_of_stock')}
-                      </span>
-                    </div>
-                  )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {groups.map((g) => (
+            <section key={g.id}>
+              {showHeaders && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
+                  <span style={{ width: 5, height: 26, borderRadius: 3, background: '#f59e0b', flexShrink: 0 }} />
+                  <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
+                    {g.name ?? t('other')}
+                  </h2>
+                  <span style={{ marginLeft: 2, fontSize: 13, fontWeight: 600, color: C.textFaint }}>{g.items.length}</span>
+                  <span style={{ flex: 1, height: 1, background: C.line }} />
                 </div>
-                <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
-                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{item.name}</h3>
-                    <span style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', fontSize: 13 }}>{formatSum(item.priceCents)}</span>
-                  </div>
-                  {item.description && (
-                    <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+              )}
+              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                {g.items.map((item) => (
+                  <CateringDishCard key={item.id} item={item} locale={locale} onSelect={() => setSelectedItem(item)} />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

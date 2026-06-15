@@ -186,6 +186,7 @@ model Restaurant {
   staff           AdminUser[]     @relation("StaffRestaurant")
   events          Event[]
   menuItems       MenuItem[]
+  menuSubcategories MenuSubcategory[]
   tableCategories TableCategory[]
   halls           Hall[]
   invitations     Invitation[]
@@ -281,14 +282,35 @@ model MenuItem {
   isOutOfStock     Boolean                   @default(false)
   sortOrder        Int                       @default(0)
   restaurantId     String?
+  // Optional subcategory grouping within the dish's category (catering site).
+  subcategoryId    String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
   selections       EventMenuSelection[]
   packageCategories TableCategoryMenuItem[]
   restaurant       Restaurant?              @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  subcategory      MenuSubcategory?         @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
 
   @@index([category, isActive])
   @@index([restaurantId])
+  @@index([subcategoryId])
+}
+
+// A named grouping of dishes inside a single MenuCategory, used to divide a
+// category into sections on the catering site.
+model MenuSubcategory {
+  id           String       @id @default(cuid())
+  name         String
+  category     MenuCategory
+  sortOrder    Int          @default(0)
+  restaurantId String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  items        MenuItem[]
+  restaurant   Restaurant?  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, category, name])
+  @@index([restaurantId, category])
 }
 
 model EventMenuSelection {

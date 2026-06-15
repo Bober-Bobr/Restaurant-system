@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { formatSumInput, parseSumToTiyin } from '../utils/currency';
-import type { MenuItem, TableCategory } from '../types/domain';
+import type { MenuItem, TableCategory, Subcategory } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { subcategoryService } from '../services/subcategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { Input } from '../components/ui/input';
@@ -113,6 +114,11 @@ export const AdminMenuPage = () => {
   const { data: tableCategories = [] } = useQuery({
     queryKey: ['tableCategories'],
     queryFn: () => tableCategoryService.list()
+  });
+
+  const { data: subcategories = [] } = useQuery({
+    queryKey: ['subcategories'],
+    queryFn: () => subcategoryService.list()
   });
 
   // Map menuItemId → TableCategory[]
@@ -306,6 +312,7 @@ export const AdminMenuPage = () => {
                   item={item}
                   locale={locale}
                   assignedTableCategories={itemTableCategoryMap.get(item.id) ?? []}
+                  subcategories={subcategories}
                   onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
                   isSaving={updateMutation.isPending}
                   onDelete={() => deleteMutation.mutate(item.id)}
@@ -323,6 +330,7 @@ export const AdminMenuPage = () => {
                     <th style={{ width: 56 }}></th>
                     <th>{translate('name', locale)}</th>
                     <th>{translate('category', locale)}</th>
+                    <th>{translate('subcategory', locale)}</th>
                     <th>{translate('description', locale)}</th>
                     <th>{translate('price', locale)}</th>
                     <th style={{ textAlign: 'center' }}>{translate('bestseller', locale)}</th>
@@ -338,6 +346,7 @@ export const AdminMenuPage = () => {
                       item={item}
                       locale={locale}
                       assignedTableCategories={itemTableCategoryMap.get(item.id) ?? []}
+                      subcategories={subcategories}
                       onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
                       isSaving={updateMutation.isPending}
                       onDelete={() => deleteMutation.mutate(item.id)}
@@ -359,6 +368,7 @@ type MenuItemRowProps = {
   item: MenuItem;
   locale: 'en' | 'ru' | 'uz';
   assignedTableCategories: TableCategory[];
+  subcategories: Subcategory[];
   onPatch: (patch: Partial<MenuItem>) => void;
   isSaving: boolean;
   onDelete: () => void;
@@ -403,7 +413,8 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'LIQUEURS', key: 'liqueurs' },
 ];
 
-const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+  const catSubs = subcategories.filter((s) => s.category === item.category);
   const [localName, setLocalName] = useState(item.name);
   const [localCategory, setLocalCategory] = useState<MenuCategory>(item.category);
   const [localDescription, setLocalDescription] = useState(item.description ?? '');
@@ -427,6 +438,8 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, is
       description: localDescription.trim() || undefined,
       photoUrl: localPhotoUrl.trim() || undefined,
       ...(priceCents !== null ? { priceCents } : {}),
+      // Clear a now-mismatched subcategory when the dish's category changes.
+      ...(localCategory !== item.category ? { subcategoryId: null } : {}),
     });
   };
 
@@ -474,6 +487,17 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, is
           <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="text-sm" />
         </div>
       </div>
+
+      {catSubs.length > 0 && (
+        <div className="space-y-1">
+          <p className="adm-label text-xs">{translate('subcategory', locale)}</p>
+          <Select value={item.subcategoryId ?? ''}
+            onChange={(e) => onPatch({ subcategoryId: e.target.value || null })}>
+            <option value="">{translate('no_subcategory', locale)}</option>
+            {catSubs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1">
         <p className="adm-label text-xs">{translate('description', locale)}</p>
@@ -539,7 +563,8 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, onPatch, is
   );
 };
 
-const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+  const catSubs = subcategories.filter((s) => s.category === item.category);
   const [localName, setLocalName] = useState(item.name);
   const [localCategory, setLocalCategory] = useState<MenuItem['category']>(item.category);
   const [localDescription, setLocalDescription] = useState(item.description ?? '');
@@ -562,7 +587,9 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
       category: localCategory,
       description: localDescription.trim() || undefined,
       photoUrl: localPhotoUrl.trim() || undefined,
-      ...(priceCents !== null ? { priceCents } : {})
+      ...(priceCents !== null ? { priceCents } : {}),
+      // Clear a now-mismatched subcategory when the dish's category changes.
+      ...(localCategory !== item.category ? { subcategoryId: null } : {})
     });
   };
 
@@ -609,6 +636,20 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
               <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
             ))}
           </Select>
+        </td>
+
+        {/* Subcategory */}
+        <td className="px-4 py-2.5">
+          {catSubs.length > 0 ? (
+            <Select value={item.subcategoryId ?? ''}
+              onChange={(e) => onPatch({ subcategoryId: e.target.value || null })}
+              className="h-8 text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
+              <option value="">{translate('no_subcategory', locale)}</option>
+              {catSubs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </Select>
+          ) : (
+            <span style={{ color: 'rgba(226,232,240,0.3)', fontSize: 12 }}>—</span>
+          )}
         </td>
 
         {/* Description */}
@@ -694,7 +735,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, onPatch, isSaving,
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={9} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={10} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={localCategory.toLowerCase()}
