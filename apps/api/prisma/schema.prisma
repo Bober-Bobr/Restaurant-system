@@ -148,17 +148,18 @@ model AdminUser {
 // These belong to a RESTAURANT_MANAGER user (not a restaurant); each day holds
 // a budget plus product/salary/additional expenses.
 model ExpenseDay {
-  id              String           @id @default(cuid())
+  id              String              @id @default(cuid())
   date            String // YYYY-MM-DD
-  allocatedSum    Int              @default(0) // whole so'm (not tiyin)
-  additionalSum   Int              @default(0) // whole so'm (not tiyin)
-  additionalNote  String?
+  allocatedSum    Int                 @default(0) // whole so'm (not tiyin)
+  isClosed        Boolean             @default(false)
+  closedAt        DateTime?
   managerId       String
-  manager         AdminUser        @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
+  manager         AdminUser           @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
   products        ProductExpense[]
   salaries        SalaryExpense[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  additionals     AdditionalExpense[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@unique([managerId, date])
   @@index([managerId])
@@ -179,6 +180,18 @@ model ProductExpense {
 }
 
 model SalaryExpense {
+  id          String     @id @default(cuid())
+  name        String
+  amountSum   Int        @default(0) // whole so'm (not tiyin)
+  sortOrder   Int        @default(0)
+  dayId       String
+  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  @@index([dayId])
+}
+
+model AdditionalExpense {
   id          String     @id @default(cuid())
   name        String
   amountSum   Int        @default(0) // whole so'm (not tiyin)

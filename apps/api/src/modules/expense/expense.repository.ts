@@ -1,14 +1,14 @@
 import { prisma } from '../../db/prisma.js';
 
+const lineOrder = [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }];
 const dayInclude = {
-  products: { orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }] },
-  salaries: { orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }] }
+  products: { orderBy: lineOrder },
+  salaries: { orderBy: lineOrder },
+  additionals: { orderBy: lineOrder }
 };
 
 export type UpdateDayData = {
   allocatedSum?: number;
-  additionalSum?: number;
-  additionalNote?: string | null;
 };
 
 export type ProductData = {
@@ -18,12 +18,10 @@ export type ProductData = {
   amountSum?: number;
 };
 
-export type SalaryData = {
+export type LineData = {
   name: string;
   amountSum?: number;
 };
-
-export type DayWithLines = Awaited<ReturnType<ExpenseRepository['findDayById']>>;
 
 export class ExpenseRepository {
   listDays(managerId: string) {
@@ -35,9 +33,9 @@ export class ExpenseRepository {
   }
 
   // Days within an inclusive date range (YYYY-MM-DD strings compare lexically).
-  listDaysInRange(managerId: string, from: string, to: string) {
+  listDaysInRange(managerId: string, from: string, to: string, openOnly = false) {
     return prisma.expenseDay.findMany({
-      where: { managerId, date: { gte: from, lte: to } },
+      where: { managerId, date: { gte: from, lte: to }, ...(openOnly ? { isClosed: false } : {}) },
       orderBy: { date: 'asc' },
       include: dayInclude
     });
@@ -54,7 +52,6 @@ export class ExpenseRepository {
     return prisma.expenseDay.findUnique({ where: { id }, include: dayInclude });
   }
 
-  // The most recent day (used to derive the next date + clone its contents).
   latestDay(managerId: string) {
     return prisma.expenseDay.findFirst({
       where: { managerId },
@@ -65,31 +62,30 @@ export class ExpenseRepository {
 
   createDay(managerId: string, date: string, seed?: UpdateDayData) {
     return prisma.expenseDay.create({
-      data: {
-        managerId,
-        date,
-        allocatedSum: seed?.allocatedSum ?? 0,
-        additionalSum: seed?.additionalSum ?? 0,
-        additionalNote: seed?.additionalNote ?? null
-      },
+      data: { managerId, date, allocatedSum: seed?.allocatedSum ?? 0 },
       include: dayInclude
     });
   }
 
-  async cloneLines(dayId: string, products: ProductData[], salaries: SalaryData[]) {
+  async cloneLines(dayId: string, products: ProductData[], salaries: LineData[], additionals: LineData[]) {
     const ops = [
-      ...products.map((p, i) =>
-        prisma.productExpense.create({ data: { ...p, dayId, sortOrder: i } })
-      ),
-      ...salaries.map((s, i) =>
-        prisma.salaryExpense.create({ data: { ...s, dayId, sortOrder: i } })
-      )
+      ...products.map((p, i) => prisma.productExpense.create({ data: { ...p, dayId, sortOrder: i } })),
+      ...salaries.map((s, i) => prisma.salaryExpense.create({ data: { ...s, dayId, sortOrder: i } })),
+      ...additionals.map((a, i) => prisma.additionalExpense.create({ data: { ...a, dayId, sortOrder: i } }))
     ];
     if (ops.length) await prisma.$transaction(ops);
   }
 
   updateDay(id: string, data: UpdateDayData) {
     return prisma.expenseDay.update({ where: { id }, data, include: dayInclude });
+  }
+
+  closeDay(id: string) {
+    return prisma.expenseDay.update({
+      where: { id },
+      data: { isClosed: true, closedAt: new Date() },
+      include: dayInclude
+    });
   }
 
   deleteDay(id: string) {
@@ -112,27 +108,41 @@ export class ExpenseRepository {
     return row?.day.managerId ?? null;
   }
 
+  async ownerOfAdditional(additionalId: string): Promise<string | null> {
+    const row = await prisma.additionalExpense.findUnique({
+      where: { id: additionalId },
+      select: { day: { select: { managerId: true } } }
+    });
+    return row?.day.managerId ?? null;
+  }
+
   createProduct(dayId: string, data: ProductData) {
     return prisma.productExpense.create({ data: { ...data, dayId } });
   }
-
   updateProduct(id: string, data: Partial<ProductData>) {
     return prisma.productExpense.update({ where: { id }, data });
   }
-
   deleteProduct(id: string) {
     return prisma.productExpense.delete({ where: { id } });
   }
 
-  createSalary(dayId: string, data: SalaryData) {
+  createSalary(dayId: string, data: LineData) {
     return prisma.salaryExpense.create({ data: { ...data, dayId } });
   }
-
-  updateSalary(id: string, data: Partial<SalaryData>) {
+  updateSalary(id: string, data: Partial<LineData>) {
     return prisma.salaryExpense.update({ where: { id }, data });
   }
-
   deleteSalary(id: string) {
     return prisma.salaryExpense.delete({ where: { id } });
+  }
+
+  createAdditional(dayId: string, data: LineData) {
+    return prisma.additionalExpense.create({ data: { ...data, dayId } });
+  }
+  updateAdditional(id: string, data: Partial<LineData>) {
+    return prisma.additionalExpense.update({ where: { id }, data });
+  }
+  deleteAdditional(id: string) {
+    return prisma.additionalExpense.delete({ where: { id } });
   }
 }

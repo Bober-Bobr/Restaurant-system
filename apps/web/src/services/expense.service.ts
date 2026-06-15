@@ -1,4 +1,4 @@
-import type { ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
+import type { AdditionalExpense, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
 import { httpClient } from './http';
 
 export const expenseService = {
@@ -12,11 +12,12 @@ export const expenseService = {
     const { data } = await httpClient.post<ExpenseDay>('/expenses/days', date ? { date } : {});
     return data;
   },
-  async updateDay(
-    id: string,
-    payload: Partial<{ allocatedSum: number; additionalSum: number; additionalNote: string | null }>
-  ) {
+  async updateDay(id: string, payload: Partial<{ allocatedSum: number }>) {
     const { data } = await httpClient.patch<ExpenseDay>(`/expenses/days/${id}`, payload);
+    return data;
+  },
+  async closeDay(id: string) {
+    const { data } = await httpClient.patch<ExpenseDay>(`/expenses/days/${id}/close`, {});
     return data;
   },
   async removeDay(id: string) {
@@ -50,10 +51,22 @@ export const expenseService = {
     await httpClient.delete(`/expenses/salaries/${id}`);
   },
 
-  // Download a PDF covering `days` ending at `end`, returned as a Blob.
-  async downloadPdf(end: string, days: number, locale: string) {
+  async addAdditional(dayId: string, payload: { name: string; amountSum?: number }) {
+    const { data } = await httpClient.post<AdditionalExpense>(`/expenses/days/${dayId}/additionals`, payload);
+    return data;
+  },
+  async updateAdditional(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+    const { data } = await httpClient.patch<AdditionalExpense>(`/expenses/additionals/${id}`, payload);
+    return data;
+  },
+  async removeAdditional(id: string) {
+    await httpClient.delete(`/expenses/additionals/${id}`);
+  },
+
+  // Download a PDF covering the inclusive [from, to] range (closed days excluded).
+  async downloadPdf(from: string, to: string, locale: string) {
     const { data } = await httpClient.get('/expenses/pdf', {
-      params: { end, days, locale },
+      params: { from, to, locale },
       responseType: 'blob',
     });
     return data as Blob;

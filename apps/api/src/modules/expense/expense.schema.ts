@@ -13,9 +13,7 @@ export const createDaySchema = z.object({
 });
 
 export const updateDaySchema = z.object({
-  allocatedSum: sum.optional(),
-  additionalSum: sum.optional(),
-  additionalNote: z.string().max(500).nullable().optional()
+  allocatedSum: sum.optional()
 });
 
 export const createProductSchema = z.object({
@@ -27,17 +25,18 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
-export const createSalarySchema = z.object({
+// Salaries and additional expenses share the same { name, amountSum } shape.
+export const createLineSchema = z.object({
   name: z.string().min(1).max(120),
   amountSum: sum.optional()
 });
 
-export const updateSalarySchema = createSalarySchema.partial();
+export const updateLineSchema = createLineSchema.partial();
 
 export const idSchema = z.object({ id: z.string().cuid() });
 export const dayIdSchema = z.object({ dayId: z.string().cuid() });
 
 export const pdfQuerySchema = z.object({
-  end: dateString.optional(),
-  days: z.coerce.number().int().min(1).max(31).default(1)
+  from: dateString.optional(),
+  to: dateString.optional()
 });

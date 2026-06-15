@@ -5,10 +5,9 @@ type Line = { name: string; quantity?: number; unit?: string; amountSum: number 
 export type PdfDay = {
   date: string;
   allocatedSum: number;
-  additionalSum: number;
-  additionalNote: string | null;
   products: Line[];
   salaries: { name: string; amountSum: number }[];
+  additionals: { name: string; amountSum: number }[];
 };
 
 const LABELS: Record<Locale, Record<string, string>> = {
@@ -37,7 +36,8 @@ const fmt = (sum: number) => sum.toLocaleString('ru-RU') + " so'm";
 function dayTotals(d: PdfDay) {
   const products = d.products.reduce((s, p) => s + p.amountSum, 0);
   const salaries = d.salaries.reduce((s, p) => s + p.amountSum, 0);
-  const spent = products + salaries + d.additionalSum;
+  const additionals = d.additionals.reduce((s, p) => s + p.amountSum, 0);
+  const spent = products + salaries + additionals;
   return { spent, balance: d.allocatedSum - spent };
 }
 
@@ -135,9 +135,13 @@ export function generateExpensePdf(
       }
 
       // Additional
-      if (d.additionalSum > 0 || d.additionalNote) {
+      if (d.additionals.length) {
         doc.moveDown(0.1);
-        kv(`${L.additional}${d.additionalNote ? ` (${d.additionalNote})` : ''}`, fmt(d.additionalSum));
+        doc.font(B, 10).fillColor('#444').text(L.additional, ML);
+        doc.moveDown(0.3);
+        for (const a of d.additionals) {
+          kv(`   • ${a.name}`, fmt(a.amountSum));
+        }
       }
 
       doc.moveDown(0.2);

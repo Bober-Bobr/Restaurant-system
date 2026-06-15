@@ -5,14 +5,14 @@ import { generateExpensePdf } from './expense.pdf.service.js';
 import { type Locale, locales } from '../../utils/translate.js';
 import {
   createDaySchema,
+  createLineSchema,
   createProductSchema,
-  createSalarySchema,
   dayIdSchema,
   idSchema,
   pdfQuerySchema,
   updateDaySchema,
-  updateProductSchema,
-  updateSalarySchema
+  updateLineSchema,
+  updateProductSchema
 } from './expense.schema.js';
 
 const service = new ExpenseService(new ExpenseRepository());
@@ -33,9 +33,9 @@ export class ExpenseController {
   }
 
   async pdf(request: Request, response: Response) {
-    const { end, days } = pdfQuerySchema.parse(request.query);
+    const { from, to } = pdfQuerySchema.parse(request.query);
     const locale = resolveLocale(request.query.locale);
-    const { rows, fromDate, endDate } = await service.listForPdf(request.admin!.id, end, days);
+    const { rows, fromDate, endDate } = await service.listForPdf(request.admin!.id, from, to);
     const file = await generateExpensePdf(rows, { from: fromDate, to: endDate }, locale);
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.pdf"`);
@@ -46,6 +46,11 @@ export class ExpenseController {
     const { id } = idSchema.parse(request.params);
     const payload = updateDaySchema.parse(request.body);
     response.json(await service.updateDay(request.admin!.id, id, payload));
+  }
+
+  async closeDay(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    response.json(await service.closeDay(request.admin!.id, id));
   }
 
   async removeDay(request: Request, response: Response) {
@@ -74,19 +79,37 @@ export class ExpenseController {
 
   async addSalary(request: Request, response: Response) {
     const { dayId } = dayIdSchema.parse(request.params);
-    const payload = createSalarySchema.parse(request.body);
+    const payload = createLineSchema.parse(request.body);
     response.status(201).json(await service.addSalary(request.admin!.id, dayId, payload));
   }
 
   async updateSalary(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
-    const payload = updateSalarySchema.parse(request.body);
+    const payload = updateLineSchema.parse(request.body);
     response.json(await service.updateSalary(request.admin!.id, id, payload));
   }
 
   async removeSalary(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
     await service.removeSalary(request.admin!.id, id);
+    response.status(204).send();
+  }
+
+  async addAdditional(request: Request, response: Response) {
+    const { dayId } = dayIdSchema.parse(request.params);
+    const payload = createLineSchema.parse(request.body);
+    response.status(201).json(await service.addAdditional(request.admin!.id, dayId, payload));
+  }
+
+  async updateAdditional(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    const payload = updateLineSchema.parse(request.body);
+    response.json(await service.updateAdditional(request.admin!.id, id, payload));
+  }
+
+  async removeAdditional(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    await service.removeAdditional(request.admin!.id, id);
     response.status(204).send();
   }
 }

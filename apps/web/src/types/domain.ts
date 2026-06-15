@@ -114,15 +114,24 @@ export type SalaryExpense = {
   dayId: string;
 };
 
+export type AdditionalExpense = {
+  id: string;
+  name: string;
+  amountSum: number; // whole so'm
+  sortOrder: number;
+  dayId: string;
+};
+
 export type ExpenseDay = {
   id: string;
   date: string; // YYYY-MM-DD
   allocatedSum: number; // whole so'm
-  additionalSum: number; // whole so'm
-  additionalNote: string | null;
+  isClosed: boolean;
+  closedAt: string | null;
   managerId: string;
   products: ProductExpense[];
   salaries: SalaryExpense[];
+  additionals: AdditionalExpense[];
 };
 
 export type PricingSummary = {

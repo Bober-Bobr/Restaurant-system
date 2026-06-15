@@ -32,6 +32,7 @@ import { AdminArrangementPage } from '../pages/AdminArrangementPage';
 import { CateringAdminLayout } from './CateringAdminLayout';
 import { RestaurantManagerLayout } from './RestaurantManagerLayout';
 import { ExpenseLedgerPage } from '../pages/ExpenseLedgerPage';
+import { AccountsPage } from '../pages/AccountsPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
@@ -233,6 +234,7 @@ export const App = () => {
         <Route element={<RestaurantManagerLayout />}>
           <Route path="/" element={<Navigate to="/ledger" replace />} />
           <Route path="/ledger" element={<ExpenseLedgerPage />} />
+          <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/devices" element={<DevicesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/ledger" replace />} />

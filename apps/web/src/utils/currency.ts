@@ -14,6 +14,13 @@ export function formatWholeSum(sum: number): string {
   return Math.round(sum).toLocaleString('ru-RU') + " so'm";
 }
 
+/** Group a digit string with thin spaces every three digits, e.g. "1000000" → "1 000 000". */
+export function groupDigits(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 /** Parse a user-entered whole-so'm string into a non-negative integer, or null if invalid. */
 export function parseWholeSum(value: string): number | null {
   const normalized = value.replace(/[\s,']/g, '').replace(/so'm?$/i, '').trim();

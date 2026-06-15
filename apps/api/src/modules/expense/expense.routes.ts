@@ -11,6 +11,7 @@ router.get('/pdf', controller.pdf.bind(controller));
 router.get('/days', controller.listDays.bind(controller));
 router.post('/days', controller.createDay.bind(controller));
 router.patch('/days/:id', controller.updateDay.bind(controller));
+router.patch('/days/:id/close', controller.closeDay.bind(controller));
 router.delete('/days/:id', controller.removeDay.bind(controller));
 
 // Product expenses (nested under a day for creation)
@@ -22,5 +23,10 @@ router.delete('/products/:id', controller.removeProduct.bind(controller));
 router.post('/days/:dayId/salaries', controller.addSalary.bind(controller));
 router.patch('/salaries/:id', controller.updateSalary.bind(controller));
 router.delete('/salaries/:id', controller.removeSalary.bind(controller));
+
+// Additional expenses
+router.post('/days/:dayId/additionals', controller.addAdditional.bind(controller));
+router.patch('/additionals/:id', controller.updateAdditional.bind(controller));
+router.delete('/additionals/:id', controller.removeAdditional.bind(controller));
 
 export { router as expenseRouter };

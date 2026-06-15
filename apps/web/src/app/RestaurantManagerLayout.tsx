@@ -33,6 +33,7 @@ export const RestaurantManagerLayout = () => {
 
   const navItems: { to: string; label: string }[] = [
     { to: '/ledger', label: t('expense_ledger') },
+    { to: '/accounts', label: t('accounts') },
     { to: '/devices', label: t('devices') },
   ];
 
