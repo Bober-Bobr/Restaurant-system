@@ -101,7 +101,7 @@ export type ProductExpense = {
   name: string;
   quantity: number;
   unit: string;
-  amountCents: number;
+  amountSum: number; // whole so'm
   sortOrder: number;
   dayId: string;
 };
@@ -109,7 +109,7 @@ export type ProductExpense = {
 export type SalaryExpense = {
   id: string;
   name: string;
-  amountCents: number;
+  amountSum: number; // whole so'm
   sortOrder: number;
   dayId: string;
 };
@@ -117,8 +117,8 @@ export type SalaryExpense = {
 export type ExpenseDay = {
   id: string;
   date: string; // YYYY-MM-DD
-  allocatedCents: number;
-  additionalCents: number;
+  allocatedSum: number; // whole so'm
+  additionalSum: number; // whole so'm
   additionalNote: string | null;
   managerId: string;
   products: ProductExpense[];

@@ -9,6 +9,20 @@ export function formatSumInput(tiyin: number): string {
   return String(Math.round(tiyin / 100));
 }
 
+/** Format a whole-so'm integer (not tiyin) as a UZS display string. */
+export function formatWholeSum(sum: number): string {
+  return Math.round(sum).toLocaleString('ru-RU') + " so'm";
+}
+
+/** Parse a user-entered whole-so'm string into a non-negative integer, or null if invalid. */
+export function parseWholeSum(value: string): number | null {
+  const normalized = value.replace(/[\s,']/g, '').replace(/so'm?$/i, '').trim();
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount);
+}
+
 /** Parse a user-entered so'm string and return the equivalent tiyin integer, or null if invalid. */
 export function parseSumToTiyin(value: string): number | null {
   // Strip thousands separators (space, apostrophe, comma) and the currency label

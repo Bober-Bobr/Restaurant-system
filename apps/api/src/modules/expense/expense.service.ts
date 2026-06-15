@@ -6,6 +6,16 @@ import {
   type UpdateDayData
 } from './expense.repository.js';
 
+// Date helpers operating on YYYY-MM-DD strings (UTC, no timezone drift).
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+function addDays(date: string, delta: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
 export class ExpenseService {
   constructor(private readonly repo: ExpenseRepository) {}
 
@@ -13,11 +23,36 @@ export class ExpenseService {
     return this.repo.listDays(managerId);
   }
 
-  // Get-or-create the day for a given date, so opening a date is idempotent.
-  async createDay(managerId: string, date: string) {
-    const existing = await this.repo.findDay(managerId, date);
+  // Create the next day. If no date is given, it's the day after the latest day
+  // (or today when there are none). The new day is pre-filled with the previous
+  // day's allocation and product/salary lines, which tend to repeat.
+  async createDay(managerId: string, date?: string) {
+    const latest = await this.repo.latestDay(managerId);
+    const targetDate = date ?? (latest ? addDays(latest.date, 1) : todayStr());
+
+    const existing = await this.repo.findDay(managerId, targetDate);
     if (existing) return existing;
-    return this.repo.createDay(managerId, date);
+
+    const day = await this.repo.createDay(managerId, targetDate, latest
+      ? { allocatedSum: latest.allocatedSum, additionalSum: latest.additionalSum, additionalNote: latest.additionalNote }
+      : undefined);
+
+    if (latest) {
+      await this.repo.cloneLines(
+        day.id,
+        latest.products.map((p) => ({ name: p.name, quantity: p.quantity, unit: p.unit, amountSum: p.amountSum })),
+        latest.salaries.map((s) => ({ name: s.name, amountSum: s.amountSum }))
+      );
+    }
+    return this.repo.findDayById(day.id);
+  }
+
+  // Inclusive range of `days` ending at `end` (defaults to the latest day / today).
+  async listForPdf(managerId: string, end: string | undefined, days: number) {
+    const latest = await this.repo.latestDay(managerId);
+    const endDate = end ?? latest?.date ?? todayStr();
+    const fromDate = addDays(endDate, -(days - 1));
+    return { rows: await this.repo.listDaysInRange(managerId, fromDate, endDate), fromDate, endDate };
   }
 
   private async requireOwnDay(managerId: string, id: string) {

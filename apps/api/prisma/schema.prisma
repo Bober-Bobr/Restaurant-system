@@ -150,8 +150,8 @@ model AdminUser {
 model ExpenseDay {
   id              String           @id @default(cuid())
   date            String // YYYY-MM-DD
-  allocatedCents  Int              @default(0)
-  additionalCents Int              @default(0)
+  allocatedSum    Int              @default(0) // whole so'm (not tiyin)
+  additionalSum   Int              @default(0) // whole so'm (not tiyin)
   additionalNote  String?
   managerId       String
   manager         AdminUser        @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
@@ -169,7 +169,7 @@ model ProductExpense {
   name        String
   quantity    Float      @default(0)
   unit        String     @default("kg")
-  amountCents Int        @default(0)
+  amountSum   Int        @default(0) // whole so'm (not tiyin)
   sortOrder   Int        @default(0)
   dayId       String
   day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
@@ -181,7 +181,7 @@ model ProductExpense {
 model SalaryExpense {
   id          String     @id @default(cuid())
   name        String
-  amountCents Int        @default(0)
+  amountSum   Int        @default(0) // whole so'm (not tiyin)
   sortOrder   Int        @default(0)
   dayId       String
   day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)

@@ -6,8 +6,8 @@ const dayInclude = {
 };
 
 export type UpdateDayData = {
-  allocatedCents?: number;
-  additionalCents?: number;
+  allocatedSum?: number;
+  additionalSum?: number;
   additionalNote?: string | null;
 };
 
@@ -15,19 +15,30 @@ export type ProductData = {
   name: string;
   quantity?: number;
   unit?: string;
-  amountCents?: number;
+  amountSum?: number;
 };
 
 export type SalaryData = {
   name: string;
-  amountCents?: number;
+  amountSum?: number;
 };
+
+export type DayWithLines = Awaited<ReturnType<ExpenseRepository['findDayById']>>;
 
 export class ExpenseRepository {
   listDays(managerId: string) {
     return prisma.expenseDay.findMany({
       where: { managerId },
       orderBy: { date: 'desc' },
+      include: dayInclude
+    });
+  }
+
+  // Days within an inclusive date range (YYYY-MM-DD strings compare lexically).
+  listDaysInRange(managerId: string, from: string, to: string) {
+    return prisma.expenseDay.findMany({
+      where: { managerId, date: { gte: from, lte: to } },
+      orderBy: { date: 'asc' },
       include: dayInclude
     });
   }
@@ -43,8 +54,38 @@ export class ExpenseRepository {
     return prisma.expenseDay.findUnique({ where: { id }, include: dayInclude });
   }
 
-  createDay(managerId: string, date: string) {
-    return prisma.expenseDay.create({ data: { managerId, date }, include: dayInclude });
+  // The most recent day (used to derive the next date + clone its contents).
+  latestDay(managerId: string) {
+    return prisma.expenseDay.findFirst({
+      where: { managerId },
+      orderBy: { date: 'desc' },
+      include: dayInclude
+    });
+  }
+
+  createDay(managerId: string, date: string, seed?: UpdateDayData) {
+    return prisma.expenseDay.create({
+      data: {
+        managerId,
+        date,
+        allocatedSum: seed?.allocatedSum ?? 0,
+        additionalSum: seed?.additionalSum ?? 0,
+        additionalNote: seed?.additionalNote ?? null
+      },
+      include: dayInclude
+    });
+  }
+
+  async cloneLines(dayId: string, products: ProductData[], salaries: SalaryData[]) {
+    const ops = [
+      ...products.map((p, i) =>
+        prisma.productExpense.create({ data: { ...p, dayId, sortOrder: i } })
+      ),
+      ...salaries.map((s, i) =>
+        prisma.salaryExpense.create({ data: { ...s, dayId, sortOrder: i } })
+      )
+    ];
+    if (ops.length) await prisma.$transaction(ops);
   }
 
   updateDay(id: string, data: UpdateDayData) {
@@ -55,7 +96,6 @@ export class ExpenseRepository {
     return prisma.expenseDay.delete({ where: { id } });
   }
 
-  // Resolve the owning managerId for a product/salary line via its day.
   async ownerOfProduct(productId: string): Promise<string | null> {
     const row = await prisma.productExpense.findUnique({
       where: { id: productId },

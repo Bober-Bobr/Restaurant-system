@@ -4,6 +4,9 @@ import { ExpenseController } from './expense.controller.js';
 const router = Router();
 const controller = new ExpenseController();
 
+// PDF export (range ending at ?end, covering ?days)
+router.get('/pdf', controller.pdf.bind(controller));
+
 // Days
 router.get('/days', controller.listDays.bind(controller));
 router.post('/days', controller.createDay.bind(controller));
