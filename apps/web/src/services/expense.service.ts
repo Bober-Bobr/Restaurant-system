@@ -12,7 +12,7 @@ export const expenseService = {
     const { data } = await httpClient.post<ExpenseDay>('/expenses/days', date ? { date } : {});
     return data;
   },
-  async updateDay(id: string, payload: Partial<{ allocatedSum: number }>) {
+  async updateDay(id: string, payload: Partial<{ allocatedSum: number; report: string | null }>) {
     const { data } = await httpClient.patch<ExpenseDay>(`/expenses/days/${id}`, payload);
     return data;
   },
@@ -63,10 +63,11 @@ export const expenseService = {
     await httpClient.delete(`/expenses/additionals/${id}`);
   },
 
-  // Download a PDF covering the inclusive [from, to] range (closed days excluded).
-  async downloadPdf(from: string, to: string, locale: string) {
+  // Download a PDF of the last `days` days ending at the latest created day
+  // (closed days excluded).
+  async downloadPdf(days: number, locale: string) {
     const { data } = await httpClient.get('/expenses/pdf', {
-      params: { from, to, locale },
+      params: { days, locale },
       responseType: 'blob',
     });
     return data as Blob;

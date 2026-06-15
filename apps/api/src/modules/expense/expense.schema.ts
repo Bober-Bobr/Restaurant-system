@@ -13,7 +13,8 @@ export const createDaySchema = z.object({
 });
 
 export const updateDaySchema = z.object({
-  allocatedSum: sum.optional()
+  allocatedSum: sum.optional(),
+  report: z.string().max(5000).nullable().optional()
 });
 
 export const createProductSchema = z.object({
@@ -37,6 +38,5 @@ export const idSchema = z.object({ id: z.string().cuid() });
 export const dayIdSchema = z.object({ dayId: z.string().cuid() });
 
 export const pdfQuerySchema = z.object({
-  from: dateString.optional(),
-  to: dateString.optional()
+  days: z.coerce.number().int().min(1).max(366).default(1)
 });

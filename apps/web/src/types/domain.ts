@@ -126,6 +126,7 @@ export type ExpenseDay = {
   id: string;
   date: string; // YYYY-MM-DD
   allocatedSum: number; // whole so'm
+  report: string | null;
   isClosed: boolean;
   closedAt: string | null;
   managerId: string;

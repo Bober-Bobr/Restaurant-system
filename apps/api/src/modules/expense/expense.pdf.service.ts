@@ -5,6 +5,7 @@ type Line = { name: string; quantity?: number; unit?: string; amountSum: number 
 export type PdfDay = {
   date: string;
   allocatedSum: number;
+  report: string | null;
   products: Line[];
   salaries: { name: string; amountSum: number }[];
   additionals: { name: string; amountSum: number }[];
@@ -15,19 +16,19 @@ const LABELS: Record<Locale, Record<string, string>> = {
     title: 'Expense Ledger', allocated: 'Allocated funds', products: 'Product expenses',
     salaries: 'Employee salaries', additional: 'Additional expenses', spent: 'Spent',
     balance: 'Balance', totalAllocated: 'Total Allocated Funds', totalExpenses: 'Total Expenses',
-    totalBalance: 'Total Balance', period: 'Period', noData: 'No data for this period.'
+    totalBalance: 'Total Balance', period: 'Period', noData: 'No data for this period.', report: 'Report'
   },
   ru: {
     title: 'Книга расходов', allocated: 'Выделено средств', products: 'Расходы на продукты',
     salaries: 'Зарплаты сотрудников', additional: 'Дополнительные расходы', spent: 'Потрачено',
     balance: 'Остаток', totalAllocated: 'Итого выделено средств', totalExpenses: 'Итого расходы',
-    totalBalance: 'Итоговый баланс', period: 'Период', noData: 'Нет данных за этот период.'
+    totalBalance: 'Итоговый баланс', period: 'Период', noData: 'Нет данных за этот период.', report: 'Отчёт'
   },
   uz: {
     title: 'Xarajatlar daftari', allocated: 'Ajratilgan mablag', products: 'Mahsulot xarajatlari',
     salaries: 'Xodimlar ish haqi', additional: 'Qoshimcha xarajatlar', spent: 'Sarflangan',
     balance: 'Qoldiq', totalAllocated: 'Jami ajratilgan mablag', totalExpenses: 'Jami xarajatlar',
-    totalBalance: 'Yakuniy balans', period: 'Davr', noData: 'Bu davr uchun malumot yoq.'
+    totalBalance: 'Yakuniy balans', period: 'Davr', noData: 'Bu davr uchun malumot yoq.', report: 'Hisobot'
   }
 };
 
@@ -147,6 +148,13 @@ export function generateExpensePdf(
       doc.moveDown(0.2);
       kv(L.spent, fmt(spent), { bold: true, color: '#b45309' });
       kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? '#b91c1c' : '#15803d' });
+
+      if (d.report && d.report.trim()) {
+        doc.moveDown(0.3);
+        doc.font(B, 10).fillColor('#444').text(L.report, ML);
+        doc.font(R, 9).fillColor('#333').text(d.report.trim(), ML, doc.y + 2, { width: contentW });
+      }
+
       doc.moveDown(0.3);
       hr('#dddddd', 0.8);
     }

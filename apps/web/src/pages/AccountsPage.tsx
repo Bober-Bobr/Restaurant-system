@@ -6,19 +6,12 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { formatWholeSum } from '../utils/currency';
 
-const isoOffset = (deltaDays: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + deltaDays);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 export const AccountsPage = () => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const queryClient = useQueryClient();
 
-  const [from, setFrom] = useState(isoOffset(-29));
-  const [to, setTo] = useState(isoOffset(0));
+  const [daysInput, setDaysInput] = useState('7');
   const [downloading, setDownloading] = useState(false);
 
   const { data: days = [], isLoading, isError } = useQuery({
@@ -32,13 +25,14 @@ export const AccountsPage = () => {
   });
 
   const downloadPdf = async () => {
+    const n = Math.max(1, Math.min(366, Math.floor(Number(daysInput) || 1)));
     setDownloading(true);
     try {
-      const blob = await expenseService.downloadPdf(from, to, locale);
+      const blob = await expenseService.downloadPdf(n, locale);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `ledger-${from}_${to}.pdf`);
+      link.setAttribute('download', `ledger-last-${n}d.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -63,15 +57,12 @@ export const AccountsPage = () => {
         {t('accounts_help')}
       </p>
 
-      {/* Custom-range PDF download */}
+      {/* PDF download for the last N days (ending at the latest created day) */}
       <section className="adm-card tablet-fade-up" style={{ padding: 16, marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <label style={{ display: 'grid', gap: 6 }}>
-          <span className="adm-label">{t('date_from')}</span>
-          <input type="date" className="adm-input" value={from} max={to} onChange={(e) => setFrom(e.target.value)} style={{ colorScheme: 'dark' }} />
-        </label>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span className="adm-label">{t('date_to')}</span>
-          <input type="date" className="adm-input" value={to} min={from} onChange={(e) => setTo(e.target.value)} style={{ colorScheme: 'dark' }} />
+          <span className="adm-label">{t('pdf_days_label')}</span>
+          <input type="number" min={1} max={366} className="adm-input" value={daysInput}
+            onChange={(e) => setDaysInput(e.target.value)} style={{ width: 140 }} />
         </label>
         <button type="button" className="adm-btn-primary" onClick={downloadPdf} disabled={downloading} style={{ height: 42 }}>
           {downloading ? t('loading') : `📄 ${t('download_pdf')}`}

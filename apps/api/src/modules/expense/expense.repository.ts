@@ -9,6 +9,7 @@ const dayInclude = {
 
 export type UpdateDayData = {
   allocatedSum?: number;
+  report?: string | null;
 };
 
 export type ProductData = {

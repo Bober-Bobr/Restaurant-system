@@ -151,6 +151,7 @@ model ExpenseDay {
   id              String              @id @default(cuid())
   date            String // YYYY-MM-DD
   allocatedSum    Int                 @default(0) // whole so'm (not tiyin)
+  report          String? // free-text end-of-day report
   isClosed        Boolean             @default(false)
   closedAt        DateTime?
   managerId       String

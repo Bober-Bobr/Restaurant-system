@@ -33,9 +33,9 @@ export class ExpenseController {
   }
 
   async pdf(request: Request, response: Response) {
-    const { from, to } = pdfQuerySchema.parse(request.query);
+    const { days } = pdfQuerySchema.parse(request.query);
     const locale = resolveLocale(request.query.locale);
-    const { rows, fromDate, endDate } = await service.listForPdf(request.admin!.id, from, to);
+    const { rows, fromDate, endDate } = await service.listForPdf(request.admin!.id, days);
     const file = await generateExpensePdf(rows, { from: fromDate, to: endDate }, locale);
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.pdf"`);

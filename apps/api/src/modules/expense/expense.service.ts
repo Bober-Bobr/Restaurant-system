@@ -24,8 +24,9 @@ export class ExpenseService {
   }
 
   // Create the next day. If no date is given, it's the day after the latest day
-  // (or today when there are none). The new day is pre-filled with the previous
-  // day's allocation and product/salary/additional lines, which tend to repeat.
+  // (or today when there are none). Only the previous day's line *structure*
+  // (product/salary/additional names and product units) is carried over — every
+  // fill-in number (allocation, quantities, amounts) starts blank.
   async createDay(managerId: string, date?: string) {
     const latest = await this.repo.latestDay(managerId);
     const targetDate = date ?? (latest ? addDays(latest.date, 1) : todayStr());
@@ -33,28 +34,26 @@ export class ExpenseService {
     const existing = await this.repo.findDay(managerId, targetDate);
     if (existing) return existing;
 
-    const day = await this.repo.createDay(managerId, targetDate,
-      latest ? { allocatedSum: latest.allocatedSum } : undefined);
+    const day = await this.repo.createDay(managerId, targetDate);
 
     if (latest) {
       await this.repo.cloneLines(
         day.id,
-        latest.products.map((p) => ({ name: p.name, quantity: p.quantity, unit: p.unit, amountSum: p.amountSum })),
-        latest.salaries.map((s) => ({ name: s.name, amountSum: s.amountSum })),
-        latest.additionals.map((a) => ({ name: a.name, amountSum: a.amountSum }))
+        latest.products.map((p) => ({ name: p.name, unit: p.unit, quantity: 0, amountSum: 0 })),
+        latest.salaries.map((s) => ({ name: s.name, amountSum: 0 })),
+        latest.additionals.map((a) => ({ name: a.name, amountSum: 0 }))
       );
     }
     return this.repo.findDayById(day.id);
   }
 
-  // Inclusive range for PDF export. Closed days are excluded. Defaults to the
-  // last 30 days ending at the latest day (or today).
-  async listForPdf(managerId: string, from?: string, to?: string) {
+  // The last `days` calendar days ending at the latest created day (or today).
+  // Closed days are excluded.
+  async listForPdf(managerId: string, days: number) {
     const latest = await this.repo.latestDay(managerId);
-    const endDate = to ?? latest?.date ?? todayStr();
-    const fromDate = from ?? addDays(endDate, -29);
-    const [lo, hi] = fromDate <= endDate ? [fromDate, endDate] : [endDate, fromDate];
-    return { rows: await this.repo.listDaysInRange(managerId, lo, hi, true), fromDate: lo, endDate: hi };
+    const endDate = latest?.date ?? todayStr();
+    const fromDate = addDays(endDate, -(days - 1));
+    return { rows: await this.repo.listDaysInRange(managerId, fromDate, endDate, true), fromDate, endDate };
   }
 
   private async requireOwnDay(managerId: string, id: string) {

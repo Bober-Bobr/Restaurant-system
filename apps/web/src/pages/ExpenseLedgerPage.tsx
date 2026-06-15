@@ -114,13 +114,15 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });
 
   const updateDay = useMutation({
-    mutationFn: (patch: { allocatedSum: number }) => expenseService.updateDay(day.id, patch),
+    mutationFn: (patch: { allocatedSum?: number; report?: string | null }) => expenseService.updateDay(day.id, patch),
     onSuccess: invalidate,
   });
   const removeDay = useMutation({ mutationFn: () => expenseService.removeDay(day.id), onSuccess: invalidate });
 
   const [allocated, setAllocated] = useState(groupDigits(String(day.allocatedSum)));
   useEffect(() => { setAllocated(groupDigits(String(day.allocatedSum))); }, [day.allocatedSum]);
+  const [report, setReport] = useState(day.report ?? '');
+  useEffect(() => { setReport(day.report ?? ''); }, [day.report]);
 
   const productsTotal = day.products.reduce((s, p) => s + p.amountSum, 0);
   const salariesTotal = day.salaries.reduce((s, p) => s + p.amountSum, 0);
@@ -185,6 +187,20 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
           <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
+        </div>
+
+        {/* End-of-day report */}
+        <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <span style={labelStyle}>{t('day_report')}</span>
+          <textarea
+            className="adm-input"
+            rows={3}
+            value={report}
+            onChange={(e) => setReport(e.target.value)}
+            onBlur={() => { if ((day.report ?? '') !== report) updateDay.mutate({ report: report || null }); }}
+            placeholder={t('day_report_placeholder')}
+            style={{ resize: 'vertical', minHeight: 70, lineHeight: 1.5 }}
+          />
         </div>
       </div>
     </section>
