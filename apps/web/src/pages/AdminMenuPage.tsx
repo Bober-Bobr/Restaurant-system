@@ -6,6 +6,7 @@ import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { subcategoryService } from '../services/subcategory.service';
 import { useAdminStore } from '../store/admin.store';
+import { useAuthStore } from '../store/auth.store';
 import { translate } from '../utils/translate';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -103,6 +104,10 @@ function BestsellerStar({ on, size = 18 }: { on: boolean; size?: number }) {
 export const AdminMenuPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
+  const role = useAuthStore((s) => s.role);
+  // The food-admin (catering) dashboard doesn't deal with banquet table
+  // categories, so the per-dish "Tables" column is hidden there.
+  const showTableCategories = role !== 'CATERING_ADMIN';
   const excluded = useExcludedCategories();
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
 
@@ -313,6 +318,7 @@ export const AdminMenuPage = () => {
                   locale={locale}
                   assignedTableCategories={itemTableCategoryMap.get(item.id) ?? []}
                   subcategories={subcategories}
+                  showTableCategories={showTableCategories}
                   onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
                   isSaving={updateMutation.isPending}
                   onDelete={() => deleteMutation.mutate(item.id)}
@@ -335,7 +341,7 @@ export const AdminMenuPage = () => {
                     <th>{translate('price', locale)}</th>
                     <th style={{ textAlign: 'center' }}>{translate('bestseller', locale)}</th>
                     <th style={{ textAlign: 'center' }}>{translate('out_of_stock', locale)}</th>
-                    <th>{translate('tables', locale)}</th>
+                    {showTableCategories && <th>{translate('tables', locale)}</th>}
                     <th></th>
                   </tr>
                 </thead>
@@ -347,6 +353,7 @@ export const AdminMenuPage = () => {
                       locale={locale}
                       assignedTableCategories={itemTableCategoryMap.get(item.id) ?? []}
                       subcategories={subcategories}
+                      showTableCategories={showTableCategories}
                       onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
                       isSaving={updateMutation.isPending}
                       onDelete={() => deleteMutation.mutate(item.id)}
@@ -369,6 +376,7 @@ type MenuItemRowProps = {
   locale: 'en' | 'ru' | 'uz';
   assignedTableCategories: TableCategory[];
   subcategories: Subcategory[];
+  showTableCategories: boolean;
   onPatch: (patch: Partial<MenuItem>) => void;
   isSaving: boolean;
   onDelete: () => void;
@@ -413,7 +421,7 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'LIQUEURS', key: 'liqueurs' },
 ];
 
-const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
   const catSubs = subcategories.filter((s) => s.category === item.category);
   const [localName, setLocalName] = useState(item.name);
   const [localCategory, setLocalCategory] = useState<MenuCategory>(item.category);
@@ -505,7 +513,7 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
           className="text-sm" placeholder="—" />
       </div>
 
-      {assignedTableCategories.length > 0 && (
+      {showTableCategories && assignedTableCategories.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {assignedTableCategories.map((tc) => (
             <span key={tc.id} className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -563,7 +571,7 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
   );
 };
 
-const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
   const catSubs = subcategories.filter((s) => s.category === item.category);
   const [localName, setLocalName] = useState(item.name);
   const [localCategory, setLocalCategory] = useState<MenuItem['category']>(item.category);
@@ -695,23 +703,25 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, onP
         </td>
 
         {/* Table categories */}
-        <td className="px-4 py-2.5">
-          {assignedTableCategories.length === 0 ? (
-            <span className="text-xs text-slate-400">—</span>
-          ) : (
-            <div className="flex flex-wrap gap-1">
-              {assignedTableCategories.map((tc) => (
-                <span
-                  key={tc.id}
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
-                >
-                  {tc.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </td>
+        {showTableCategories && (
+          <td className="px-4 py-2.5">
+            {assignedTableCategories.length === 0 ? (
+              <span className="text-xs text-slate-400">—</span>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {assignedTableCategories.map((tc) => (
+                  <span
+                    key={tc.id}
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.3)' }}
+                  >
+                    {tc.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </td>
+        )}
 
         {/* Actions */}
         <td className="whitespace-nowrap px-4 py-2.5">
@@ -735,7 +745,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, onP
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={10} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={showTableCategories ? 10 : 9} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={localCategory.toLowerCase()}

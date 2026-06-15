@@ -216,6 +216,7 @@ export const App = () => {
           <Route path="/admin/photos" element={<AdminPhotosPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/reviews" element={<AdminReviewsPage />} />
+          <Route path="/admin/settings" element={<AdminSettingsPage />} />
           <Route path="/devices" element={<DevicesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin/menu" replace />} />
@@ -257,6 +258,7 @@ export const App = () => {
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />
+        <Route path="/admin/subcategories" element={<AdminSubcategoriesPage />} />
         <Route path="/admin/additional" element={<AdminAdditionalPage />} />
         <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />
         <Route path="/admin/halls" element={<AdminHallsPage />} />
