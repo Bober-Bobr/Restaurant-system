@@ -16,6 +16,7 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   OWNER: 'Owner',
   ADMIN: 'Administrator',
   CATERING_ADMIN: 'Food Admin',
+  RESTAURANT_MANAGER: 'Restaurant Manager',
   EMPLOYEE: 'Employee',
   KITCHEN: 'Kitchen'
 };
@@ -26,6 +27,7 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   OWNER: { background: '#7c3aed', color: '#fff' },
   ADMIN: { background: '#2563eb', color: '#fff' },
   CATERING_ADMIN: { background: '#0ea5e9', color: '#fff' },
+  RESTAURANT_MANAGER: { background: '#d97706', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' },
   KITCHEN: { background: '#ea580c', color: '#fff' }
 };

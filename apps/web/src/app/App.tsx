@@ -30,10 +30,12 @@ import { AdminLayout } from './AdminLayout';
 import { AdminReviewsPage } from '../pages/AdminReviewsPage';
 import { AdminArrangementPage } from '../pages/AdminArrangementPage';
 import { CateringAdminLayout } from './CateringAdminLayout';
+import { RestaurantManagerLayout } from './RestaurantManagerLayout';
+import { ExpenseLedgerPage } from '../pages/ExpenseLedgerPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -98,6 +100,23 @@ export const App = () => {
     );
   }
 
+  // Restaurant Manager subdomain → expense ledger + devices
+  if (isRestaurantManagerSubdomain()) {
+    const { accessToken, role } = useAuthStore.getState();
+    if (!accessToken || role !== 'RESTAURANT_MANAGER') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = buildAbsoluteUrl('/login');
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
+  }
+
   // On root domain, only /login, /tablet and /tablet/summary are accessible
   if (isRootDomain() && window.location.hostname !== 'localhost') {
     const { accessToken, role, restaurantName } = useAuthStore.getState();
@@ -109,6 +128,11 @@ export const App = () => {
     // MANAGER → manager.v-menu.uz
     if (accessToken && role === 'MANAGER' && window.location.pathname !== '/login') {
       window.location.href = buildSubdomainBase('manager');
+      return null;
+    }
+    // RESTAURANT_MANAGER → rmanager.v-menu.uz
+    if (accessToken && role === 'RESTAURANT_MANAGER' && window.location.pathname !== '/login') {
+      window.location.href = buildSubdomainBase('rmanager');
       return null;
     }
     // CATERING_ADMIN → food-admin subdomain
@@ -200,9 +224,24 @@ export const App = () => {
     }
   }
 
+  // RESTAURANT_MANAGER → expense ledger + devices, not tied to a restaurant.
+  const role = useAuthStore((s) => s.role);
+  if (role === 'RESTAURANT_MANAGER') {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<RestaurantManagerLayout />}>
+          <Route path="/" element={<Navigate to="/ledger" replace />} />
+          <Route path="/ledger" element={<ExpenseLedgerPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/ledger" replace />} />
+      </Routes>
+    );
+  }
+
   // CATERING_ADMIN → restaurant admin dashboard limited to a few pages, in the
   // monochrome catering-site theme.
-  const role = useAuthStore((s) => s.role);
   if (role === 'CATERING_ADMIN') {
     return (
       <Routes>

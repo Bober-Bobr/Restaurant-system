@@ -3,7 +3,8 @@ import express from 'express';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { adminAuthMiddleware, requireRestaurant } from './middleware/auth.middleware.js';
+import { AdminRole } from '@prisma/client';
+import { adminAuthMiddleware, requireRestaurant, requireRole } from './middleware/auth.middleware.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
@@ -20,6 +21,7 @@ import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
 import { companyRouter } from './modules/company/company.routes.js';
 import { invitationRouter } from './modules/invitation/invitation.routes.js';
 import { reviewRouter } from './modules/review/review.routes.js';
+import { expenseRouter } from './modules/expense/expense.routes.js';
 
 export const app = express();
 
@@ -67,6 +69,8 @@ protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/photos', photoRoutes);
 protectedApi.use('/restaurants', restaurantRouter);
+// Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
+protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);
 protectedApi.use('/companies', companyRouter);
 // Invitations: auth middleware is applied inside the router (it's outside the auto-mounted protected API
 // because routes use roles directly without requireRestaurant).

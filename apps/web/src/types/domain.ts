@@ -95,6 +95,36 @@ export type Subcategory = {
   sortOrder?: number;
 };
 
+// ── Restaurant Manager expense ledger ──
+export type ProductExpense = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  amountCents: number;
+  sortOrder: number;
+  dayId: string;
+};
+
+export type SalaryExpense = {
+  id: string;
+  name: string;
+  amountCents: number;
+  sortOrder: number;
+  dayId: string;
+};
+
+export type ExpenseDay = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  allocatedCents: number;
+  additionalCents: number;
+  additionalNote: string | null;
+  managerId: string;
+  products: ProductExpense[];
+  salaries: SalaryExpense[];
+};
+
 export type PricingSummary = {
   eventId: number;
   guestCount: number;

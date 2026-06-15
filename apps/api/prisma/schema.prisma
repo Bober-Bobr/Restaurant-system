@@ -121,6 +121,7 @@ enum AdminRole {
   OWNER
   ADMIN
   CATERING_ADMIN
+  RESTAURANT_MANAGER
   EMPLOYEE
   KITCHEN
 }
@@ -138,8 +139,55 @@ model AdminUser {
   restaurant       Restaurant?  @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
   companies        Company[]
   sessions         Session[]
+  expenseDays      ExpenseDay[] @relation("ManagerExpenseDays")
 
   @@index([restaurantId])
+}
+
+// ── Restaurant Manager expense ledger ──
+// These belong to a RESTAURANT_MANAGER user (not a restaurant); each day holds
+// a budget plus product/salary/additional expenses.
+model ExpenseDay {
+  id              String           @id @default(cuid())
+  date            String // YYYY-MM-DD
+  allocatedCents  Int              @default(0)
+  additionalCents Int              @default(0)
+  additionalNote  String?
+  managerId       String
+  manager         AdminUser        @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
+  products        ProductExpense[]
+  salaries        SalaryExpense[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([managerId, date])
+  @@index([managerId])
+}
+
+model ProductExpense {
+  id          String     @id @default(cuid())
+  name        String
+  quantity    Float      @default(0)
+  unit        String     @default("kg")
+  amountCents Int        @default(0)
+  sortOrder   Int        @default(0)
+  dayId       String
+  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  @@index([dayId])
+}
+
+model SalaryExpense {
+  id          String     @id @default(cuid())
+  name        String
+  amountCents Int        @default(0)
+  sortOrder   Int        @default(0)
+  dayId       String
+  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  @@index([dayId])
 }
 
 model Session {

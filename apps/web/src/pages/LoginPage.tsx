@@ -57,6 +57,11 @@ export const LoginPage = () => {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: '', _rn: '', _exp: String(data.expiresIn),
       });
+    } else if (isRootDomain() && data.role === 'RESTAURANT_MANAGER') {
+      window.location.href = buildSubdomainUrl('rmanager', {
+        _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
+        _rid: '', _rn: '', _exp: String(data.expiresIn),
+      });
     } else if (isRootDomain() && data.role === 'OWNER') {
       window.location.href = buildSubdomainUrl('cabinet', {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,

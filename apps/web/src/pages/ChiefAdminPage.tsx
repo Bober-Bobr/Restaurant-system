@@ -226,6 +226,7 @@ export const ChiefAdminPage = () => {
                   <option value="MANAGER">MANAGER</option>
                   <option value="OWNER">OWNER</option>
                   <option value="ADMIN">ADMIN</option>
+                  <option value="RESTAURANT_MANAGER">RESTAURANT MANAGER</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
                   <option value="KITCHEN">KITCHEN</option>
                 </select>
@@ -264,6 +265,7 @@ export const ChiefAdminPage = () => {
                       <option value="MANAGER">MANAGER</option>
                       <option value="OWNER">OWNER</option>
                       <option value="ADMIN">ADMIN</option>
+                      <option value="RESTAURANT_MANAGER">RESTAURANT MANAGER</option>
                       <option value="EMPLOYEE">EMPLOYEE</option>
                       <option value="KITCHEN">KITCHEN</option>
                     </select>

@@ -30,7 +30,7 @@ export class AuthService {
     device: DeviceInfo = {}
   ): Promise<AuthResponse> {
     const role = options.role ?? AdminRole.ADMIN;
-    const platformRoles: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER];
+    const platformRoles: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.MANAGER, AdminRole.OWNER, AdminRole.RESTAURANT_MANAGER];
 
     const taken = await this.authRepository.findByUsername(username);
     if (taken) throw createHttpError(409, 'Username already taken');
@@ -107,7 +107,12 @@ export class AuthService {
     payload: { username: string; password: string; role: AdminRole; restaurantId?: string | null }
   ) {
     if (caller.role === AdminRole.OWNER) {
-      if (payload.role === AdminRole.OWNER || payload.role === AdminRole.CHIEF_ADMIN || payload.role === AdminRole.MANAGER) {
+      if (
+        payload.role === AdminRole.OWNER ||
+        payload.role === AdminRole.CHIEF_ADMIN ||
+        payload.role === AdminRole.MANAGER ||
+        payload.role === AdminRole.RESTAURANT_MANAGER
+      ) {
         throw createHttpError(403, 'Owners can only create Administrator, Food Admin, Employee, or Kitchen accounts.');
       }
     }

@@ -157,6 +157,7 @@ export const OwnerCabinetPage = () => {
     OWNER: 'owner_role',
     ADMIN: 'administrator_role',
     CATERING_ADMIN: 'catering_admin_role',
+    RESTAURANT_MANAGER: 'restaurant_manager_role',
     EMPLOYEE: 'employee_role',
     KITCHEN: 'kitchen_role',
   };

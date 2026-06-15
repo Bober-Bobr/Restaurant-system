@@ -11,7 +11,7 @@ export function buildSubdomainBase(subdomain: string, path = '/'): string {
 }
 
 // Single-label subdomains reserved for platform roles — never treated as a restaurant slug.
-const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'www']);
+const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'rmanager', 'www']);
 
 export function toSubdomainSlug(name: string): string {
   return name
@@ -38,6 +38,11 @@ export function isCabinetSubdomain(): boolean {
 
 export function isManagerSubdomain(): boolean {
   return window.location.hostname === `manager.${ROOT_DOMAIN}`;
+}
+
+// rmanager.v-menu.uz — the Restaurant Manager (expense ledger / devices) app.
+export function isRestaurantManagerSubdomain(): boolean {
+  return window.location.hostname === `rmanager.${ROOT_DOMAIN}`;
 }
 
 // Matches <slug>.invitation.v-menu.uz — returns the restaurant slug or null.
