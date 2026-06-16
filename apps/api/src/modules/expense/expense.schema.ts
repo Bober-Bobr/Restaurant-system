@@ -40,3 +40,7 @@ export const dayIdSchema = z.object({ dayId: z.string().cuid() });
 export const pdfQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(366).default(1)
 });
+
+export const pdfSelectionSchema = z.object({
+  dayIds: z.array(z.string().cuid()).min(1).max(366)
+});

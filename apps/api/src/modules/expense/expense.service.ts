@@ -56,6 +56,25 @@ export class ExpenseService {
     return { rows: await this.repo.listDaysInRange(managerId, fromDate, endDate, true), fromDate, endDate };
   }
 
+  // Export the given open days, then close them. Returns the rows captured
+  // before closing (so the PDF reflects their final contents).
+  async exportSelectionAndClose(managerId: string, dayIds: string[]) {
+    const rows = await this.repo.listOpenDaysByIds(managerId, dayIds);
+    const ids = rows.map((r) => r.id);
+    if (ids.length) await this.repo.closeManyByIds(managerId, ids);
+    const dates = rows.map((r) => r.date);
+    return {
+      rows,
+      fromDate: dates[0] ?? todayStr(),
+      endDate: dates[dates.length - 1] ?? todayStr()
+    };
+  }
+
+  async reopenDay(managerId: string, id: string) {
+    await this.requireOwnDay(managerId, id);
+    return this.repo.reopenDay(id);
+  }
+
   private async requireOwnDay(managerId: string, id: string) {
     const day = await this.repo.findDayById(id);
     if (!day || day.managerId !== managerId) throw createHttpError(404, 'Day not found');

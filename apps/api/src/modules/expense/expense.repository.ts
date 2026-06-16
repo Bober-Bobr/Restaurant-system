@@ -42,6 +42,30 @@ export class ExpenseRepository {
     });
   }
 
+  // Open days matching the given ids, owned by this manager (ascending by date).
+  listOpenDaysByIds(managerId: string, ids: string[]) {
+    return prisma.expenseDay.findMany({
+      where: { managerId, id: { in: ids }, isClosed: false },
+      orderBy: { date: 'asc' },
+      include: dayInclude
+    });
+  }
+
+  closeManyByIds(managerId: string, ids: string[]) {
+    return prisma.expenseDay.updateMany({
+      where: { managerId, id: { in: ids } },
+      data: { isClosed: true, closedAt: new Date() }
+    });
+  }
+
+  reopenDay(id: string) {
+    return prisma.expenseDay.update({
+      where: { id },
+      data: { isClosed: false, closedAt: null },
+      include: dayInclude
+    });
+  }
+
   findDay(managerId: string, date: string) {
     return prisma.expenseDay.findUnique({
       where: { managerId_date: { managerId, date } },

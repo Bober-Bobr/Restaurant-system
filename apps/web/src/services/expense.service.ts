@@ -20,6 +20,10 @@ export const expenseService = {
     const { data } = await httpClient.patch<ExpenseDay>(`/expenses/days/${id}/close`, {});
     return data;
   },
+  async reopenDay(id: string) {
+    const { data } = await httpClient.patch<ExpenseDay>(`/expenses/days/${id}/reopen`, {});
+    return data;
+  },
   async removeDay(id: string) {
     await httpClient.delete(`/expenses/days/${id}`);
   },
@@ -68,6 +72,15 @@ export const expenseService = {
   async downloadPdf(days: number, locale: string) {
     const { data } = await httpClient.get('/expenses/pdf', {
       params: { days, locale },
+      responseType: 'blob',
+    });
+    return data as Blob;
+  },
+
+  // Download a PDF of the selected days; the server closes them afterwards.
+  async downloadSelectionPdf(dayIds: string[], locale: string) {
+    const { data } = await httpClient.post('/expenses/pdf/selection', { dayIds }, {
+      params: { locale },
       responseType: 'blob',
     });
     return data as Blob;

@@ -10,6 +10,7 @@ import {
   dayIdSchema,
   idSchema,
   pdfQuerySchema,
+  pdfSelectionSchema,
   updateDaySchema,
   updateLineSchema,
   updateProductSchema
@@ -42,6 +43,17 @@ export class ExpenseController {
     response.send(file);
   }
 
+  // Export the selected open days as a single PDF, then close them.
+  async pdfSelection(request: Request, response: Response) {
+    const { dayIds } = pdfSelectionSchema.parse(request.body);
+    const locale = resolveLocale(request.query.locale);
+    const { rows, fromDate, endDate } = await service.exportSelectionAndClose(request.admin!.id, dayIds);
+    const file = await generateExpensePdf(rows, { from: fromDate, to: endDate }, locale);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.pdf"`);
+    response.send(file);
+  }
+
   async updateDay(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
     const payload = updateDaySchema.parse(request.body);
@@ -51,6 +63,11 @@ export class ExpenseController {
   async closeDay(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
     response.json(await service.closeDay(request.admin!.id, id));
+  }
+
+  async reopenDay(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    response.json(await service.reopenDay(request.admin!.id, id));
   }
 
   async removeDay(request: Request, response: Response) {

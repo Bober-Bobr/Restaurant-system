@@ -13,6 +13,8 @@ export const AccountsPage = () => {
 
   const [daysInput, setDaysInput] = useState('7');
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: days = [], isLoading, isError } = useQuery({
     queryKey: QUERY_KEY,
@@ -23,6 +25,42 @@ export const AccountsPage = () => {
     mutationFn: (id: string) => expenseService.closeDay(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
   });
+
+  const reopenDay = useMutation({
+    mutationFn: (id: string) => expenseService.reopenDay(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  // Export the highlighted days as one PDF; the server closes them afterwards.
+  const downloadSelection = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setExporting(true);
+    try {
+      const blob = await expenseService.downloadSelectionPdf(ids, locale);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ledger-${ids.length}-days.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setSelected(new Set());
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    } catch {
+      window.alert(t('download_failed'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const downloadPdf = async () => {
     const n = Math.max(1, Math.min(366, Math.floor(Number(daysInput) || 1)));
@@ -70,6 +108,19 @@ export const AccountsPage = () => {
         <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.4)', alignSelf: 'center' }}>{t('closed_excluded_note')}</span>
       </section>
 
+      {/* Selection action bar — highlight open days, export + auto-close them */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+        <button type="button" className="adm-btn-primary" onClick={downloadSelection}
+          disabled={selected.size === 0 || exporting} style={{ opacity: selected.size === 0 ? 0.5 : 1 }}>
+          {exporting ? t('loading') : `📄 ${t('download_close_selected')}${selected.size ? ` (${selected.size})` : ''}`}
+        </button>
+        {selected.size > 0 && (
+          <button type="button" className="adm-btn-ghost" onClick={() => setSelected(new Set())} style={{ fontSize: 13 }}>
+            {t('clear_selection')}
+          </button>
+        )}
+      </div>
+
       {isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading')}</p>}
       {isError && <p style={{ color: '#fca5a5' }}>{t('something_went_wrong')}</p>}
       {!isLoading && days.length === 0 && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('no_days_yet')}</p>}
@@ -79,8 +130,22 @@ export const AccountsPage = () => {
           {days.map((day) => {
             const spent = daySpent(day);
             const balance = day.allocatedSum - spent;
+            const isSelected = selected.has(day.id);
             return (
-              <div key={day.id} className="adm-card tablet-fade-up" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div key={day.id} className="adm-card tablet-fade-up"
+                style={{
+                  padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+                  border: isSelected ? '1px solid rgba(201,164,44,0.6)' : undefined,
+                  background: isSelected ? 'rgba(201,164,44,0.08)' : undefined,
+                }}>
+                {/* Checkbox only for open days */}
+                <div style={{ width: 22, display: 'flex', justifyContent: 'center' }}>
+                  {!day.isClosed && (
+                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(day.id)}
+                      style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+                  )}
+                </div>
+
                 <div style={{ minWidth: 150 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', textTransform: 'capitalize' }}>{fmtDate(day.date)}</p>
                   {day.isClosed && (
@@ -92,9 +157,14 @@ export const AccountsPage = () => {
                 <Stat label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
                 <Stat label={t('remaining')} value={formatWholeSum(balance)} color={balance < 0 ? '#f87171' : '#4ade80'} />
 
-                <div style={{ marginLeft: 'auto' }}>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                   {day.isClosed ? (
-                    <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.4)' }}>—</span>
+                    <button type="button" className="adm-btn-ghost"
+                      onClick={() => { if (window.confirm(t('reopen_day_confirm'))) reopenDay.mutate(day.id); }}
+                      disabled={reopenDay.isPending}
+                      style={{ fontSize: 13 }}>
+                      {t('reopen_day')}
+                    </button>
                   ) : (
                     <button type="button" className="adm-btn-ghost"
                       onClick={() => { if (window.confirm(t('close_day_confirm'))) closeDay.mutate(day.id); }}
