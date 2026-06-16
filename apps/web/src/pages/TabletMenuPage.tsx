@@ -1100,10 +1100,34 @@ export const TabletMenuPage = () => {
               />
             )}
 
-            {/* Additional */}
-            <section className="rg-card p-4 sm:p-6 reveal">
-              <p className="rg-heading mb-1">{t('additional')}</p>
-              <p className="mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('browse_menu_items')}</p>
+            {/* Additional — premium highlighted section */}
+            <section className="reveal" style={{
+              position: 'relative', borderRadius: 24, padding: 'clamp(16px, 3vw, 26px)',
+              background: 'linear-gradient(165deg, rgba(201,164,44,0.13) 0%, rgba(26,51,32,0.35) 45%, rgba(255,255,255,0.03) 100%)',
+              border: '1px solid rgba(201,164,44,0.32)',
+              boxShadow: '0 14px 44px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.07)',
+            }}>
+              {/* Soft gold glow accent in the corner */}
+              <div aria-hidden style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', pointerEvents: 'none',
+                background: 'radial-gradient(circle, rgba(201,164,44,0.22) 0%, transparent 70%)' }} />
+
+              {/* Premium header */}
+              <div className="mb-4 flex items-center gap-3" style={{ position: 'relative' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 14, flexShrink: 0,
+                  background: 'linear-gradient(145deg, #f3d98b, #c9a42c)', boxShadow: '0 6px 20px rgba(201,164,44,0.45)' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#1a3320">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="rg-heading" style={{ margin: 0, fontSize: 'clamp(18px, 2.4vw, 23px)',
+                    background: 'linear-gradient(90deg, #f7e6a8, #c9a42c)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                    {t('additional')}
+                  </p>
+                  <p className="text-sm" style={{ margin: '2px 0 0', color: 'rgba(255,255,255,0.55)' }}>{t('browse_menu_items')}</p>
+                </div>
+              </div>
+              <div style={{ height: 1, marginBottom: 18, background: 'linear-gradient(90deg, rgba(201,164,44,0.7) 0%, rgba(201,164,44,0.08) 70%, transparent 100%)' }} />
 
               {/* Category pills */}
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">

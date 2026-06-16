@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MenuItem } from '../../types/domain';
 import { getPhotoUrl } from '../../utils/photoUrl';
 import { formatSum } from '../../utils/currency';
@@ -16,12 +16,30 @@ type MenuItemCardProps = {
 export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false }: MenuItemCardProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const photoSrc = getPhotoUrl(item.photoUrl);
+  const selected = quantity > 0;
+
+  // Free-entry quantity: a local string lets the field be cleared/retyped without
+  // immediately collapsing the card when it momentarily empties.
+  const [qtyStr, setQtyStr] = useState(String(quantity));
+  useEffect(() => { setQtyStr(String(quantity)); }, [quantity]);
+  const commitQty = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    setQtyStr(digits);
+    if (digits !== '') onQuantityChange(Math.min(9999, parseInt(digits, 10)));
+  };
 
   const Wrapper = dark ? 'div' : Card;
   const wrapperProps = dark
     ? {
-        className: 'group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg',
-        style: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' },
+        className: 'group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
+        style: {
+          background: selected
+            ? 'linear-gradient(160deg, rgba(201,164,44,0.16) 0%, rgba(255,255,255,0.05) 60%)'
+            : 'rgba(255,255,255,0.06)',
+          border: selected ? '1px solid rgba(201,164,44,0.55)' : '1px solid rgba(255,255,255,0.12)',
+          backdropFilter: 'blur(8px)',
+          boxShadow: selected ? '0 10px 28px rgba(201,164,44,0.20)' : undefined,
+        },
       }
     : { className: 'group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-lg' };
 
@@ -117,18 +135,27 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
                   onClick={() => onQuantityChange(Math.max(0, quantity - 1))}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
                   style={{ color: dark ? 'rgba(255,255,255,0.8)' : '#44403c' }}
+                  aria-label="Decrease"
                 >
                   −
                 </button>
-                <span className="w-6 text-center text-sm font-semibold"
-                  style={{ color: dark ? 'white' : '#1c1917' }}>
-                  {quantity}
-                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={qtyStr}
+                  onChange={(e) => commitQty(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={() => { if (qtyStr === '') setQtyStr(String(quantity)); }}
+                  className="w-10 bg-transparent text-center text-sm font-semibold outline-none"
+                  style={{ color: dark ? 'white' : '#1c1917' }}
+                  aria-label="Quantity"
+                />
                 <button
                   type="button"
                   onClick={() => onQuantityChange(quantity + 1)}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
                   style={dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' }}
+                  aria-label="Increase"
                 >
                   +
                 </button>
