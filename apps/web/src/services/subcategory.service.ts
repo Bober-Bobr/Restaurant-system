@@ -6,11 +6,11 @@ export const subcategoryService = {
     const { data } = await httpClient.get<Subcategory[]>('/subcategories');
     return data;
   },
-  async create(payload: { name: string; category: Subcategory['category']; sortOrder?: number }) {
+  async create(payload: { name: string; category: Subcategory['category']; sortOrder?: number; hidden?: boolean }) {
     const { data } = await httpClient.post<Subcategory>('/subcategories', payload);
     return data;
   },
-  async update(id: string, payload: Partial<{ name: string; category: Subcategory['category']; sortOrder: number }>) {
+  async update(id: string, payload: Partial<{ name: string; category: Subcategory['category']; sortOrder: number; hidden: boolean }>) {
     const { data } = await httpClient.patch<Subcategory>(`/subcategories/${id}`, payload);
     return data;
   },

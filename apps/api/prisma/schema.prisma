@@ -399,6 +399,9 @@ model MenuSubcategory {
   name         String
   category     MenuCategory
   sortOrder    Int          @default(0)
+  // When true, the subcategory header/chip is not rendered on the catering site;
+  // its dishes fall back into the category's ungrouped block to save space.
+  hidden       Boolean      @default(false)
   restaurantId String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

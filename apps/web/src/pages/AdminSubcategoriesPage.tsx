@@ -66,6 +66,11 @@ export const AdminSubcategoriesPage = () => {
     onSuccess: async () => { setEditingId(null); await invalidate(); },
   });
 
+  const toggleHiddenMutation = useMutation({
+    mutationFn: ({ id, hidden }: { id: string; hidden: boolean }) => subcategoryService.update(id, { hidden }),
+    onSuccess: async () => { await invalidate(); },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => subcategoryService.remove(id),
     onSuccess: async () => { await invalidate(); },
@@ -176,7 +181,20 @@ export const AdminSubcategoriesPage = () => {
                       </>
                     ) : (
                       <>
-                        <span style={{ flex: 1, color: '#f8fafc', fontWeight: 600, fontSize: 14 }}>{sc.name}</span>
+                        <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, color: sc.hidden ? 'rgba(226,232,240,0.5)' : '#f8fafc', fontWeight: 600, fontSize: 14 }}>
+                          {sc.name}
+                          {sc.hidden && (
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', padding: '2px 7px', borderRadius: 999, background: 'rgba(148,163,184,0.18)', color: '#94a3b8' }}>
+                              {t('hidden_label')}
+                            </span>
+                          )}
+                        </span>
+                        <button type="button" className="adm-btn-ghost"
+                          title={sc.hidden ? t('show_subcategory') : t('do_not_show')}
+                          onClick={() => toggleHiddenMutation.mutate({ id: sc.id, hidden: !sc.hidden })}
+                          disabled={toggleHiddenMutation.isPending}>
+                          {sc.hidden ? t('show_subcategory') : t('do_not_show')}
+                        </button>
                         <button type="button" className="adm-btn-ghost"
                           onClick={() => { setEditingId(sc.id); setEditName(sc.name); }}>
                           {t('edit')}

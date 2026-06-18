@@ -330,7 +330,7 @@ export const AdminMenuPage = () => {
             {/* Desktop table */}
             <div className="adm-card tablet-fade-up hidden sm:block">
               <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <table className="adm-table" style={{ width: '100%', minWidth: 780 }}>
+              <table className="adm-table" style={{ width: '100%', minWidth: 880 }}>
                 <thead>
                   <tr>
                     <th style={{ width: 56 }}></th>
@@ -639,7 +639,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
         {/* Category */}
         <td className="px-4 py-2.5">
-          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 min-w-[170px] text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
             {CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
             ))}
@@ -667,7 +667,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
         {/* Price */}
         <td className="px-4 py-2.5">
-          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="h-8 w-24 text-sm" />
+          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="h-8 w-36 min-w-[130px] text-sm" />
         </td>
 
         {/* Bestseller toggle */}

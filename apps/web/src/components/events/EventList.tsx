@@ -17,12 +17,28 @@ const statusStyle: Record<string, React.CSSProperties> = {
   COMPLETED: { background: 'rgba(37,99,235,0.15)',   color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)' },
 };
 
-const eventTypeLabel: Record<string, string> = {
-  RESERVATION:   'Reservation',
-  BANQUET:       'Banquet',
-  WEDDING:       'Wedding',
-  PRIVATE_PARTY: 'Private Party',
-  CORPORATE:     'Corporate',
+const statusLabelKey: Record<string, Parameters<typeof translate>[0]> = {
+  DRAFT: 'status_draft',
+  CONFIRMED: 'status_confirmed',
+  CANCELLED: 'status_cancelled',
+  COMPLETED: 'status_completed',
+};
+
+// "Menu not selected" badge styling (a derived status shown when an event has no
+// dish selections yet).
+const menuNotSelectedStyle: React.CSSProperties = {
+  background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.35)',
+};
+
+const eventTypeLabelKey: Record<string, Parameters<typeof translate>[0]> = {
+  RESERVATION:   'event_type_reservation',
+  BANQUET:       'event_type_banquet',
+  WEDDING:       'event_type_wedding',
+  BIRTHDAY:      'event_type_birthday',
+  PRIVATE_PARTY: 'event_type_private_party',
+  CORPORATE:     'event_type_corporate',
+  FOTIHA_TUI:    'event_type_fotiha_tui',
+  NACHOR_OSHI:   'event_type_nachor_oshi',
 };
 
 function formatDateTime(iso: string) {
@@ -48,7 +64,7 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
         fontSize: 14,
         color: 'rgba(226,232,240,0.45)',
       }}>
-        No events yet.
+        {t('no_events_yet')}
       </div>
     );
   }
@@ -61,15 +77,15 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
         <thead>
           <tr>
             <th>#</th>
-            <th>Customer</th>
-            <th>Date / Time</th>
-            <th>Type</th>
-            <th>Guests</th>
-            <th>Hall / Table</th>
-            <th>Menu</th>
-            <th>Notes</th>
-            <th>Status</th>
-            {hasActions ? <th>Actions</th> : null}
+            <th>{t('ev_col_customer')}</th>
+            <th>{t('ev_col_datetime')}</th>
+            <th>{t('event_type')}</th>
+            <th>{t('guests')}</th>
+            <th>{t('ev_col_hall_table')}</th>
+            <th>{t('menu')}</th>
+            <th>{t('notes')}</th>
+            <th>{t('status')}</th>
+            {hasActions ? <th>{t('actions')}</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -97,7 +113,7 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap', color: 'rgba(226,232,240,0.75)' }}>
-                  {event.eventType ? (eventTypeLabel[event.eventType] ?? event.eventType) : '—'}
+                  {event.eventType ? (eventTypeLabelKey[event.eventType] ? t(eventTypeLabelKey[event.eventType]) : event.eventType) : '—'}
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap', color: 'rgba(226,232,240,0.75)' }}>
@@ -119,9 +135,9 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                   {dishTypes > 0 ? (
                     <>
                       <p style={{ margin: 0, color: '#e2e8f0' }}>
-                        {dishTypes} {dishTypes === 1 ? 'dish' : 'dishes'}
+                        {dishTypes === 1 ? t('dish_count_one') : t('dishes_count', { count: dishTypes })}
                       </p>
-                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{totalPcs} pcs total</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{t('pcs_total', { count: totalPcs })}</p>
                     </>
                   ) : (
                     <p style={{ margin: 0, color: 'rgba(226,232,240,0.35)' }}>—</p>
@@ -139,12 +155,19 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <span
-                    className="adm-badge"
-                    style={statusStyle[event.status] ?? statusStyle.DRAFT}
-                  >
-                    {event.status}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                    <span
+                      className="adm-badge"
+                      style={statusStyle[event.status] ?? statusStyle.DRAFT}
+                    >
+                      {statusLabelKey[event.status] ? t(statusLabelKey[event.status]) : event.status}
+                    </span>
+                    {dishTypes === 0 && event.status !== 'CANCELLED' && (
+                      <span className="adm-badge" style={menuNotSelectedStyle}>
+                        {t('status_menu_not_selected')}
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {hasActions ? (
@@ -157,7 +180,7 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                           size="sm"
                           onClick={() => onEdit(event.id)}
                         >
-                          Edit
+                          {t('edit')}
                         </Button>
                       )}
                       {onDelete && (

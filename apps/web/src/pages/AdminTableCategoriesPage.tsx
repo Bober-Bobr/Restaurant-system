@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
@@ -70,6 +70,39 @@ const parseCats = (raw: string): FoodCategory[] =>
     .filter((s) => FOOD_PACKAGE_CATEGORIES.includes(s));
 
 const serializeCats = (cats: FoodCategory[]): string => cats.join(',');
+
+// Servings-per-table count. Holds its own text so the field can be emptied while
+// typing (deleting the "1" shows a blank box); on blur an empty/invalid value
+// snaps back to 1.
+function ServingsInput({ value, onChange, title }: { value: number; onChange: (n: number) => void; title: string }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => { setText(String(value)); }, [value]);
+
+  return (
+    <input
+      type="number"
+      min={1}
+      title={title}
+      value={text}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setText(raw);
+        const n = Math.floor(Number(raw));
+        if (raw !== '' && Number.isFinite(n) && n >= 1) onChange(n);
+      }}
+      onBlur={() => {
+        const n = Math.floor(Number(text));
+        if (text === '' || !Number.isFinite(n) || n < 1) { setText('1'); onChange(1); }
+        else setText(String(n));
+      }}
+      style={{
+        width: 44, textAlign: 'center', padding: '2px 4px', borderRadius: 6,
+        border: '1px solid rgba(201,164,44,0.4)', background: 'rgba(15,23,42,0.6)',
+        color: '#f8fafc', fontSize: 12, outline: 'none', MozAppearance: 'textfield',
+      }}
+    />
+  );
+}
 
 // ── Food package section ───────────────────────────────────────────────────
 function FoodPackageSection({
@@ -200,22 +233,10 @@ function FoodPackageSection({
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 3, paddingLeft: 6, borderLeft: '1px solid rgba(201,164,44,0.3)' }}
                       >
                         <span style={{ color: 'rgba(226,232,240,0.55)' }}>×</span>
-                        <input
-                          type="number"
-                          min={1}
+                        <ServingsInput
+                          title={t('servings_per_table')}
                           value={servingsById[item.id] ?? 1}
-                          onChange={(e) => {
-                            const n = Math.floor(Number(e.target.value));
-                            onServingsChange(item.id, Number.isFinite(n) ? Math.max(0, n) : servingsById[item.id] ?? 1);
-                          }}
-                          onBlur={() => {
-                            if ((servingsById[item.id] ?? 1) < 1) onServingsChange(item.id, 1);
-                          }}
-                          style={{
-                            width: 44, textAlign: 'center', padding: '2px 4px', borderRadius: 6,
-                            border: '1px solid rgba(201,164,44,0.4)', background: 'rgba(15,23,42,0.6)',
-                            color: '#f8fafc', fontSize: 12, outline: 'none', MozAppearance: 'textfield',
-                          }}
+                          onChange={(n) => onServingsChange(item.id, n)}
                         />
                       </span>
                     )}

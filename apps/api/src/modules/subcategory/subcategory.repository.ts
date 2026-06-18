@@ -5,6 +5,7 @@ export type CreateSubcategoryData = {
   name: string;
   category: MenuCategory;
   sortOrder?: number;
+  hidden?: boolean;
 };
 
 export class SubcategoryRepository {

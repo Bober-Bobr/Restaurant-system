@@ -4,7 +4,8 @@ import { z } from 'zod';
 export const createSubcategorySchema = z.object({
   name: z.string().min(1).max(100),
   category: z.nativeEnum(MenuCategory),
-  sortOrder: z.number().int().min(0).optional()
+  sortOrder: z.number().int().min(0).optional(),
+  hidden: z.boolean().optional()
 });
 
 export const updateSubcategorySchema = createSubcategorySchema.partial();

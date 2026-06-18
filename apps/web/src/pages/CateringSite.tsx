@@ -500,8 +500,10 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const groups = (() => {
     const map = new Map<string, { id: string; name: string | null; sortOrder: number; items: MenuItem[] }>();
     for (const m of visible) {
-      // Only honor a subcategory that actually belongs to this category.
-      const sub = m.subcategory && m.subcategory.category === cat ? m.subcategory : null;
+      // Only honor a subcategory that belongs to this category and isn't hidden.
+      // Hidden subcategories fall back to the ungrouped block so their header
+      // doesn't take up space on the catering site.
+      const sub = m.subcategory && m.subcategory.category === cat && !m.subcategory.hidden ? m.subcategory : null;
       const key = sub?.id ?? NONE;
       if (!map.has(key)) map.set(key, { id: key, name: sub?.name ?? null, sortOrder: sub?.sortOrder ?? 99999, items: [] });
       map.get(key)!.items.push(m);

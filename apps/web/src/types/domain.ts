@@ -93,6 +93,7 @@ export type Subcategory = {
   name: string;
   category: MenuItem['category'];
   sortOrder?: number;
+  hidden?: boolean;
 };
 
 // ── Restaurant Manager expense ledger ──

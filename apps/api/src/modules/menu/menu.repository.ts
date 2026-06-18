@@ -8,7 +8,7 @@ export class MenuRepository {
     return prisma.menuItem.findMany({
       where: { restaurantId, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
-      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true } } }
+      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true, hidden: true } } }
     });
   }
 
@@ -17,7 +17,7 @@ export class MenuRepository {
     return prisma.menuItem.findMany({
       where: { restaurantId, isActive: true, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
-      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true } } }
+      include: { subcategory: { select: { id: true, name: true, category: true, sortOrder: true, hidden: true } } }
     });
   }
 

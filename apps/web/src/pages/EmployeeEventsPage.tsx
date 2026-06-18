@@ -9,22 +9,22 @@ import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { httpClient } from '../services/http';
 
-const EVENT_TYPE_LABEL: Record<NonNullable<Event['eventType']>, string> = {
-  RESERVATION: 'Reservation',
-  BANQUET: 'Banquet',
-  WEDDING: 'Wedding',
-  BIRTHDAY: 'Birthday',
-  PRIVATE_PARTY: 'Private party',
-  CORPORATE: 'Corporate',
-  FOTIHA_TUI: 'Fotiha Tui',
-  NACHOR_OSHI: 'Nachor Oshi',
+const EVENT_TYPE_LABEL_KEY: Record<NonNullable<Event['eventType']>, Parameters<typeof translate>[0]> = {
+  RESERVATION: 'event_type_reservation',
+  BANQUET: 'event_type_banquet',
+  WEDDING: 'event_type_wedding',
+  BIRTHDAY: 'event_type_birthday',
+  PRIVATE_PARTY: 'event_type_private_party',
+  CORPORATE: 'event_type_corporate',
+  FOTIHA_TUI: 'event_type_fotiha_tui',
+  NACHOR_OSHI: 'event_type_nachor_oshi',
 };
 
-const STATUS_BADGE: Record<Event['status'], { bg: string; label: string }> = {
-  DRAFT: { bg: '#9ca3af', label: 'Draft' },
-  CONFIRMED: { bg: '#16a34a', label: 'Confirmed' },
-  CANCELLED: { bg: '#dc2626', label: 'Cancelled' },
-  COMPLETED: { bg: '#2563eb', label: 'Completed' },
+const STATUS_BADGE: Record<Event['status'], { bg: string; labelKey: Parameters<typeof translate>[0] }> = {
+  DRAFT: { bg: '#9ca3af', labelKey: 'status_draft' },
+  CONFIRMED: { bg: '#16a34a', labelKey: 'status_confirmed' },
+  CANCELLED: { bg: '#dc2626', labelKey: 'status_cancelled' },
+  COMPLETED: { bg: '#2563eb', labelKey: 'status_completed' },
 };
 
 const formatDate = (iso: string, locale: string) => {
@@ -114,11 +114,11 @@ export const EmployeeEventsPage = () => {
                   <span style={{ color: '#c9a42c' }}>#{event.id}</span> — {event.customerName}
                 </h2>
                 <span className="adm-badge" style={{ background: status.bg, color: '#fff' }}>
-                  {status.label}
+                  {t(status.labelKey)}
                 </span>
                 {event.eventType && (
                   <span className="adm-badge" style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}>
-                    {EVENT_TYPE_LABEL[event.eventType]}
+                    {t(EVENT_TYPE_LABEL_KEY[event.eventType])}
                   </span>
                 )}
               </div>
