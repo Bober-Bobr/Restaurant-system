@@ -152,26 +152,28 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
       doc.restore();
     };
 
-    // Draw a table header row (two columns with labels)
-    const tableHeader = (x: number, y: number, label1: string, label2: string) => {
-      cell(x, y, COL1, HEADER_H, label1, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
-      cell(x + COL1, y, COL2, HEADER_H, label2, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
-      return y + HEADER_H;
+    // All table-drawing helpers read and update curY directly via closure so that
+    // ensureSpace()'s page-break logic (which resets curY to ML) is always applied
+    // before the cell is drawn. Passing y as a parameter would let the stale value
+    // override the freshly-reset curY, placing every subsequent row on its own page.
+
+    const tableHeader = (label1: string, label2: string) => {
+      cell(ML, curY, COL1, HEADER_H, label1, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
+      cell(ML + COL1, curY, COL2, HEADER_H, label2, { bold: true, fontSize: 9, fillColor: '#f0f0f0', align: 'center' });
+      curY += HEADER_H;
     };
 
-    // Draw a section sub-header spanning both columns
-    const sectionRow = (x: number, y: number, label: string) => {
+    const sectionRow = (label: string) => {
       ensureSpace(SECTION_H);
-      cell(x, y, TW, SECTION_H, label, { bold: true, fontSize: 9, align: 'center', fillColor: '#e8e8e8' });
-      return y + SECTION_H;
+      cell(ML, curY, TW, SECTION_H, label, { bold: true, fontSize: 9, align: 'center', fillColor: '#e8e8e8' });
+      curY += SECTION_H;
     };
 
-    // Draw a data row
-    const dataRow = (x: number, y: number, name: string, qty: string, shade = false) => {
+    const dataRow = (name: string, qty: string, shade = false) => {
       ensureSpace(ROW_H);
-      cell(x, y, COL1, ROW_H, name, { fontSize: 9, fillColor: shade ? '#fafafa' : '#ffffff' });
-      cell(x + COL1, y, COL2, ROW_H, qty, { fontSize: 9, align: 'center', fillColor: shade ? '#fafafa' : '#ffffff' });
-      return y + ROW_H;
+      cell(ML, curY, COL1, ROW_H, name, { fontSize: 9, fillColor: shade ? '#fafafa' : '#ffffff' });
+      cell(ML + COL1, curY, COL2, ROW_H, qty, { fontSize: 9, align: 'center', fillColor: shade ? '#fafafa' : '#ffffff' });
+      curY += ROW_H;
     };
 
     // ── Page top: logo + restaurant name + document title ─────────────────
@@ -219,7 +221,7 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
 
     // ── Main table ────────────────────────────────────────────────────────
 
-    curY = tableHeader(ML, curY, t('dish_name'), t('qty_pcs'));
+    tableHeader(t('dish_name'), t('qty_pcs'));
 
     // Group included dishes by category
     const includedDishes = data.includedDishes ?? [];
@@ -240,10 +242,9 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     let shade = false;
     if (blocks.length > 0) {
       for (const block of blocks) {
-        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        sectionRow(block.label.toUpperCase());
         for (const dish of block.dishes) {
-          const servings = dish.servings ?? 1;
-          curY = dataRow(ML, curY, dish.name, String(servings), shade);
+          dataRow(dish.name, String(dish.servings ?? 1), shade);
           shade = !shade;
         }
       }
@@ -270,10 +271,9 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
         block.items.push(item);
       }
       for (const block of addBlocks) {
-        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        sectionRow(block.label.toUpperCase());
         for (const item of block.items) {
-          const qty = data.selectedItems[item.id];
-          curY = dataRow(ML, curY, item.name, String(qty), shade);
+          dataRow(item.name, String(data.selectedItems[item.id]), shade);
           shade = !shade;
         }
       }
@@ -284,7 +284,7 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     if (data.childrenTableName && (childrenDishes.length > 0 || (data.childrenCount ?? 0) > 0)) {
       const heading = `${t('children_table')} — ${data.childrenTableName}` +
         ((data.childrenCount ?? 0) > 0 ? ` (${t('children_count')}: ${data.childrenCount})` : '');
-      curY = sectionRow(ML, curY, heading.toUpperCase());
+      sectionRow(heading.toUpperCase());
       // Group children's dishes by category label.
       type CBlock = { label: string; dishes: typeof childrenDishes };
       const cBlocks: CBlock[] = [];
@@ -299,9 +299,9 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
         block.dishes.push(dish);
       }
       for (const block of cBlocks) {
-        curY = sectionRow(ML, curY, block.label.toUpperCase());
+        sectionRow(block.label.toUpperCase());
         for (const dish of block.dishes) {
-          curY = dataRow(ML, curY, dish.name, String(dish.servings ?? 1), shade);
+          dataRow(dish.name, String(dish.servings ?? 1), shade);
           shade = !shade;
         }
       }
@@ -313,21 +313,21 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
 
     ensureSpace(SECTION_H + ROW_H * 3 + 20);
 
-    curY = sectionRow(ML, curY, t('pricing').toUpperCase());
+    sectionRow(t('pricing').toUpperCase());
 
     if (hasDiscount && data.pricing.originalPerGuestCents != null) {
-      curY = dataRow(ML, curY, `${t('price_per_guest')} (${t('original_price')})`, formatSom(data.pricing.originalPerGuestCents), false);
+      dataRow(`${t('price_per_guest')} (${t('original_price')})`, formatSom(data.pricing.originalPerGuestCents), false);
     }
-    curY = dataRow(ML, curY, t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
+    dataRow(t('price_per_guest'), formatSom(data.pricing.perGuestCents), true);
     if (hasDiscount) {
-      curY = dataRow(ML, curY, t('discount'), `−${data.pricing.discountPercent}%`, false);
+      dataRow(t('discount'), `−${data.pricing.discountPercent}%`, false);
     }
     if (data.childrenTableName && (data.childrenSubtotalCents ?? 0) > 0) {
       const per = data.childrenRateCents != null ? ` (${data.childrenCount} × ${formatSom(data.childrenRateCents)})` : '';
-      curY = dataRow(ML, curY, `${t('children_table')}${per}`, formatSom(data.childrenSubtotalCents ?? 0), false);
+      dataRow(`${t('children_table')}${per}`, formatSom(data.childrenSubtotalCents ?? 0), false);
     }
     if (hasDiscount && data.pricing.originalTotalCents != null) {
-      curY = dataRow(ML, curY, `${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents), false);
+      dataRow(`${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents), false);
     }
     // Total row — bold, slightly taller
     ensureSpace(ROW_H + 4);

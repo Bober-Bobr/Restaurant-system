@@ -204,7 +204,13 @@ function FoodPackageSection({
                           type="number"
                           min={1}
                           value={servingsById[item.id] ?? 1}
-                          onChange={(e) => onServingsChange(item.id, Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                          onChange={(e) => {
+                            const n = Math.floor(Number(e.target.value));
+                            onServingsChange(item.id, Number.isFinite(n) ? Math.max(0, n) : servingsById[item.id] ?? 1);
+                          }}
+                          onBlur={() => {
+                            if ((servingsById[item.id] ?? 1) < 1) onServingsChange(item.id, 1);
+                          }}
                           style={{
                             width: 44, textAlign: 'center', padding: '2px 4px', borderRadius: 6,
                             border: '1px solid rgba(201,164,44,0.4)', background: 'rgba(15,23,42,0.6)',

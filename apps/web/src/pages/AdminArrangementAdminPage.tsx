@@ -6,6 +6,7 @@ import { restaurantService } from '../services/restaurant.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { formatSum } from '../utils/currency';
 import type { MenuItem, TableCategory } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
@@ -305,6 +306,9 @@ function TableCategoryArrangementSection({ t }: { t: (k: Parameters<typeof trans
                   {tc.isActive ? t('active') : t('inactive')}
                 </p>
               </div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#c9a42c', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {formatSum(tc.ratePerPerson)} / {t('person')}
+              </p>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button type="button" disabled={idx === 0} onClick={() => reorder(idx, idx - 1)} style={iconBtn(idx === 0)}><Arrow dir="up" /></button>
                 <button type="button" disabled={idx === items.length - 1} onClick={() => reorder(idx, idx + 1)} style={iconBtn(idx === items.length - 1)}><Arrow dir="down" /></button>
