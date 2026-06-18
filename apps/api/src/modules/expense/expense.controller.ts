@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
+import createHttpError from 'http-errors';
 import { ExpenseRepository } from './expense.repository.js';
 import { ExpenseService } from './expense.service.js';
-import { generateExpensePdf } from './expense.pdf.service.js';
+import { generateDayPdf, generateSummaryPdf } from './expense.pdf.service.js';
+import { createZip } from '../../utils/zip.js';
 import { type Locale, locales } from '../../utils/translate.js';
 import {
   createDaySchema,
@@ -9,7 +11,6 @@ import {
   createProductSchema,
   eventIdSchema,
   idSchema,
-  pdfQuerySchema,
   pdfSelectionSchema,
   updateDaySchema,
   updateEventSchema,
@@ -34,25 +35,31 @@ export class ExpenseController {
     response.status(201).json(await service.createDay(request.admin!.id, date));
   }
 
-  async pdf(request: Request, response: Response) {
-    const { days } = pdfQuerySchema.parse(request.query);
-    const locale = resolveLocale(request.query.locale);
-    const { rows, fromDate, endDate } = await service.listForPdf(request.admin!.id, days);
-    const file = await generateExpensePdf(rows, { from: fromDate, to: endDate }, locale);
-    response.setHeader('Content-Type', 'application/pdf');
-    response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.pdf"`);
-    response.send(file);
-  }
-
-  // Export the selected open days as a single PDF, then close them.
+  // Export the selected days. A single day downloads as one <date>.pdf; multiple
+  // days download as a ZIP of one <date>.pdf per day plus a summary.pdf. Days are
+  // never closed by this action.
   async pdfSelection(request: Request, response: Response) {
     const { dayIds } = pdfSelectionSchema.parse(request.body);
     const locale = resolveLocale(request.query.locale);
-    const { rows, fromDate, endDate } = await service.exportSelectionAndClose(request.admin!.id, dayIds);
-    const file = await generateExpensePdf(rows, { from: fromDate, to: endDate }, locale);
-    response.setHeader('Content-Type', 'application/pdf');
-    response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.pdf"`);
-    response.send(file);
+    const { rows, fromDate, endDate } = await service.selectionForExport(request.admin!.id, dayIds);
+    if (rows.length === 0) throw createHttpError(404, 'No days to export');
+
+    if (rows.length === 1) {
+      const file = await generateDayPdf(rows[0], locale);
+      response.setHeader('Content-Type', 'application/pdf');
+      response.setHeader('Content-Disposition', `attachment; filename="${rows[0].date}.pdf"`);
+      response.send(file);
+      return;
+    }
+
+    const files: { name: string; data: Buffer }[] = [];
+    for (const day of rows) files.push({ name: `${day.date}.pdf`, data: await generateDayPdf(day, locale) });
+    files.push({ name: 'summary.pdf', data: await generateSummaryPdf(rows, { from: fromDate, to: endDate }, locale) });
+
+    const zip = createZip(files);
+    response.setHeader('Content-Type', 'application/zip');
+    response.setHeader('Content-Disposition', `attachment; filename="ledger-${fromDate}_${endDate}.zip"`);
+    response.send(zip);
   }
 
   async updateDay(request: Request, response: Response) {

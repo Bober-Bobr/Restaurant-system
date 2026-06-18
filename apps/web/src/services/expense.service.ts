@@ -75,17 +75,8 @@ export const expenseService = {
     await httpClient.delete(`/expenses/additionals/${id}`);
   },
 
-  // Download a PDF of the last `days` days ending at the latest created day
-  // (closed days excluded).
-  async downloadPdf(days: number, locale: string) {
-    const { data } = await httpClient.get('/expenses/pdf', {
-      params: { days, locale },
-      responseType: 'blob',
-    });
-    return data as Blob;
-  },
-
-  // Download a PDF of the selected days; the server closes them afterwards.
+  // Export selected days: one <date>.pdf for a single day, or a ZIP of per-day
+  // PDFs plus a summary.pdf for several. Days are not closed by this action.
   async downloadSelectionPdf(dayIds: string[], locale: string) {
     const { data } = await httpClient.post('/expenses/pdf/selection', { dayIds }, {
       params: { locale },

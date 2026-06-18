@@ -4,9 +4,7 @@ import { ExpenseController } from './expense.controller.js';
 const router = Router();
 const controller = new ExpenseController();
 
-// PDF export of the last ?days days
-router.get('/pdf', controller.pdf.bind(controller));
-// PDF export of selected days, which are then closed
+// Export selected days (one <date>.pdf each + summary.pdf, zipped if multiple)
 router.post('/pdf/selection', controller.pdfSelection.bind(controller));
 
 // Days

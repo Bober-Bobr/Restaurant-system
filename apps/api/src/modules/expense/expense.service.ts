@@ -52,17 +52,9 @@ export class ExpenseService {
     return this.repo.findDayById(day.id);
   }
 
-  async listForPdf(managerId: string, days: number) {
-    const latest = await this.repo.latestDay(managerId);
-    const endDate = latest?.date ?? todayStr();
-    const fromDate = addDays(endDate, -(days - 1));
-    return { rows: await this.repo.listDaysInRange(managerId, fromDate, endDate, true), fromDate, endDate };
-  }
-
-  async exportSelectionAndClose(managerId: string, dayIds: string[]) {
-    const rows = await this.repo.listOpenDaysByIds(managerId, dayIds);
-    const ids = rows.map((r) => r.id);
-    if (ids.length) await this.repo.closeManyByIds(managerId, ids);
+  // Selected days for a multi-file export (no auto-close), oldest first.
+  async selectionForExport(managerId: string, dayIds: string[]) {
+    const rows = await this.repo.listByIds(managerId, dayIds);
     const dates = rows.map((r) => r.date);
     return { rows, fromDate: dates[0] ?? todayStr(), endDate: dates[dates.length - 1] ?? todayStr() };
   }

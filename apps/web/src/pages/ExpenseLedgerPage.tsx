@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { expenseService } from '../services/expense.service';
 import type { DayEvent, DayEventType, ExpenseDay, ProductExpense } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
@@ -38,6 +39,7 @@ export const ExpenseLedgerPage = () => {
   const t: TFn = (key, params) => translate(key, locale, params);
   const queryClient = useQueryClient();
   const [idx, setIdx] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: days = [], isLoading, isError } = useQuery({
     queryKey: QUERY_KEY,
@@ -47,6 +49,16 @@ export const ExpenseLedgerPage = () => {
   useEffect(() => {
     if (idx > days.length - 1) setIdx(Math.max(0, days.length - 1));
   }, [days.length, idx]);
+
+  // Deep link from the Accounts page: ?day=<id> jumps to that day, then clears.
+  useEffect(() => {
+    const dayId = searchParams.get('day');
+    if (!dayId || days.length === 0) return;
+    const pos = days.findIndex((d) => d.id === dayId);
+    if (pos >= 0) setIdx(pos);
+    searchParams.delete('day');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, days, setSearchParams]);
 
   const [newDate, setNewDate] = useState('');
 

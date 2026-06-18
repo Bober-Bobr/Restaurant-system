@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { expenseService } from '../services/expense.service';
 import { QUERY_KEY, daySpent } from './ExpenseLedgerPage';
+import type { ExpenseDay } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { formatWholeSum } from '../utils/currency';
@@ -10,9 +12,8 @@ export const AccountsPage = () => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const [daysInput, setDaysInput] = useState('7');
-  const [downloading, setDownloading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -38,47 +39,32 @@ export const AccountsPage = () => {
       return next;
     });
 
-  // Export the highlighted days as one PDF; the server closes them afterwards.
+  // Export the highlighted days: a single day → <date>.pdf; several days → a ZIP
+  // of one <date>.pdf per day plus a summary.pdf. Days are not closed.
   const downloadSelection = async () => {
-    const ids = [...selected];
-    if (ids.length === 0) return;
+    const chosen: ExpenseDay[] = days
+      .filter((d) => selected.has(d.id))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (chosen.length === 0) return;
     setExporting(true);
     try {
-      const blob = await expenseService.downloadSelectionPdf(ids, locale);
+      const blob = await expenseService.downloadSelectionPdf(chosen.map((d) => d.id), locale);
+      const filename = chosen.length === 1
+        ? `${chosen[0].date}.pdf`
+        : `ledger-${chosen[0].date}_${chosen[chosen.length - 1].date}.zip`;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `ledger-${ids.length}-days.pdf`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
       setSelected(new Set());
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     } catch {
       window.alert(t('download_failed'));
     } finally {
       setExporting(false);
-    }
-  };
-
-  const downloadPdf = async () => {
-    const n = Math.max(1, Math.min(366, Math.floor(Number(daysInput) || 1)));
-    setDownloading(true);
-    try {
-      const blob = await expenseService.downloadPdf(n, locale);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `ledger-last-${n}d.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      window.alert(t('download_failed'));
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -95,24 +81,11 @@ export const AccountsPage = () => {
         {t('accounts_help')}
       </p>
 
-      {/* PDF download for the last N days (ending at the latest created day) */}
-      <section className="adm-card tablet-fade-up" style={{ padding: 16, marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span className="adm-label">{t('pdf_days_label')}</span>
-          <input type="number" min={1} max={366} className="adm-input" value={daysInput}
-            onChange={(e) => setDaysInput(e.target.value)} style={{ width: 140 }} />
-        </label>
-        <button type="button" className="adm-btn-primary" onClick={downloadPdf} disabled={downloading} style={{ height: 42 }}>
-          {downloading ? t('loading') : `📄 ${t('download_pdf')}`}
-        </button>
-        <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.4)', alignSelf: 'center' }}>{t('closed_excluded_note')}</span>
-      </section>
-
-      {/* Selection action bar — highlight open days, export + auto-close them */}
+      {/* Selection action bar — highlight days and export them as separate files */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <button type="button" className="adm-btn-primary" onClick={downloadSelection}
           disabled={selected.size === 0 || exporting} style={{ opacity: selected.size === 0 ? 0.5 : 1 }}>
-          {exporting ? t('loading') : `📄 ${t('download_close_selected')}${selected.size ? ` (${selected.size})` : ''}`}
+          {exporting ? t('loading') : `📄 ${t('download_selected')}${selected.size ? ` (${selected.size})` : ''}`}
         </button>
         {selected.size > 0 && (
           <button type="button" className="adm-btn-ghost" onClick={() => setSelected(new Set())} style={{ fontSize: 13 }}>
@@ -138,12 +111,9 @@ export const AccountsPage = () => {
                   border: isSelected ? '1px solid rgba(201,164,44,0.6)' : undefined,
                   background: isSelected ? 'rgba(201,164,44,0.08)' : undefined,
                 }}>
-                {/* Checkbox only for open days */}
                 <div style={{ width: 22, display: 'flex', justifyContent: 'center' }}>
-                  {!day.isClosed && (
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(day.id)}
-                      style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
-                  )}
+                  <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(day.id)}
+                    style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
                 </div>
 
                 <div style={{ minWidth: 150 }}>
@@ -158,6 +128,11 @@ export const AccountsPage = () => {
                 <Stat label={t('remaining')} value={formatWholeSum(balance)} color={balance < 0 ? '#f87171' : '#4ade80'} />
 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                  <button type="button" className="adm-btn-ghost"
+                    onClick={() => navigate(`/ledger?day=${day.id}`)}
+                    style={{ fontSize: 13 }}>
+                    {t('go_to_ledger')}
+                  </button>
                   {day.isClosed ? (
                     <button type="button" className="adm-btn-ghost"
                       onClick={() => { if (window.confirm(t('reopen_day_confirm'))) reopenDay.mutate(day.id); }}

@@ -42,26 +42,12 @@ export class ExpenseRepository {
     return prisma.expenseDay.findMany({ where: { managerId }, orderBy: { date: 'desc' }, include: dayInclude });
   }
 
-  listDaysInRange(managerId: string, from: string, to: string, openOnly = false) {
+  // Selected days (any status), oldest first, for a multi-file export.
+  listByIds(managerId: string, ids: string[]) {
     return prisma.expenseDay.findMany({
-      where: { managerId, date: { gte: from, lte: to }, ...(openOnly ? { isClosed: false } : {}) },
-      orderBy: { date: 'asc' },
-      include: dayInclude
-    });
-  }
-
-  listOpenDaysByIds(managerId: string, ids: string[]) {
-    return prisma.expenseDay.findMany({
-      where: { managerId, id: { in: ids }, isClosed: false },
-      orderBy: { date: 'asc' },
-      include: dayInclude
-    });
-  }
-
-  closeManyByIds(managerId: string, ids: string[]) {
-    return prisma.expenseDay.updateMany({
       where: { managerId, id: { in: ids } },
-      data: { isClosed: true, closedAt: new Date() }
+      orderBy: { date: 'asc' },
+      include: dayInclude
     });
   }
 
