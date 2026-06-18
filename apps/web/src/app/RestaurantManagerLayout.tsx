@@ -32,8 +32,9 @@ export const RestaurantManagerLayout = () => {
   if (!accessToken) return <Navigate to="/login" replace />;
 
   const navItems: { to: string; label: string }[] = [
-    { to: '/ledger', label: t('expense_ledger') },
     { to: '/accounts', label: t('accounts') },
+    { to: '/ledger', label: t('expense_ledger') },
+    { to: '/additional', label: t('additional_expenses') },
     { to: '/devices', label: t('devices') },
   ];
 

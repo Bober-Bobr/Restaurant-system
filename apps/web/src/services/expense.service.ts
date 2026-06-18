@@ -1,4 +1,4 @@
-import type { AdditionalExpense, DayEvent, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
+import type { AdditionalExpense, DayEvent, DayExtraExpense, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
 import { httpClient } from './http';
 
 export const expenseService = {
@@ -75,10 +75,32 @@ export const expenseService = {
     await httpClient.delete(`/expenses/additionals/${id}`);
   },
 
-  // Export selected days: one <date>.pdf for a single day, or a ZIP of per-day
-  // PDFs plus a summary.pdf for several. Days are not closed by this action.
+  // Day-level additional expenses (separate from the per-event main expenses).
+  async addExtra(dayId: string, payload: { name: string; amountSum?: number }) {
+    const { data } = await httpClient.post<DayExtraExpense>(`/expenses/days/${dayId}/extras`, payload);
+    return data;
+  },
+  async updateExtra(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+    const { data } = await httpClient.patch<DayExtraExpense>(`/expenses/extras/${id}`, payload);
+    return data;
+  },
+  async removeExtra(id: string) {
+    await httpClient.delete(`/expenses/extras/${id}`);
+  },
+
+  // Export the selected days' main expenses as one multi-page PDF. Days are not
+  // closed by this action.
   async downloadSelectionPdf(dayIds: string[], locale: string) {
     const { data } = await httpClient.post('/expenses/pdf/selection', { dayIds }, {
+      params: { locale },
+      responseType: 'blob',
+    });
+    return data as Blob;
+  },
+
+  // Export the selected days' additional (day-level) expenses as one PDF.
+  async downloadExtrasPdf(dayIds: string[], locale: string) {
+    const { data } = await httpClient.post('/expenses/pdf/extras-selection', { dayIds }, {
       params: { locale },
       responseType: 'blob',
     });

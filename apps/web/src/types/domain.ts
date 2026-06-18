@@ -137,6 +137,14 @@ export type DayEvent = {
   additionals: AdditionalExpense[];
 };
 
+export type DayExtraExpense = {
+  id: string;
+  name: string;
+  amountSum: number; // whole so'm
+  sortOrder: number;
+  dayId: string;
+};
+
 export type ExpenseDay = {
   id: string;
   date: string; // YYYY-MM-DD
@@ -146,6 +154,7 @@ export type ExpenseDay = {
   closedAt: string | null;
   managerId: string;
   events: DayEvent[];
+  extras: DayExtraExpense[];
 };
 
 export type PricingSummary = {

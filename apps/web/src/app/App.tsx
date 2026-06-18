@@ -33,6 +33,7 @@ import { CateringAdminLayout } from './CateringAdminLayout';
 import { RestaurantManagerLayout } from './RestaurantManagerLayout';
 import { ExpenseLedgerPage } from '../pages/ExpenseLedgerPage';
 import { AccountsPage } from '../pages/AccountsPage';
+import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
@@ -232,12 +233,13 @@ export const App = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RestaurantManagerLayout />}>
-          <Route path="/" element={<Navigate to="/ledger" replace />} />
-          <Route path="/ledger" element={<ExpenseLedgerPage />} />
+          <Route path="/" element={<Navigate to="/accounts" replace />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/ledger" element={<ExpenseLedgerPage />} />
+          <Route path="/additional" element={<AdditionalExpensesPage />} />
           <Route path="/devices" element={<DevicesPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/ledger" replace />} />
+        <Route path="*" element={<Navigate to="/accounts" replace />} />
       </Routes>
     );
   }

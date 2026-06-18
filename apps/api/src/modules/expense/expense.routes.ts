@@ -4,8 +4,10 @@ import { ExpenseController } from './expense.controller.js';
 const router = Router();
 const controller = new ExpenseController();
 
-// Export selected days (one <date>.pdf each + summary.pdf, zipped if multiple)
+// Export selected days' main expenses as one multi-page PDF
 router.post('/pdf/selection', controller.pdfSelection.bind(controller));
+// Export selected days' additional (day-level) expenses as one PDF
+router.post('/pdf/extras-selection', controller.pdfExtrasSelection.bind(controller));
 
 // Days
 router.get('/days', controller.listDays.bind(controller));
@@ -30,5 +32,10 @@ router.delete('/salaries/:id', controller.removeSalary.bind(controller));
 router.post('/events/:eventId/additionals', controller.addAdditional.bind(controller));
 router.patch('/additionals/:id', controller.updateAdditional.bind(controller));
 router.delete('/additionals/:id', controller.removeAdditional.bind(controller));
+
+// Day-level additional expenses
+router.post('/days/:id/extras', controller.addExtra.bind(controller));
+router.patch('/extras/:id', controller.updateExtra.bind(controller));
+router.delete('/extras/:id', controller.removeExtra.bind(controller));
 
 export { router as expenseRouter };

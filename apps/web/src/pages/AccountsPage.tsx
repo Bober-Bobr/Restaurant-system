@@ -15,6 +15,7 @@ export const AccountsPage = () => {
   const navigate = useNavigate();
 
   const [exporting, setExporting] = useState(false);
+  const [exportingExtras, setExportingExtras] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: days = [], isLoading, isError } = useQuery({
@@ -39,32 +40,55 @@ export const AccountsPage = () => {
       return next;
     });
 
-  // Export the highlighted days: a single day → <date>.pdf; several days → a ZIP
-  // of one <date>.pdf per day plus a summary.pdf. Days are not closed.
+  const saveBlob = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const chosenDays = (): ExpenseDay[] =>
+    days.filter((d) => selected.has(d.id)).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Export the highlighted days' main expenses as a single multi-page PDF.
+  // Days are not closed by this action.
   const downloadSelection = async () => {
-    const chosen: ExpenseDay[] = days
-      .filter((d) => selected.has(d.id))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const chosen = chosenDays();
     if (chosen.length === 0) return;
     setExporting(true);
     try {
       const blob = await expenseService.downloadSelectionPdf(chosen.map((d) => d.id), locale);
       const filename = chosen.length === 1
         ? `${chosen[0].date}.pdf`
-        : `ledger-${chosen[0].date}_${chosen[chosen.length - 1].date}.zip`;
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+        : `ledger-${chosen[0].date}_${chosen[chosen.length - 1].date}.pdf`;
+      saveBlob(blob, filename);
       setSelected(new Set());
     } catch {
       window.alert(t('download_failed'));
     } finally {
       setExporting(false);
+    }
+  };
+
+  // Export the highlighted days' additional (day-level) expenses, separately.
+  const downloadExtras = async () => {
+    const chosen = chosenDays();
+    if (chosen.length === 0) return;
+    setExportingExtras(true);
+    try {
+      const blob = await expenseService.downloadExtrasPdf(chosen.map((d) => d.id), locale);
+      const filename = chosen.length === 1
+        ? `${chosen[0].date}-extras.pdf`
+        : `extras-${chosen[0].date}_${chosen[chosen.length - 1].date}.pdf`;
+      saveBlob(blob, filename);
+    } catch {
+      window.alert(t('download_failed'));
+    } finally {
+      setExportingExtras(false);
     }
   };
 
@@ -86,6 +110,10 @@ export const AccountsPage = () => {
         <button type="button" className="adm-btn-primary" onClick={downloadSelection}
           disabled={selected.size === 0 || exporting} style={{ opacity: selected.size === 0 ? 0.5 : 1 }}>
           {exporting ? t('loading') : `📄 ${t('download_selected')}${selected.size ? ` (${selected.size})` : ''}`}
+        </button>
+        <button type="button" className="adm-btn-ghost" onClick={downloadExtras}
+          disabled={selected.size === 0 || exportingExtras} style={{ opacity: selected.size === 0 ? 0.5 : 1 }}>
+          {exportingExtras ? t('loading') : `📄 ${t('download_additional')}${selected.size ? ` (${selected.size})` : ''}`}
         </button>
         {selected.size > 0 && (
           <button type="button" className="adm-btn-ghost" onClick={() => setSelected(new Set())} style={{ fontSize: 13 }}>

@@ -157,11 +157,26 @@ model ExpenseDay {
   managerId       String
   manager         AdminUser           @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
   events          DayEvent[]
+  extras          DayExtraExpense[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   @@unique([managerId, date])
   @@index([managerId])
+}
+
+// Day-level "additional expenses" kept separate from the per-event main
+// expenses. Managed on the Additional Expenses tab and exported separately.
+model DayExtraExpense {
+  id          String     @id @default(cuid())
+  name        String
+  amountSum   Int        @default(0) // whole so'm (not tiyin)
+  sortOrder   Int        @default(0)
+  dayId       String
+  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+
+  @@index([dayId])
 }
 
 // A department/event within a day: NAHOR, FOTIHA, TUI or OTHERS. Each holds its

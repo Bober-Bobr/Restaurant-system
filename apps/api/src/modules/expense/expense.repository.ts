@@ -10,7 +10,8 @@ const eventInclude = {
   additionals: { orderBy: lineOrder }
 };
 const dayInclude = {
-  events: { include: eventInclude, orderBy: { createdAt: 'asc' as const } }
+  events: { include: eventInclude, orderBy: { createdAt: 'asc' as const } },
+  extras: { orderBy: lineOrder }
 };
 
 export type UpdateDayData = {
@@ -118,6 +119,10 @@ export class ExpenseRepository {
     const row = await prisma.additionalExpense.findUnique({ where: { id }, select: { event: { select: { day: { select: { managerId: true } } } } } });
     return row?.event.day.managerId ?? null;
   }
+  async ownerOfExtra(id: string): Promise<string | null> {
+    const row = await prisma.dayExtraExpense.findUnique({ where: { id }, select: { day: { select: { managerId: true } } } });
+    return row?.day.managerId ?? null;
+  }
 
   createProduct(eventId: string, data: ProductData) {
     return prisma.productExpense.create({ data: { ...data, eventId } });
@@ -147,5 +152,16 @@ export class ExpenseRepository {
   }
   deleteAdditional(id: string) {
     return prisma.additionalExpense.delete({ where: { id } });
+  }
+
+  // Day-level additional expenses (separate from the per-event lines above).
+  createExtra(dayId: string, data: LineData) {
+    return prisma.dayExtraExpense.create({ data: { ...data, dayId } });
+  }
+  updateExtra(id: string, data: Partial<LineData>) {
+    return prisma.dayExtraExpense.update({ where: { id }, data });
+  }
+  deleteExtra(id: string) {
+    return prisma.dayExtraExpense.delete({ where: { id } });
   }
 }

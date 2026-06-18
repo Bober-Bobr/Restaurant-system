@@ -129,4 +129,17 @@ export class ExpenseService {
     if ((await this.repo.ownerOfAdditional(id)) !== managerId) throw createHttpError(404, 'Additional expense not found');
     await this.repo.deleteAdditional(id);
   }
+
+  async addExtra(managerId: string, dayId: string, data: LineData) {
+    await this.requireOwnDay(managerId, dayId);
+    return this.repo.createExtra(dayId, data);
+  }
+  async updateExtra(managerId: string, id: string, data: Partial<LineData>) {
+    if ((await this.repo.ownerOfExtra(id)) !== managerId) throw createHttpError(404, 'Extra expense not found');
+    return this.repo.updateExtra(id, data);
+  }
+  async removeExtra(managerId: string, id: string) {
+    if ((await this.repo.ownerOfExtra(id)) !== managerId) throw createHttpError(404, 'Extra expense not found');
+    await this.repo.deleteExtra(id);
+  }
 }
