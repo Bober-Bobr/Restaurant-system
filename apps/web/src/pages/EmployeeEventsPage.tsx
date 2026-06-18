@@ -25,6 +25,7 @@ const STATUS_BADGE: Record<Event['status'], { bg: string; labelKey: Parameters<t
   CONFIRMED: { bg: '#16a34a', labelKey: 'status_confirmed' },
   CANCELLED: { bg: '#dc2626', labelKey: 'status_cancelled' },
   COMPLETED: { bg: '#2563eb', labelKey: 'status_completed' },
+  MENU_NOT_SELECTED: { bg: '#d97706', labelKey: 'status_menu_not_selected' },
 };
 
 const formatDate = (iso: string, locale: string) => {

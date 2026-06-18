@@ -11,7 +11,7 @@ export type Event = {
   customerPhone?: string;
   eventDate: string;
   guestCount: number;
-  status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'MENU_NOT_SELECTED';
   eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE' | 'FOTIHA_TUI' | 'NACHOR_OSHI';
   birthdayPersonName?: string;
   brideName?: string;

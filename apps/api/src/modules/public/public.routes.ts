@@ -72,6 +72,7 @@ router.get('/restaurants', async (_request, response, next) => {
       logoUrl: r.logoUrl ?? r.company?.logoUrl ?? null,
       backgroundImageUrl: r.backgroundImageUrl ?? null,
       categoryOrder: parseCategoryOrder(r.categoryOrder),
+      hideSubcategories: r.hideSubcategories ?? false,
       companyName: r.company?.name ?? null,
     })));
   } catch (error) { next(error); }

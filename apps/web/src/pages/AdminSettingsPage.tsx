@@ -74,7 +74,7 @@ export const AdminSettingsPage = () => {
     });
 
   const saveMutation = useMutation({
-    mutationFn: () => menuService.saveSettings([...excluded]),
+    mutationFn: () => menuService.saveSettings({ excludedCategories: [...excluded] }),
     onSuccess: () => {
       // Refresh everything that depends on the visible category set.
       queryClient.invalidateQueries();

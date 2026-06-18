@@ -23,6 +23,7 @@ const STATUS_BADGE: Record<Event['status'], { bg: string; fg: string; border: st
   CONFIRMED: { bg: 'rgba(34,197,94,0.15)',   fg: '#4ade80', border: 'rgba(34,197,94,0.3)',  key: 'status_confirmed' },
   CANCELLED: { bg: 'rgba(220,38,38,0.15)',   fg: '#fca5a5', border: 'rgba(220,38,38,0.3)',  key: 'status_cancelled' },
   COMPLETED: { bg: 'rgba(37,99,235,0.15)',   fg: '#60a5fa', border: 'rgba(37,99,235,0.3)',  key: 'status_completed' },
+  MENU_NOT_SELECTED: { bg: 'rgba(245,158,11,0.15)', fg: '#fbbf24', border: 'rgba(245,158,11,0.35)', key: 'status_menu_not_selected' },
 };
 
 const formatDate = (iso: string, locale: string) =>

@@ -12,6 +12,7 @@ enum EventStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+  MENU_NOT_SELECTED
 }
 
 enum EventType {
@@ -275,6 +276,9 @@ model Restaurant {
   backgroundImageUrl String?
   categoryOrder   String?
   excludedCategories String?
+  // Master switch: when true, subcategories are disabled everywhere — the menu
+  // items Subcategory column and the catering-site subcategory headers are hidden.
+  hideSubcategories Boolean       @default(false)
   ownerId         String
   companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)

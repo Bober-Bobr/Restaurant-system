@@ -465,7 +465,7 @@ function CateringDishCard({ item, locale, onSelect }: { item: MenuItem; locale: 
   );
 }
 
-function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: Locale }) {
+function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menuItems: MenuItem[]; locale: Locale; hideSubcategories?: boolean }) {
   const { category = '' } = useParams();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const cat = category as MenuCategory;
@@ -500,10 +500,12 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   const groups = (() => {
     const map = new Map<string, { id: string; name: string | null; sortOrder: number; items: MenuItem[] }>();
     for (const m of visible) {
-      // Only honor a subcategory that belongs to this category and isn't hidden.
-      // Hidden subcategories fall back to the ungrouped block so their header
-      // doesn't take up space on the catering site.
-      const sub = m.subcategory && m.subcategory.category === cat && !m.subcategory.hidden ? m.subcategory : null;
+      // Honor a subcategory only when it belongs to this category, isn't itself
+      // hidden, and the restaurant-wide master switch hasn't disabled subcategories.
+      // Otherwise the dish falls into the ungrouped block (no header taking space).
+      const sub = !hideSubcategories && m.subcategory && m.subcategory.category === cat && !m.subcategory.hidden
+        ? m.subcategory
+        : null;
       const key = sub?.id ?? NONE;
       if (!map.has(key)) map.set(key, { id: key, name: sub?.name ?? null, sortOrder: sub?.sortOrder ?? 99999, items: [] });
       map.get(key)!.items.push(m);
@@ -994,7 +996,7 @@ export const CateringSite = ({ slug }: { slug: string }) => {
     <CateringLayout restaurant={restaurant} locale={locale} setLocale={setLocale}>
       <Routes>
         <Route path="/" element={<MenuBlocks menuItems={menuItems} locale={locale} categoryOrder={restaurant?.categoryOrder} />} />
-        <Route path="/category/:category" element={<CategoryDetail menuItems={menuItems} locale={locale} />} />
+        <Route path="/category/:category" element={<CategoryDetail menuItems={menuItems} locale={locale} hideSubcategories={restaurant?.hideSubcategories ?? false} />} />
         <Route path="/halls" element={<HallsPage restaurantId={restaurant!.id} locale={locale} />} />
         <Route path="/halls/:hallId" element={<HallDetail restaurantId={restaurant!.id} locale={locale} />} />
         <Route path="/reviews" element={<ReviewsPage restaurantId={restaurant!.id} locale={locale} />} />

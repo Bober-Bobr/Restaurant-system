@@ -28,7 +28,8 @@ export const arrangementSchema = z.object({
 });
 
 export const settingsSchema = z.object({
-  excludedCategories: z.array(z.nativeEnum(MenuCategory))
+  excludedCategories: z.array(z.nativeEnum(MenuCategory)),
+  hideSubcategories: z.boolean().optional()
 });
 
 export const menuItemIdSchema = z.object({

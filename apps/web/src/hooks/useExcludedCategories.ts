@@ -17,3 +17,14 @@ export function useExcludedCategories(): Set<MenuCategory> {
   });
   return new Set(data?.excludedCategories ?? []);
 }
+
+// Master switch: when true, subcategories are disabled everywhere for the
+// restaurant (menu Subcategory column + catering-site subcategory headers).
+export function useHideSubcategories(): boolean {
+  const { data } = useQuery({
+    queryKey: EXCLUDED_CATEGORIES_KEY,
+    queryFn: () => menuService.getSettings(),
+    staleTime: 60_000,
+  });
+  return data?.hideSubcategories ?? false;
+}

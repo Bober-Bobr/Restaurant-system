@@ -43,12 +43,18 @@ export class MenuService {
   }
 
   async getSettings(restaurantId: string) {
-    return { excludedCategories: await this.menuRepository.getExcludedCategories(restaurantId) };
+    return {
+      excludedCategories: await this.menuRepository.getExcludedCategories(restaurantId),
+      hideSubcategories: await this.menuRepository.getHideSubcategories(restaurantId),
+    };
   }
 
-  async saveSettings(restaurantId: string, payload: { excludedCategories: MenuCategory[] }) {
+  async saveSettings(restaurantId: string, payload: { excludedCategories: MenuCategory[]; hideSubcategories?: boolean }) {
     const excludedCategories = await this.menuRepository.saveExcludedCategories(restaurantId, payload.excludedCategories);
-    return { excludedCategories };
+    const hideSubcategories = payload.hideSubcategories === undefined
+      ? await this.menuRepository.getHideSubcategories(restaurantId)
+      : await this.menuRepository.saveHideSubcategories(restaurantId, payload.hideSubcategories);
+    return { excludedCategories, hideSubcategories };
   }
 
   async updateMenuItem(menuItemId: string, payload: {

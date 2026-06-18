@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { subcategoryService } from '../services/subcategory.service';
+import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { useExcludedCategories } from '../hooks/useExcludedCategories';
+import { useExcludedCategories, EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcludedCategories';
 import type { MenuItem, Subcategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -42,6 +43,19 @@ export const AdminSubcategoriesPage = () => {
   const { data: subcategories = [], isLoading } = useQuery({
     queryKey: ['subcategories'],
     queryFn: () => subcategoryService.list(),
+  });
+
+  // Master switch — disables subcategories everywhere (menu column + catering site).
+  const settingsQuery = useQuery({
+    queryKey: EXCLUDED_CATEGORIES_KEY,
+    queryFn: () => menuService.getSettings(),
+  });
+  const hideSubcategories = settingsQuery.data?.hideSubcategories ?? false;
+
+  const toggleMasterMutation = useMutation({
+    mutationFn: (next: boolean) =>
+      menuService.saveSettings({ excludedCategories: settingsQuery.data?.excludedCategories ?? [], hideSubcategories: next }),
+    onSuccess: () => queryClient.invalidateQueries(),
   });
 
   const availableCategories = FOOD_CATEGORIES.filter((c) => !excluded.has(c));
@@ -105,7 +119,27 @@ export const AdminSubcategoriesPage = () => {
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
       <h1 className="adm-title" style={{ marginBottom: 8 }}>{t('subcategories')}</h1>
-      <p style={{ margin: '0 0 20px', color: 'rgba(226,232,240,0.6)', fontSize: 14 }}>{t('subcategories_help')}</p>
+      <p style={{ margin: '0 0 16px', color: 'rgba(226,232,240,0.6)', fontSize: 14 }}>{t('subcategories_help')}</p>
+
+      {/* Master switch: turn subcategories off everywhere at once. */}
+      <section className="adm-card tablet-fade-up" style={{ padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: 0, fontWeight: 700, color: '#f8fafc', fontSize: 14 }}>{t('disable_subcategories')}</p>
+          <p style={{ margin: '4px 0 0', color: 'rgba(226,232,240,0.55)', fontSize: 12, maxWidth: 560 }}>{t('disable_subcategories_help')}</p>
+        </div>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}>
+          <input
+            type="checkbox"
+            checked={hideSubcategories}
+            disabled={settingsQuery.isLoading || toggleMasterMutation.isPending}
+            onChange={(e) => toggleMasterMutation.mutate(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: 13, fontWeight: 600, color: hideSubcategories ? '#c9a42c' : 'rgba(226,232,240,0.7)' }}>
+            {hideSubcategories ? t('subcategories_disabled') : t('subcategories_enabled')}
+          </span>
+        </label>
+      </section>
 
       {/* Create */}
       <section className="adm-card tablet-fade-up adm-section">

@@ -34,6 +34,23 @@ export class MenuRepository {
     return parseExcludedCategories(JSON.stringify(categories));
   }
 
+  // Master switch: hide all subcategories everywhere for this restaurant.
+  async getHideSubcategories(restaurantId: string): Promise<boolean> {
+    const row = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { hideSubcategories: true },
+    });
+    return row?.hideSubcategories ?? false;
+  }
+
+  async saveHideSubcategories(restaurantId: string, value: boolean): Promise<boolean> {
+    await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: { hideSubcategories: value },
+    });
+    return value;
+  }
+
   // Persist the catering-site arrangement: the restaurant's category order plus
   // each dish's position within its category. Dish updates are scoped to the
   // restaurant so a client can't reorder another tenant's items.

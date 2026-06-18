@@ -15,6 +15,7 @@ const statusStyle: Record<string, React.CSSProperties> = {
   CONFIRMED: { background: 'rgba(34,197,94,0.15)',   color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)' },
   CANCELLED: { background: 'rgba(220,38,38,0.15)',   color: '#fca5a5', border: '1px solid rgba(220,38,38,0.3)' },
   COMPLETED: { background: 'rgba(37,99,235,0.15)',   color: '#60a5fa', border: '1px solid rgba(37,99,235,0.3)' },
+  MENU_NOT_SELECTED: { background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.35)' },
 };
 
 const statusLabelKey: Record<string, Parameters<typeof translate>[0]> = {
@@ -22,12 +23,7 @@ const statusLabelKey: Record<string, Parameters<typeof translate>[0]> = {
   CONFIRMED: 'status_confirmed',
   CANCELLED: 'status_cancelled',
   COMPLETED: 'status_completed',
-};
-
-// "Menu not selected" badge styling (a derived status shown when an event has no
-// dish selections yet).
-const menuNotSelectedStyle: React.CSSProperties = {
-  background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.35)',
+  MENU_NOT_SELECTED: 'status_menu_not_selected',
 };
 
 const eventTypeLabelKey: Record<string, Parameters<typeof translate>[0]> = {
@@ -155,19 +151,12 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                    <span
-                      className="adm-badge"
-                      style={statusStyle[event.status] ?? statusStyle.DRAFT}
-                    >
-                      {statusLabelKey[event.status] ? t(statusLabelKey[event.status]) : event.status}
-                    </span>
-                    {dishTypes === 0 && event.status !== 'CANCELLED' && (
-                      <span className="adm-badge" style={menuNotSelectedStyle}>
-                        {t('status_menu_not_selected')}
-                      </span>
-                    )}
-                  </div>
+                  <span
+                    className="adm-badge"
+                    style={statusStyle[event.status] ?? statusStyle.DRAFT}
+                  >
+                    {statusLabelKey[event.status] ? t(statusLabelKey[event.status]) : event.status}
+                  </span>
                 </td>
 
                 {hasActions ? (

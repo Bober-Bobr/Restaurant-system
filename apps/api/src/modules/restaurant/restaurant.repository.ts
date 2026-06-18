@@ -29,6 +29,7 @@ export class RestaurantRepository {
         logoUrl: true,
         backgroundImageUrl: true,
         categoryOrder: true,
+        hideSubcategories: true,
         company: { select: { name: true, logoUrl: true } },
       },
     });

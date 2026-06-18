@@ -46,6 +46,14 @@ const binarySearchEventById = (events: Event[], targetId: number): Event | null 
 
 const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE', 'FOTIHA_TUI', 'NACHOR_OSHI'];
 
+const STATUS_LABEL_KEY: Record<Event['status'], Parameters<typeof translate>[0]> = {
+  DRAFT: 'status_draft',
+  CONFIRMED: 'status_confirmed',
+  CANCELLED: 'status_cancelled',
+  COMPLETED: 'status_completed',
+  MENU_NOT_SELECTED: 'status_menu_not_selected',
+};
+
 export const AdminEventsPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -330,10 +338,11 @@ export const AdminEventsPage = () => {
           <label style={{ display: 'grid', gap: 6 }}>
             {t('status')}
             <Select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
-              <option value="DRAFT">DRAFT</option>
-              <option value="CONFIRMED">CONFIRMED</option>
-              <option value="CANCELLED">CANCELLED</option>
-              <option value="COMPLETED">COMPLETED</option>
+              <option value="DRAFT">{t('status_draft')}</option>
+              <option value="CONFIRMED">{t('status_confirmed')}</option>
+              <option value="CANCELLED">{t('status_cancelled')}</option>
+              <option value="COMPLETED">{t('status_completed')}</option>
+              <option value="MENU_NOT_SELECTED">{t('status_menu_not_selected')}</option>
             </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -449,7 +458,7 @@ export const AdminEventsPage = () => {
             PRIVATE_PARTY: t('event_type_private_party'), CORPORATE: t('event_type_corporate')
           };
           const statusColors: Record<string, string> = {
-            DRAFT: '#94a3b8', CONFIRMED: '#', CANCELLED: '#fca5a5'
+            DRAFT: '#94a3b8', CONFIRMED: '#4ade80', CANCELLED: '#fca5a5', COMPLETED: '#60a5fa', MENU_NOT_SELECTED: '#fbbf24',
           };
           const dishTypes  = searchResult.selections?.length ?? 0;
           const totalPcs   = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
@@ -472,7 +481,7 @@ export const AdminEventsPage = () => {
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('status')}</p>
-                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: statusColors[searchResult.status] ?? '#475569' }}>{searchResult.status}</p>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: statusColors[searchResult.status] ?? '#475569' }}>{t(STATUS_LABEL_KEY[searchResult.status])}</p>
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('event_date_time')}</p>

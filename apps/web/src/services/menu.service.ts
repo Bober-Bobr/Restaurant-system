@@ -31,11 +31,11 @@ export const menuService = {
     await httpClient.put('/menu-items/arrangement', payload);
   },
   async getSettings() {
-    const { data } = await httpClient.get<{ excludedCategories: MenuItem['category'][] }>('/menu-items/settings');
+    const { data } = await httpClient.get<{ excludedCategories: MenuItem['category'][]; hideSubcategories: boolean }>('/menu-items/settings');
     return data;
   },
-  async saveSettings(excludedCategories: MenuItem['category'][]) {
-    const { data } = await httpClient.put<{ excludedCategories: MenuItem['category'][] }>('/menu-items/settings', { excludedCategories });
+  async saveSettings(payload: { excludedCategories: MenuItem['category'][]; hideSubcategories?: boolean }) {
+    const { data } = await httpClient.put<{ excludedCategories: MenuItem['category'][]; hideSubcategories: boolean }>('/menu-items/settings', payload);
     return data;
   }
 };

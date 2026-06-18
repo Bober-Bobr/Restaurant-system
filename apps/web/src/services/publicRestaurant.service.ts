@@ -13,6 +13,7 @@ export type PublicRestaurantSummary = {
   logoUrl: string | null;
   backgroundImageUrl?: string | null;
   categoryOrder?: string[] | null;
+  hideSubcategories?: boolean;
   companyName?: string | null;
 };
 
