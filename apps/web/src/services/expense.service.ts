@@ -1,4 +1,4 @@
-import type { AdditionalExpense, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
+import type { AdditionalExpense, DayEvent, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
 import { httpClient } from './http';
 
 export const expenseService = {
@@ -26,6 +26,14 @@ export const expenseService = {
   },
   async removeDay(id: string) {
     await httpClient.delete(`/expenses/days/${id}`);
+  },
+
+  async updateEvent(
+    id: string,
+    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null }>
+  ) {
+    const { data } = await httpClient.patch<DayEvent>(`/expenses/events/${id}`, payload);
+    return data;
   },
 
   async addProduct(eventId: string, payload: { name: string; quantity?: number; unit?: string; amountSum?: number }) {

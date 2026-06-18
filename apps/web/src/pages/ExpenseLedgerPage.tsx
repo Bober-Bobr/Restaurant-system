@@ -20,7 +20,9 @@ type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string
 
 const clampSum = (n: number) => Math.max(0, Math.min(MAX_SUM, n));
 
+const bookingTotal = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
 const eventSpent = (e: DayEvent) =>
+  bookingTotal(e) +
   e.products.reduce((s, p) => s + p.amountSum, 0) +
   e.salaries.reduce((s, p) => s + p.amountSum, 0) +
   e.additionals.reduce((s, p) => s + p.amountSum, 0);
@@ -46,11 +48,17 @@ export const ExpenseLedgerPage = () => {
     if (idx > days.length - 1) setIdx(Math.max(0, days.length - 1));
   }, [days.length, idx]);
 
+  const [newDate, setNewDate] = useState('');
+
   const addDay = useMutation({
-    mutationFn: () => expenseService.createDay(),
-    onSuccess: async () => {
+    mutationFn: (date?: string) => expenseService.createDay(date),
+    onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setIdx(0); // newest day sits at the top
+      setNewDate('');
+      // Days are sorted by date desc; jump to the one we just created.
+      const fresh = queryClient.getQueryData<ExpenseDay[]>(QUERY_KEY);
+      const pos = fresh?.findIndex((d) => d.id === created?.id) ?? 0;
+      setIdx(pos >= 0 ? pos : 0);
     },
   });
 
@@ -80,8 +88,17 @@ export const ExpenseLedgerPage = () => {
       </p>
 
       <section className="adm-card tablet-fade-up" style={{ padding: 14, marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button type="button" className="adm-btn-primary" onClick={() => addDay.mutate()} disabled={addDay.isPending}>
+        <button type="button" className="adm-btn-primary" onClick={() => addDay.mutate(undefined)} disabled={addDay.isPending}>
           {addDay.isPending ? t('creating') : `+ ${t('add_day')}`}
+        </button>
+        <span style={{ color: 'rgba(226,232,240,0.35)', fontSize: 12 }}>{t('or')}</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={labelStyle}>{t('add_day_for_date')}</span>
+          <input type="date" className="adm-input" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ width: 170 }} />
+        </label>
+        <button type="button" className="adm-btn-ghost" onClick={() => { if (newDate) addDay.mutate(newDate); }}
+          disabled={!newDate || addDay.isPending} style={{ fontSize: 13 }}>
+          {t('create_in_advance')}
         </button>
       </section>
 
@@ -240,14 +257,47 @@ const Total = ({ label, value, color }: { label: string; value: string; color: s
   </div>
 );
 
-// One department's three expense blocks (products / salaries / additionals).
+// One department's booking, three expense blocks (products / salaries / additionals) and notes.
 const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChanged: () => void }) => {
   const productsTotal = event.products.reduce((s, p) => s + p.amountSum, 0);
   const salariesTotal = event.salaries.reduce((s, p) => s + p.amountSum, 0);
   const additionalsTotal = event.additionals.reduce((s, p) => s + p.amountSum, 0);
 
+  const updateEvent = useMutation({
+    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null }>) =>
+      expenseService.updateEvent(event.id, patch),
+    onSuccess: onChanged,
+  });
+
+  const [bookingName, setBookingName] = useState(event.bookingName ?? '');
+  const [guests, setGuests] = useState(event.guestCount ? String(event.guestCount) : '');
+  const [price, setPrice] = useState(event.pricePerGuestSum ? groupDigits(String(event.pricePerGuestSum)) : '');
+  const [note, setNote] = useState(event.report ?? '');
+  useEffect(() => { setBookingName(event.bookingName ?? ''); }, [event.bookingName]);
+  useEffect(() => { setGuests(event.guestCount ? String(event.guestCount) : ''); }, [event.guestCount]);
+  useEffect(() => { setPrice(event.pricePerGuestSum ? groupDigits(String(event.pricePerGuestSum)) : ''); }, [event.pricePerGuestSum]);
+  useEffect(() => { setNote(event.report ?? ''); }, [event.report]);
+
+  const bookingSum = bookingTotal(event);
+
   return (
     <>
+      {/* Booking: guests × price per guest is added to this department's spent. */}
+      <Block title={t('booking')} total={formatWholeSum(bookingSum)}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input className="adm-input" value={bookingName} onChange={(e) => setBookingName(e.target.value)}
+            onBlur={() => { const v = bookingName.trim(); if (v !== (event.bookingName ?? '')) updateEvent.mutate({ bookingName: v || null }); }}
+            placeholder={t('booking_name')} style={{ ...rowInput, flex: 2, minWidth: 160 }} />
+          <input className="adm-input" inputMode="numeric" value={guests} onChange={(e) => setGuests(e.target.value.replace(/[^\d]/g, ''))}
+            onBlur={() => { const n = Number(guests) || 0; if (n !== event.guestCount) updateEvent.mutate({ guestCount: n }); }}
+            placeholder={t('guest_count')} style={{ ...rowInput, width: 100, textAlign: 'right' }} />
+          <span style={{ color: 'rgba(226,232,240,0.4)' }}>×</span>
+          <input className="adm-input" inputMode="numeric" value={price} onChange={(e) => setPrice(groupDigits(e.target.value))}
+            onBlur={() => { const c = parseWholeSum(price); if (c !== null && clampSum(c) !== event.pricePerGuestSum) updateEvent.mutate({ pricePerGuestSum: clampSum(c) }); }}
+            placeholder={t('price_per_guest')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+        </div>
+      </Block>
+
       <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {event.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={onChanged} />)}
@@ -278,6 +328,14 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
             onAdd={(payload) => expenseService.addAdditional(event.id, payload)} onAdded={onChanged} />
         </div>
       </Block>
+
+      {/* Per-event notes (separate from the day report). */}
+      <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <span style={labelStyle}>{t('event_notes')}</span>
+        <textarea className="adm-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
+          onBlur={() => { if ((event.report ?? '') !== note) updateEvent.mutate({ report: note || null }); }}
+          placeholder={t('event_notes_placeholder')} style={{ resize: 'vertical', minHeight: 56, lineHeight: 1.5 }} />
+      </div>
     </>
   );
 };

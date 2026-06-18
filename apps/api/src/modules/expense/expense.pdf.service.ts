@@ -4,6 +4,10 @@ import type { Locale } from '../../utils/translate.js';
 type Line = { name: string; quantity?: number; unit?: string; amountSum: number };
 type PdfEvent = {
   type: string;
+  bookingName?: string | null;
+  guestCount: number;
+  pricePerGuestSum: number;
+  report?: string | null;
   products: Line[];
   salaries: { name: string; amountSum: number }[];
   additionals: { name: string; amountSum: number }[];
@@ -24,6 +28,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     balance: 'Balance', totalAllocated: 'Total Allocated Funds', totalExpenses: 'Total Expenses',
     totalBalance: 'Total Balance', period: 'Period', noData: 'No data for this period.', report: 'Report',
     dayTotals: 'Day totals', grandTotals: 'Overall totals',
+    booking: 'Booking', guests: 'Guests', pricePerGuest: 'Price per guest', bookingTotal: 'Booking total',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Tui', OTHERS: 'Others'
   },
   ru: {
@@ -32,6 +37,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     balance: 'Остаток', totalAllocated: 'Итого выделено средств', totalExpenses: 'Итого расходы',
     totalBalance: 'Итоговый баланс', period: 'Период', noData: 'Нет данных за этот период.', report: 'Отчёт',
     dayTotals: 'Итоги дня', grandTotals: 'Общие итоги',
+    booking: 'Бронь', guests: 'Гостей', pricePerGuest: 'Цена за гостя', bookingTotal: 'Итого по брони',
     NAHOR: 'Нахор', FOTIHA: 'Фотиха', TUI: 'Той', OTHERS: 'Прочее'
   },
   uz: {
@@ -40,16 +46,21 @@ const LABELS: Record<Locale, Record<string, string>> = {
     balance: 'Qoldiq', totalAllocated: 'Jami ajratilgan mablag', totalExpenses: 'Jami xarajatlar',
     totalBalance: 'Yakuniy balans', period: 'Davr', noData: 'Bu davr uchun malumot yoq.', report: 'Hisobot',
     dayTotals: 'Kun yakuni', grandTotals: 'Umumiy yakun',
+    booking: 'Bron', guests: 'Mehmonlar', pricePerGuest: 'Mehmon narxi', bookingTotal: 'Bron jami',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Toy', OTHERS: 'Boshqalar'
   }
 };
 
 const fmt = (sum: number) => sum.toLocaleString('ru-RU') + " so'm";
+const bookingTotal = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
 const eventSpent = (e: PdfEvent) =>
+  bookingTotal(e) +
   e.products.reduce((s, p) => s + p.amountSum, 0) +
   e.salaries.reduce((s, p) => s + p.amountSum, 0) +
   e.additionals.reduce((s, p) => s + p.amountSum, 0);
-const eventHasData = (e: PdfEvent) => e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0;
+const eventHasData = (e: PdfEvent) =>
+  e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0 ||
+  bookingTotal(e) > 0 || !!e.bookingName?.trim() || !!e.report?.trim();
 const daySpent = (d: PdfDay) => d.events.reduce((s, e) => s + eventSpent(e), 0);
 const sortedEvents = (d: PdfDay) => [...d.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
 
@@ -133,12 +144,28 @@ export function generateExpensePdf(
         doc.moveDown(0.2);
         hr('#999999', 1.2);
 
+        // Booking block (guests × price per guest).
+        if (ev.bookingName?.trim() || bookingTotal(ev) > 0) {
+          doc.font(B, 10).fillColor('#444').text(L.booking, ML);
+          doc.moveDown(0.3);
+          if (ev.bookingName?.trim()) kv('   • ' + L.booking, ev.bookingName.trim());
+          kv(`   • ${L.guests} × ${L.pricePerGuest}`, `${ev.guestCount} × ${fmt(ev.pricePerGuestSum)}`);
+          kv(`   • ${L.bookingTotal}`, fmt(bookingTotal(ev)));
+          doc.moveDown(0.1);
+        }
+
         lineList(L.products, ev.products.map((p) => ({ label: p.quantity ? `${p.name}  (${p.quantity} ${p.unit ?? ''})`.trimEnd() : p.name, value: p.amountSum })));
         lineList(L.salaries, ev.salaries.map((s) => ({ label: s.name, value: s.amountSum })));
         lineList(L.additional, ev.additionals.map((a) => ({ label: a.name, value: a.amountSum })));
 
         doc.moveDown(0.2);
         kv(`${eventLabel(ev.type)} — ${L.spent}`, fmt(eventSpent(ev)), { bold: true, color: '#b45309' });
+
+        if (ev.report?.trim()) {
+          doc.moveDown(0.3);
+          doc.font(B, 10).fillColor('#444').text(L.report, ML);
+          doc.font(R, 9).fillColor('#333').text(ev.report.trim(), ML, doc.y + 2, { width: contentW });
+        }
       });
 
       // Day totals — per-event columns, then the day total.

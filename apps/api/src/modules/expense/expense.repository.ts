@@ -18,6 +18,13 @@ export type UpdateDayData = {
   report?: string | null;
 };
 
+export type UpdateEventData = {
+  bookingName?: string | null;
+  guestCount?: number;
+  pricePerGuestSum?: number;
+  report?: string | null;
+};
+
 export type ProductData = {
   name: string;
   quantity?: number;
@@ -108,6 +115,10 @@ export class ExpenseRepository {
   async ownerOfEvent(eventId: string): Promise<string | null> {
     const row = await prisma.dayEvent.findUnique({ where: { id: eventId }, select: { day: { select: { managerId: true } } } });
     return row?.day.managerId ?? null;
+  }
+
+  updateEvent(id: string, data: UpdateEventData) {
+    return prisma.dayEvent.update({ where: { id }, data });
   }
   async ownerOfProduct(id: string): Promise<string | null> {
     const row = await prisma.productExpense.findUnique({ where: { id }, select: { event: { select: { day: { select: { managerId: true } } } } } });

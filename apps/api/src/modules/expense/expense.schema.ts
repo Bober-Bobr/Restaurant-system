@@ -17,6 +17,13 @@ export const updateDaySchema = z.object({
   report: z.string().max(5000).nullable().optional()
 });
 
+export const updateEventSchema = z.object({
+  bookingName: z.string().max(120).nullable().optional(),
+  guestCount: z.number().int().min(0).max(1_000_000).optional(),
+  pricePerGuestSum: sum.optional(),
+  report: z.string().max(5000).nullable().optional()
+});
+
 export const createProductSchema = z.object({
   name: z.string().min(1).max(120),
   quantity: z.number().min(0).max(1_000_000).optional(),

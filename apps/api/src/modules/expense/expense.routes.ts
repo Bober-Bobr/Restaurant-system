@@ -17,6 +17,9 @@ router.patch('/days/:id/close', controller.closeDay.bind(controller));
 router.patch('/days/:id/reopen', controller.reopenDay.bind(controller));
 router.delete('/days/:id', controller.removeDay.bind(controller));
 
+// Event department booking/notes
+router.patch('/events/:id', controller.updateEvent.bind(controller));
+
 // Expense lines are created under an event department.
 router.post('/events/:eventId/products', controller.addProduct.bind(controller));
 router.patch('/products/:id', controller.updateProduct.bind(controller));

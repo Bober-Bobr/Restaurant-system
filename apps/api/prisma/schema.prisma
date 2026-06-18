@@ -171,6 +171,11 @@ model DayEvent {
   type        String // NAHOR | FOTIHA | TUI | OTHERS
   dayId       String
   day         ExpenseDay          @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  // Booking: guestCount * pricePerGuestSum is added to this event's spent total.
+  bookingName      String?
+  guestCount       Int            @default(0)
+  pricePerGuestSum Int            @default(0) // whole so'm (not tiyin)
+  report           String? // free-text notes for this event/department
   products    ProductExpense[]
   salaries    SalaryExpense[]
   additionals AdditionalExpense[]

@@ -128,6 +128,10 @@ export type DayEvent = {
   id: string;
   type: DayEventType;
   dayId: string;
+  bookingName: string | null;
+  guestCount: number;
+  pricePerGuestSum: number; // whole so'm
+  report: string | null;
   products: ProductExpense[];
   salaries: SalaryExpense[];
   additionals: AdditionalExpense[];

@@ -12,6 +12,7 @@ import {
   pdfQuerySchema,
   pdfSelectionSchema,
   updateDaySchema,
+  updateEventSchema,
   updateLineSchema,
   updateProductSchema
 } from './expense.schema.js';
@@ -74,6 +75,12 @@ export class ExpenseController {
     const { id } = idSchema.parse(request.params);
     await service.removeDay(request.admin!.id, id);
     response.status(204).send();
+  }
+
+  async updateEvent(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    const payload = updateEventSchema.parse(request.body);
+    response.json(await service.updateEvent(request.admin!.id, id, payload));
   }
 
   async addProduct(request: Request, response: Response) {

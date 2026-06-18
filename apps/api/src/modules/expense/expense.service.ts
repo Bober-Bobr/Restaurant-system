@@ -3,7 +3,8 @@ import {
   ExpenseRepository,
   type LineData,
   type ProductData,
-  type UpdateDayData
+  type UpdateDayData,
+  type UpdateEventData
 } from './expense.repository.js';
 
 function todayStr(): string {
@@ -78,6 +79,11 @@ export class ExpenseService {
   }
   private async requireOwnEvent(managerId: string, eventId: string) {
     if ((await this.repo.ownerOfEvent(eventId)) !== managerId) throw createHttpError(404, 'Event not found');
+  }
+
+  async updateEvent(managerId: string, id: string, data: UpdateEventData) {
+    await this.requireOwnEvent(managerId, id);
+    return this.repo.updateEvent(id, data);
   }
 
   async updateDay(managerId: string, id: string, data: UpdateDayData) {
