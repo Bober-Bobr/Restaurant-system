@@ -98,6 +98,15 @@ export const expenseService = {
     return data as Blob;
   },
 
+  // Export only the chosen event departments of a single day as one PDF.
+  async downloadEventsPdf(dayId: string, eventIds: string[], locale: string) {
+    const { data } = await httpClient.post('/expenses/pdf/events', { dayId, eventIds }, {
+      params: { locale },
+      responseType: 'blob',
+    });
+    return data as Blob;
+  },
+
   // Export the selected days' additional (day-level) expenses as one PDF.
   async downloadExtrasPdf(dayIds: string[], locale: string) {
     const { data } = await httpClient.post('/expenses/pdf/extras-selection', { dayIds }, {

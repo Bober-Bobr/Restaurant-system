@@ -21,6 +21,17 @@ type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string
 
 const clampSum = (n: number) => Math.max(0, Math.min(MAX_SUM, n));
 
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 const bookingTotal = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
 const eventSpent = (e: DayEvent) =>
   bookingTotal(e) +
@@ -150,7 +161,31 @@ const rowInput: React.CSSProperties = { height: 38 };
 
 const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const queryClient = useQueryClient();
+  const { locale } = useAdminStore();
   const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+
+  // Per-event PDF export: pick the departments to include, download just those.
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
+  const toggleEvent = (id: string) =>
+    setSelectedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const downloadEvents = async () => {
+    if (selectedEvents.size === 0) return;
+    setExporting(true);
+    try {
+      const blob = await expenseService.downloadEventsPdf(day.id, [...selectedEvents], locale);
+      saveBlob(blob, `${day.date}.pdf`);
+    } catch {
+      window.alert(t('download_failed'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const updateDay = useMutation({
     mutationFn: (patch: { allocatedSum?: number; report?: string | null }) => expenseService.updateDay(day.id, patch),
@@ -195,28 +230,53 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
       <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 20 }}>
         {!activeEvent ? (
           /* Department selection */
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
-            {events.map((ev) => {
-              const evSpent = eventSpent(ev);
-              return (
-                <button key={ev.id} type="button" onClick={() => setActiveEventId(ev.id)}
-                  className="tablet-fade-up"
-                  style={{
-                    textAlign: 'left', cursor: 'pointer', borderRadius: 16, padding: '18px 18px',
-                    background: 'linear-gradient(160deg, rgba(201,164,44,0.12), rgba(255,255,255,0.03))',
-                    border: '1px solid rgba(201,164,44,0.3)', transition: 'all 0.18s',
-                  }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>{t(EVENT_LABEL_KEY[ev.type])}</span>
-                    <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
-                  </div>
-                  <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('amount_spent')}</p>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
-                    {formatWholeSum(evSpent)}
-                  </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Per-event PDF export toolbar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="adm-btn-primary" onClick={downloadEvents}
+                disabled={selectedEvents.size === 0 || exporting}
+                style={{ opacity: selectedEvents.size === 0 ? 0.5 : 1, fontSize: 13 }}>
+                {exporting ? t('loading') : `📄 ${t('download_selected')}${selectedEvents.size ? ` (${selectedEvents.size})` : ''}`}
+              </button>
+              {selectedEvents.size > 0 && (
+                <button type="button" className="adm-btn-ghost" onClick={() => setSelectedEvents(new Set())} style={{ fontSize: 13 }}>
+                  {t('clear_selection')}
                 </button>
-              );
-            })}
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
+              {events.map((ev) => {
+                const evSpent = eventSpent(ev);
+                const checked = selectedEvents.has(ev.id);
+                return (
+                  <div key={ev.id} className="tablet-fade-up"
+                    style={{
+                      position: 'relative', borderRadius: 16,
+                      background: 'linear-gradient(160deg, rgba(201,164,44,0.12), rgba(255,255,255,0.03))',
+                      border: checked ? '1px solid rgba(201,164,44,0.7)' : '1px solid rgba(201,164,44,0.3)',
+                      transition: 'all 0.18s',
+                    }}>
+                    <label onClick={(e) => e.stopPropagation()}
+                      style={{ position: 'absolute', top: 12, right: 12, display: 'flex', cursor: 'pointer', zIndex: 1 }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleEvent(ev.id)}
+                        style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+                    </label>
+                    <button type="button" onClick={() => setActiveEventId(ev.id)}
+                      style={{ width: '100%', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', padding: '18px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 26 }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>{t(EVENT_LABEL_KEY[ev.type])}</span>
+                        <span style={{ color: '#c9a42c', fontSize: 18, marginLeft: 'auto' }}>›</span>
+                      </div>
+                      <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('amount_spent')}</p>
+                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
+                        {formatWholeSum(evSpent)}
+                      </p>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           /* Selected department's expense panel */

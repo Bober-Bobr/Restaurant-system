@@ -59,6 +59,13 @@ export class ExpenseService {
     return { rows, fromDate: dates[0] ?? todayStr(), endDate: dates[dates.length - 1] ?? todayStr() };
   }
 
+  // A single day with only the chosen event departments kept, for a PDF export.
+  async eventSelectionForExport(managerId: string, dayId: string, eventIds: string[]) {
+    const day = await this.requireOwnDay(managerId, dayId);
+    const wanted = new Set(eventIds);
+    return { ...day, events: day.events.filter((e) => wanted.has(e.id)) };
+  }
+
   async reopenDay(managerId: string, id: string) {
     await this.requireOwnDay(managerId, id);
     return this.repo.reopenDay(id);

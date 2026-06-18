@@ -6,6 +6,8 @@ const controller = new ExpenseController();
 
 // Export selected days' main expenses as one multi-page PDF
 router.post('/pdf/selection', controller.pdfSelection.bind(controller));
+// Export only the chosen event departments of a single day as one PDF
+router.post('/pdf/events', controller.pdfEvents.bind(controller));
 // Export selected days' additional (day-level) expenses as one PDF
 router.post('/pdf/extras-selection', controller.pdfExtrasSelection.bind(controller));
 

@@ -47,3 +47,9 @@ export const eventIdSchema = z.object({ eventId: z.string().cuid() });
 export const pdfSelectionSchema = z.object({
   dayIds: z.array(z.string().cuid()).min(1).max(366)
 });
+
+// Export only the chosen event departments within a single day.
+export const pdfEventsSchema = z.object({
+  dayId: z.string().cuid(),
+  eventIds: z.array(z.string().cuid()).min(1).max(20)
+});

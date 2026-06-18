@@ -10,6 +10,7 @@ import {
   createProductSchema,
   eventIdSchema,
   idSchema,
+  pdfEventsSchema,
   pdfSelectionSchema,
   updateDaySchema,
   updateEventSchema,
@@ -46,6 +47,19 @@ export class ExpenseController {
     const filename = rows.length === 1 ? `${rows[0].date}.pdf` : `ledger-${fromDate}_${endDate}.pdf`;
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    response.send(file);
+  }
+
+  // Export only the chosen event departments of a single day as one PDF.
+  async pdfEvents(request: Request, response: Response) {
+    const { dayId, eventIds } = pdfEventsSchema.parse(request.body);
+    const locale = resolveLocale(request.query.locale);
+    const day = await service.eventSelectionForExport(request.admin!.id, dayId, eventIds);
+    if (day.events.length === 0) throw createHttpError(404, 'No events to export');
+
+    const file = await generateCombinedPdf([day], { from: day.date, to: day.date }, locale);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader('Content-Disposition', `attachment; filename="${day.date}.pdf"`);
     response.send(file);
   }
 
