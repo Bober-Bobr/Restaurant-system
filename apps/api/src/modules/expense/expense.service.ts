@@ -6,7 +6,6 @@ import {
   type UpdateDayData
 } from './expense.repository.js';
 
-// Date helpers operating on YYYY-MM-DD strings (UTC, no timezone drift).
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -23,10 +22,9 @@ export class ExpenseService {
     return this.repo.listDays(managerId);
   }
 
-  // Create the next day. If no date is given, it's the day after the latest day
-  // (or today when there are none). Only the previous day's line *structure*
-  // (product/salary/additional names and product units) is carried over — every
-  // fill-in number (allocation, quantities, amounts) starts blank.
+  // Create the next day with its four event departments. Each event copies the
+  // previous day's matching event's line *structure* (names/units); every number
+  // (allocation, quantities, amounts) starts blank.
   async createDay(managerId: string, date?: string) {
     const latest = await this.repo.latestDay(managerId);
     const targetDate = date ?? (latest ? addDays(latest.date, 1) : todayStr());
@@ -37,18 +35,22 @@ export class ExpenseService {
     const day = await this.repo.createDay(managerId, targetDate);
 
     if (latest) {
-      await this.repo.cloneLines(
-        day.id,
-        latest.products.map((p) => ({ name: p.name, unit: p.unit, quantity: 0, amountSum: 0 })),
-        latest.salaries.map((s) => ({ name: s.name, amountSum: 0 })),
-        latest.additionals.map((a) => ({ name: a.name, amountSum: 0 }))
-      );
+      for (const event of day.events) {
+        const src = latest.events.find((e) => e.type === event.type);
+        if (!src) continue;
+        if (src.products.length || src.salaries.length || src.additionals.length) {
+          await this.repo.cloneLines(
+            event.id,
+            src.products.map((p) => ({ name: p.name, unit: p.unit })),
+            src.salaries.map((s) => ({ name: s.name })),
+            src.additionals.map((a) => ({ name: a.name }))
+          );
+        }
+      }
     }
     return this.repo.findDayById(day.id);
   }
 
-  // The last `days` calendar days ending at the latest created day (or today).
-  // Closed days are excluded.
   async listForPdf(managerId: string, days: number) {
     const latest = await this.repo.latestDay(managerId);
     const endDate = latest?.date ?? todayStr();
@@ -56,18 +58,12 @@ export class ExpenseService {
     return { rows: await this.repo.listDaysInRange(managerId, fromDate, endDate, true), fromDate, endDate };
   }
 
-  // Export the given open days, then close them. Returns the rows captured
-  // before closing (so the PDF reflects their final contents).
   async exportSelectionAndClose(managerId: string, dayIds: string[]) {
     const rows = await this.repo.listOpenDaysByIds(managerId, dayIds);
     const ids = rows.map((r) => r.id);
     if (ids.length) await this.repo.closeManyByIds(managerId, ids);
     const dates = rows.map((r) => r.date);
-    return {
-      rows,
-      fromDate: dates[0] ?? todayStr(),
-      endDate: dates[dates.length - 1] ?? todayStr()
-    };
+    return { rows, fromDate: dates[0] ?? todayStr(), endDate: dates[dates.length - 1] ?? todayStr() };
   }
 
   async reopenDay(managerId: string, id: string) {
@@ -80,25 +76,26 @@ export class ExpenseService {
     if (!day || day.managerId !== managerId) throw createHttpError(404, 'Day not found');
     return day;
   }
+  private async requireOwnEvent(managerId: string, eventId: string) {
+    if ((await this.repo.ownerOfEvent(eventId)) !== managerId) throw createHttpError(404, 'Event not found');
+  }
 
   async updateDay(managerId: string, id: string, data: UpdateDayData) {
     await this.requireOwnDay(managerId, id);
     return this.repo.updateDay(id, data);
   }
-
   async closeDay(managerId: string, id: string) {
     await this.requireOwnDay(managerId, id);
     return this.repo.closeDay(id);
   }
-
   async removeDay(managerId: string, id: string) {
     await this.requireOwnDay(managerId, id);
     await this.repo.deleteDay(id);
   }
 
-  async addProduct(managerId: string, dayId: string, data: ProductData) {
-    await this.requireOwnDay(managerId, dayId);
-    return this.repo.createProduct(dayId, data);
+  async addProduct(managerId: string, eventId: string, data: ProductData) {
+    await this.requireOwnEvent(managerId, eventId);
+    return this.repo.createProduct(eventId, data);
   }
   async updateProduct(managerId: string, id: string, data: Partial<ProductData>) {
     if ((await this.repo.ownerOfProduct(id)) !== managerId) throw createHttpError(404, 'Product not found');
@@ -109,9 +106,9 @@ export class ExpenseService {
     await this.repo.deleteProduct(id);
   }
 
-  async addSalary(managerId: string, dayId: string, data: LineData) {
-    await this.requireOwnDay(managerId, dayId);
-    return this.repo.createSalary(dayId, data);
+  async addSalary(managerId: string, eventId: string, data: LineData) {
+    await this.requireOwnEvent(managerId, eventId);
+    return this.repo.createSalary(eventId, data);
   }
   async updateSalary(managerId: string, id: string, data: Partial<LineData>) {
     if ((await this.repo.ownerOfSalary(id)) !== managerId) throw createHttpError(404, 'Salary not found');
@@ -122,9 +119,9 @@ export class ExpenseService {
     await this.repo.deleteSalary(id);
   }
 
-  async addAdditional(managerId: string, dayId: string, data: LineData) {
-    await this.requireOwnDay(managerId, dayId);
-    return this.repo.createAdditional(dayId, data);
+  async addAdditional(managerId: string, eventId: string, data: LineData) {
+    await this.requireOwnEvent(managerId, eventId);
+    return this.repo.createAdditional(eventId, data);
   }
   async updateAdditional(managerId: string, id: string, data: Partial<LineData>) {
     if ((await this.repo.ownerOfAdditional(id)) !== managerId) throw createHttpError(404, 'Additional expense not found');

@@ -35,7 +35,7 @@ export const createLineSchema = z.object({
 export const updateLineSchema = createLineSchema.partial();
 
 export const idSchema = z.object({ id: z.string().cuid() });
-export const dayIdSchema = z.object({ dayId: z.string().cuid() });
+export const eventIdSchema = z.object({ eventId: z.string().cuid() });
 
 export const pdfQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(366).default(1)

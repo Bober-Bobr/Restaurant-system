@@ -156,9 +156,7 @@ model ExpenseDay {
   closedAt        DateTime?
   managerId       String
   manager         AdminUser           @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
-  products        ProductExpense[]
-  salaries        SalaryExpense[]
-  additionals     AdditionalExpense[]
+  events          DayEvent[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -166,42 +164,58 @@ model ExpenseDay {
   @@index([managerId])
 }
 
-model ProductExpense {
-  id          String     @id @default(cuid())
-  name        String
-  quantity    Float      @default(0)
-  unit        String     @default("kg")
-  amountSum   Int        @default(0) // whole so'm (not tiyin)
-  sortOrder   Int        @default(0)
+// A department/event within a day: NAHOR, FOTIHA, TUI or OTHERS. Each holds its
+// own product/salary/additional expense lines.
+model DayEvent {
+  id          String              @id @default(cuid())
+  type        String // NAHOR | FOTIHA | TUI | OTHERS
   dayId       String
-  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
+  day         ExpenseDay          @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  products    ProductExpense[]
+  salaries    SalaryExpense[]
+  additionals AdditionalExpense[]
+  createdAt   DateTime            @default(now())
 
+  @@unique([dayId, type])
   @@index([dayId])
+}
+
+model ProductExpense {
+  id          String   @id @default(cuid())
+  name        String
+  quantity    Float    @default(0)
+  unit        String   @default("kg")
+  amountSum   Int      @default(0) // whole so'm (not tiyin)
+  sortOrder   Int      @default(0)
+  eventId     String
+  event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
 }
 
 model SalaryExpense {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  amountSum   Int        @default(0) // whole so'm (not tiyin)
-  sortOrder   Int        @default(0)
-  dayId       String
-  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
+  amountSum   Int      @default(0) // whole so'm (not tiyin)
+  sortOrder   Int      @default(0)
+  eventId     String
+  event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
 
-  @@index([dayId])
+  @@index([eventId])
 }
 
 model AdditionalExpense {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  amountSum   Int        @default(0) // whole so'm (not tiyin)
-  sortOrder   Int        @default(0)
-  dayId       String
-  day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
+  amountSum   Int      @default(0) // whole so'm (not tiyin)
+  sortOrder   Int      @default(0)
+  eventId     String
+  event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
 
-  @@index([dayId])
+  @@index([eventId])
 }
 
 model Session {

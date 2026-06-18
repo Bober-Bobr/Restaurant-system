@@ -7,7 +7,7 @@ import {
   createDaySchema,
   createLineSchema,
   createProductSchema,
-  dayIdSchema,
+  eventIdSchema,
   idSchema,
   pdfQuerySchema,
   pdfSelectionSchema,
@@ -77,9 +77,9 @@ export class ExpenseController {
   }
 
   async addProduct(request: Request, response: Response) {
-    const { dayId } = dayIdSchema.parse(request.params);
+    const { eventId } = eventIdSchema.parse(request.params);
     const payload = createProductSchema.parse(request.body);
-    response.status(201).json(await service.addProduct(request.admin!.id, dayId, payload));
+    response.status(201).json(await service.addProduct(request.admin!.id, eventId, payload));
   }
 
   async updateProduct(request: Request, response: Response) {
@@ -95,9 +95,9 @@ export class ExpenseController {
   }
 
   async addSalary(request: Request, response: Response) {
-    const { dayId } = dayIdSchema.parse(request.params);
+    const { eventId } = eventIdSchema.parse(request.params);
     const payload = createLineSchema.parse(request.body);
-    response.status(201).json(await service.addSalary(request.admin!.id, dayId, payload));
+    response.status(201).json(await service.addSalary(request.admin!.id, eventId, payload));
   }
 
   async updateSalary(request: Request, response: Response) {
@@ -113,9 +113,9 @@ export class ExpenseController {
   }
 
   async addAdditional(request: Request, response: Response) {
-    const { dayId } = dayIdSchema.parse(request.params);
+    const { eventId } = eventIdSchema.parse(request.params);
     const payload = createLineSchema.parse(request.body);
-    response.status(201).json(await service.addAdditional(request.admin!.id, dayId, payload));
+    response.status(201).json(await service.addAdditional(request.admin!.id, eventId, payload));
   }
 
   async updateAdditional(request: Request, response: Response) {

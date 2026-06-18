@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { expenseService } from '../services/expense.service';
-import type { ExpenseDay, ProductExpense } from '../types/domain';
+import type { DayEvent, DayEventType, ExpenseDay, ProductExpense } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { formatWholeSum, groupDigits, parseWholeSum } from '../utils/currency';
@@ -10,16 +10,26 @@ export const QUERY_KEY = ['expense-days'];
 const UNITS = ['kg', 'g', 'l', 'ml', 'pcs'];
 const MAX_SUM = 1_000_000_000;
 
+export const EVENT_ORDER: DayEventType[] = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'];
+const EVENT_LABEL_KEY: Record<DayEventType, Parameters<typeof translate>[0]> = {
+  NAHOR: 'dept_nahor', FOTIHA: 'dept_fotiha', TUI: 'dept_tui', OTHERS: 'dept_others',
+};
+
 type Locale = 'en' | 'ru' | 'uz';
 type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
 
 const clampSum = (n: number) => Math.max(0, Math.min(MAX_SUM, n));
 
-// Sum of every expense line on a day.
-export const daySpent = (day: ExpenseDay) =>
-  day.products.reduce((s, p) => s + p.amountSum, 0) +
-  day.salaries.reduce((s, p) => s + p.amountSum, 0) +
-  day.additionals.reduce((s, p) => s + p.amountSum, 0);
+const eventSpent = (e: DayEvent) =>
+  e.products.reduce((s, p) => s + p.amountSum, 0) +
+  e.salaries.reduce((s, p) => s + p.amountSum, 0) +
+  e.additionals.reduce((s, p) => s + p.amountSum, 0);
+
+// Sum of every expense line across all of a day's events.
+export const daySpent = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventSpent(e), 0);
+
+const sortedEvents = (day: ExpenseDay) =>
+  [...day.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
 
 export const ExpenseLedgerPage = () => {
   const { locale } = useAdminStore();
@@ -124,10 +134,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const [report, setReport] = useState(day.report ?? '');
   useEffect(() => { setReport(day.report ?? ''); }, [day.report]);
 
-  const productsTotal = day.products.reduce((s, p) => s + p.amountSum, 0);
-  const salariesTotal = day.salaries.reduce((s, p) => s + p.amountSum, 0);
-  const additionalsTotal = day.additionals.reduce((s, p) => s + p.amountSum, 0);
-  const spent = productsTotal + salariesTotal + additionalsTotal;
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  const events = sortedEvents(day);
+  const activeEvent = events.find((e) => e.id === activeEventId) ?? null;
+
+  const spent = daySpent(day);
   const remaining = day.allocatedSum - spent;
 
   const commitAllocated = () => {
@@ -153,36 +164,41 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
       </div>
 
       <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {day.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={invalidate} />)}
-            <AddProductRow dayId={day.id} t={t} onAdded={invalidate} />
+        {!activeEvent ? (
+          /* Department selection */
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
+            {events.map((ev) => {
+              const evSpent = eventSpent(ev);
+              return (
+                <button key={ev.id} type="button" onClick={() => setActiveEventId(ev.id)}
+                  className="tablet-fade-up"
+                  style={{
+                    textAlign: 'left', cursor: 'pointer', borderRadius: 16, padding: '18px 18px',
+                    background: 'linear-gradient(160deg, rgba(201,164,44,0.12), rgba(255,255,255,0.03))',
+                    border: '1px solid rgba(201,164,44,0.3)', transition: 'all 0.18s',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>{t(EVENT_LABEL_KEY[ev.type])}</span>
+                    <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
+                  </div>
+                  <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('amount_spent')}</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
+                    {formatWholeSum(evSpent)}
+                  </p>
+                </button>
+              );
+            })}
           </div>
-        </Block>
-
-        <Block title={t('employee_salaries')} total={formatWholeSum(salariesTotal)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {day.salaries.map((s) => (
-              <LineRow key={s.id} line={s} placeholder={t('employee_name')} t={t}
-                onUpdate={(patch) => expenseService.updateSalary(s.id, patch)}
-                onRemove={() => expenseService.removeSalary(s.id)} onChanged={invalidate} />
-            ))}
-            <AddLineRow dayId={day.id} placeholder={t('employee_name')}
-              onAdd={(payload) => expenseService.addSalary(day.id, payload)} onAdded={invalidate} />
+        ) : (
+          /* Selected department's expense panel */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <button type="button" onClick={() => setActiveEventId(null)}
+              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#c9a42c', fontSize: 15, fontWeight: 700, padding: 0 }}>
+              ‹ {t(EVENT_LABEL_KEY[activeEvent.type])}
+            </button>
+            <EventPanel event={activeEvent} t={t} onChanged={invalidate} />
           </div>
-        </Block>
-
-        <Block title={t('additional_expenses')} total={formatWholeSum(additionalsTotal)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {day.additionals.map((a) => (
-              <LineRow key={a.id} line={a} placeholder={t('note')} t={t}
-                onUpdate={(patch) => expenseService.updateAdditional(a.id, patch)}
-                onRemove={() => expenseService.removeAdditional(a.id)} onChanged={invalidate} />
-            ))}
-            <AddLineRow dayId={day.id} placeholder={t('note')}
-              onAdd={(payload) => expenseService.addAdditional(day.id, payload)} onAdded={invalidate} />
-          </div>
-        </Block>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
@@ -224,6 +240,48 @@ const Total = ({ label, value, color }: { label: string; value: string; color: s
   </div>
 );
 
+// One department's three expense blocks (products / salaries / additionals).
+const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChanged: () => void }) => {
+  const productsTotal = event.products.reduce((s, p) => s + p.amountSum, 0);
+  const salariesTotal = event.salaries.reduce((s, p) => s + p.amountSum, 0);
+  const additionalsTotal = event.additionals.reduce((s, p) => s + p.amountSum, 0);
+
+  return (
+    <>
+      <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {event.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={onChanged} />)}
+          <AddProductRow eventId={event.id} t={t} onAdded={onChanged} />
+        </div>
+      </Block>
+
+      <Block title={t('employee_salaries')} total={formatWholeSum(salariesTotal)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {event.salaries.map((s) => (
+            <LineRow key={s.id} line={s} placeholder={t('employee_name')} t={t}
+              onUpdate={(patch) => expenseService.updateSalary(s.id, patch)}
+              onRemove={() => expenseService.removeSalary(s.id)} onChanged={onChanged} />
+          ))}
+          <AddLineRow placeholder={t('employee_name')}
+            onAdd={(payload) => expenseService.addSalary(event.id, payload)} onAdded={onChanged} />
+        </div>
+      </Block>
+
+      <Block title={t('additional_expenses')} total={formatWholeSum(additionalsTotal)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {event.additionals.map((a) => (
+            <LineRow key={a.id} line={a} placeholder={t('note')} t={t}
+              onUpdate={(patch) => expenseService.updateAdditional(a.id, patch)}
+              onRemove={() => expenseService.removeAdditional(a.id)} onChanged={onChanged} />
+          ))}
+          <AddLineRow placeholder={t('note')}
+            onAdd={(payload) => expenseService.addAdditional(event.id, payload)} onAdded={onChanged} />
+        </div>
+      </Block>
+    </>
+  );
+};
+
 const removeBtn: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: 18, lineHeight: 1, padding: 4 };
 
 const ProductRow = ({ product, t, onChanged }: { product: ProductExpense; t: TFn; onChanged: () => void }) => {
@@ -262,13 +320,13 @@ const ProductRow = ({ product, t, onChanged }: { product: ProductExpense; t: TFn
   );
 };
 
-const AddProductRow = ({ dayId, t, onAdded }: { dayId: string; t: TFn; onAdded: () => void }) => {
+const AddProductRow = ({ eventId, t, onAdded }: { eventId: string; t: TFn; onAdded: () => void }) => {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [unit, setUnit] = useState('kg');
   const [amount, setAmount] = useState('');
   const add = useMutation({
-    mutationFn: () => expenseService.addProduct(dayId, {
+    mutationFn: () => expenseService.addProduct(eventId, {
       name: name.trim(), quantity: Number(qty) || 0, unit, amountSum: clampSum(parseWholeSum(amount) ?? 0),
     }),
     onSuccess: () => { setName(''); setQty(''); setUnit('kg'); setAmount(''); onAdded(); },
@@ -315,7 +373,7 @@ const LineRow = ({ line, placeholder, t, onUpdate, onRemove, onChanged }: {
 };
 
 const AddLineRow = ({ placeholder, onAdd, onAdded }: {
-  dayId: string; placeholder: string;
+  placeholder: string;
   onAdd: (payload: { name: string; amountSum: number }) => Promise<unknown>;
   onAdded: () => void;
 }) => {

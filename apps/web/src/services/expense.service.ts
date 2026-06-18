@@ -28,8 +28,8 @@ export const expenseService = {
     await httpClient.delete(`/expenses/days/${id}`);
   },
 
-  async addProduct(dayId: string, payload: { name: string; quantity?: number; unit?: string; amountSum?: number }) {
-    const { data } = await httpClient.post<ProductExpense>(`/expenses/days/${dayId}/products`, payload);
+  async addProduct(eventId: string, payload: { name: string; quantity?: number; unit?: string; amountSum?: number }) {
+    const { data } = await httpClient.post<ProductExpense>(`/expenses/events/${eventId}/products`, payload);
     return data;
   },
   async updateProduct(
@@ -43,8 +43,8 @@ export const expenseService = {
     await httpClient.delete(`/expenses/products/${id}`);
   },
 
-  async addSalary(dayId: string, payload: { name: string; amountSum?: number }) {
-    const { data } = await httpClient.post<SalaryExpense>(`/expenses/days/${dayId}/salaries`, payload);
+  async addSalary(eventId: string, payload: { name: string; amountSum?: number }) {
+    const { data } = await httpClient.post<SalaryExpense>(`/expenses/events/${eventId}/salaries`, payload);
     return data;
   },
   async updateSalary(id: string, payload: Partial<{ name: string; amountSum: number }>) {
@@ -55,8 +55,8 @@ export const expenseService = {
     await httpClient.delete(`/expenses/salaries/${id}`);
   },
 
-  async addAdditional(dayId: string, payload: { name: string; amountSum?: number }) {
-    const { data } = await httpClient.post<AdditionalExpense>(`/expenses/days/${dayId}/additionals`, payload);
+  async addAdditional(eventId: string, payload: { name: string; amountSum?: number }) {
+    const { data } = await httpClient.post<AdditionalExpense>(`/expenses/events/${eventId}/additionals`, payload);
     return data;
   },
   async updateAdditional(id: string, payload: Partial<{ name: string; amountSum: number }>) {

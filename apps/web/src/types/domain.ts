@@ -103,7 +103,7 @@ export type ProductExpense = {
   unit: string;
   amountSum: number; // whole so'm
   sortOrder: number;
-  dayId: string;
+  eventId: string;
 };
 
 export type SalaryExpense = {
@@ -111,7 +111,7 @@ export type SalaryExpense = {
   name: string;
   amountSum: number; // whole so'm
   sortOrder: number;
-  dayId: string;
+  eventId: string;
 };
 
 export type AdditionalExpense = {
@@ -119,7 +119,18 @@ export type AdditionalExpense = {
   name: string;
   amountSum: number; // whole so'm
   sortOrder: number;
+  eventId: string;
+};
+
+export type DayEventType = 'NAHOR' | 'FOTIHA' | 'TUI' | 'OTHERS';
+
+export type DayEvent = {
+  id: string;
+  type: DayEventType;
   dayId: string;
+  products: ProductExpense[];
+  salaries: SalaryExpense[];
+  additionals: AdditionalExpense[];
 };
 
 export type ExpenseDay = {
@@ -130,9 +141,7 @@ export type ExpenseDay = {
   isClosed: boolean;
   closedAt: string | null;
   managerId: string;
-  products: ProductExpense[];
-  salaries: SalaryExpense[];
-  additionals: AdditionalExpense[];
+  events: DayEvent[];
 };
 
 export type PricingSummary = {
