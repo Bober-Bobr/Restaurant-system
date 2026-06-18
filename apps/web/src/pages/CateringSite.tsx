@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantSummary } from '../services/publicRestaurant.service';
@@ -158,6 +158,20 @@ function CateringLayout({
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const revealRef = useScrollReveal<HTMLElement>();
 
+  // Hide the header when scrolling down (more room for content), show it on the
+  // way back up. Always visible near the very top of the page.
+  const [hideHeader, setHideHeader] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 80) { setHideHeader(false); last = y; return; }
+      if (Math.abs(y - last) > 6) { setHideHeader(y > last); last = y; }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
     textDecoration: 'none', color: 'rgba(255,255,255,0.78)', whiteSpace: 'nowrap',
@@ -188,6 +202,8 @@ function CateringLayout({
           position: 'sticky', top: 0, zIndex: 20,
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${C.line}`,
+          transform: hideHeader ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'transform 0.3s ease', willChange: 'transform',
         }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', minWidth: 0 }}>
@@ -453,6 +469,16 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [cat]);
 
   const headerH = useHeaderHeight();
+  const subHeaderRef = useRef<HTMLDivElement>(null);
+
+  // Jump to a subcategory section, landing just below the sticky headers.
+  const scrollToGroup = (id: string) => {
+    const el = document.getElementById(`subcat-${id}`);
+    if (!el) return;
+    const offset = headerH + (subHeaderRef.current?.offsetHeight ?? 0) + 24;
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  };
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
   const hasBestsellers = allItems.some((m) => m.isBestseller);
 
@@ -487,7 +513,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   return (
     <>
       {/* Sticky sub-header: back link + category name + bestseller filter */}
-      <div style={{
+      <div ref={subHeaderRef} style={{
         position: 'sticky', top: headerH + 12, zIndex: 15,
         margin: '0 0 20px', padding: '12px 16px',
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
@@ -524,6 +550,24 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
             </button>
           )}
         </div>
+
+        {/* Subcategory hook chips: tap to jump to a section */}
+        {showHeaders && groups.length > 1 && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+            {groups.map((g) => (
+              <button key={g.id} type="button" onClick={() => scrollToGroup(g.id)}
+                style={{
+                  flexShrink: 0, padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
+                  fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+                  background: 'rgba(255,255,255,0.06)', color: '#fff',
+                  border: `1px solid ${C.line}`, transition: 'all 0.15s',
+                }}>
+                {g.name ?? t('other')}
+                <span style={{ marginLeft: 7, fontSize: 12, fontWeight: 600, color: C.textFaint }}>{g.items.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {visible.length === 0 ? (
@@ -531,7 +575,7 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           {groups.map((g) => (
-            <section key={g.id}>
+            <section key={g.id} id={`subcat-${g.id}`} style={{ scrollMarginTop: headerH + 120 }}>
               {showHeaders && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
                   <span style={{ width: 5, height: 26, borderRadius: 3, background: '#f59e0b', flexShrink: 0 }} />
