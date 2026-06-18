@@ -106,6 +106,23 @@ function useHeaderHeight(): number {
   return height;
 }
 
+// True while the user is scrolling down (past a small top zone). Drives the
+// auto-hiding header; the category sub-header uses it to slide up in sync.
+function useHideOnScroll(): boolean {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 80) { setHidden(false); last = y; return; }
+      if (Math.abs(y - last) > 6) { setHidden(y > last); last = y; }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return hidden;
+}
+
 // Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
 function BestsellerBadge({ on, size = 16, dark = false }: { on: boolean; size?: number; dark?: boolean }) {
   const color = dark ? '#000' : '#f59e0b';
@@ -160,17 +177,7 @@ function CateringLayout({
 
   // Hide the header when scrolling down (more room for content), show it on the
   // way back up. Always visible near the very top of the page.
-  const [hideHeader, setHideHeader] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y < 80) { setHideHeader(false); last = y; return; }
-      if (Math.abs(y - last) > 6) { setHideHeader(y > last); last = y; }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const hideHeader = useHideOnScroll();
 
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -469,7 +476,10 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [cat]);
 
   const headerH = useHeaderHeight();
+  const headerHidden = useHideOnScroll();
   const subHeaderRef = useRef<HTMLDivElement>(null);
+  // When the site header hides, the sub-header rises to fill the freed space.
+  const subHeaderTop = (headerHidden ? 0 : headerH) + 12;
 
   // Jump to a subcategory section, landing just below the sticky headers.
   const scrollToGroup = (id: string) => {
@@ -514,10 +524,11 @@ function CategoryDetail({ menuItems, locale }: { menuItems: MenuItem[]; locale: 
     <>
       {/* Sticky sub-header: back link + category name + bestseller filter */}
       <div ref={subHeaderRef} style={{
-        position: 'sticky', top: headerH + 12, zIndex: 15,
+        position: 'sticky', top: subHeaderTop, zIndex: 15,
         margin: '0 0 20px', padding: '12px 16px',
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
         border: `1px solid ${C.line}`, borderRadius: 14,
+        transition: 'top 0.3s ease',
       }}>
         <Link to="/" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
