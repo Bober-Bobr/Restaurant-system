@@ -820,14 +820,22 @@ export const TabletMenuPage = () => {
     setWelcomeShown(true);
   };
 
+  const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
+
+  // Dishes already included in the chosen table package (courses + included dishes)
+  // shouldn't be offered again as paid "Additional" items.
+  const includedItemIds = new Set((selectedTableCategory?.packageItems ?? []).map((pi) => pi.menuItem.id));
+  const isSelectableAdditional = (item: MenuItem) =>
+    ADDITIONAL_CATEGORIES.includes(item.category) &&
+    tabletStatusOf(item) === 'PAID' &&
+    !includedItemIds.has(item.id);
+
   const sortedAndFiltered = quickSort(
     (menuItems ?? []).filter(
-      (item) => ADDITIONAL_CATEGORIES.includes(item.category) &&
-        tabletStatusOf(item) === 'PAID' &&
+      (item) => isSelectableAdditional(item) &&
         (activeCategory === null || item.category === activeCategory)
     )
   );
-  const selectedTableCategory = tableCategories?.find((tc) => tc.id === selectedTableCategoryId);
   // Single active children's table (if any) — shown as an optional add-on table.
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
@@ -1131,7 +1139,7 @@ export const TabletMenuPage = () => {
 
               {/* Category pills */}
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
-                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && tabletStatusOf(item) === 'PAID'))].map((cat) => (
+                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && isSelectableAdditional(item)))].map((cat) => (
                   <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
                     className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200"
                     style={activeCategory === cat

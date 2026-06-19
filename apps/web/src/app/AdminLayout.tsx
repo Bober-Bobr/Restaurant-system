@@ -22,6 +22,7 @@ export const AdminLayout = () => {
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const location = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants'],
@@ -63,6 +64,21 @@ export const AdminLayout = () => {
 
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
+  // Secondary tabs tucked behind the "⋯" overflow menu to keep the bar compact.
+  const OVERFLOW_PATHS = new Set(['/admin/arrangement', '/admin/subcategories', '/admin/halls', '/admin/users', '/admin/settings', '/devices']);
+  const primaryNav = navItems.filter((i) => !OVERFLOW_PATHS.has(i.to));
+  const overflowNav = navItems.filter((i) => OVERFLOW_PATHS.has(i.to));
+  const overflowActive = overflowNav.some((i) => isActive(i.to));
+
+  const navLinkStyle = (active: boolean): React.CSSProperties => ({
+    padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, letterSpacing: '0.01em',
+    textDecoration: 'none',
+    color: active ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+    background: active ? 'rgba(201,164,44,0.12)' : 'transparent',
+    border: active ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+    transition: 'all 0.18s',
+  });
+
   return (
     <div className="adm-bg">
       <nav style={{
@@ -96,7 +112,7 @@ export const AdminLayout = () => {
 
           {/* Desktop nav */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, flexWrap: 'wrap' }} className="adm-nav-desktop">
-            {navItems.map((item) => (
+            {primaryNav.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -118,6 +134,58 @@ export const AdminLayout = () => {
                 {item.label}
               </Link>
             ))}
+
+            {/* Overflow ("⋯") menu — secondary tabs */}
+            {overflowNav.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((v) => !v)}
+                  aria-label={t('more')}
+                  title={t('more')}
+                  style={{
+                    ...navLinkStyle(overflowActive || moreOpen),
+                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+                  </svg>
+                  {t('more')}
+                </button>
+
+                {moreOpen && (
+                  <>
+                    <div onClick={() => setMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div
+                      className="scale-in"
+                      style={{
+                        position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 41,
+                        minWidth: 200,
+                        background: 'rgba(15,23,42,0.98)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 12,
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                        padding: 6,
+                        display: 'flex', flexDirection: 'column', gap: 2,
+                      }}
+                    >
+                      {overflowNav.map((item) => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMoreOpen(false)}
+                          style={{ ...navLinkStyle(isActive(item.to)), padding: '9px 12px' }}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <Link
               to={`/tablet?restaurantId=${tabletRestaurantId}`}
               style={{
@@ -229,25 +297,32 @@ export const AdminLayout = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileNavOpen(false)}
-                style={{
-                  padding: '11px 16px',
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.85)',
-                  background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
-                  border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {item.label}
-              </Link>
+            {[...primaryNav, ...overflowNav].map((item, idx) => (
+              <div key={item.to}>
+                {idx === primaryNav.length && (
+                  <p style={{ margin: '10px 16px 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.35)' }}>
+                    {t('more')}
+                  </p>
+                )}
+                <Link
+                  to={item.to}
+                  onClick={() => setMobileNavOpen(false)}
+                  style={{
+                    display: 'block',
+                    padding: '11px 16px',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.85)',
+                    background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
+                    border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {item.label}
+                </Link>
+              </div>
             ))}
             <Link
               to={`/tablet?restaurantId=${tabletRestaurantId}`}

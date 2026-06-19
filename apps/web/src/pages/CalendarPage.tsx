@@ -214,7 +214,12 @@ function HallCalendar({
   while (cells.length % 7 !== 0) cells.push({ day: null, key: `tail-${cells.length}`, booking: null });
 
   return (
-    <section className="adm-card tablet-fade-up" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <section className="adm-card tablet-fade-up" style={{
+      padding: 16, display: 'flex', flexDirection: 'column', gap: 10,
+      // While a day is expanded, lift this hall card above its neighbours so the
+      // popup isn't painted over by the adjacent hall's card.
+      position: 'relative', zIndex: openKey ? 20 : 1,
+    }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <p className="adm-heading" style={{ margin: 0 }}>{t('hall')}</p>
