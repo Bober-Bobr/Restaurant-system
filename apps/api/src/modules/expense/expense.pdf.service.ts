@@ -31,7 +31,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     dayTotals: 'Day totals', grandTotals: 'Overall totals',
     booking: 'Booking', guests: 'Guests', pricePerGuest: 'Price per guest', bookingTotal: 'Booking total',
     extrasTitle: 'Additional expenses', total: 'Total', noExtras: 'No additional expenses.',
-    NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Tui', OTHERS: 'Others'
+    NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Wedding', OTHERS: 'Others'
   },
   ru: {
     title: 'Книга расходов', summaryTitle: 'Сводка расходов', allocated: 'Выделено средств', products: 'Расходы на продукты',
@@ -41,7 +41,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     dayTotals: 'Итоги дня', grandTotals: 'Общие итоги',
     booking: 'Бронь', guests: 'Гостей', pricePerGuest: 'Цена за гостя', bookingTotal: 'Итого по брони',
     extrasTitle: 'Дополнительные расходы', total: 'Итого', noExtras: 'Нет дополнительных расходов.',
-    NAHOR: 'Нахор', FOTIHA: 'Фотиха', TUI: 'Той', OTHERS: 'Прочее'
+    NAHOR: 'Нахор', FOTIHA: 'Фотиха', TUI: 'Свадьба', OTHERS: 'Прочее'
   },
   uz: {
     title: 'Xarajatlar daftari', summaryTitle: 'Xarajatlar hisoboti', allocated: 'Ajratilgan mablag', products: 'Mahsulot xarajatlari',
