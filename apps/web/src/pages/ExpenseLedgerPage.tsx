@@ -33,14 +33,19 @@ const saveBlob = (blob: Blob, filename: string) => {
 };
 
 const bookingTotal = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
+// Each event's budget is its booking (guests × price per guest). There is no
+// longer a separate day-level allocation — the day budget is the sum of these.
+export const eventBudget = (e: DayEvent) => bookingTotal(e);
+// Spent = the actual expenses (products, salaries, additionals).
 const eventSpent = (e: DayEvent) =>
-  bookingTotal(e) +
   e.products.reduce((s, p) => s + p.amountSum, 0) +
   e.salaries.reduce((s, p) => s + p.amountSum, 0) +
   e.additionals.reduce((s, p) => s + p.amountSum, 0);
 
 // Sum of every expense line across all of a day's events.
 export const daySpent = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventSpent(e), 0);
+// Day budget = sum of every event's budget.
+export const dayBudget = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventBudget(e), 0);
 
 const sortedEvents = (day: ExpenseDay) =>
   [...day.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
@@ -188,13 +193,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   };
 
   const updateDay = useMutation({
-    mutationFn: (patch: { allocatedSum?: number; report?: string | null }) => expenseService.updateDay(day.id, patch),
+    mutationFn: (patch: { report?: string | null }) => expenseService.updateDay(day.id, patch),
     onSuccess: invalidate,
   });
   const removeDay = useMutation({ mutationFn: () => expenseService.removeDay(day.id), onSuccess: invalidate });
 
-  const [allocated, setAllocated] = useState(groupDigits(String(day.allocatedSum)));
-  useEffect(() => { setAllocated(groupDigits(String(day.allocatedSum))); }, [day.allocatedSum]);
   const [report, setReport] = useState(day.report ?? '');
   useEffect(() => { setReport(day.report ?? ''); }, [day.report]);
 
@@ -202,37 +205,21 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const events = sortedEvents(day);
   const activeEvent = events.find((e) => e.id === activeEventId) ?? null;
 
+  const budget = dayBudget(day);
   const spent = daySpent(day);
-  const remaining = day.allocatedSum - spent;
-
-  const commitAllocated = () => {
-    const parsed = parseWholeSum(allocated);
-    if (parsed === null) return;
-    const next = clampSum(parsed);
-    if (next !== day.allocatedSum) updateDay.mutate({ allocatedSum: next });
-  };
+  const remaining = budget - spent;
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        {/* Booking total (guests × price per guest) of the open department, shown above the allocated funds field */}
-        {activeEvent && bookingTotal(activeEvent) > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 18px 0' }}>
-            <Total label={t('guests_total')} value={formatWholeSum(bookingTotal(activeEvent))} color="#fbbf24" />
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={labelStyle}>{t('allocated_funds')}</span>
-            <input className="adm-input" inputMode="numeric" value={allocated}
-              onChange={(e) => setAllocated(groupDigits(e.target.value))} onBlur={commitAllocated}
-              style={{ width: 180, textAlign: 'right' }} />
-          </label>
-          <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
-            disabled={removeDay.isPending} style={{ fontSize: 12 }}>
-            {t('delete')}
-          </button>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
+        {/* Budget of the open department (guests × price per guest). */}
+        {activeEvent && bookingTotal(activeEvent) > 0
+          ? <Total label={t('guests_total')} value={formatWholeSum(bookingTotal(activeEvent))} color="#fbbf24" />
+          : <span />}
+        <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
+          disabled={removeDay.isPending} style={{ fontSize: 12 }}>
+          {t('delete')}
+        </button>
       </div>
 
       <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -256,6 +243,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
               {events.map((ev) => {
                 const evSpent = eventSpent(ev);
+                const evBudget = eventBudget(ev);
                 const checked = selectedEvents.has(ev.id);
                 return (
                   <div key={ev.id} className="tablet-fade-up"
@@ -276,8 +264,12 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
                         <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>{t(EVENT_LABEL_KEY[ev.type])}</span>
                         <span style={{ color: '#c9a42c', fontSize: 18, marginLeft: 'auto' }}>›</span>
                       </div>
-                      <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('amount_spent')}</p>
-                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
+                      <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('budget')}</p>
+                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evBudget > 0 ? '#e2e8f0' : 'rgba(226,232,240,0.45)' }}>
+                        {formatWholeSum(evBudget)}
+                      </p>
+                      <p style={{ ...labelStyle, margin: '8px 0 2px' }}>{t('amount_spent')}</p>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
                         {formatWholeSum(evSpent)}
                       </p>
                     </button>
@@ -298,6 +290,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
+          <Total label={t('budget')} value={formatWholeSum(budget)} color="#e2e8f0" />
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
           <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
         </div>

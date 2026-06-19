@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { expenseService } from '../services/expense.service';
-import { QUERY_KEY, daySpent } from './ExpenseLedgerPage';
+import { QUERY_KEY, daySpent, dayBudget } from './ExpenseLedgerPage';
 import type { ExpenseDay } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
@@ -130,7 +130,8 @@ export const AccountsPage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {days.map((day) => {
             const spent = daySpent(day);
-            const balance = day.allocatedSum - spent;
+            const budget = dayBudget(day);
+            const balance = budget - spent;
             const isSelected = selected.has(day.id);
             return (
               <div key={day.id} className="adm-card tablet-fade-up"
@@ -151,7 +152,7 @@ export const AccountsPage = () => {
                   )}
                 </div>
 
-                <Stat label={t('allocated_funds')} value={formatWholeSum(day.allocatedSum)} />
+                <Stat label={t('budget')} value={formatWholeSum(budget)} />
                 <Stat label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
                 <Stat label={t('remaining')} value={formatWholeSum(balance)} color={balance < 0 ? '#f87171' : '#4ade80'} />
 
