@@ -205,8 +205,10 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const events = sortedEvents(day);
   const activeEvent = events.find((e) => e.id === activeEventId) ?? null;
 
-  const budget = dayBudget(day);
-  const spent = daySpent(day);
+  // While a department is open its figures are shown on their own; the day-wide
+  // totals are only shown on the department overview.
+  const budget = activeEvent ? eventBudget(activeEvent) : dayBudget(day);
+  const spent = activeEvent ? eventSpent(activeEvent) : daySpent(day);
   const remaining = budget - spent;
 
   return (
@@ -216,10 +218,15 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         {activeEvent && bookingTotal(activeEvent) > 0
           ? <Total label={t('guests_total')} value={formatWholeSum(bookingTotal(activeEvent))} color="#fbbf24" />
           : <span />}
-        <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
-          disabled={removeDay.isPending} style={{ fontSize: 12 }}>
-          {t('delete')}
-        </button>
+        {/* The day-delete button is only available on the department overview. */}
+        {!activeEvent
+          ? (
+            <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
+              disabled={removeDay.isPending} style={{ fontSize: 12 }}>
+              {t('delete')}
+            </button>
+          )
+          : <span />}
       </div>
 
       <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -290,7 +297,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-          <Total label={t('budget')} value={formatWholeSum(budget)} color="#e2e8f0" />
+          {!activeEvent && <Total label={t('budget')} value={formatWholeSum(budget)} color="#e2e8f0" />}
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
           <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
         </div>

@@ -180,57 +180,6 @@ function renderEventDetail(ctx: Ctx, day: PdfDay, ev: PdfEvent, locale: Locale) 
   }
 }
 
-// The day's summary page, photo-style: each department's spend as a bulleted
-// line, then the Spent / Balance footer and the grand
-// Total Allocated / Total Expenses / Total Balance block (red / green).
-function renderDayTotals(ctx: Ctx, day: PdfDay, locale: Locale) {
-  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv, bulletRow } = ctx;
-  doc.font(B, 16).fillColor('#111').text(`${L.dayTotals} — ${formatDate(day.date, locale)}`, ML, 44);
-  doc.moveDown(0.3);
-  hr('#999999', 1.2);
-  doc.moveDown(0.2);
-
-  // Amounts for every created event department: its budget and its spend.
-  for (const ev of sortedEvents(day)) {
-    kv(`•  ${eventLabel(ev.type)}`, `${fmt(eventBudget(ev))}  /  ${fmt(eventSpent(ev))}`);
-  }
-  doc.font(R, 8).fillColor('#888').text(`${L.budget}  /  ${L.spent}`, ML, doc.y, { width: contentW, align: 'right' });
-  doc.moveDown(0.4);
-
-  // Day-level additional expenses, if any.
-  if (day.extras.length) {
-    doc.moveDown(0.2);
-    doc.font(B, 11).fillColor('#222').text(L.additional, ML);
-    doc.moveDown(0.4);
-    for (const ex of day.extras) bulletRow(ex.name, ex.amountSum);
-  }
-
-  const budget = dayBudget(day);
-  const spent = daySpent(day);
-  const balance = budget - spent;
-  const green = '#15803d';
-  const red = '#b91c1c';
-
-  doc.moveDown(0.6);
-  hr('#dddddd', 0.8);
-  doc.moveDown(0.1);
-  kv(L.spent, fmt(spent), { bold: true, color: red, labelColor: red, size: 11 });
-  kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? red : green, labelColor: balance < 0 ? red : green, size: 11 });
-
-  doc.moveDown(0.3);
-  hr('#111111', 1.4);
-  doc.moveDown(0.1);
-  kv(L.totalAllocated, fmt(budget), { bold: true, size: 11 });
-  kv(L.totalExpenses, fmt(spent), { bold: true, color: red, labelColor: red, size: 11 });
-  kv(L.totalBalance, fmt(balance), { bold: true, color: balance < 0 ? red : green, labelColor: balance < 0 ? red : green, size: 11 });
-
-  if (day.report && day.report.trim()) {
-    doc.moveDown(0.5);
-    doc.font(B, 10).fillColor('#444').text(L.report, ML);
-    doc.font(R, 9).fillColor('#333').text(day.report.trim(), ML, doc.y + 2, { width: contentW });
-  }
-}
-
 // Overview page: per-day rows (events with a spend, then allocated/spent/balance)
 // followed by the overall grand totals. Used as the cover page for multi-day PDFs.
 function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: string }, locale: Locale) {
@@ -270,9 +219,9 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
   kv(L.totalBalance, fmt(grandBalance), { bold: true, color: grandBalance < 0 ? '#b91c1c' : '#15803d', labelColor: grandBalance < 0 ? '#b91c1c' : '#15803d' });
 }
 
-// Single combined PDF for the selected main expenses. Page order: for each day,
-// one page per event department followed by that day's summary page; after all
-// days (when more than one) a final overall summary page closes the document.
+// Single combined PDF for the selected main expenses. Page order: one page per
+// event department for every day (no per-day summary). When more than one day is
+// exported, a final overall summary page closes the document.
 export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: string }, locale: Locale): Promise<Buffer> {
   const ctx = createDoc(locale);
   const { doc, L, R, B, ML } = ctx;
@@ -294,13 +243,11 @@ export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: s
       newPage();
       renderEventDetail(ctx, day, ev, locale);
     }
-    newPage();
-    renderDayTotals(ctx, day, locale); // the day's summary closes its section
   });
 
   if (days.length > 1) {
     newPage();
-    renderSummaryPage(ctx, days, range, locale); // overall summary, last
+    renderSummaryPage(ctx, days, range, locale); // overall summary across days, last
   }
 
   doc.end();
