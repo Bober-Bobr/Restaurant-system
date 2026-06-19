@@ -591,6 +591,9 @@ function IncludedDishesSection({
     (pi) => pi.menuItem.category !== 'FIRST_COURSE' && pi.menuItem.category !== 'SECOND_COURSE' && pi.menuItem.category !== 'THIRD_COURSE'
   );
   if (includedItems.length === 0) return null;
+  // Dishes already included in the package by default must never be offered as a
+  // free swap for another slot (it's already on the table for free).
+  const packageDefaultIds = new Set((tableCategory.packageItems ?? []).map((pi) => pi.menuItem.id));
   const grouped = Object.entries(
     includedItems.reduce<Record<string, typeof includedItems>>(
       (acc, pi) => { const cat = pi.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi); return acc; }, {}
@@ -628,7 +631,7 @@ function IncludedDishesSection({
               );
               const freeAlts = (menuItems ?? []).filter(
                 (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' &&
-                  m.id !== pi.menuItem.id && !usedByOthers.has(m.id)
+                  !packageDefaultIds.has(m.id) && !usedByOthers.has(m.id)
               );
               const chosenId = replacements[pi.id];
               const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
