@@ -621,8 +621,14 @@ function IncludedDishesSection({
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
             {items!.map((pi, i) => {
+              // Dishes already swapped-in for OTHER package items are no longer
+              // offered here, so the same free dish can't replace two dishes.
+              const usedByOthers = new Set(
+                Object.entries(replacements).filter(([piId]) => piId !== pi.id).map(([, menuItemId]) => menuItemId)
+              );
               const freeAlts = (menuItems ?? []).filter(
-                (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' && m.id !== pi.menuItem.id
+                (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' &&
+                  m.id !== pi.menuItem.id && !usedByOthers.has(m.id)
               );
               const chosenId = replacements[pi.id];
               const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
