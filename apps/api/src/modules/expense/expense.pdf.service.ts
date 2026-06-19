@@ -253,9 +253,9 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
   kv(L.totalBalance, fmt(grandBalance), { bold: true, color: grandBalance < 0 ? '#b91c1c' : '#15803d', labelColor: grandBalance < 0 ? '#b91c1c' : '#15803d' });
 }
 
-// Single combined PDF for the selected main expenses. For several days the first
-// page is the overall summary (invoice overview); each day then leads with its
-// own totals/invoice page, followed by one page per event department.
+// Single combined PDF for the selected main expenses. Page order: for each day,
+// one page per event department followed by that day's summary page; after all
+// days (when more than one) a final overall summary page closes the document.
 export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: string }, locale: Locale): Promise<Buffer> {
   const ctx = createDoc(locale);
   const { doc, L, R, B, ML } = ctx;
@@ -267,17 +267,24 @@ export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: s
     return ctx.finished;
   }
 
-  const multi = days.length > 1;
-  if (multi) renderSummaryPage(ctx, days, range, locale);
+  // The document opens on a blank first page; reuse it for the first section,
+  // then add a fresh page before every subsequent one.
+  let started = false;
+  const newPage = () => { if (started) doc.addPage(); started = true; };
 
-  days.forEach((day, di) => {
-    if (multi || di > 0) doc.addPage(); else doc.moveDown(0.5);
-    renderDayTotals(ctx, day, locale); // the day's invoice/totals leads its section
+  days.forEach((day) => {
     for (const ev of sortedEvents(day).filter(eventHasData)) {
-      doc.addPage();
+      newPage();
       renderEventDetail(ctx, day, ev, locale);
     }
+    newPage();
+    renderDayTotals(ctx, day, locale); // the day's summary closes its section
   });
+
+  if (days.length > 1) {
+    newPage();
+    renderSummaryPage(ctx, days, range, locale); // overall summary, last
+  }
 
   doc.end();
   return ctx.finished;

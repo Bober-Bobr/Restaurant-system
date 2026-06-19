@@ -215,11 +215,12 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        {/* Day spend totals — shown above the allocated funds field */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, padding: '16px 18px 0', flexWrap: 'wrap' }}>
-          <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
-          <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
-        </div>
+        {/* Booking total (guests × price per guest) of the open department, shown above the allocated funds field */}
+        {activeEvent && bookingTotal(activeEvent) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 18px 0' }}>
+            <Total label={t('guests_total')} value={formatWholeSum(bookingTotal(activeEvent))} color="#fbbf24" />
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={labelStyle}>{t('allocated_funds')}</span>
@@ -296,6 +297,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
           </div>
         )}
 
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
+          <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
+          <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
+        </div>
+
         {/* End-of-day report */}
         <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <span style={labelStyle}>{t('day_report')}</span>
@@ -352,12 +358,11 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
   useEffect(() => { setPrice(event.pricePerGuestSum ? groupDigits(String(event.pricePerGuestSum)) : ''); }, [event.pricePerGuestSum]);
   useEffect(() => { setNote(event.report ?? ''); }, [event.report]);
 
-  const bookingSum = bookingTotal(event);
-
   return (
     <>
-      {/* Booking: guests × price per guest is added to this department's spent. */}
-      <Block title={t('booking')} total={formatWholeSum(bookingSum)}>
+      {/* Booking: guests × price per guest is added to this department's spent.
+          The total itself is shown at the top, above the allocated funds field. */}
+      <Block title={t('booking')} total="">
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input className="adm-input" value={bookingName} onChange={(e) => setBookingName(e.target.value)}
             onBlur={() => { const v = bookingName.trim(); if (v !== (event.bookingName ?? '')) updateEvent.mutate({ bookingName: v || null }); }}
