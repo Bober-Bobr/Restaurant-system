@@ -214,17 +214,24 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={labelStyle}>{t('allocated_funds')}</span>
-          <input className="adm-input" inputMode="numeric" value={allocated}
-            onChange={(e) => setAllocated(groupDigits(e.target.value))} onBlur={commitAllocated}
-            style={{ width: 180, textAlign: 'right' }} />
-        </label>
-        <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
-          disabled={removeDay.isPending} style={{ fontSize: 12 }}>
-          {t('delete')}
-        </button>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        {/* Day spend totals — shown above the allocated funds field */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, padding: '16px 18px 0', flexWrap: 'wrap' }}>
+          <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
+          <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={labelStyle}>{t('allocated_funds')}</span>
+            <input className="adm-input" inputMode="numeric" value={allocated}
+              onChange={(e) => setAllocated(groupDigits(e.target.value))} onBlur={commitAllocated}
+              style={{ width: 180, textAlign: 'right' }} />
+          </label>
+          <button type="button" className="adm-btn-danger" onClick={() => { if (window.confirm(t('delete_day_confirm'))) removeDay.mutate(); }}
+            disabled={removeDay.isPending} style={{ fontSize: 12 }}>
+            {t('delete')}
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -288,11 +295,6 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
             <EventPanel event={activeEvent} t={t} onChanged={invalidate} />
           </div>
         )}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-          <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
-          <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
-        </div>
 
         {/* End-of-day report */}
         <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>

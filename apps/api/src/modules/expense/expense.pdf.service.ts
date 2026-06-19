@@ -107,72 +107,108 @@ function createDoc(locale: Locale) {
     doc.moveTo(ML, doc.y).lineTo(right, doc.y).lineWidth(weight).strokeColor(color).stroke();
     doc.moveDown(0.5);
   };
-  const kv = (label: string, value: string, opts: { bold?: boolean; color?: string } = {}) => {
+  const kv = (label: string, value: string, opts: { bold?: boolean; color?: string; labelColor?: string; size?: number } = {}) => {
     const y = doc.y;
-    doc.font(opts.bold ? B : R, 10).fillColor(opts.color ?? '#222');
-    doc.text(label, ML, y, { width: contentW * 0.6, lineBreak: false });
+    const size = opts.size ?? 10;
+    doc.font(opts.bold ? B : R, size).fillColor(opts.labelColor ?? '#222');
+    doc.text(label, ML, y, { width: contentW * 0.62, lineBreak: false });
+    doc.font(opts.bold ? B : R, size).fillColor(opts.color ?? opts.labelColor ?? '#222');
     doc.text(value, ML, y, { width: contentW, align: 'right', lineBreak: false });
-    doc.moveDown(0.5);
+    doc.moveDown(0.55);
   };
-  const lineList = (heading: string, rows: { label: string; value: number }[]) => {
-    if (!rows.length) return;
-    doc.font(B, 10).fillColor('#444').text(heading, ML);
-    doc.moveDown(0.3);
-    for (const r of rows) kv(`   • ${r.label}`, fmt(r.value));
-    doc.moveDown(0.1);
-  };
+  // A flat bulleted "• name … amount" line, photo-style.
+  const bulletRow = (name: string, value: number) => kv(`•  ${name}`, fmt(value));
 
-  return { doc, finished, L, R, B, ML, right, contentW, eventLabel, hr, kv, lineList };
+  return { doc, finished, L, R, B, ML, right, contentW, eventLabel, hr, kv, bulletRow };
 }
 
 type Ctx = ReturnType<typeof createDoc>;
 
-// One event department's full detail (booking, line items, spent, notes).
+// One event department's full detail on its own page, photo-style: a flat
+// bulleted list of every line, an "Additional expenses" group, then the
+// Spent / Balance footer in red/green.
 function renderEventDetail(ctx: Ctx, day: PdfDay, ev: PdfEvent, locale: Locale) {
-  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv, lineList } = ctx;
-  doc.font(B, 13).fillColor('#111').text(`${formatDate(day.date, locale)}  ·  ${eventLabel(ev.type)}`, ML);
-  doc.moveDown(0.2);
+  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv, bulletRow } = ctx;
+  doc.font(B, 15).fillColor('#111').text(`${formatDate(day.date, locale)}  ·  ${eventLabel(ev.type)}`, ML, 44);
+  doc.moveDown(0.3);
   hr('#999999', 1.2);
+  doc.moveDown(0.2);
 
-  if (ev.bookingName?.trim() || bookingTotal(ev) > 0) {
-    doc.font(B, 10).fillColor('#444').text(L.booking, ML);
-    doc.moveDown(0.3);
-    if (ev.bookingName?.trim()) kv('   • ' + L.booking, ev.bookingName.trim());
-    kv(`   • ${L.guests} × ${L.pricePerGuest}`, `${ev.guestCount} × ${fmt(ev.pricePerGuestSum)}`);
-    kv(`   • ${L.bookingTotal}`, fmt(bookingTotal(ev)));
-    doc.moveDown(0.1);
+  // Flat list: booking line, products (with qty/unit), salaries.
+  if (bookingTotal(ev) > 0) {
+    const name = ev.bookingName?.trim() || L.booking;
+    kv(`•  ${name}  (${ev.guestCount} × ${fmt(ev.pricePerGuestSum)})`, fmt(bookingTotal(ev)));
+  } else if (ev.bookingName?.trim()) {
+    kv(`•  ${ev.bookingName.trim()}`, '');
+  }
+  for (const p of ev.products) {
+    const label = p.quantity ? `•  ${p.name}  (${p.quantity} ${p.unit ?? ''})`.trimEnd() : `•  ${p.name}`;
+    kv(label, fmt(p.amountSum));
+  }
+  for (const s of ev.salaries) bulletRow(s.name, s.amountSum);
+
+  // Additional expenses group.
+  if (ev.additionals.length) {
+    doc.moveDown(0.4);
+    doc.font(B, 11).fillColor('#222').text(L.additional, ML);
+    doc.moveDown(0.4);
+    for (const a of ev.additionals) bulletRow(a.name, a.amountSum);
   }
 
-  lineList(L.products, ev.products.map((p) => ({ label: p.quantity ? `${p.name}  (${p.quantity} ${p.unit ?? ''})`.trimEnd() : p.name, value: p.amountSum })));
-  lineList(L.salaries, ev.salaries.map((s) => ({ label: s.name, value: s.amountSum })));
-  lineList(L.additional, ev.additionals.map((a) => ({ label: a.name, value: a.amountSum })));
-
-  doc.moveDown(0.2);
-  kv(`${eventLabel(ev.type)} — ${L.spent}`, fmt(eventSpent(ev)), { bold: true, color: '#b45309' });
+  // Spent / balance footer. Balance here is allocated minus this department's
+  // spend is not meaningful, so only the department's own Spent is shown.
+  doc.moveDown(0.6);
+  hr('#dddddd', 0.8);
+  doc.moveDown(0.1);
+  kv(L.spent, fmt(eventSpent(ev)), { bold: true, color: '#b91c1c', labelColor: '#b91c1c', size: 11 });
 
   if (ev.report?.trim()) {
-    doc.moveDown(0.3);
+    doc.moveDown(0.4);
     doc.font(B, 10).fillColor('#444').text(L.report, ML);
     doc.font(R, 9).fillColor('#333').text(ev.report.trim(), ML, doc.y + 2, { width: contentW });
   }
 }
 
-// Per-event columns + allocated/spent/balance + the day report.
+// The day's summary page, photo-style: each department's spend as a bulleted
+// line, then the Spent / Balance footer and the grand
+// Total Allocated / Total Expenses / Total Balance block (red / green).
 function renderDayTotals(ctx: Ctx, day: PdfDay, locale: Locale) {
-  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv } = ctx;
-  doc.font(B, 14).fillColor('#111').text(`${L.dayTotals} — ${formatDate(day.date, locale)}`, ML);
-  doc.moveDown(0.2);
+  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv, bulletRow } = ctx;
+  doc.font(B, 16).fillColor('#111').text(`${L.dayTotals} — ${formatDate(day.date, locale)}`, ML, 44);
+  doc.moveDown(0.3);
   hr('#999999', 1.2);
-  for (const ev of sortedEvents(day)) kv(eventLabel(ev.type), fmt(eventSpent(ev)));
   doc.moveDown(0.2);
+
+  for (const ev of sortedEvents(day)) bulletRow(eventLabel(ev.type), eventSpent(ev));
+
+  // Day-level additional expenses, if any.
+  if (day.extras.length) {
+    doc.moveDown(0.4);
+    doc.font(B, 11).fillColor('#222').text(L.additional, ML);
+    doc.moveDown(0.4);
+    for (const ex of day.extras) bulletRow(ex.name, ex.amountSum);
+  }
+
+  const spent = daySpent(day);
+  const balance = day.allocatedSum - spent;
+  const green = '#15803d';
+  const red = '#b91c1c';
+
+  doc.moveDown(0.6);
   hr('#dddddd', 0.8);
-  const balance = day.allocatedSum - daySpent(day);
-  kv(L.allocated, fmt(day.allocatedSum), { bold: true });
-  kv(L.spent, fmt(daySpent(day)), { bold: true, color: '#b45309' });
-  kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? '#b91c1c' : '#15803d' });
+  doc.moveDown(0.1);
+  kv(L.spent, fmt(spent), { bold: true, color: red, labelColor: red, size: 11 });
+  kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? red : green, labelColor: balance < 0 ? red : green, size: 11 });
+
+  doc.moveDown(0.3);
+  hr('#111111', 1.4);
+  doc.moveDown(0.1);
+  kv(L.totalAllocated, fmt(day.allocatedSum), { bold: true, size: 11 });
+  kv(L.totalExpenses, fmt(spent), { bold: true, color: red, labelColor: red, size: 11 });
+  kv(L.totalBalance, fmt(balance), { bold: true, color: balance < 0 ? red : green, labelColor: balance < 0 ? red : green, size: 11 });
 
   if (day.report && day.report.trim()) {
-    doc.moveDown(0.3);
+    doc.moveDown(0.5);
     doc.font(B, 10).fillColor('#444').text(L.report, ML);
     doc.font(R, 9).fillColor('#333').text(day.report.trim(), ML, doc.y + 2, { width: contentW });
   }
@@ -202,8 +238,8 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
     }
     const balance = day.allocatedSum - daySpent(day);
     kv(L.allocated, fmt(day.allocatedSum), { bold: true });
-    kv(L.spent, fmt(daySpent(day)), { bold: true, color: '#b45309' });
-    kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? '#b91c1c' : '#15803d' });
+    kv(L.spent, fmt(daySpent(day)), { bold: true, color: '#b91c1c', labelColor: '#b91c1c' });
+    kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? '#b91c1c' : '#15803d', labelColor: balance < 0 ? '#b91c1c' : '#15803d' });
     doc.moveDown(0.6);
   });
 
@@ -211,9 +247,10 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
   doc.font(B, 16).fillColor('#111').text(L.grandTotals, ML);
   doc.moveDown(0.3);
   hr('#111111', 1.5);
+  const grandBalance = grandAllocated - grandSpent;
   kv(L.totalAllocated, fmt(grandAllocated), { bold: true });
-  kv(L.totalExpenses, fmt(grandSpent), { bold: true, color: '#b45309' });
-  kv(L.totalBalance, fmt(grandAllocated - grandSpent), { bold: true, color: grandAllocated - grandSpent < 0 ? '#b91c1c' : '#15803d' });
+  kv(L.totalExpenses, fmt(grandSpent), { bold: true, color: '#b91c1c', labelColor: '#b91c1c' });
+  kv(L.totalBalance, fmt(grandBalance), { bold: true, color: grandBalance < 0 ? '#b91c1c' : '#15803d', labelColor: grandBalance < 0 ? '#b91c1c' : '#15803d' });
 }
 
 // Single combined PDF for the selected main expenses. For several days the first
