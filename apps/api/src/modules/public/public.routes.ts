@@ -10,6 +10,7 @@ import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
 import { generateSummaryExcel } from './excel.service.js';
 import { InvitationController } from '../invitation/invitation.controller.js';
+import { GuestInvitationController } from '../guestInvitation/guestInvitation.controller.js';
 import { ReviewController } from '../review/review.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,7 @@ function parseCategoryOrder(raw: string | null | undefined): string[] {
 
 const router = Router();
 const invitationController = new InvitationController();
+const guestInvitationController = new GuestInvitationController();
 const reviewController = new ReviewController();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
@@ -41,6 +43,10 @@ const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
+
+// Standalone guest invitations (wedding-style) + RSVP submission.
+router.get('/guest-invitations/:slug', guestInvitationController.publicBySlug.bind(guestInvitationController));
+router.post('/guest-invitations/:slug/rsvp', guestInvitationController.submitRsvp.bind(guestInvitationController));
 
 // Public reviews: submit + list approved.
 router.post('/reviews', reviewController.create.bind(reviewController));

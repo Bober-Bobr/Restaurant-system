@@ -17,7 +17,9 @@ import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
 import { ManagerPortalPage, ManagerRestaurantEventsPage } from '../pages/ManagerPortalPage';
 import { ManagerRestaurantsPage } from '../pages/ManagerRestaurantsPage';
 import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
-import { PublicInvitationPage } from '../pages/PublicInvitationPage';
+import { GuestInvitationsPage } from '../pages/GuestInvitationsPage';
+import { GuestInvitationBuilderPage } from '../pages/GuestInvitationBuilderPage';
+import { InvitationSubdomainDispatcher } from '../pages/PublicGuestInvitationPage';
 import { CateringSite } from '../pages/CateringSite';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
@@ -64,13 +66,15 @@ export const App = () => {
     return <CateringSite slug={cateringSlug} />;
   }
 
-  // Invitation subdomain (<slug>.invitation.v-menu.uz) → public viewer
+  // Invitation subdomain (<slug>.invitation.v-menu.uz) → public viewer.
+  // The dispatcher resolves the slug against standalone guest invitations first,
+  // then falls back to the restaurant flyer renderer.
   if (getInvitationSubdomainSlug()) {
     return (
       <Routes>
-        <Route path="/:slug" element={<PublicInvitationPage />} />
-        <Route path="/" element={<PublicInvitationPage />} />
-        <Route path="*" element={<PublicInvitationPage />} />
+        <Route path="/:slug" element={<InvitationSubdomainDispatcher />} />
+        <Route path="/" element={<InvitationSubdomainDispatcher />} />
+        <Route path="*" element={<InvitationSubdomainDispatcher />} />
       </Routes>
     );
   }
@@ -95,6 +99,9 @@ export const App = () => {
         <Route path="/" element={<ManagerPortalPage />} />
         <Route path="/restaurants/:restaurantId" element={<ManagerRestaurantEventsPage />} />
         <Route path="/restaurants/:restaurantId/events/:eventId/invitation" element={<InvitationBuilderPage />} />
+        <Route path="/invitations" element={<GuestInvitationsPage />} />
+        <Route path="/invitations/new" element={<GuestInvitationBuilderPage />} />
+        <Route path="/invitations/:id" element={<GuestInvitationBuilderPage />} />
         <Route path="/info" element={<ManagerRestaurantsPage />} />
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

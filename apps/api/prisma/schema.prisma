@@ -141,6 +141,7 @@ model AdminUser {
   companies        Company[]
   sessions         Session[]
   expenseDays      ExpenseDay[] @relation("ManagerExpenseDays")
+  guestInvitations GuestInvitation[] @relation("ManagerGuestInvitations")
 
   @@index([restaurantId])
 }
@@ -493,4 +494,79 @@ model Invitation {
 
   @@index([restaurantId])
   @@index([eventId])
+}
+
+// ── Standalone guest invitation (wedding-style, not tied to a restaurant/event) ──
+// Created by a MANAGER; rendered publicly on <slug>.invitation.v-menu.uz.
+model GuestInvitation {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  createdById String?
+
+  // Theme + cursor/finger trail
+  accentColor     String?
+  backgroundColor String?
+  musicUrl        String?
+  trailTemplate   String  @default("sparkle") // sparkle | hearts | candy
+  trailColor      String?
+
+  // Hero (couple names + background photo)
+  coupleNames  String?
+  heroSubtitle String?
+  heroImageUrl String?
+
+  // Dear-guest message
+  greetingTitle   String?
+  greetingMessage String?
+  coupleSignature String?
+
+  // Venue / restaurant + map
+  venueLabel     String?
+  venueName      String?
+  eventDate      DateTime?
+  venueImageUrl  String?
+  mapAddress     String?
+  mapButtonLabel String?
+
+  // Timing schedule (JSON array of { time, label })
+  timingTitle String?
+  timingItems Json    @default("[]")
+
+  // Countdown
+  countdownAt    DateTime?
+  countdownLabel String?
+
+  // Contacts / brand
+  telegramUrl  String?
+  phone        String?
+  instagramUrl String?
+  brandLabel   String?
+
+  // RSVP
+  rsvpTitle   String?
+  rsvpEnabled Boolean @default(true)
+
+  // Per-section animations: { sectionKey: { type, durationMs, delayMs } }
+  sectionAnimations Json @default("{}")
+
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy AdminUser?              @relation("ManagerGuestInvitations", fields: [createdById], references: [id], onDelete: SetNull)
+  rsvps     GuestInvitationRsvp[]
+
+  @@index([createdById])
+}
+
+model GuestInvitationRsvp {
+  id           String   @id @default(cuid())
+  invitationId String
+  guestName    String
+  attending    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  invitation GuestInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
 }
