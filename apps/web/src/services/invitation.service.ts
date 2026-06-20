@@ -20,6 +20,9 @@ export type Invitation = {
   eventId: string | null;
   restaurantId: string;
 
+  // Freeform WYSIWYG block layout (empty → legacy fixed renderer is used).
+  blocks?: import('../blocks/types').Block[];
+
   promoTitle: string | null;
   promoSubtitle: string | null;
   promoCode: string | null;

@@ -21,6 +21,7 @@ import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
 import { companyRouter } from './modules/company/company.routes.js';
 import { invitationRouter } from './modules/invitation/invitation.routes.js';
 import { guestInvitationRouter } from './modules/guestInvitation/guestInvitation.routes.js';
+import { designTemplateRouter } from './modules/designTemplate/designTemplate.routes.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { expenseRouter } from './modules/expense/expense.routes.js';
 
@@ -77,6 +78,7 @@ protectedApi.use('/companies', companyRouter);
 // because routes use roles directly without requireRestaurant).
 app.use('/api/invitations', invitationRouter);
 app.use('/api/guest-invitations', guestInvitationRouter);
+app.use('/api/design-templates', designTemplateRouter);
 app.use('/api/reviews', reviewRouter);
 
 app.use('/api', protectedApi);

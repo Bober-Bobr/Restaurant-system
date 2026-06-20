@@ -39,8 +39,12 @@ export type GuestInvitation = {
   slug: string;
   createdById: string | null;
 
+  // Freeform WYSIWYG block layout (empty → legacy fixed renderer is used).
+  blocks?: import('../blocks/types').Block[];
+
   accentColor: string | null;
   backgroundColor: string | null;
+  backgroundImageUrl: string | null;
   musicUrl: string | null;
   trailTemplate: TrailTemplate;
   trailColor: string | null;

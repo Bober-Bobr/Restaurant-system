@@ -8,8 +8,22 @@ const menuItem = z.object({
 
 const dateTime = z.string().datetime({ offset: true });
 
+// Freeform WYSIWYG block: { id, type, props, anim? }. Props are type-specific and
+// validated on the client, so the server schema stays permissive.
+export const blockArray = z
+  .array(
+    z.object({
+      id: z.string().max(60),
+      type: z.string().max(40),
+      props: z.record(z.string(), z.any()).optional(),
+      anim: z.any().optional(),
+    })
+  )
+  .max(120);
+
 const baseShape = {
   slug: z.string().min(1).max(120).regex(/^[a-zA-Z0-9_-]+$/),
+  blocks: blockArray.optional(),
   eventId: z.string().max(40).optional().nullable(),
   restaurantId: z.string().min(1).max(40),
 

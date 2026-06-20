@@ -70,6 +70,7 @@ export class InvitationController {
       createdById: admin.id,
       menuItems: (data.menuItems ?? []) as unknown as object,
       galleryPhotos: (data.galleryPhotos ?? []) as unknown as object,
+      blocks: (data.blocks ?? []) as unknown as object,
     } as never);
     response.status(201).json(created);
   }
@@ -85,6 +86,7 @@ export class InvitationController {
       ...normalizeJsonFields(data),
       ...(data.menuItems !== undefined ? { menuItems: data.menuItems as unknown as object } : {}),
       ...(data.galleryPhotos !== undefined ? { galleryPhotos: data.galleryPhotos as unknown as object } : {}),
+      ...(data.blocks !== undefined ? { blocks: data.blocks as unknown as object } : {}),
     } as never);
     response.json(updated);
   }

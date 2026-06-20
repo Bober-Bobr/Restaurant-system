@@ -27,11 +27,25 @@ const sectionAnimation = z.object({
 
 const trailTemplate = z.enum(['sparkle', 'hearts', 'candy']);
 
+// Freeform WYSIWYG block array (validated on the client; permissive here).
+const blockArray = z
+  .array(
+    z.object({
+      id: z.string().max(60),
+      type: z.string().max(40),
+      props: z.record(z.string(), z.any()).optional(),
+      anim: z.any().optional(),
+    })
+  )
+  .max(120);
+
 const baseShape = {
   slug: z.string().min(1).max(120).regex(/^[a-zA-Z0-9_-]+$/),
+  blocks: blockArray.optional(),
 
   accentColor: z.string().max(32).optional().nullable(),
   backgroundColor: z.string().max(32).optional().nullable(),
+  backgroundImageUrl: z.string().max(500).optional().nullable(),
   musicUrl: z.string().max(500).optional().nullable(),
   trailTemplate: trailTemplate.optional(),
   trailColor: z.string().max(32).optional().nullable(),

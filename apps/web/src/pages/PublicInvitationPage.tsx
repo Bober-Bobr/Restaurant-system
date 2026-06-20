@@ -6,6 +6,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
+import { BlockList, type RenderCtx } from '../blocks/BlockRenderer';
 
 const ACCENT = '#c9a42c';
 const PAGE_BG = `
@@ -83,6 +84,20 @@ export const PublicInvitationPage = () => {
   const pageBackground = bgImage
     ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${bgImage}) center / cover fixed, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
+
+  // New block-based layout takes over when present; legacy fixed layout otherwise.
+  if (invitation.blocks && invitation.blocks.length > 0) {
+    const ctx: RenderCtx = { accent };
+    return (
+      <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        <FingerTrail accent={accent} />
+        {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
+        <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+          <BlockList blocks={invitation.blocks} ctx={ctx} />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main style={{

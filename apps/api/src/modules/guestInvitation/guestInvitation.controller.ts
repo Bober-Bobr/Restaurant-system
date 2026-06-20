@@ -44,6 +44,7 @@ export class GuestInvitationController {
       createdById: admin.id,
       timingItems: (data.timingItems ?? []) as unknown as object,
       sectionAnimations: (data.sectionAnimations ?? {}) as unknown as object,
+      blocks: (data.blocks ?? []) as unknown as object,
     } as never);
     response.status(201).json(created);
   }
@@ -60,6 +61,7 @@ export class GuestInvitationController {
       ...(data.sectionAnimations !== undefined
         ? { sectionAnimations: data.sectionAnimations as unknown as object }
         : {}),
+      ...(data.blocks !== undefined ? { blocks: data.blocks as unknown as object } : {}),
     } as never);
     response.json(updated);
   }

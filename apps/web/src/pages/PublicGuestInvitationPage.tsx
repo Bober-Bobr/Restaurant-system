@@ -13,6 +13,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { getInvitationSubdomainSlug } from '../utils/subdomain';
 import { useParams } from 'react-router-dom';
 import { PublicInvitationPage } from './PublicInvitationPage';
+import { BlockList, type RenderCtx } from '../blocks/BlockRenderer';
 
 const TEXT = '#1a1a1a';
 
@@ -120,7 +121,25 @@ function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation 
     window.open(`https://yandex.com/maps/?text=${encodeURIComponent(inv.mapAddress)}`, '_blank', 'noopener,noreferrer');
   };
 
-  const pageBackground = `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
+  const bgImg = inv.backgroundImageUrl ? (getPhotoUrl(inv.backgroundImageUrl) ?? inv.backgroundImageUrl) : null;
+  const pageBackground = bgImg
+    ? `linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.35)), url(${bgImg}) center / cover fixed, ${bgColor}`
+    : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
+
+  // New block-based layout takes over when present; otherwise fall back to the
+  // legacy fixed wedding layout below.
+  if (inv.blocks && inv.blocks.length > 0) {
+    const ctx: RenderCtx = { accent, submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
+    return (
+      <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        <FingerTrail accent={trailColor} template={inv.trailTemplate ?? 'sparkle'} />
+        {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
+        <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+          <BlockList blocks={inv.blocks} ctx={ctx} />
+        </div>
+      </main>
+    );
+  }
 
   const mapButton = inv.mapAddress ? (
     <button type="button" onClick={openMap} style={{
