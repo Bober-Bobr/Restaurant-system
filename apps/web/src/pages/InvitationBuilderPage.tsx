@@ -8,10 +8,11 @@ import { translate } from '../utils/translate';
 import { eventService } from '../services/event.service';
 import { restaurantService } from '../services/restaurant.service';
 import { invitationService, type Invitation } from '../services/invitation.service';
-import { type DesignTheme, type DesignTemplate, designTemplateService } from '../services/designTemplate.service';
+import { type DesignTheme, designTemplateService } from '../services/designTemplate.service';
 import { buildSubdomainBase } from '../utils/subdomain';
 import { BlockEditor } from '../blocks/BlockEditor';
 import type { Block } from '../blocks/types';
+import type { PickedDesign } from '../blocks/builtinTemplates';
 import { seedFlyerBlocks, flyerTheme } from '../blocks/seed';
 import { DesignerTopBar } from './GuestInvitationBuilderPage';
 import { TemplateChooser, useDesignSave } from './designerShared';
@@ -60,7 +61,7 @@ export const InvitationBuilderPage = () => {
     }
   }, [existingQuery.data, existingQuery.isLoading, restaurant, event, initialized, slug]);
 
-  const applyTemplate = (tpl: DesignTemplate | null) => {
+  const applyTemplate = (tpl: PickedDesign | null) => {
     if (tpl) { setBlocks(structuredClone(tpl.blocks)); setTheme({ ...tpl.theme }); }
     else { setBlocks([]); setTheme(flyerTheme({})); }
     setChosen(true);

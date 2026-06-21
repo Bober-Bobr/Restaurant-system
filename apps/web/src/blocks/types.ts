@@ -12,6 +12,7 @@ export type BlockType =
   | 'image'
   | 'button'
   | 'countdown'
+  | 'timing'
   | 'gallery'
   | 'menu'
   | 'socials'
@@ -35,7 +36,9 @@ export type GalleryItem = { photoUrl: string; videoUrl?: string | null };
 export type MenuShowcaseItem = { number: number; name: string; photoUrl?: string | null };
 export type SocialLink = { label: string; url: string };
 
-export type FieldType = 'text' | 'textarea' | 'image' | 'color' | 'datetime' | 'boolean' | 'gallery' | 'menu' | 'socials' | 'action' | 'select';
+export type TimingItem = { time: string; label: string };
+
+export type FieldType = 'text' | 'textarea' | 'image' | 'color' | 'datetime' | 'boolean' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
 
 export type BlockFieldDef = {
   key: string;
@@ -121,6 +124,15 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'targetAt', labelKey: 'bf_datetime', type: 'datetime' },
     ],
   },
+  timing: {
+    type: 'timing', icon: '🕐', labelKey: 'block_timing',
+    defaultProps: { title: 'TIMING', items: [] },
+    defaultAnim: { type: 'slide-left', durationMs: 800, delayMs: 0 },
+    fields: [
+      { key: 'title', labelKey: 'bf_title', type: 'text' },
+      { key: 'items', labelKey: 'bf_timing', type: 'timing' },
+    ],
+  },
   gallery: {
     type: 'gallery', icon: '📷', labelKey: 'block_gallery',
     defaultProps: { items: [] },
@@ -192,7 +204,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 
 // All block types, in the order they appear in the Add-block palette.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'hero', 'countdown', 'gallery', 'menu', 'map', 'rsvp', 'contacts', 'socials', 'promo', 'divider',
+  'heading', 'text', 'image', 'button', 'hero', 'countdown', 'timing', 'gallery', 'menu', 'map', 'rsvp', 'contacts', 'socials', 'promo', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {

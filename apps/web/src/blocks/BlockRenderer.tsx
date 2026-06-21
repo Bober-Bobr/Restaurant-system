@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink } from './types';
+import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { str, bool } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -56,6 +56,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
       return <CountdownView targetAt={(p.targetAt as string) ?? null} label={str(p, 'label')} accent={accent} />;
+    case 'timing':
+      return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
       return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} />;
     case 'menu':
@@ -123,6 +125,23 @@ function CountdownView({ targetAt, label, accent }: { targetAt: string | null; l
           <div key={s.l} style={{ minWidth: 58 }}>
             <p style={{ margin: 0, fontSize: 36, fontWeight: 600, color: TEXT }}>{String(s.v).padStart(2, '0')}</p>
             <p style={{ margin: '2px 0 0', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: hexToRgba(accent, 0.9) }}>{s.l}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TimingView({ title, items, accent }: { title: string; items: TimingItem[]; accent: string }) {
+  if (items.length === 0) return <Placeholder label="Timing" />;
+  return (
+    <section style={{ padding: '36px 32px' }}>
+      {title && <h2 style={{ margin: '0 0 26px', fontSize: 38, textAlign: 'center', letterSpacing: '0.08em', color: TEXT }}>{title}</h2>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 18 }}>
+            <span style={{ fontSize: 16, color: accent, fontFamily: 'system-ui, sans-serif', minWidth: 52 }}>{it.time}</span>
+            <span style={{ fontSize: 18, letterSpacing: '0.05em', color: TEXT }}>{it.label}</span>
           </div>
         ))}
       </div>

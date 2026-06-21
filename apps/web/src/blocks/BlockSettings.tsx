@@ -1,4 +1,4 @@
-import type { Block, BlockFieldDef, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink } from './types';
+import type { Block, BlockFieldDef, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { BLOCK_DEFS } from './types';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
@@ -88,6 +88,8 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
       return <MenuItemsEditor items={Array.isArray(value) ? (value as MenuShowcaseItem[]) : []} onChange={onChange} t={t} restaurantId={restaurantId} />;
     case 'socials':
       return <SocialsEditor items={Array.isArray(value) ? (value as SocialLink[]) : []} onChange={onChange} t={t} />;
+    case 'timing':
+      return <TimingEditor items={Array.isArray(value) ? (value as TimingItem[]) : []} onChange={onChange} t={t} />;
     default:
       return null;
   }
@@ -171,6 +173,23 @@ function SocialsEditor({ items, onChange, t }: { items: SocialLink[]; onChange: 
           </>)
         ))}
         {addBtn(() => onChange([...items, { label: '', url: '' }]), t('add_row'))}
+      </div>
+    </Labeled>
+  );
+}
+
+function TimingEditor({ items, onChange, t }: { items: TimingItem[]; onChange: (v: TimingItem[]) => void; t: T }) {
+  return (
+    <Labeled text={t('bf_timing')}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {items.map((it, i) => (
+          rowBox(<>
+            <input style={{ ...input, width: 80 }} placeholder="18:40" value={it.time} onChange={(e) => onChange(items.map((x, j) => j === i ? { ...x, time: e.target.value } : x))} />
+            <input style={{ ...input, flex: 1 }} placeholder="СБОР ГОСТЕЙ" value={it.label} onChange={(e) => onChange(items.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} />
+            {delBtn(() => onChange(items.filter((_, j) => j !== i)))}
+          </>)
+        ))}
+        {addBtn(() => onChange([...items, { time: '', label: '' }]), t('add_row'))}
       </div>
     </Labeled>
   );

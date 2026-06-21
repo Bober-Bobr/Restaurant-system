@@ -6,11 +6,12 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { guestInvitationService, type GuestInvitation, type TrailTemplate } from '../services/guestInvitation.service';
-import { designTemplateService, type DesignTemplate, type DesignTheme } from '../services/designTemplate.service';
+import { designTemplateService, type DesignTheme } from '../services/designTemplate.service';
 import { buildSubdomainBase } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { BlockEditor } from '../blocks/BlockEditor';
 import type { Block } from '../blocks/types';
+import type { PickedDesign } from '../blocks/builtinTemplates';
 import { seedInvitationBlocks, invitationTheme } from '../blocks/seed';
 import { TemplateChooser, useDesignSave } from './designerShared';
 
@@ -60,7 +61,7 @@ export const GuestInvitationBuilderPage = () => {
     }
   }, [existingQuery.data, initialized]);
 
-  const applyTemplate = (tpl: DesignTemplate | null) => {
+  const applyTemplate = (tpl: PickedDesign | null) => {
     if (tpl) { setBlocks(structuredClone(tpl.blocks)); setTheme({ ...tpl.theme }); }
     else { setBlocks([]); setTheme(invitationTheme({})); }
     setChosen(true);
