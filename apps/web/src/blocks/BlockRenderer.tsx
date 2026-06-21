@@ -217,21 +217,30 @@ function SocialsView({ title, links, accent }: { title: string; links: SocialLin
   );
 }
 
-function ContactsView({ p, accent }: { p: BlockProps; accent: string }) {
+function ContactsView({ p }: { p: BlockProps; accent: string }) {
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
   return (
     <section style={{ padding: '28px 20px', textAlign: 'center' }}>
       {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: TEXT }}>{str(p, 'title')}</h3>}
-      <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
-        {phone && <IconLink href={`tel:${phone}`} accent={accent}>☎</IconLink>}
-        {tg && <IconLink href={tg} accent={accent}>✈</IconLink>}
-        {ig && <IconLink href={ig} accent={accent}>◎</IconLink>}
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+        {tg && <IconLink href={tg}><SvgTelegram /></IconLink>}
+        {phone && <IconLink href={`tel:${phone}`}><SvgPhone /></IconLink>}
+        {ig && <IconLink href={ig}><SvgInstagram /></IconLink>}
       </div>
     </section>
   );
 }
-function IconLink({ href, accent, children }: { href: string; accent: string; children: React.ReactNode }) {
-  return <a href={href} target="_blank" rel="noreferrer" style={{ width: 48, height: 48, borderRadius: '50%', background: '#000', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontSize: 20 }}>{children}</a>;
+function IconLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <a href={href} target="_blank" rel="noreferrer" style={{ width: 52, height: 52, borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>{children}</a>;
+}
+function SvgTelegram() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>;
+}
+function SvgPhone() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+}
+function SvgInstagram() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
 }
 
 function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {

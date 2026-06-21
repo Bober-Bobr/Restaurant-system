@@ -64,10 +64,17 @@ function weddingInvitation(): BuiltinTemplate {
       }, { type: 'slide-left', durationMs: 800, delayMs: 0 }),
 
       b('countdown', { targetAt: null, label: 'ДО ВСТРЕЧИ ЧЕРЕЗ:' }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
-      b('heading', { text: 'INVITE UZ', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
-      b('contacts', { title: '', phone: '', telegramUrl: '', instagramUrl: '' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
 
       b('rsvp', { title: 'ПОДТВЕРДИТЕ ПРИСУТСТВИЕ' }, { type: 'slide-up', durationMs: 800, delayMs: 0 }),
+
+      // Brand + social circles (telegram / phone / instagram) close the page.
+      b('heading', { text: 'INVITE UZ', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('contacts', {
+        title: '',
+        telegramUrl: 'https://t.me/invite_uz',
+        phone: '+998 77 122 70 72',
+        instagramUrl: 'https://instagram.com/invite_uz',
+      }, { type: 'fade', durationMs: 700, delayMs: 120 }),
     ],
   };
 }
