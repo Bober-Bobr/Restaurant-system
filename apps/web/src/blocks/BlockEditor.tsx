@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Block, BlockType } from './types';
 import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
-import { BlockView, type RenderCtx } from './BlockRenderer';
+import { BlockView, readableText, type RenderCtx } from './BlockRenderer';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
 import type { TranslationKey } from '../utils/translate';
@@ -48,7 +48,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
     ? `linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.35)), url(${bgImage}) center / cover, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
-  const ctx: RenderCtx = { accent, replayAnim: true };
+  const ctx: RenderCtx = { accent, replayAnim: true, text: bgImage ? '#f5f5f5' : readableText(bgColor) };
 
   const setBlock = (b: Block) => onBlocksChange(blocks.map((x) => (x.id === b.id ? b : x)));
   const addBlock = (type: BlockType) => {

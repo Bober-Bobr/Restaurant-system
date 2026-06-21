@@ -6,7 +6,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
-import { BlockList, type RenderCtx } from '../blocks/BlockRenderer';
+import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 
 const ACCENT = '#c9a42c';
 const PAGE_BG = `
@@ -87,7 +87,7 @@ export const PublicInvitationPage = () => {
 
   // New block-based layout takes over when present; legacy fixed layout otherwise.
   if (invitation.blocks && invitation.blocks.length > 0) {
-    const ctx: RenderCtx = { accent };
+    const ctx: RenderCtx = { accent, text: bgImage ? '#f5f5f5' : readableText(bgColor) };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
         <FingerTrail accent={accent} />

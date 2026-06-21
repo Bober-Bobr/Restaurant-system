@@ -6,6 +6,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 
 export type RenderCtx = {
   accent: string;
+  // Primary text color (derived from the page background for contrast).
+  text?: string;
   replayAnim?: boolean;
   // When provided (invitations), the RSVP block persists responses.
   submitRsvp?: (p: { guestName: string; attending: boolean }) => Promise<void>;
@@ -18,13 +20,24 @@ function hexToRgba(hex: string, alpha: number): string {
   if (!m) return `rgba(201,164,44,${alpha})`;
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
+
+// Pick a legible text color (dark or light) for a given background color.
+export function readableText(bg: string | null | undefined): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((bg || '').trim());
+  if (!m) return TEXT;
+  const [r, g, b] = [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5 ? '#f5f5f5' : TEXT;
+}
+
 const img = (u?: string | null) => (u ? (getPhotoUrl(u) ?? u) : null);
 const arr = <T,>(p: BlockProps, k: string): T[] => (Array.isArray(p[k]) ? (p[k] as T[]) : []);
 
 // ── One block → markup ───────────────────────────────────────────────────────
 export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+  // The section sets the inherited text color; sub-components use `inherit`.
   return (
-    <AnimatedSection anim={block.anim} replay={ctx.replayAnim}>
+    <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color: ctx.text ?? TEXT }}>
       <BlockBody block={block} ctx={ctx} />
     </AnimatedSection>
   );
@@ -38,15 +51,15 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       const src = img(str(p, 'imageUrl'));
       return (
         <section style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', position: 'relative', background: src ? `linear-gradient(rgba(255,255,255,0.05),rgba(255,255,255,0.05)), url(${src}) center / cover` : 'transparent' }}>
-          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: TEXT }}>{str(p, 'title')}</h1>}
+          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
           {str(p, 'subtitle') && <p style={{ position: 'absolute', bottom: 28, margin: 0, fontSize: 12, letterSpacing: '0.25em', color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>{str(p, 'subtitle')}</p>}
         </section>
       );
     }
     case 'heading':
-      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: 26, letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: TEXT }}>{str(p, 'text')}</h2>;
+      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: 26, letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
     case 'text':
-      return <p style={{ margin: 0, padding: '10px 24px', fontSize: 14, lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: '#444', fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
+      return <p style={{ margin: 0, padding: '10px 24px', fontSize: 14, lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
     case 'image': {
       const src = img(str(p, 'url'));
       if (!src) return <Placeholder label="Image" />;
@@ -119,11 +132,11 @@ function CountdownView({ targetAt, label, accent }: { targetAt: string | null; l
   const cd = useCountdown(targetAt);
   return (
     <section style={{ padding: '32px 24px', textAlign: 'center' }}>
-      {label && <h2 style={{ margin: '0 0 18px', fontSize: 24, letterSpacing: '0.08em', color: TEXT }}>{label}</h2>}
+      {label && <h2 style={{ margin: '0 0 18px', fontSize: 24, letterSpacing: '0.08em', color: 'inherit' }}>{label}</h2>}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
         {[{ v: cd?.days ?? 0, l: 'Days' }, { v: cd?.hours ?? 0, l: 'Hrs' }, { v: cd?.minutes ?? 0, l: 'Min' }, { v: cd?.seconds ?? 0, l: 'Sec' }].map((s) => (
           <div key={s.l} style={{ minWidth: 58 }}>
-            <p style={{ margin: 0, fontSize: 36, fontWeight: 600, color: TEXT }}>{String(s.v).padStart(2, '0')}</p>
+            <p style={{ margin: 0, fontSize: 36, fontWeight: 600, color: 'inherit' }}>{String(s.v).padStart(2, '0')}</p>
             <p style={{ margin: '2px 0 0', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: hexToRgba(accent, 0.9) }}>{s.l}</p>
           </div>
         ))}
@@ -136,12 +149,12 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
   if (items.length === 0) return <Placeholder label="Timing" />;
   return (
     <section style={{ padding: '36px 32px' }}>
-      {title && <h2 style={{ margin: '0 0 26px', fontSize: 38, textAlign: 'center', letterSpacing: '0.08em', color: TEXT }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 26px', fontSize: 38, textAlign: 'center', letterSpacing: '0.08em', color: 'inherit' }}>{title}</h2>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {items.map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 18 }}>
             <span style={{ fontSize: 16, color: accent, fontFamily: 'system-ui, sans-serif', minWidth: 52 }}>{it.time}</span>
-            <span style={{ fontSize: 18, letterSpacing: '0.05em', color: TEXT }}>{it.label}</span>
+            <span style={{ fontSize: 18, letterSpacing: '0.05em', color: 'inherit' }}>{it.label}</span>
           </div>
         ))}
       </div>
@@ -192,7 +205,7 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: src ? `url(${src}) center / cover` : '#eaeaea', border: `3px solid ${accent}` }} />
                 <span style={{ position: 'absolute', top: -4, left: -4, width: 26, height: 26, borderRadius: '50%', background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, fontFamily: 'system-ui, sans-serif', border: '2px solid #fff' }}>{it.number}</span>
               </div>
-              <p style={{ margin: 0, fontSize: 22, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>{it.name}</p>
+              <p style={{ margin: 0, fontSize: 22, fontStyle: 'italic', fontWeight: 700, color: 'inherit' }}>{it.name}</p>
             </div>
           );
         })}
@@ -204,7 +217,7 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
 function SocialsView({ title, links, accent }: { title: string; links: SocialLink[]; accent: string }) {
   return (
     <section style={{ padding: '24px 20px' }}>
-      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: TEXT }}>{title}</h3>}
+      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
           <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>
@@ -221,7 +234,7 @@ function ContactsView({ p }: { p: BlockProps; accent: string }) {
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
   return (
     <section style={{ padding: '28px 20px', textAlign: 'center' }}>
-      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: TEXT }}>{str(p, 'title')}</h3>}
+      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
         {tg && <IconLink href={tg}><SvgTelegram /></IconLink>}
         {phone && <IconLink href={`tel:${phone}`}><SvgPhone /></IconLink>}
@@ -268,19 +281,19 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
     try { if (submit) await submit({ guestName: name.trim(), attending }); setState('done'); } catch { setState('error'); }
   };
   const radio = (val: boolean, label: string) => (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: 16, color: TEXT, fontFamily: 'system-ui, sans-serif' }}>
-      <span style={{ width: 26, height: 26, borderRadius: '50%', border: `2px solid ${attending === val ? accent : '#bbb'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{attending === val && <span style={{ width: 12, height: 12, borderRadius: '50%', background: accent }} />}</span>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: 16, color: 'inherit', fontFamily: 'system-ui, sans-serif' }}>
+      <span style={{ width: 26, height: 26, borderRadius: '50%', border: `2px solid ${attending === val ? accent : 'currentColor'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{attending === val && <span style={{ width: 12, height: 12, borderRadius: '50%', background: accent }} />}</span>
       {label}
     </label>
   );
   return (
     <section style={{ padding: '40px 24px', textAlign: 'center' }}>
-      {title && <h2 style={{ margin: '0 0 22px', fontSize: 28, letterSpacing: '0.06em', color: TEXT }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 22px', fontSize: 28, letterSpacing: '0.06em', color: 'inherit' }}>{title}</h2>}
       {state === 'done' ? (
         <p style={{ margin: 0, fontSize: 18, color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Ваш ответ получен.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 360, margin: '0 auto' }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Напишите Имя" style={{ padding: '16px 18px', fontSize: 16, border: '1px solid #ccc', borderRadius: 2, outline: 'none', background: 'transparent', color: TEXT, fontFamily: 'system-ui, sans-serif' }} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Напишите Имя" style={{ padding: '16px 18px', fontSize: 16, border: '1px solid currentColor', borderRadius: 2, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-start' }}>{radio(true, 'смогу присутствовать')}{radio(false, 'не смогу присутствовать')}</div>
           <button type="button" onClick={go} disabled={state === 'sending' || !name.trim() || attending === null} style={{ alignSelf: 'center', padding: '14px 44px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'system-ui, sans-serif', opacity: !name.trim() || attending === null ? 0.5 : 1 }}>{state === 'sending' ? '...' : 'ОТПРАВИТЬ'}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}

@@ -79,9 +79,73 @@ function weddingInvitation(): BuiltinTemplate {
   };
 }
 
+// ── Ready-made "Restaurant · MADINABEK" flyer ───────────────────────────────
+// Recreates the reference restaurant flyer: gift promo, phone CTA, welcome,
+// countdown, menu showcase, restaurant gallery, lead CTA, contacts and the
+// social-pages list. Dark/gold theme; photos left empty for the manager.
+function restaurantFlyer(): BuiltinTemplate {
+  const PHONE = '+998 77 122 70 72';
+  return {
+    id: 'builtin-restaurant-flyer',
+    name: 'Ресторан · Тёмный',
+    theme: {
+      accentColor: '#c9a42c',
+      backgroundColor: '#0d0d0d',
+      backgroundImageUrl: null,
+      musicUrl: null,
+    },
+    blocks: [
+      b('heading', { text: 'ПОЛУЧИТЕ ПОДАРОК', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('promo', {
+        title: 'ОНЛАЙН ПРИГЛАСИТЕЛЬНОЕ',
+        imageUrl: '',
+        code: '#MBEK78',
+        subtitle: 'Чтобы получить онлайн-пригласительное, позвоните по указанному номеру и назовите промокод',
+      }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
+      b('button', { label: 'ТЕЛЕФОН', action: { kind: 'phone', value: PHONE } }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+
+      b('image', { url: '', rounded: true }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('text', { text: 'Добро пожаловать — вкус, тепло и гостеприимство ждут вас!', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 80 }),
+
+      b('countdown', { targetAt: null, label: '' }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
+
+      b('menu', {
+        title: 'МЕНЮ · MENU',
+        items: [
+          { number: 1, name: 'Самса', photoUrl: null },
+          { number: 2, name: 'Долма', photoUrl: null },
+          { number: 3, name: 'Мастова', photoUrl: null },
+          { number: 4, name: 'Умакай', photoUrl: null },
+          { number: 5, name: 'Кичири', photoUrl: null },
+        ],
+      }, { type: 'slide-up', durationMs: 800, delayMs: 0 }),
+
+      b('heading', { text: 'НАШ РЕСТОРАН', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('gallery', { items: [] }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+
+      b('heading', { text: 'ПЛАНИРУЕТЕ МЕРОПРИЯТИЕ?', align: 'center' }, { type: 'slide-up', durationMs: 700, delayMs: 0 }),
+      b('text', { text: 'Оставьте номер телефона — администратор перезвонит вам', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 80 }),
+      b('button', { label: 'ПОЗВОНИТЬ', action: { kind: 'phone', value: PHONE } }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+
+      b('contacts', { title: 'НАШИ КОНТАКТЫ', telegramUrl: 'https://t.me/madinabek', phone: PHONE, instagramUrl: 'https://instagram.com/madinabek_restaurant_by_havas' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+
+      b('socials', {
+        title: 'ПОДПИСЫВАЙТЕСЬ НА НАШИ СТРАНИЦЫ',
+        links: [
+          { label: '@madinabek_restaurant_by_havas', url: 'https://instagram.com/madinabek_restaurant_by_havas' },
+          { label: '@tohiriy_by_havas_restaurant', url: 'https://instagram.com/tohiriy_by_havas_restaurant' },
+          { label: '@emir_by_havas', url: 'https://instagram.com/emir_by_havas' },
+          { label: '@afsona_by_havas', url: 'https://instagram.com/afsona_by_havas' },
+          { label: '@grand_turon_by_havas', url: 'https://instagram.com/grand_turon_by_havas' },
+        ],
+      }, { type: 'fade', durationMs: 700, delayMs: 80 }),
+    ],
+  };
+}
+
 // Built-in templates per designer kind. Rebuilt on each call so block ids are
 // fresh when applied into the editor.
 export function builtinTemplates(kind: DesignKind): BuiltinTemplate[] {
   if (kind === 'invitation') return [weddingInvitation()];
-  return [];
+  return [restaurantFlyer()];
 }
