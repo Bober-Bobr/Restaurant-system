@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantSummary } from '../services/publicRestaurant.service';
@@ -91,23 +91,6 @@ function hallPhotoList(hall: Hall): string[] {
   return Array.from(new Set(all));
 }
 
-// Live height of the sticky site header, so sub-headers can stick just below it.
-// The header height changes when the nav/locale buttons wrap on narrow screens.
-function useHeaderHeight(): number {
-  const [height, setHeight] = useState(64);
-  useEffect(() => {
-    const el = document.getElementById('cs-header');
-    if (!el) return;
-    const update = () => setHeight(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    window.addEventListener('resize', update);
-    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
-  }, []);
-  return height;
-}
-
 // Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
 function BestsellerBadge({ on, size = 16, dark = false }: { on: boolean; size?: number; dark?: boolean }) {
   const color = dark ? '#000' : '#f59e0b';
@@ -159,9 +142,6 @@ function CateringLayout({
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const revealRef = useScrollReveal<HTMLElement>();
-  // The header is fixed to the very top; offset the page content by its height
-  // so nothing hides underneath it.
-  const headerH = useHeaderHeight();
 
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -190,7 +170,6 @@ function CateringLayout({
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <header id="cs-header" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20,
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${C.line}`,
         }}>
@@ -229,7 +208,7 @@ function CateringLayout({
           </div>
         </header>
 
-        <main ref={revealRef} style={{ maxWidth: 1100, margin: '0 auto', padding: `${headerH}px 16px 48px` }}>
+        <main ref={revealRef} style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' }}>
           {children}
         </main>
       </div>
@@ -457,18 +436,11 @@ function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menu
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [cat]);
 
-  const headerH = useHeaderHeight();
-  const subHeaderRef = useRef<HTMLDivElement>(null);
-  // The fixed header occupies the top `headerH`px; pin the back-to-menu bar
-  // flush beneath it so it's fixed from the very first pixel of scroll.
-  const subHeaderTop = headerH;
-
-  // Jump to a subcategory section, landing just below the sticky headers.
+  // Jump to a subcategory section, landing near the top of the viewport.
   const scrollToGroup = (id: string) => {
     const el = document.getElementById(`subcat-${id}`);
     if (!el) return;
-    const offset = headerH + (subHeaderRef.current?.offsetHeight ?? 0) + 24;
-    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    const y = el.getBoundingClientRect().top + window.scrollY - 16;
     window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   };
   const allItems = menuItems.filter((m) => m.category === cat && m.isActive);
@@ -508,13 +480,11 @@ function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menu
 
   return (
     <>
-      {/* Sticky sub-header: back link + category name + bestseller filter */}
-      <div ref={subHeaderRef} style={{
-        position: 'sticky', top: subHeaderTop, zIndex: 15,
+      {/* Back link + category name + bestseller filter (scrolls with the page) */}
+      <div style={{
         margin: '0 0 20px', padding: '12px 16px',
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)',
         border: `1px solid ${C.line}`, borderRadius: 14,
-        transition: 'top 0.3s ease',
       }}>
         <Link to="/" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -572,7 +542,7 @@ function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menu
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           {groups.map((g) => (
-            <section key={g.id} id={`subcat-${g.id}`} style={{ scrollMarginTop: headerH + 120 }}>
+            <section key={g.id} id={`subcat-${g.id}`} style={{ scrollMarginTop: 16 }}>
               {showHeaders && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
                   <span style={{ width: 5, height: 26, borderRadius: 3, background: '#f59e0b', flexShrink: 0 }} />
