@@ -159,6 +159,9 @@ function CateringLayout({
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const revealRef = useScrollReveal<HTMLElement>();
+  // The header is fixed to the very top; offset the page content by its height
+  // so nothing hides underneath it.
+  const headerH = useHeaderHeight();
 
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -187,7 +190,7 @@ function CateringLayout({
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <header id="cs-header" style={{
-          position: 'sticky', top: 0, zIndex: 20,
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20,
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${C.line}`,
         }}>
@@ -226,7 +229,7 @@ function CateringLayout({
           </div>
         </header>
 
-        <main ref={revealRef} style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' }}>
+        <main ref={revealRef} style={{ maxWidth: 1100, margin: '0 auto', padding: `${headerH}px 16px 48px` }}>
           {children}
         </main>
       </div>
@@ -456,8 +459,9 @@ function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menu
 
   const headerH = useHeaderHeight();
   const subHeaderRef = useRef<HTMLDivElement>(null);
-  // The site header stays put, so the sub-header sticks at a constant offset below it.
-  const subHeaderTop = headerH + 12;
+  // The fixed header occupies the top `headerH`px; pin the back-to-menu bar
+  // flush beneath it so it's fixed from the very first pixel of scroll.
+  const subHeaderTop = headerH;
 
   // Jump to a subcategory section, landing just below the sticky headers.
   const scrollToGroup = (id: string) => {
