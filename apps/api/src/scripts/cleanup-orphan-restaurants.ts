@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 // One-off cleanup for restaurants that were orphaned (companyId = null) by the
