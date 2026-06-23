@@ -41,7 +41,7 @@ export type Hall = {
 export type TableCategoryPackageItem = {
   id: string;
   servings: number;
-  menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'category' | 'priceCents' | 'photoUrl'>;
+  menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'nameI18n' | 'descriptionI18n' | 'category' | 'priceCents' | 'photoUrl'>;
 };
 
 export type TableType = 'ADULT' | 'CHILDREN';
@@ -63,10 +63,14 @@ export type TableCategory = {
 
 export type TabletStatus = 'NONE' | 'FREE' | 'PAID';
 
+export type DishI18n = { en?: string; ru?: string; uz?: string };
+
 export type MenuItem = {
   id: string;
   name: string;
   description?: string;
+  nameI18n?: DishI18n | null;
+  descriptionI18n?: DishI18n | null;
   category:
     | 'SOUPS' | 'PIZZA' | 'COLD_APPETIZERS' | 'GRILL' | 'PASTRY' | 'HOT_APPETIZERS'
     | 'BEER_SNACKS' | 'DESSERT' | 'LAMB_DISHES' | 'BEEF_DISHES' | 'CHICKEN_DISHES'

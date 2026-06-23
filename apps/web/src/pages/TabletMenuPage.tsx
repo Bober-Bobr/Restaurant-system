@@ -6,6 +6,7 @@ import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
 import type { MenuItem, TableCategory, TabletStatus } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { dishName, dishDescription } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
@@ -422,12 +423,13 @@ function CategorySlide({
 // identically. `card` wraps the content in its own rg-card section.
 
 function CourseChoiceSection({
-  tableCategory, t, onLightbox, card = false, showName = true,
+  tableCategory, t, locale, onLightbox, card = false, showName = true,
   firstSelectedId, secondSelectedIds, thirdSelectedIds,
   onFirst, onToggleSecond, onToggleThird,
 }: {
   tableCategory: TableCategory;
   t: TFn;
+  locale: Locale;
   onLightbox: (src: string | null) => void;
   card?: boolean;
   showName?: boolean;
@@ -551,10 +553,10 @@ function CourseChoiceSection({
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                      {item.description && (
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dishName(item, locale)}</p>
+                      {dishDescription(item, locale) && (
                         <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {item.description}
+                          {dishDescription(item, locale)}
                         </p>
                       )}
                     </div>
@@ -574,12 +576,13 @@ function CourseChoiceSection({
 // ── Reusable: included dishes (non-course categories) with free swaps ──────
 
 function IncludedDishesSection({
-  tableCategory, menuItems, t, onLightbox, viewOnly, card = false, showName = true,
+  tableCategory, menuItems, t, locale, onLightbox, viewOnly, card = false, showName = true,
   replacements, onReplacement,
 }: {
   tableCategory: TableCategory;
   menuItems: MenuItem[];
   t: TFn;
+  locale: Locale;
   onLightbox: (src: string | null) => void;
   viewOnly: boolean;
   card?: boolean;
@@ -656,10 +659,10 @@ function IncludedDishesSection({
                     </div>
                   )}
                   <div className="p-2.5">
-                    <p className="text-sm font-semibold leading-snug text-white">{displayItem.name}</p>
-                    {displayItem.description && (
+                    <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
+                    {dishDescription(displayItem, locale) && (
                       <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                        {displayItem.description}
+                        {dishDescription(displayItem, locale)}
                       </p>
                     )}
                     {!viewOnly && freeAlts.length > 0 && (
@@ -678,11 +681,11 @@ function IncludedDishesSection({
                           }}
                         >
                           <option value={pi.menuItem.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                            {pi.menuItem.name} ({t('included_default')})
+                            {dishName(pi.menuItem, locale)} ({t('included_default')})
                           </option>
                           {freeAlts.map((alt) => (
                             <option key={alt.id} value={alt.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                              {alt.name}
+                              {dishName(alt, locale)}
                             </option>
                           ))}
                         </select>
@@ -704,11 +707,12 @@ function IncludedDishesSection({
 // ── Optional children's table: toggle + count + full course/dish selection ──
 
 function ChildrenTableSection({
-  tableCategory, menuItems, t, onLightbox, viewOnly,
+  tableCategory, menuItems, t, locale, onLightbox, viewOnly,
 }: {
   tableCategory: TableCategory;
   menuItems: MenuItem[];
   t: TFn;
+  locale: Locale;
   onLightbox: (src: string | null) => void;
   viewOnly: boolean;
 }) {
@@ -757,7 +761,7 @@ function ChildrenTableSection({
           </div>
 
           <CourseChoiceSection
-            tableCategory={tableCategory} t={t} onLightbox={onLightbox} showName={false}
+            tableCategory={tableCategory} t={t} locale={locale} onLightbox={onLightbox} showName={false}
             firstSelectedId={childFirstCourseId}
             secondSelectedIds={childSecondCourseIds}
             thirdSelectedIds={childThirdCourseIds}
@@ -768,7 +772,7 @@ function ChildrenTableSection({
 
           <div className="mt-6">
             <IncludedDishesSection
-              tableCategory={tableCategory} menuItems={menuItems} t={t} onLightbox={onLightbox}
+              tableCategory={tableCategory} menuItems={menuItems} t={t} locale={locale} onLightbox={onLightbox}
               viewOnly={viewOnly} showName={false}
               replacements={childReplacements} onReplacement={setChildReplacement}
             />
@@ -1090,7 +1094,7 @@ export const TabletMenuPage = () => {
             {/* Course choice — shared component (adult table) */}
             {selectedTableCategory && (
               <CourseChoiceSection
-                tableCategory={selectedTableCategory} t={t} onLightbox={setLightboxSrc} card
+                tableCategory={selectedTableCategory} t={t} locale={locale} onLightbox={setLightboxSrc} card
                 firstSelectedId={selectedFirstCourseId}
                 secondSelectedIds={selectedSecondCourseIds}
                 thirdSelectedIds={selectedThirdCourseIds}
@@ -1103,7 +1107,7 @@ export const TabletMenuPage = () => {
             {/* Included dishes — shared component (adult table) */}
             {selectedTableCategory && (
               <IncludedDishesSection
-                tableCategory={selectedTableCategory} menuItems={menuItems ?? []} t={t}
+                tableCategory={selectedTableCategory} menuItems={menuItems ?? []} t={t} locale={locale}
                 onLightbox={setLightboxSrc} viewOnly={viewOnly} card
                 replacements={replacements} onReplacement={setReplacement}
               />
@@ -1112,7 +1116,7 @@ export const TabletMenuPage = () => {
             {/* Children's table — optional add-on, shown before Additional */}
             {selectedTableCategory && childrenTableCategory && (
               <ChildrenTableSection
-                tableCategory={childrenTableCategory} menuItems={menuItems ?? []} t={t}
+                tableCategory={childrenTableCategory} menuItems={menuItems ?? []} t={t} locale={locale}
                 onLightbox={setLightboxSrc} viewOnly={viewOnly}
               />
             )}
@@ -1173,7 +1177,7 @@ export const TabletMenuPage = () => {
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} />
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} />
                     </div>
                   ))}
                 </div>

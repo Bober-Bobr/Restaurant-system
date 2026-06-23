@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { MenuItem } from '../../types/domain';
 import { getPhotoUrl } from '../../utils/photoUrl';
 import { formatSum } from '../../utils/currency';
+import { dishName, dishDescription } from '../../utils/menuI18n';
+import { defaultLocale, type Locale } from '../../utils/translate';
 import { Card } from '../ui/card';
 import { Lightbox } from '../ui/lightbox';
 
@@ -11,9 +13,12 @@ type MenuItemCardProps = {
   onQuantityChange: (nextQuantity: number) => void;
   dark?: boolean;
   viewOnly?: boolean;
+  locale?: Locale;
 };
 
-export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false }: MenuItemCardProps) => {
+export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale }: MenuItemCardProps) => {
+  const localizedName = dishName(item, locale);
+  const localizedDescription = dishDescription(item, locale);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const photoSrc = getPhotoUrl(item.photoUrl);
   const selected = quantity > 0;
@@ -90,16 +95,16 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
           </span>
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold leading-snug" style={{ color: dark ? 'white' : '#1c1917' }}>
-              {item.name || 'Menu Item'}
+              {localizedName || 'Menu Item'}
             </h3>
             <span className="shrink-0 text-sm font-bold" style={{ color: dark ? '#c9a42c' : '#1c1917' }}>
               {formatSum(Number(item.priceCents ?? 0))}
             </span>
           </div>
-          {item.description && (
+          {localizedDescription && (
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed"
               style={{ color: dark ? 'rgba(255,255,255,0.55)' : '#78716c' }}>
-              {item.description}
+              {localizedDescription}
             </p>
           )}
         </div>

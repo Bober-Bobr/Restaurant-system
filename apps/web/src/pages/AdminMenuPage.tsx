@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { formatSumInput, parseSumToTiyin } from '../utils/currency';
-import type { MenuItem, TableCategory, Subcategory } from '../types/domain';
+import type { MenuItem, TableCategory, Subcategory, DishI18n } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { subcategoryService } from '../services/subcategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
 import { translate } from '../utils/translate';
+import { cleanI18n } from '../utils/menuI18n';
 import { Input } from '../components/ui/input';
+import { DishTranslations } from '../components/menu/DishTranslations';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
@@ -143,6 +145,8 @@ export const AdminMenuPage = () => {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [nameI18n, setNameI18n] = useState<DishI18n>({});
+  const [descriptionI18n, setDescriptionI18n] = useState<DishI18n>({});
   const [category, setCategory] = useState<MenuItem['category']>('HOT_APPETIZERS');
   const [price, setPrice] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
@@ -158,6 +162,8 @@ export const AdminMenuPage = () => {
       return menuService.create({
         name: name.trim(),
         description: description.trim() ? description.trim() : undefined,
+        nameI18n: cleanI18n(nameI18n),
+        descriptionI18n: cleanI18n(descriptionI18n),
         category,
         priceCents,
         photoUrl: photoUrl.trim() ? photoUrl.trim() : undefined,
@@ -167,6 +173,8 @@ export const AdminMenuPage = () => {
     onSuccess: async () => {
       setName('');
       setDescription('');
+      setNameI18n({});
+      setDescriptionI18n({});
       setCategory('HOT_APPETIZERS');
       setPrice('');
       setPhotoUrl('');
@@ -253,6 +261,13 @@ export const AdminMenuPage = () => {
             {translate('description', locale)}
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
+
+          <DishTranslations
+            locale={locale}
+            nameI18n={nameI18n}
+            descriptionI18n={descriptionI18n}
+            onChange={({ nameI18n: n, descriptionI18n: d }) => { setNameI18n(n); setDescriptionI18n(d); }}
+          />
 
           <label style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
             <input type="checkbox" checked={isBestseller} onChange={(e) => setIsBestseller(e.target.checked)}
@@ -433,6 +448,8 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
   const [localDescription, setLocalDescription] = useState(item.description ?? '');
   const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
   const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
+  const [localNameI18n, setLocalNameI18n] = useState<DishI18n>(item.nameI18n ?? {});
+  const [localDescriptionI18n, setLocalDescriptionI18n] = useState<DishI18n>(item.descriptionI18n ?? {});
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
 
   useEffect(() => {
@@ -441,7 +458,9 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
     setLocalDescription(item.description ?? '');
     setLocalPrice(formatCents(item.priceCents));
     setLocalPhotoUrl(item.photoUrl ?? '');
-  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl]);
+    setLocalNameI18n(item.nameI18n ?? {});
+    setLocalDescriptionI18n(item.descriptionI18n ?? {});
+  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl, item.nameI18n, item.descriptionI18n]);
 
   const handleSave = () => {
     const priceCents = parsePriceToCents(localPrice);
@@ -449,6 +468,8 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
       name: localName.trim(),
       category: localCategory,
       description: localDescription.trim() || undefined,
+      nameI18n: cleanI18n(localNameI18n) ?? {},
+      descriptionI18n: cleanI18n(localDescriptionI18n) ?? {},
       photoUrl: localPhotoUrl.trim() || undefined,
       ...(priceCents !== null ? { priceCents } : {}),
       // Clear a now-mismatched subcategory when the dish's category changes.
@@ -518,6 +539,13 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
           className="text-sm" placeholder="—" />
       </div>
 
+      <DishTranslations
+        locale={locale}
+        nameI18n={localNameI18n}
+        descriptionI18n={localDescriptionI18n}
+        onChange={({ nameI18n: n, descriptionI18n: d }) => { setLocalNameI18n(n); setLocalDescriptionI18n(d); }}
+      />
+
       {showTableCategories && assignedTableCategories.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {assignedTableCategories.map((tc) => (
@@ -583,7 +611,10 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
   const [localDescription, setLocalDescription] = useState(item.description ?? '');
   const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
   const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
+  const [localNameI18n, setLocalNameI18n] = useState<DishI18n>(item.nameI18n ?? {});
+  const [localDescriptionI18n, setLocalDescriptionI18n] = useState<DishI18n>(item.descriptionI18n ?? {});
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
+  const [showTranslations, setShowTranslations] = useState(false);
 
   useEffect(() => {
     setLocalName(item.name);
@@ -591,7 +622,9 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
     setLocalDescription(item.description ?? '');
     setLocalPrice(formatCents(item.priceCents));
     setLocalPhotoUrl(item.photoUrl ?? '');
-  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl]);
+    setLocalNameI18n(item.nameI18n ?? {});
+    setLocalDescriptionI18n(item.descriptionI18n ?? {});
+  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl, item.nameI18n, item.descriptionI18n]);
 
   const handleSave = () => {
     const priceCents = parsePriceToCents(localPrice);
@@ -599,6 +632,8 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
       name: localName.trim(),
       category: localCategory,
       description: localDescription.trim() || undefined,
+      nameI18n: cleanI18n(localNameI18n) ?? {},
+      descriptionI18n: cleanI18n(localDescriptionI18n) ?? {},
       photoUrl: localPhotoUrl.trim() || undefined,
       ...(priceCents !== null ? { priceCents } : {}),
       // Clear a now-mismatched subcategory when the dish's category changes.
@@ -733,6 +768,9 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
         {/* Actions */}
         <td className="whitespace-nowrap px-4 py-2.5">
           <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowTranslations((v) => !v)} title={translate('translations', locale)}>
+            🌐
+          </Button>
           <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave}>
             {translate('save', locale)}
           </Button>
@@ -762,6 +800,24 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
               setShowPhotoSelector(false);
             }}
           />
+        </td>
+      </tr>
+    )}
+
+    {showTranslations && (
+      <tr>
+        <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+          <DishTranslations
+            locale={locale}
+            nameI18n={localNameI18n}
+            descriptionI18n={localDescriptionI18n}
+            onChange={({ nameI18n: n, descriptionI18n: d }) => { setLocalNameI18n(n); setLocalDescriptionI18n(d); }}
+            defaultOpen
+            hideToggle
+          />
+          <div className="mt-2">
+            <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave}>{translate('save', locale)}</Button>
+          </div>
         </td>
       </tr>
     )}

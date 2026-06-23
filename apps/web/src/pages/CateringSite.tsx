@@ -10,6 +10,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { IMAGE_ACCEPT } from '../utils/uploadFormats';
+import { dishName, dishDescription } from '../utils/menuI18n';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
@@ -107,23 +108,6 @@ function useHeaderHeight(): number {
   return height;
 }
 
-// True while the user is scrolling down (past a small top zone). Drives the
-// auto-hiding header; the category sub-header uses it to slide up in sync.
-function useHideOnScroll(): boolean {
-  const [hidden, setHidden] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y < 80) { setHidden(false); last = y; return; }
-      if (Math.abs(y - last) > 6) { setHidden(y > last); last = y; }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  return hidden;
-}
-
 // Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
 function BestsellerBadge({ on, size = 16, dark = false }: { on: boolean; size?: number; dark?: boolean }) {
   const color = dark ? '#000' : '#f59e0b';
@@ -176,10 +160,6 @@ function CateringLayout({
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const revealRef = useScrollReveal<HTMLElement>();
 
-  // Hide the header when scrolling down (more room for content), show it on the
-  // way back up. Always visible near the very top of the page.
-  const hideHeader = useHideOnScroll();
-
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
     textDecoration: 'none', color: 'rgba(255,255,255,0.78)', whiteSpace: 'nowrap',
@@ -210,8 +190,6 @@ function CateringLayout({
           position: 'sticky', top: 0, zIndex: 20,
           background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(16px)',
           borderBottom: `1px solid ${C.line}`,
-          transform: hideHeader ? 'translateY(-100%)' : 'translateY(0)',
-          transition: 'transform 0.3s ease', willChange: 'transform',
         }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', minWidth: 0 }}>
@@ -383,12 +361,12 @@ function DishModal({ item, locale, onClose }: { item: MenuItem; locale: Locale; 
           )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{item.name}</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{dishName(item, locale)}</h2>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{formatSum(item.priceCents)}</span>
           </div>
 
-          {item.description && (
-            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.82)' }}>{item.description}</p>
+          {dishDescription(item, locale) && (
+            <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.82)' }}>{dishDescription(item, locale)}</p>
           )}
         </div>
 
@@ -455,11 +433,11 @@ function CateringDishCard({ item, locale, onSelect }: { item: MenuItem; locale: 
       </div>
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, alignItems: 'baseline' }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{item.name}</h3>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{dishName(item, locale)}</h3>
           <span style={{ color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', fontSize: 13 }}>{formatSum(item.priceCents)}</span>
         </div>
-        {item.description && (
-          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+        {dishDescription(item, locale) && (
+          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.4, color: C.textDim, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{dishDescription(item, locale)}</p>
         )}
       </div>
     </button>
@@ -477,10 +455,9 @@ function CategoryDetail({ menuItems, locale, hideSubcategories = false }: { menu
   useEffect(() => { window.scrollTo({ top: 0 }); }, [cat]);
 
   const headerH = useHeaderHeight();
-  const headerHidden = useHideOnScroll();
   const subHeaderRef = useRef<HTMLDivElement>(null);
-  // When the site header hides, the sub-header rises to fill the freed space.
-  const subHeaderTop = (headerHidden ? 0 : headerH) + 12;
+  // The site header stays put, so the sub-header sticks at a constant offset below it.
+  const subHeaderTop = headerH + 12;
 
   // Jump to a subcategory section, landing just below the sticky headers.
   const scrollToGroup = (id: string) => {

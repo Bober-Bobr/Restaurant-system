@@ -373,6 +373,11 @@ model MenuItem {
   id               String                    @id @default(cuid())
   name             String
   description      String?
+  // Optional per-language overrides for name/description, shown on the tablet and
+  // catering site. Shape: { en?: string; ru?: string; uz?: string }. The base
+  // name/description above act as the default/fallback when a locale is missing.
+  nameI18n         Json?
+  descriptionI18n  Json?
   category         MenuCategory
   priceCents       Int
   photoUrl         String?

@@ -1,7 +1,7 @@
 import createHttpError from 'http-errors';
 import { MenuCategory } from '@prisma/client';
 import { EventRepository } from '../events/event.repository.js';
-import { MenuRepository } from './menu.repository.js';
+import { MenuRepository, type I18nMap } from './menu.repository.js';
 
 export class MenuService {
   constructor(
@@ -20,6 +20,8 @@ export class MenuService {
   async createMenuItem(restaurantId: string, payload: {
     name: string;
     description?: string;
+    nameI18n?: I18nMap | null;
+    descriptionI18n?: I18nMap | null;
     category: MenuCategory;
     priceCents: number;
     photoUrl?: string;
@@ -60,6 +62,8 @@ export class MenuService {
   async updateMenuItem(menuItemId: string, payload: {
     name?: string;
     description?: string;
+    nameI18n?: I18nMap | null;
+    descriptionI18n?: I18nMap | null;
     category?: MenuCategory;
     priceCents?: number;
     photoUrl?: string;

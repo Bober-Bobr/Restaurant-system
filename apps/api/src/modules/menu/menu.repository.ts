@@ -2,6 +2,9 @@ import { MenuCategory } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
 import { getExcludedCategories, parseExcludedCategories } from '../../utils/excludedCategories.js';
 
+// Per-language overrides for a dish's name/description (any locale optional).
+export type I18nMap = { en?: string; ru?: string; uz?: string };
+
 export class MenuRepository {
   async listAll(restaurantId: string) {
     const excluded = await getExcludedCategories(restaurantId);
@@ -76,6 +79,8 @@ export class MenuRepository {
   async create(restaurantId: string, payload: {
     name: string;
     description?: string;
+    nameI18n?: I18nMap | null;
+    descriptionI18n?: I18nMap | null;
     category: MenuCategory;
     priceCents: number;
     photoUrl?: string;
@@ -87,7 +92,15 @@ export class MenuRepository {
     sortOrder?: number;
     subcategoryId?: string | null;
   }) {
-    return prisma.menuItem.create({ data: { ...payload, restaurantId } });
+    const { nameI18n, descriptionI18n, ...rest } = payload;
+    return prisma.menuItem.create({
+      data: {
+        ...rest,
+        restaurantId,
+        ...(nameI18n != null ? { nameI18n } : {}),
+        ...(descriptionI18n != null ? { descriptionI18n } : {}),
+      },
+    });
   }
 
   async getById(menuItemId: string) {
@@ -97,6 +110,8 @@ export class MenuRepository {
   async updateById(menuItemId: string, payload: {
     name?: string;
     description?: string;
+    nameI18n?: I18nMap | null;
+    descriptionI18n?: I18nMap | null;
     category?: MenuCategory;
     priceCents?: number;
     photoUrl?: string;
@@ -108,7 +123,15 @@ export class MenuRepository {
     sortOrder?: number;
     subcategoryId?: string | null;
   }) {
-    return prisma.menuItem.update({ where: { id: menuItemId }, data: payload });
+    const { nameI18n, descriptionI18n, ...rest } = payload;
+    return prisma.menuItem.update({
+      where: { id: menuItemId },
+      data: {
+        ...rest,
+        ...(nameI18n != null ? { nameI18n } : {}),
+        ...(descriptionI18n != null ? { descriptionI18n } : {}),
+      },
+    });
   }
 
   async deleteById(menuItemId: string) {

@@ -1,9 +1,18 @@
 import { MenuCategory } from '@prisma/client';
 import { z } from 'zod';
 
+// Optional per-language overrides; any locale may be omitted or blank.
+const i18nMapSchema = z.object({
+  en: z.string().max(500).optional(),
+  ru: z.string().max(500).optional(),
+  uz: z.string().max(500).optional(),
+}).nullable().optional();
+
 export const createMenuItemSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().max(500).optional(),
+  nameI18n: i18nMapSchema,
+  descriptionI18n: i18nMapSchema,
   category: z.nativeEnum(MenuCategory),
   priceCents: z.number().int().positive().max(10000000000),
   photoUrl: z.string().min(1).optional(),

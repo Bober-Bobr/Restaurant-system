@@ -8,6 +8,7 @@ import { httpClient } from '../services/http';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { dishName } from '../utils/menuI18n';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
@@ -551,7 +552,7 @@ export const TabletSummaryPage = () => {
                           style={{ background: '#c9a42c', color: '#1a3320' }}>
                           {selectedItems[item.id]}
                         </span>
-                        <p className="text-sm font-medium text-white truncate">{item.name}</p>
+                        <p className="text-sm font-medium text-white truncate">{dishName(item, locale)}</p>
                       </div>
                       <p className="text-sm font-semibold whitespace-nowrap" style={{ color: '#c9a42c' }}>
                         {formatSum(item.priceCents * selectedItems[item.id])}
