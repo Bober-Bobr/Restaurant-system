@@ -4,6 +4,7 @@ import { photoService, type PhotoCategory } from '../services/photo.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import { Lightbox } from '../components/ui/lightbox';
@@ -191,7 +192,7 @@ export const AdminPhotosPage = () => {
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*"
+              accept={IMAGE_ACCEPT}
               onChange={handleFileSelect}
               className="hidden"
             />

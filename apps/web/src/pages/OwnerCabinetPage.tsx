@@ -106,6 +106,42 @@ export const OwnerCabinetPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['owner-restaurants'] }),
   });
 
+  // Per-restaurant inline edit state
+  const [editingRestaurantId, setEditingRestaurantId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<{ name: string; address: string; phone: string; email: string; logoUrl: string | null }>(
+    { name: '', address: '', phone: '', email: '', logoUrl: null },
+  );
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const startEditRestaurant = (r: Restaurant) => {
+    setEditingRestaurantId(r.id);
+    setEditError(null);
+    setEdit({
+      name: r.name,
+      address: r.address ?? '',
+      phone: r.phone ?? '',
+      email: r.email ?? '',
+      logoUrl: r.logoUrl ?? null,
+    });
+  };
+
+  const updateRestaurant = useMutation({
+    mutationFn: (id: string) =>
+      restaurantService.update(id, {
+        name: edit.name.trim(),
+        address: edit.address.trim() || undefined,
+        phone: edit.phone.trim() || null,
+        email: edit.email.trim() || null,
+        logoUrl: edit.logoUrl || undefined,
+      }),
+    onSuccess: () => {
+      setEditingRestaurantId(null);
+      setEditError(null);
+      queryClient.invalidateQueries({ queryKey: ['owner-restaurants'] });
+    },
+    onError: (e) => setEditError(formatError(e)),
+  });
+
   // ── Users ──
   const usersQuery = useQuery<AdminUser[]>({
     queryKey: ['owner-users'],
@@ -321,6 +357,44 @@ export const OwnerCabinetPage = () => {
                         <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
                           {restaurantsHere.map((r) => {
                             const effLogo = r.logoUrl ?? r.company?.logoUrl ?? null;
+                            const isEditing = editingRestaurantId === r.id;
+                            if (isEditing) {
+                              return (
+                                <div key={r.id} style={{ background: 'rgba(15,23,42,0.7)', borderRadius: 7, padding: 12, border: '1px solid rgba(201,164,44,0.3)' }}>
+                                  <div style={{ width: 120, marginBottom: 10 }}>
+                                    <PhotoUploadField
+                                      label={t('logo')}
+                                      value={edit.logoUrl}
+                                      onChange={(url) => setEdit((s) => ({ ...s, logoUrl: url }))}
+                                      restaurantId={r.id}
+                                      height={64}
+                                    />
+                                  </div>
+                                  <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                                    <input placeholder={t('name')} value={edit.name} onChange={(e) => setEdit((s) => ({ ...s, name: e.target.value }))} style={inputStyle} />
+                                    <input placeholder={t('address')} value={edit.address} onChange={(e) => setEdit((s) => ({ ...s, address: e.target.value }))} style={inputStyle} />
+                                    <input placeholder={t('phone')} value={edit.phone} onChange={(e) => setEdit((s) => ({ ...s, phone: e.target.value }))} style={inputStyle} />
+                                    <input placeholder={t('email')} value={edit.email} onChange={(e) => setEdit((s) => ({ ...s, email: e.target.value }))} style={inputStyle} />
+                                  </div>
+                                  {editError && <p style={{ color: '#f87171', marginTop: 8, fontSize: 12 }}>{editError}</p>}
+                                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                                    <button
+                                      onClick={() => updateRestaurant.mutate(r.id)}
+                                      disabled={!edit.name.trim() || updateRestaurant.isPending}
+                                      style={{ ...btnStyle, opacity: !edit.name.trim() ? 0.5 : 1, fontSize: 12, padding: '6px 12px' }}
+                                    >
+                                      {updateRestaurant.isPending ? t('saving') : t('save')}
+                                    </button>
+                                    <button
+                                      onClick={() => { setEditingRestaurantId(null); setEditError(null); }}
+                                      style={{ ...btnStyle, background: '#334155', fontSize: 12, padding: '6px 12px' }}
+                                    >
+                                      {t('cancel')}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
                             return (
                               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }}>
                                 {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ height: 32, width: 'auto', maxWidth: 72, objectFit: 'contain', flexShrink: 0 }} />}
@@ -328,6 +402,12 @@ export const OwnerCabinetPage = () => {
                                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
                                   {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
                                 </div>
+                                <button
+                                  onClick={() => startEditRestaurant(r)}
+                                  style={{ ...btnStyle, background: 'rgba(201,164,44,0.12)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)', fontSize: 11, padding: '4px 8px' }}
+                                >
+                                  {t('edit')}
+                                </button>
                                 <button
                                   onClick={() => {
                                     if (confirm(t('delete_restaurant_confirm', { name: r.name }))) {

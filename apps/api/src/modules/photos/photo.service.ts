@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
 import { getExcludedCategories } from '../../utils/excludedCategories.js';
+import { IMAGE_EXTENSIONS } from '../../utils/imageUpload.js';
 
 export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 
@@ -14,8 +15,6 @@ const DISH_CATEGORIES = [
   // Legacy folders kept so existing photos remain visible.
   'first_course', 'second_course', 'third_course', 'drinks', 'sweets', 'fruits', 'salads',
 ] as const;
-
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

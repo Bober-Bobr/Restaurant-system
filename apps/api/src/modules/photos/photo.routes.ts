@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { PhotoController } from './photo.controller';
 import { PhotoService } from './photo.service';
+import { isAllowedImage } from '../../utils/imageUpload.js';
 
 const router = Router();
 const photoService = new PhotoService();
@@ -13,8 +14,7 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (_req, file, cb) => {
-    // Allow only image files
-    if (file.mimetype.startsWith('image/')) {
+    if (isAllowedImage(file)) {
       cb(null, true);
     } else {
       cb(new Error('Only image files are allowed'));

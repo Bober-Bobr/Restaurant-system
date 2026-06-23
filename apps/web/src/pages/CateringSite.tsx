@@ -9,6 +9,7 @@ import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
@@ -953,7 +954,7 @@ function ReviewForm({ restaurantId, locale }: { restaurantId: string; locale: Lo
             }}>
               <span>📷</span>
               <span>{t('attach_photo')}</span>
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+              <input type="file" accept={IMAGE_ACCEPT} style={{ display: 'none' }} onChange={handlePhotoChange} />
             </label>
           )}
         </div>

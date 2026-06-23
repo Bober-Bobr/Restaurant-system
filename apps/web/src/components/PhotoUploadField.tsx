@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { photoService } from '../services/photo.service';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 
 type Props = {
   value: string | null | undefined;
@@ -37,7 +38,7 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={IMAGE_ACCEPT}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
         style={{ display: 'none' }}
       />

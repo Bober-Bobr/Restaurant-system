@@ -12,12 +12,13 @@ import { generateSummaryExcel } from './excel.service.js';
 import { InvitationController } from '../invitation/invitation.controller.js';
 import { GuestInvitationController } from '../guestInvitation/guestInvitation.controller.js';
 import { ReviewController } from '../review/review.controller.js';
+import { isAllowedImage } from '../../utils/imageUpload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reviewPhotoUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
+    if (isAllowedImage(file)) cb(null, true);
     else cb(new Error('Only image files are allowed'));
   },
 });
