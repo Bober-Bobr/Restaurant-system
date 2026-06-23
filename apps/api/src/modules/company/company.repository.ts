@@ -35,6 +35,12 @@ export class CompanyRepository {
   }
 
   async deleteById(id: string) {
-    return prisma.company.delete({ where: { id } });
+    // The company → restaurant relation is `onDelete: SetNull`, so deleting a
+    // company would otherwise leave its restaurants orphaned in the database.
+    // Remove them in the same transaction (their own children cascade via FK).
+    return prisma.$transaction(async (tx) => {
+      await tx.restaurant.deleteMany({ where: { companyId: id } });
+      return tx.company.delete({ where: { id } });
+    });
   }
 }
