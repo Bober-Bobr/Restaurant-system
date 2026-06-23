@@ -4,6 +4,12 @@ import { PhotoService } from './photo.service';
 type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 const ALLOWED_CATEGORIES: readonly string[] = ['menu', 'hall', 'table', 'invitation'];
 
+// Roles that own/manage more than one restaurant may target a specific restaurant
+// via the request body. Everyone else is pinned to their own assigned restaurant.
+function canScopeToAnyRestaurant(role: string | undefined): boolean {
+  return role === 'CHIEF_ADMIN' || role === 'MANAGER' || role === 'OWNER';
+}
+
 export class PhotoController {
   constructor(private readonly photoService: PhotoService) {}
 
@@ -22,7 +28,7 @@ export class PhotoController {
 
       const role = req.admin?.role;
       const bodyRestaurantId = typeof req.body.restaurantId === 'string' ? req.body.restaurantId.trim() : '';
-      const restaurantId = (role === 'CHIEF_ADMIN' || role === 'MANAGER') && bodyRestaurantId
+      const restaurantId = canScopeToAnyRestaurant(role) && bodyRestaurantId
         ? bodyRestaurantId
         : req.admin?.restaurantId ?? null;
       const urls = await this.photoService.uploadPhotos(
@@ -34,7 +40,7 @@ export class PhotoController {
       res.json({ urls });
     } catch (error) {
       console.error('Photo upload error:', error);
-      res.status(500).json({ error: 'Failed to upload photos' });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to upload photos' });
     }
   }
 
@@ -48,7 +54,7 @@ export class PhotoController {
 
       const role = req.admin?.role;
       const bodyRestaurantId = typeof req.body.restaurantId === 'string' ? req.body.restaurantId.trim() : '';
-      const restaurantId = (role === 'CHIEF_ADMIN' || role === 'MANAGER') && bodyRestaurantId
+      const restaurantId = canScopeToAnyRestaurant(role) && bodyRestaurantId
         ? bodyRestaurantId
         : req.admin?.restaurantId ?? null;
       // Stored under the restaurant's `invitation` folder alongside other assets.
@@ -70,7 +76,7 @@ export class PhotoController {
 
       const role = req.admin?.role;
       const queryRestaurantId = typeof req.query.restaurantId === 'string' ? req.query.restaurantId.trim() : '';
-      const restaurantId = (role === 'CHIEF_ADMIN' || role === 'MANAGER') && queryRestaurantId
+      const restaurantId = canScopeToAnyRestaurant(role) && queryRestaurantId
         ? queryRestaurantId
         : req.admin?.restaurantId ?? null;
       const dishCategory = (req.query.dishCategory as string) || undefined;
