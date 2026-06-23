@@ -47,8 +47,15 @@ export class RestaurantRepository {
     });
   }
 
-  async create(ownerId: string, data: { name: string; address?: string; logoUrl?: string; companyId?: string }) {
-    return prisma.restaurant.create({ data: { ...data, ownerId } });
+  async create(ownerId: string, data: { name?: string; address?: string; logoUrl?: string; companyId?: string }) {
+    let name = (data.name ?? '').trim();
+    // A restaurant created without its own name takes on the company's name so it
+    // is never blank in listings or the public site.
+    if (!name && data.companyId) {
+      const company = await prisma.company.findUnique({ where: { id: data.companyId }, select: { name: true } });
+      name = company?.name ?? '';
+    }
+    return prisma.restaurant.create({ data: { ...data, name, ownerId } });
   }
 
   async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string; backgroundImageUrl?: string | null }) {

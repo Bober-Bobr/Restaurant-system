@@ -18,7 +18,7 @@ export type Restaurant = {
 };
 
 export type CreateRestaurantPayload = {
-  name: string;
+  name?: string;
   address?: string;
   phone?: string | null;
   email?: string | null;

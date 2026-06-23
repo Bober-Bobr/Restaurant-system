@@ -90,7 +90,7 @@ export const OwnerCabinetPage = () => {
   const createRestaurant = useMutation({
     mutationFn: (companyId: string) =>
       restaurantService.create({
-        name: rName.trim(),
+        name: rName.trim() || undefined,
         address: rAddress.trim() || undefined,
         companyId,
       }),
@@ -380,8 +380,8 @@ export const OwnerCabinetPage = () => {
                                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                                     <button
                                       onClick={() => updateRestaurant.mutate(r.id)}
-                                      disabled={!edit.name.trim() || updateRestaurant.isPending}
-                                      style={{ ...btnStyle, opacity: !edit.name.trim() ? 0.5 : 1, fontSize: 12, padding: '6px 12px' }}
+                                      disabled={updateRestaurant.isPending}
+                                      style={{ ...btnStyle, fontSize: 12, padding: '6px 12px' }}
                                     >
                                       {updateRestaurant.isPending ? t('saving') : t('save')}
                                     </button>
@@ -399,7 +399,7 @@ export const OwnerCabinetPage = () => {
                               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }}>
                                 {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ height: 32, width: 'auto', maxWidth: 72, objectFit: 'contain', flexShrink: 0 }} />}
                                 <div style={{ flex: 1 }}>
-                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
+                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name || r.company?.name || company.name}</p>
                                   {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
                                 </div>
                                 <button
@@ -429,15 +429,16 @@ export const OwnerCabinetPage = () => {
                         <div style={{ background: 'rgba(15,23,42,0.55)', padding: 12, borderRadius: 7 }}>
                           <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{t('company_logo_used')}</p>
                           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                            <input placeholder={t('name')} value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
+                            <input placeholder={t('name_optional')} value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
                             <input placeholder={t('address')} value={rAddress} onChange={(e) => setRAddress(e.target.value)} style={inputStyle} />
                           </div>
+                          <p style={{ margin: '6px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.45)' }}>{t('blank_uses_company_name')}</p>
                           {rError && <p style={{ color: '#f87171', marginTop: 8, fontSize: 12 }}>{rError}</p>}
                           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                             <button
                               onClick={() => createRestaurant.mutate(company.id)}
-                              disabled={!rName.trim() || createRestaurant.isPending}
-                              style={{ ...btnStyle, opacity: !rName.trim() ? 0.5 : 1, fontSize: 12, padding: '6px 12px' }}
+                              disabled={createRestaurant.isPending}
+                              style={{ ...btnStyle, fontSize: 12, padding: '6px 12px' }}
                             >
                               {createRestaurant.isPending ? t('adding') : t('add')}
                             </button>

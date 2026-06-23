@@ -52,6 +52,27 @@ export const ChiefAdminPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-companies'] }),
   });
 
+  // ── Inline name editing (company + restaurant) ────────────────────────────
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [editingRestaurantId, setEditingRestaurantId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+
+  const renameCompany = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => companyService.update(id, { name }),
+    onSuccess: () => {
+      setEditingCompanyId(null);
+      queryClient.invalidateQueries({ queryKey: ['cad-companies'] });
+    },
+  });
+
+  const renameRestaurant = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => restaurantService.update(id, { name }),
+    onSuccess: () => {
+      setEditingRestaurantId(null);
+      queryClient.invalidateQueries({ queryKey: ['cad-companies'] });
+    },
+  });
+
   // ── User actions ─────────────────────────────────────────────────────────
   const [uName, setUName] = useState('');
   const [uPwd, setUPwd] = useState('');
@@ -160,13 +181,41 @@ export const ChiefAdminPage = () => {
                       <img src={getPhotoUrl(company.logoUrl)} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
                     )}
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{company.name}</p>
+                      {editingCompanyId === company.id ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <input
+                            autoFocus
+                            value={nameDraft}
+                            onChange={(e) => setNameDraft(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && nameDraft.trim()) renameCompany.mutate({ id: company.id, name: nameDraft.trim() }); if (e.key === 'Escape') setEditingCompanyId(null); }}
+                            style={{ ...inputStyle, fontWeight: 700, fontSize: 15, padding: '4px 8px', flex: 1, minWidth: 0 }}
+                          />
+                          <button
+                            onClick={() => { if (nameDraft.trim()) renameCompany.mutate({ id: company.id, name: nameDraft.trim() }); }}
+                            disabled={!nameDraft.trim() || renameCompany.isPending}
+                            style={{ ...btnStyle, fontSize: 12, padding: '5px 10px' }}
+                          >
+                            {renameCompany.isPending ? 'Saving…' : 'Save'}
+                          </button>
+                          <button onClick={() => setEditingCompanyId(null)} style={{ ...btnStyle, background: '#334155', fontSize: 12, padding: '5px 10px' }}>Cancel</button>
+                        </div>
+                      ) : (
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{company.name}</p>
+                      )}
                       <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
                         Owner:{' '}
                         <span style={{ color: '#a78bfa', fontWeight: 600 }}>{company.owner.username}</span>
                         <span style={{ marginLeft: 6, padding: '1px 6px', background: '#7c3aed', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>OWNER</span>
                       </p>
                     </div>
+                    {editingCompanyId !== company.id && (
+                      <button
+                        onClick={() => { setEditingCompanyId(company.id); setNameDraft(company.name); }}
+                        style={{ ...btnStyle, background: 'rgba(167,139,250,0.15)', color: '#c4b5fd', border: '1px solid rgba(167,139,250,0.4)', fontSize: 12, padding: '5px 10px' }}
+                      >
+                        Rename
+                      </button>
+                    )}
                     <button
                       onClick={() => { if (confirm(`Delete company "${company.name}" and all its restaurants?`)) deleteCompany.mutate(company.id); }}
                       style={{ ...btnStyle, background: '#dc2626', fontSize: 12, padding: '5px 10px' }}
@@ -187,18 +236,47 @@ export const ChiefAdminPage = () => {
                         {company.restaurants.map((r) => (
                           <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
                             {r.logoUrl && (
-                              <img src={getPhotoUrl(r.logoUrl)} alt={r.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />
+                              <img src={getPhotoUrl(r.logoUrl)} alt={r.name || company.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />
                             )}
-                            <div style={{ flex: 1 }}>
-                              <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
-                              {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
-                            </div>
-                            <button
-                              onClick={() => { if (confirm(`Delete restaurant "${r.name}"?`)) deleteRestaurant.mutate(r.id); }}
-                              style={{ ...btnStyle, background: '#7f1d1d', fontSize: 11, padding: '4px 8px' }}
-                            >
-                              Delete
-                            </button>
+                            {editingRestaurantId === r.id ? (
+                              <div style={{ flex: 1, display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input
+                                  autoFocus
+                                  value={nameDraft}
+                                  onChange={(e) => setNameDraft(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') renameRestaurant.mutate({ id: r.id, name: nameDraft.trim() }); if (e.key === 'Escape') setEditingRestaurantId(null); }}
+                                  placeholder={company.name}
+                                  style={{ ...inputStyle, fontWeight: 600, fontSize: 14, padding: '4px 8px', flex: 1, minWidth: 0 }}
+                                />
+                                <button
+                                  onClick={() => renameRestaurant.mutate({ id: r.id, name: nameDraft.trim() })}
+                                  disabled={renameRestaurant.isPending}
+                                  style={{ ...btnStyle, fontSize: 11, padding: '4px 8px' }}
+                                >
+                                  {renameRestaurant.isPending ? 'Saving…' : 'Save'}
+                                </button>
+                                <button onClick={() => setEditingRestaurantId(null)} style={{ ...btnStyle, background: '#334155', fontSize: 11, padding: '4px 8px' }}>Cancel</button>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ flex: 1 }}>
+                                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name || company.name}</p>
+                                  {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
+                                </div>
+                                <button
+                                  onClick={() => { setEditingRestaurantId(r.id); setNameDraft(r.name); }}
+                                  style={{ ...btnStyle, background: 'rgba(167,139,250,0.15)', color: '#c4b5fd', border: '1px solid rgba(167,139,250,0.4)', fontSize: 11, padding: '4px 8px' }}
+                                >
+                                  Rename
+                                </button>
+                                <button
+                                  onClick={() => { if (confirm(`Delete restaurant "${r.name || company.name}"?`)) deleteRestaurant.mutate(r.id); }}
+                                  style={{ ...btnStyle, background: '#7f1d1d', fontSize: 11, padding: '4px 8px' }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>

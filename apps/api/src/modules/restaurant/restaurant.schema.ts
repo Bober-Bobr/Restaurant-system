@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 export const createRestaurantSchema = z.object({
-  name: z.string().min(1).max(150),
+  // Name is optional — a nameless restaurant inherits its company's name on create.
+  name: z.string().max(150).optional(),
   address: z.string().max(300).optional(),
   phone: z.string().max(60).optional().nullable(),
   email: z.string().max(160).optional().nullable(),
