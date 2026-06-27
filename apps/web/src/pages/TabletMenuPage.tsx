@@ -4,7 +4,7 @@ import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
-import type { MenuItem, TableCategory, TabletStatus } from '../types/domain';
+import type { MenuItem, TableCategory, TableCategoryPackageItem, TabletStatus } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { dishName, dishDescription } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
@@ -573,6 +573,119 @@ function CourseChoiceSection({
   return card ? <section className="rg-card p-4 sm:p-6 reveal">{inner}</section> : <>{inner}</>;
 }
 
+// ── Dish picker modal: pick a free replacement, shown with photo + description ──
+// Opened by the "Edit" button on an included dish. The first option is the
+// dish included by default (selecting it clears the swap); the rest are the
+// free alternatives in the same category.
+
+function DishSwapModal({
+  pi, alternatives, chosenId, locale, t, onChoose, onClose,
+}: {
+  pi: TableCategoryPackageItem;
+  alternatives: MenuItem[];
+  chosenId?: string;
+  locale: Locale;
+  t: TFn;
+  onChoose: (menuItemId: string | null) => void;
+  onClose: () => void;
+}) {
+  const options: { item: TableCategoryPackageItem['menuItem']; value: string | null; isDefault: boolean }[] = [
+    { item: pi.menuItem, value: null, isDefault: true },
+    ...alternatives.map((m) => ({ item: m, value: m.id as string | null, isDefault: false })),
+  ];
+  const currentValue = chosenId ?? null;
+
+  return (
+    <div onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(6,14,9,0.8)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}>
+      <div onClick={(e) => e.stopPropagation()} className="tablet-fade-up"
+        style={{
+          width: '100%', maxWidth: 760, maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column',
+          borderRadius: 24,
+          background: 'linear-gradient(135deg, rgba(26,51,32,0.98) 0%, rgba(15,33,20,0.98) 100%)',
+          border: '1px solid rgba(201,164,44,0.35)',
+          boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
+        }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <p className="rg-label" style={{ margin: 0 }}>{dishName(pi.menuItem, locale)}</p>
+            <h3 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#fff' }}>{t('choose_replacement')}</h3>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t('cancel')}
+            style={{
+              flexShrink: 0, width: 40, height: 40, borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)',
+              color: '#fff', fontSize: 22, lineHeight: 1, cursor: 'pointer',
+            }}>×</button>
+        </div>
+
+        {/* Options grid */}
+        <div className="scrollbar-none"
+          style={{ overflowY: 'auto', padding: 18, display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))' }}>
+          {options.map(({ item, value, isDefault }) => {
+            const selected = currentValue === value;
+            const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+            return (
+              <button key={value ?? 'default'} type="button" onClick={() => onChoose(value)}
+                style={{
+                  textAlign: 'left', padding: 0, cursor: 'pointer',
+                  borderRadius: 16, overflow: 'hidden',
+                  background: selected ? 'rgba(201,164,44,0.14)' : 'rgba(255,255,255,0.05)',
+                  border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'border 0.18s, background 0.18s',
+                }}>
+                {photoSrc ? (
+                  <img src={photoSrc} alt={dishName(item, locale)}
+                    style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ height: 150, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="34" height="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+                <div style={{ padding: '10px 12px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25 }}>
+                      {dishName(item, locale)}
+                    </p>
+                    {selected && (
+                      <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: '#c9a42c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                  {isDefault && (
+                    <span style={{ display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#d9b84a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.3)' }}>
+                      {t('included_default')}
+                    </span>
+                  )}
+                  {dishDescription(item, locale) && (
+                    <p style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+                      {dishDescription(item, locale)}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Reusable: included dishes (non-course categories) with free swaps ──────
 
 function IncludedDishesSection({
@@ -590,6 +703,7 @@ function IncludedDishesSection({
   replacements: Record<string, string>;
   onReplacement: (packageItemId: string, menuItemId: string | null) => void;
 }) {
+  const [editingPiId, setEditingPiId] = useState<string | null>(null);
   const includedItems = (tableCategory.packageItems ?? []).filter(
     (pi) => pi.menuItem.category !== 'FIRST_COURSE' && pi.menuItem.category !== 'SECOND_COURSE' && pi.menuItem.category !== 'THIRD_COURSE'
   );
@@ -602,6 +716,19 @@ function IncludedDishesSection({
       (acc, pi) => { const cat = pi.menuItem.category; if (!acc[cat]) acc[cat] = []; acc[cat]!.push(pi); return acc; }, {}
     )
   ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
+
+  // Free alternatives for a package item: same category, FREE status, not already
+  // part of the package and not swapped-in for another slot.
+  const getFreeAlts = (pi: TableCategoryPackageItem) => {
+    const usedByOthers = new Set(
+      Object.entries(replacements).filter(([piId]) => piId !== pi.id).map(([, menuItemId]) => menuItemId)
+    );
+    return (menuItems ?? []).filter(
+      (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' &&
+        !packageDefaultIds.has(m.id) && !usedByOthers.has(m.id)
+    );
+  };
+  const editingPi = editingPiId ? includedItems.find((pi) => pi.id === editingPiId) ?? null : null;
 
   const inner = (
     <>
@@ -627,15 +754,7 @@ function IncludedDishesSection({
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
             {items!.map((pi, i) => {
-              // Dishes already swapped-in for OTHER package items are no longer
-              // offered here, so the same free dish can't replace two dishes.
-              const usedByOthers = new Set(
-                Object.entries(replacements).filter(([piId]) => piId !== pi.id).map(([, menuItemId]) => menuItemId)
-              );
-              const freeAlts = (menuItems ?? []).filter(
-                (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' &&
-                  !packageDefaultIds.has(m.id) && !usedByOthers.has(m.id)
-              );
+              const freeAlts = getFreeAlts(pi);
               const chosenId = replacements[pi.id];
               const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
               const isSwapped = displayItem.id !== pi.menuItem.id;
@@ -666,30 +785,21 @@ function IncludedDishesSection({
                       </p>
                     )}
                     {!viewOnly && freeAlts.length > 0 && (
-                      <div className="mt-2.5">
-                        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(96,165,250,0.85)', marginBottom: 5 }}>
-                          {t('swap_free')}
-                        </label>
-                        <select
-                          value={chosenId ?? pi.menuItem.id}
-                          onChange={(e) => onReplacement(pi.id, e.target.value === pi.menuItem.id ? null : e.target.value)}
-                          style={{
-                            width: '100%', padding: '7px 9px', borderRadius: 9,
-                            background: 'rgba(0,0,0,0.35)', color: '#fff',
-                            border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.15)'}`,
-                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          }}
-                        >
-                          <option value={pi.menuItem.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                            {dishName(pi.menuItem, locale)} ({t('included_default')})
-                          </option>
-                          {freeAlts.map((alt) => (
-                            <option key={alt.id} value={alt.id} style={{ background: '#1a2e20', color: '#fff' }}>
-                              {dishName(alt, locale)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <button type="button" onClick={() => setEditingPiId(pi.id)}
+                        className="mt-2.5"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
+                          fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
+                          color: isSwapped ? '#93c5fd' : '#d9b84a',
+                          background: isSwapped ? 'rgba(59,130,246,0.12)' : 'rgba(201,164,44,0.1)',
+                          border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(201,164,44,0.3)'}`,
+                        }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {t('edit')}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -698,6 +808,18 @@ function IncludedDishesSection({
           </div>
         </div>
       ))}
+
+      {editingPi && (
+        <DishSwapModal
+          pi={editingPi}
+          alternatives={getFreeAlts(editingPi)}
+          chosenId={replacements[editingPi.id]}
+          locale={locale}
+          t={t}
+          onChoose={(menuItemId) => { onReplacement(editingPi.id, menuItemId); setEditingPiId(null); }}
+          onClose={() => setEditingPiId(null)}
+        />
+      )}
     </>
   );
 

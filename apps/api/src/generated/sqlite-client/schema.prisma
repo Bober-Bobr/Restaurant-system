@@ -1,0 +1,609 @@
+// READ-ONLY source schema for the one-time SQLite -> Postgres data migration.
+// It mirrors the SQLite database as it was before the cutover and generates a
+// SEPARATE client (output below) so the ETL script can open the old SQLite DB
+// and the new Postgres DB at the same time. Do not edit models here for new
+// features — schema.prisma is the source of truth. Safe to delete once the
+// migration is done.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/sqlite-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("SQLITE_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  MENU_NOT_SELECTED
+}
+
+enum EventType {
+  RESERVATION
+  BANQUET
+  WEDDING
+  BIRTHDAY
+  PRIVATE_PARTY
+  CORPORATE
+  FOTIHA_TUI
+  NACHOR_OSHI
+}
+
+enum MenuCategory {
+  SOUPS
+  PIZZA
+  COLD_APPETIZERS
+  GRILL
+  PASTRY
+  HOT_APPETIZERS
+  BEER_SNACKS
+  DESSERT
+  LAMB_DISHES
+  BEEF_DISHES
+  CHICKEN_DISHES
+  SIDE_DISHES
+  PASTA
+  SOFT_DRINKS
+  STEAKS
+  ENERGY_DRINKS
+  SALADS_OIL
+  SALADS_MAYO
+  COFFEE
+  SUSHI_ROLLS
+  DRIED_FRUITS
+  CANDIES
+  // Legacy values kept for existing data and the tablet course-choice feature.
+  FIRST_COURSE
+  SECOND_COURSE
+  THIRD_COURSE
+  SWEETS
+  FRUITS
+  ALCOHOL
+  LEMONADES
+  NON_ALCOHOLIC_COCKTAILS
+  ALCOHOLIC_COCKTAILS
+  MILKSHAKES
+  TEA_MENU
+  FRESH_JUICES
+  LIQUEURS
+}
+
+enum Region {
+  US
+  CA
+  GB
+  DE
+  FR
+  IT
+  ES
+  RU
+  CN
+  JP
+  KR
+  AU
+  UZ
+  EU
+}
+
+model Event {
+  id                      String               @id @default(cuid())
+  eventNumber             Int                  @unique @default(0)
+  customerName            String
+  customerPhone           String?
+  eventDate               DateTime
+  guestCount              Int
+  status                  EventStatus          @default(DRAFT)
+  eventType               EventType            @default(RESERVATION)
+  region                  Region?
+  hallId                  String?
+  tableCategoryId         String?
+  // Optional children's table add-on chosen on the tablet (plain refs, no FK).
+  childrenTableCategoryId String?
+  childrenCount           Int                  @default(0)
+  restaurantId            String?
+  notes                   String?
+  birthdayPersonName      String?
+  brideName               String?
+  groomName               String?
+  honoreePersonName       String?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  selections              EventMenuSelection[]
+  invitation              Invitation?
+  hall                    Hall?                @relation(fields: [hallId], references: [id], onDelete: SetNull)
+  tableCategory           TableCategory?       @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
+  restaurant              Restaurant?          @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@index([hallId])
+  @@index([tableCategoryId])
+  @@index([restaurantId])
+}
+
+enum AdminRole {
+  CHIEF_ADMIN
+  MANAGER
+  OWNER
+  ADMIN
+  CATERING_ADMIN
+  RESTAURANT_MANAGER
+  EMPLOYEE
+  KITCHEN
+}
+
+model AdminUser {
+  id               String            @id @default(cuid())
+  username         String            @unique
+  passwordHash     String
+  refreshTokenHash String?
+  role             AdminRole         @default(OWNER)
+  restaurantId     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  ownedRestaurants Restaurant[]      @relation("OwnedRestaurants")
+  restaurant       Restaurant?       @relation("StaffRestaurant", fields: [restaurantId], references: [id], onDelete: SetNull)
+  companies        Company[]
+  sessions         Session[]
+  expenseDays      ExpenseDay[]      @relation("ManagerExpenseDays")
+  guestInvitations GuestInvitation[] @relation("ManagerGuestInvitations")
+  designTemplates  DesignTemplate[]  @relation("ManagerDesignTemplates")
+
+  @@index([restaurantId])
+}
+
+// ── Restaurant Manager expense ledger ──
+// These belong to a RESTAURANT_MANAGER user (not a restaurant); each day holds
+// a budget plus product/salary/additional expenses.
+model ExpenseDay {
+  id           String            @id @default(cuid())
+  date         String // YYYY-MM-DD
+  allocatedSum Int               @default(0) // whole so'm (not tiyin)
+  report       String? // free-text end-of-day report
+  isClosed     Boolean           @default(false)
+  closedAt     DateTime?
+  managerId    String
+  manager      AdminUser         @relation("ManagerExpenseDays", fields: [managerId], references: [id], onDelete: Cascade)
+  events       DayEvent[]
+  extras       DayExtraExpense[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([managerId, date])
+  @@index([managerId])
+}
+
+// Day-level "additional expenses" kept separate from the per-event main
+// expenses. Managed on the Additional Expenses tab and exported separately.
+model DayExtraExpense {
+  id        String     @id @default(cuid())
+  name      String
+  amountSum Int        @default(0) // whole so'm (not tiyin)
+  sortOrder Int        @default(0)
+  dayId     String
+  day       ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@index([dayId])
+}
+
+// A department/event within a day: NAHOR, FOTIHA, TUI or OTHERS. Each holds its
+// own product/salary/additional expense lines.
+model DayEvent {
+  id               String              @id @default(cuid())
+  type             String // NAHOR | FOTIHA | TUI | OTHERS
+  dayId            String
+  day              ExpenseDay          @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  // Booking: guestCount * pricePerGuestSum is added to this event's spent total.
+  bookingName      String?
+  guestCount       Int                 @default(0)
+  pricePerGuestSum Int                 @default(0) // whole so'm (not tiyin)
+  report           String? // free-text notes for this event/department
+  products         ProductExpense[]
+  salaries         SalaryExpense[]
+  additionals      AdditionalExpense[]
+  createdAt        DateTime            @default(now())
+
+  @@unique([dayId, type])
+  @@index([dayId])
+}
+
+model ProductExpense {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Float    @default(0)
+  unit      String   @default("kg")
+  amountSum Int      @default(0) // whole so'm (not tiyin)
+  sortOrder Int      @default(0)
+  eventId   String
+  event     DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model SalaryExpense {
+  id        String   @id @default(cuid())
+  name      String
+  amountSum Int      @default(0) // whole so'm (not tiyin)
+  sortOrder Int      @default(0)
+  eventId   String
+  event     DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model AdditionalExpense {
+  id        String   @id @default(cuid())
+  name      String
+  amountSum Int      @default(0) // whole so'm (not tiyin)
+  sortOrder Int      @default(0)
+  eventId   String
+  event     DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  user             AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  logoUrl     String?
+  ownerId     String
+  owner       AdminUser    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  restaurants Restaurant[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([ownerId])
+}
+
+model Restaurant {
+  id                 String            @id @default(cuid())
+  name               String
+  address            String?
+  phone              String?
+  email              String?
+  history            String?
+  logoUrl            String?
+  backgroundImageUrl String?
+  categoryOrder      String?
+  excludedCategories String?
+  // Master switch: when true, subcategories are disabled everywhere — the menu
+  // items Subcategory column and the catering-site subcategory headers are hidden.
+  hideSubcategories  Boolean           @default(false)
+  ownerId            String
+  companyId          String?
+  owner              AdminUser         @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)
+  company            Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  staff              AdminUser[]       @relation("StaffRestaurant")
+  events             Event[]
+  menuItems          MenuItem[]
+  menuSubcategories  MenuSubcategory[]
+  tableCategories    TableCategory[]
+  halls              Hall[]
+  invitations        Invitation[]
+  reviews            Review[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([ownerId])
+  @@index([companyId])
+}
+
+model Review {
+  id           String     @id @default(cuid())
+  restaurantId String
+  authorName   String
+  rating       Int
+  text         String?
+  photoUrl     String?
+  isApproved   Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+model TableCategory {
+  id                 String                  @id @default(cuid())
+  name               String
+  includedCategories String                  @default("")
+  ratePerPerson      Int                     @default(0)
+  discountPercent    Int                     @default(0)
+  // Table audience: ADULT (default) or CHILDREN. A CHILDREN table is shown as an
+  // optional add-on table on the tablet, priced by a separate children count.
+  tableType          String                  @default("ADULT")
+  description        String?
+  photoUrl           String?
+  photos             Json                    @default("[]")
+  isActive           Boolean                 @default(true)
+  sortOrder          Int                     @default(0)
+  restaurantId       String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  events             Event[]
+  packageItems       TableCategoryMenuItem[]
+  restaurant         Restaurant?             @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
+}
+
+model TableCategoryMenuItem {
+  id              String        @id @default(cuid())
+  tableCategoryId String
+  menuItemId      String
+  servings        Int           @default(1)
+  tableCategory   TableCategory @relation(fields: [tableCategoryId], references: [id], onDelete: Cascade)
+  menuItem        MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([tableCategoryId, menuItemId])
+  @@index([tableCategoryId])
+}
+
+model Hall {
+  id           String      @id @default(cuid())
+  name         String
+  capacity     Int
+  description  String?
+  photoUrl     String?
+  photos       Json        @default("[]")
+  isActive     Boolean     @default(true)
+  restaurantId String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  events       Event[]
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId])
+}
+
+model MenuItem {
+  id                String                  @id @default(cuid())
+  name              String
+  description       String?
+  // Optional per-language overrides for name/description, shown on the tablet and
+  // catering site. Shape: { en?: string; ru?: string; uz?: string }. The base
+  // name/description above act as the default/fallback when a locale is missing.
+  nameI18n          Json?
+  descriptionI18n   Json?
+  category          MenuCategory
+  priceCents        Int
+  photoUrl          String?
+  isActive          Boolean                 @default(true)
+  showOnTablet      Boolean                 @default(true)
+  // Tablet "Additional" status: NONE (hidden), FREE (free replacement only), PAID (paid additional item).
+  tabletStatus      String                  @default("PAID")
+  isBestseller      Boolean                 @default(false)
+  isOutOfStock      Boolean                 @default(false)
+  sortOrder         Int                     @default(0)
+  restaurantId      String?
+  // Optional subcategory grouping within the dish's category (catering site).
+  subcategoryId     String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  selections        EventMenuSelection[]
+  packageCategories TableCategoryMenuItem[]
+  restaurant        Restaurant?             @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  subcategory       MenuSubcategory?        @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+
+  @@index([category, isActive])
+  @@index([restaurantId])
+  @@index([subcategoryId])
+}
+
+// A named grouping of dishes inside a single MenuCategory, used to divide a
+// category into sections on the catering site.
+model MenuSubcategory {
+  id           String       @id @default(cuid())
+  name         String
+  category     MenuCategory
+  sortOrder    Int          @default(0)
+  // When true, the subcategory header/chip is not rendered on the catering site;
+  // its dishes fall back into the category's ungrouped block to save space.
+  hidden       Boolean      @default(false)
+  restaurantId String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  items        MenuItem[]
+  restaurant   Restaurant?  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, category, name])
+  @@index([restaurantId, category])
+}
+
+model EventMenuSelection {
+  id             String   @id @default(cuid())
+  eventId        String
+  menuItemId     String
+  quantity       Int
+  unitPriceCents Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, menuItemId])
+  @@index([eventId])
+}
+
+model Invitation {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  eventId      String? @unique
+  restaurantId String
+  createdById  String?
+
+  // Ordered freeform block layout for the WYSIWYG designer (JSON array of Block).
+  // When empty, the public page falls back to the legacy fixed-section renderer.
+  blocks Json @default("[]")
+
+  // Top hero card (gift / promo)
+  promoTitle    String?
+  promoSubtitle String?
+  promoCode     String?
+  promoImageUrl String?
+
+  // Secondary promo block under hero
+  promoCodeAlt     String?
+  promoDescription String?
+
+  // Telegram CTA
+  telegramUrl   String?
+  telegramLabel String?
+
+  // Welcome / venue card
+  welcomeTitle    String?
+  welcomeSubtitle String?
+  welcomeImageUrl String?
+  welcomeMessage  String?
+
+  // Countdown
+  countdownAt    DateTime?
+  countdownLabel String?
+
+  // Menu showcase items (JSON array of { number, name, photoUrl })
+  menuItems Json @default("[]")
+
+  // Photo gallery (JSON array of strings)
+  galleryPhotos Json @default("[]")
+
+  // Social + contacts
+  instagramUrl    String?
+  instagramLabel  String?
+  phone           String?
+  contactsTitle   String?
+  contactVCardUrl String?
+
+  // Theme / palette
+  accentColor        String?
+  backgroundColor    String?
+  backgroundImageUrl String?
+
+  // Optional looping background music played on the public invitation
+  musicUrl String?
+
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event      Event?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([eventId])
+}
+
+// ── Standalone guest invitation (wedding-style, not tied to a restaurant/event) ──
+// Created by a MANAGER; rendered publicly on <slug>.invitation.v-menu.uz.
+model GuestInvitation {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  createdById String?
+
+  // Ordered freeform block layout (JSON array of Block); empty → legacy renderer.
+  blocks Json @default("[]")
+
+  // Theme + cursor/finger trail
+  accentColor        String?
+  backgroundColor    String?
+  backgroundImageUrl String?
+  musicUrl           String?
+  trailTemplate      String  @default("sparkle") // sparkle | hearts | candy
+  trailColor         String?
+
+  // Hero (couple names + background photo)
+  coupleNames  String?
+  heroSubtitle String?
+  heroImageUrl String?
+
+  // Dear-guest message
+  greetingTitle   String?
+  greetingMessage String?
+  coupleSignature String?
+
+  // Venue / restaurant + map
+  venueLabel     String?
+  venueName      String?
+  eventDate      DateTime?
+  venueImageUrl  String?
+  mapAddress     String?
+  mapButtonLabel String?
+
+  // Timing schedule (JSON array of { time, label })
+  timingTitle String?
+  timingItems Json    @default("[]")
+
+  // Countdown
+  countdownAt    DateTime?
+  countdownLabel String?
+
+  // Contacts / brand
+  telegramUrl  String?
+  phone        String?
+  instagramUrl String?
+  brandLabel   String?
+
+  // RSVP
+  rsvpTitle   String?
+  rsvpEnabled Boolean @default(true)
+
+  // Per-section animations: { sectionKey: { type, durationMs, delayMs } }
+  sectionAnimations Json @default("{}")
+
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy AdminUser?            @relation("ManagerGuestInvitations", fields: [createdById], references: [id], onDelete: SetNull)
+  rsvps     GuestInvitationRsvp[]
+
+  @@index([createdById])
+}
+
+model GuestInvitationRsvp {
+  id           String   @id @default(cuid())
+  invitationId String
+  guestName    String
+  attending    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  invitation GuestInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
+}
+
+// A manager-private reusable design snapshot (blocks + theme) for the WYSIWYG
+// designer. `kind` separates flyer templates from invitation templates.
+model DesignTemplate {
+  id        String   @id @default(cuid())
+  ownerId   String?
+  name      String
+  kind      String // flyer | invitation
+  blocks    Json     @default("[]")
+  theme     Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  owner AdminUser? @relation("ManagerDesignTemplates", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+}
