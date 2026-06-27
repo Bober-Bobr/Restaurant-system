@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { EventList } from '../components/events/EventList';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
@@ -218,6 +219,44 @@ export const AdminEventsPage = () => {
       setSearchError(t('event_not_found', { id: targetId }));
     }
   };
+
+  // Populate the editor form from an event and bring it into view at the top of
+  // the page (the editing section). Shared by the list, search, and the
+  // "focus event" deep-link coming from the calendar.
+  const startEditing = (event: Event) => {
+    setEditingId(event.id);
+    setCustomerName(event.customerName);
+    setCustomerPhone(event.customerPhone ?? '');
+    const evDate = new Date(event.eventDate);
+    const evLocal = new Date(evDate.getTime() - evDate.getTimezoneOffset() * 60000).toISOString();
+    setEventDate(evLocal.slice(0, 10));
+    setEventTime(evLocal.slice(11, 16));
+    setGuestCountText(event.guestCount.toString());
+    setEventType(event.eventType ?? 'RESERVATION');
+    setStatus(event.status);
+    setHallId(event.hallId ?? '');
+    setTableCategoryId(event.tableCategoryId ?? '');
+    setNotes(event.notes ?? '');
+    setBirthdayPersonName(event.birthdayPersonName ?? '');
+    setBrideName(event.brideName ?? '');
+    setGroomName(event.groomName ?? '');
+    setHonoreeName(event.honoreePersonName ?? '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Deep link from the calendar: /?editEventId=<id> opens that event in the
+  // editor once the events have loaded, then clears the param so it doesn't
+  // re-trigger on later renders.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const editId = searchParams.get('editEventId');
+    if (!editId || !events) return;
+    const event = events.find((item) => item.id === Number(editId));
+    if (event) startEditing(event);
+    searchParams.delete('editEventId');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, searchParams]);
 
   const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
   const canSave = validation.errors.length === 0 && !updateMutation.isPending;
@@ -551,26 +590,7 @@ export const AdminEventsPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setEditingId(searchResult.id);
-                    setCustomerName(searchResult.customerName);
-                    setCustomerPhone(searchResult.customerPhone ?? '');
-                    const srDate = new Date(searchResult.eventDate);
-                    const srLocal = new Date(srDate.getTime() - srDate.getTimezoneOffset() * 60000).toISOString();
-                    setEventDate(srLocal.slice(0, 10));
-                    setEventTime(srLocal.slice(11, 16));
-                    setGuestCountText(searchResult.guestCount.toString());
-                    setEventType(searchResult.eventType ?? 'RESERVATION');
-                    setStatus(searchResult.status);
-                    setHallId(searchResult.hallId ?? '');
-                    setTableCategoryId(searchResult.tableCategoryId ?? '');
-                    setNotes(searchResult.notes ?? '');
-                    setBirthdayPersonName(searchResult.birthdayPersonName ?? '');
-                    setBrideName(searchResult.brideName ?? '');
-                    setGroomName(searchResult.groomName ?? '');
-                    setHonoreeName(searchResult.honoreePersonName ?? '');
-                    document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
+                  onClick={() => startEditing(searchResult)}
                 >
                   {t('edit')}
                 </Button>
@@ -601,25 +621,7 @@ export const AdminEventsPage = () => {
           events={events}
           onEdit={(eventId) => {
             const event = events.find((item) => item.id === eventId);
-            if (!event) return;
-
-            setEditingId(event.id);
-            setCustomerName(event.customerName);
-            setCustomerPhone(event.customerPhone ?? '');
-            const evDate = new Date(event.eventDate);
-            const evLocal = new Date(evDate.getTime() - evDate.getTimezoneOffset() * 60000).toISOString();
-            setEventDate(evLocal.slice(0, 10));
-            setEventTime(evLocal.slice(11, 16));
-            setGuestCountText(event.guestCount.toString());
-            setEventType(event.eventType ?? 'RESERVATION');
-            setStatus(event.status);
-            setHallId(event.hallId ?? '');
-            setTableCategoryId(event.tableCategoryId ?? '');
-            setNotes(event.notes ?? '');
-            setBirthdayPersonName(event.birthdayPersonName ?? '');
-            setBrideName(event.brideName ?? '');
-            setGroomName(event.groomName ?? '');
-            setHonoreeName(event.honoreePersonName ?? '');
+            if (event) startEditing(event);
           }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}

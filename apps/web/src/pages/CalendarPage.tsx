@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
@@ -30,7 +31,7 @@ const SLOT_KEYS: Record<Slot, Parameters<typeof translate>[0]> = {
   dinner: 'dinner',
 };
 
-type EventInfo = { name: string; time: string; type: string | null; sortAt: number };
+type EventInfo = { id: number; name: string; time: string; type: string | null; sortAt: number };
 type DayBooking = { slots: Set<Slot>; events: EventInfo[] };
 
 const EVENT_TYPE_KEY: Record<string, Parameters<typeof translate>[0]> = {
@@ -89,6 +90,7 @@ export const CalendarPage = () => {
       const booking = dayMap.get(dayKey)!;
       if (slot) booking.slots.add(slot);
       booking.events.push({
+        id: ev.id,
         name: ev.customerName,
         time: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
         type: ev.eventType ?? null,
@@ -325,6 +327,7 @@ function EventDayBox({
   onClose: () => void;
   t: (k: Parameters<typeof translate>[0], p?: Record<string, string | number>) => string;
 }) {
+  const navigate = useNavigate();
   return (
     <>
       {/* Backdrop to catch outside clicks */}
@@ -351,7 +354,22 @@ function EventDayBox({
             background: 'rgba(201,164,44,0.08)',
             border: '1px solid rgba(201,164,44,0.2)',
           }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{ev.name}</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{ev.name}</p>
+              <button
+                type="button"
+                onClick={() => { onClose(); navigate(`/?editEventId=${ev.id}`); }}
+                style={{
+                  flexShrink: 0,
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+                  padding: '3px 10px', borderRadius: 999, cursor: 'pointer',
+                  background: 'rgba(201,164,44,0.18)', color: '#c9a42c',
+                  border: '1px solid rgba(201,164,44,0.4)',
+                }}
+              >
+                {t('edit')}
+              </button>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{ev.time}</span>
               {ev.type && (
