@@ -97,7 +97,9 @@ export const TabletSummaryPage = () => {
   const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
     childrenTableSelected, childrenCount, childReplacements,
-    locale, setLocale, setGuestCount, reset } = useTabletStore();
+    locale, setLocale, setGuestCount, reset,
+    customerName: draftCustomerName, customerPhone: draftCustomerPhone,
+    eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -110,10 +112,12 @@ export const TabletSummaryPage = () => {
   // Reveal-on-scroll: re-scan once data finishes loading and sections render.
   const revealRef = useScrollReveal<HTMLDivElement>([isLoading]);
 
-  const [customerName, setCustomerName]             = useState('');
-  const [customerPhone, setCustomerPhone]           = useState('');
-  const [eventDate, setEventDate]                   = useState('');
-  const [eventTime, setEventTime]                   = useState('');
+  // Pre-fill contact + date/time when they were entered on the admin Events page
+  // and handed off via "Change Menu" (falls back to empty in the normal flow).
+  const [customerName, setCustomerName]             = useState(draftCustomerName);
+  const [customerPhone, setCustomerPhone]           = useState(draftCustomerPhone);
+  const [eventDate, setEventDate]                   = useState(draftEventDate);
+  const [eventTime, setEventTime]                   = useState(draftEventTime);
   const [eventNotes, setEventNotes]                 = useState('');
   const [eventType, setEventType]                   = useState<EventType>('RESERVATION');
   const [birthdayPersonName, setBirthdayPersonName] = useState('');

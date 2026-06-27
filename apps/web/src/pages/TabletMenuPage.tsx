@@ -944,9 +944,11 @@ export const TabletMenuPage = () => {
   }, [loadPublicData, restaurantId]);
 
   // Reset table-category selection on every mount so the slide reappears
-  // each time a guest navigates back to this page (kiosk behavior).
+  // each time a guest navigates back to this page (kiosk behavior). When the
+  // admin Events page hands off a draft (prefill=1), keep its pre-selected
+  // table category instead of clearing it.
   useEffect(() => {
-    setTableCategory('');
+    if (searchParams.get('prefill') !== '1') setTableCategory('');
   }, []);
 
   const dismissWelcome = () => {

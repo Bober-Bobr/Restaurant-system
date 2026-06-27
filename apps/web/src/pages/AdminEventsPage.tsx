@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EventList } from '../components/events/EventList';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
+import { useAuthStore } from '../store/auth.store';
+import { useTabletStore } from '../store/tablet.store';
 import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { Input } from '../components/ui/input';
@@ -57,7 +59,9 @@ const STATUS_LABEL_KEY: Record<Event['status'], Parameters<typeof translate>[0]>
 
 export const AdminEventsPage = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { locale } = useAdminStore();
+  const tabletRestaurantId = useAuthStore((s) => s.restaurantId) ?? '';
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const { data: events, isLoading, isError } = useQuery({
     queryKey: ['events'],
@@ -80,7 +84,7 @@ export const AdminEventsPage = () => {
   const [eventTime, setEventTime] = useState('');
   const [guestCountText, setGuestCountText] = useState('50');
   const [eventType, setEventType] = useState<NonNullable<Event['eventType']>>('RESERVATION');
-  const [status, setStatus] = useState<NonNullable<Event['status']>>('DRAFT');
+  const [status, setStatus] = useState<NonNullable<Event['status']>>('MENU_NOT_SELECTED');
   const [hallId, setHallId] = useState('');
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
@@ -152,7 +156,7 @@ export const AdminEventsPage = () => {
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
-      setStatus('DRAFT');
+      setStatus('MENU_NOT_SELECTED');
       setEventType('RESERVATION');
       setHallId('');
       setTableCategoryId('');
@@ -175,7 +179,7 @@ export const AdminEventsPage = () => {
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
-      setStatus('DRAFT');
+      setStatus('MENU_NOT_SELECTED');
       setEventType('RESERVATION');
       setHallId('');
       setTableCategoryId('');
@@ -242,6 +246,22 @@ export const AdminEventsPage = () => {
     setGroomName(event.groomName ?? '');
     setHonoreeName(event.honoreePersonName ?? '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // "Change Menu": hand the data entered so far over to the tablet flow (which
+  // picks the menu/courses), then jump to the tablet. The `prefill=1` flag tells
+  // the tablet menu page to keep the pre-selected table category instead of
+  // resetting it. Contact + date/time resurface on the tablet Summary page.
+  const goToTabletWithDraft = () => {
+    const tablet = useTabletStore.getState();
+    tablet.setGuestCount(parsePositiveInt(guestCountText) ?? 0);
+    tablet.setHall(hallId);
+    tablet.setTableCategory(tableCategoryId);
+    tablet.setCustomerName(customerName.trim());
+    tablet.setCustomerPhone(customerPhone.trim());
+    tablet.setEventDate(eventDate);
+    tablet.setEventTime(eventTime);
+    navigate(`/tablet?restaurantId=${encodeURIComponent(tabletRestaurantId)}&prefill=1`);
   };
 
   // Deep link from the calendar: /?editEventId=<id> opens that event in the
@@ -377,11 +397,10 @@ export const AdminEventsPage = () => {
           <label style={{ display: 'grid', gap: 6 }}>
             {t('status')}
             <Select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
-              <option value="DRAFT">{t('status_draft')}</option>
+              <option value="MENU_NOT_SELECTED">{t('status_menu_not_selected')}</option>
               <option value="CONFIRMED">{t('status_confirmed')}</option>
               <option value="CANCELLED">{t('status_cancelled')}</option>
               <option value="COMPLETED">{t('status_completed')}</option>
-              <option value="MENU_NOT_SELECTED">{t('status_menu_not_selected')}</option>
             </Select>
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -431,7 +450,7 @@ export const AdminEventsPage = () => {
                   setEventDate('');
                   setEventTime('');
                   setGuestCountText('50');
-                  setStatus('DRAFT');
+                  setStatus('MENU_NOT_SELECTED');
                   setEventType('RESERVATION');
                   setHallId('');
                   setTableCategoryId('');
@@ -459,6 +478,18 @@ export const AdminEventsPage = () => {
                 {createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create event.'}
               </span>
             ) : null}
+          </div>
+
+          {/* Change Menu — hand the entered details to the tablet flow to pick the menu */}
+          <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16, display: 'flex' }}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goToTabletWithDraft}
+              disabled={!tabletRestaurantId}
+            >
+              {t('change_menu')} →
+            </Button>
           </div>
         </form>
       </section>

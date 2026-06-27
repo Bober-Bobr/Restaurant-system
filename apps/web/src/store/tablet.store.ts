@@ -13,6 +13,12 @@ type SelectionState = {
   // Free replacements: included package-item id → chosen FREE menu-item id.
   replacements: Record<string, string>;
   guestCount: number;
+  // ── Event draft handed off from the admin Events page "Change Menu" button ──
+  // Pre-fills the tablet flow; contact + date/time surface again on the Summary.
+  customerName: string;
+  customerPhone: string;
+  eventDate: string;
+  eventTime: string;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
@@ -35,6 +41,10 @@ type SelectionState = {
   toggleChildThirdCourse: (menuItemId: string) => void;
   setChildReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setGuestCount: (count: number) => void;
+  setCustomerName: (value: string) => void;
+  setCustomerPhone: (value: string) => void;
+  setEventDate: (value: string) => void;
+  setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
   reset: () => void;
 };
@@ -48,6 +58,10 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedThirdCourseIds: [],
   replacements: {},
   guestCount: 0,
+  customerName: '',
+  customerPhone: '',
+  eventDate: '',
+  eventTime: '',
   childrenTableSelected: false,
   childrenCount: 0,
   childFirstCourseId: undefined,
@@ -165,6 +179,18 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setGuestCount: (count) => {
     set({ guestCount: Math.max(count, 0) });
   },
+  setCustomerName: (value) => {
+    set({ customerName: value });
+  },
+  setCustomerPhone: (value) => {
+    set({ customerPhone: value });
+  },
+  setEventDate: (value) => {
+    set({ eventDate: value });
+  },
+  setEventTime: (value) => {
+    set({ eventTime: value });
+  },
   setLocale: (locale) => {
     set({ locale });
   },
@@ -178,6 +204,10 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedThirdCourseIds: [],
       replacements: {},
       guestCount: 0,
+      customerName: '',
+      customerPhone: '',
+      eventDate: '',
+      eventTime: '',
       childrenTableSelected: false,
       childrenCount: 0,
       childFirstCourseId: undefined,
