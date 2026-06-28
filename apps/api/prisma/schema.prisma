@@ -326,6 +326,10 @@ model TableCategory {
   description        String?
   photoUrl           String?
   photos             Json                      @default("[]")
+  // Per-table-category free-substitution dishes: MenuItem ids offered as free
+  // swaps on the tablet for THIS table only. null = fall back to the legacy
+  // global MenuItem.tabletStatus === 'FREE' behavior.
+  freeSubstitutionItemIds Json?
   isActive           Boolean                   @default(true)
   sortOrder          Int                       @default(0)
   restaurantId       String?

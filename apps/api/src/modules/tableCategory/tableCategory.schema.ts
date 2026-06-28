@@ -15,6 +15,8 @@ export const createTableCategorySchema = z.object({
   description: z.string().max(500).optional(),
   photoUrl: z.string().min(1).optional(),
   photos: z.array(z.string()).optional(),
+  // MenuItem ids offered as free substitutions for this table category only.
+  freeSubstitutionItemIds: z.array(z.string()).optional(),
   isActive: z.boolean().optional()
 });
 

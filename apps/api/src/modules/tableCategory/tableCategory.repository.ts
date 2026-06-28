@@ -10,6 +10,7 @@ export type CreateTableCategoryData = {
   description?: string;
   photoUrl?: string;
   photos?: string[];
+  freeSubstitutionItemIds?: string[];
   isActive?: boolean;
 };
 

@@ -717,14 +717,21 @@ function IncludedDishesSection({
     )
   ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
 
-  // Free alternatives for a package item: same category, FREE status, not already
-  // part of the package and not swapped-in for another slot.
+  // Dishes allowed as free substitutions for THIS table category. When the
+  // category has its own list use it; otherwise fall back to the legacy global
+  // MenuItem.tabletStatus === 'FREE' behavior.
+  const catFreeIds = tableCategory.freeSubstitutionItemIds;
+  const isFreeForThisTable = (m: MenuItem) =>
+    catFreeIds != null ? catFreeIds.includes(m.id) : tabletStatusOf(m) === 'FREE';
+
+  // Free alternatives for a package item: same category, allowed as a free swap
+  // for this table, not already part of the package and not swapped-in elsewhere.
   const getFreeAlts = (pi: TableCategoryPackageItem) => {
     const usedByOthers = new Set(
       Object.entries(replacements).filter(([piId]) => piId !== pi.id).map(([, menuItemId]) => menuItemId)
     );
     return (menuItems ?? []).filter(
-      (m) => m.category === pi.menuItem.category && tabletStatusOf(m) === 'FREE' &&
+      (m) => m.category === pi.menuItem.category && isFreeForThisTable(m) &&
         !packageDefaultIds.has(m.id) && !usedByOthers.has(m.id)
     );
   };

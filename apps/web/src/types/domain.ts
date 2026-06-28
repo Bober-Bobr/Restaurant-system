@@ -56,6 +56,9 @@ export type TableCategory = {
   description?: string;
   photoUrl?: string;
   photos?: string[];
+  // MenuItem ids allowed as free substitutions for this table category only.
+  // null/undefined = fall back to the legacy global MenuItem.tabletStatus 'FREE'.
+  freeSubstitutionItemIds?: string[] | null;
   isActive: boolean;
   sortOrder?: number;
   packageItems?: TableCategoryPackageItem[];
