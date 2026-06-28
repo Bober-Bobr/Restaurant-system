@@ -264,18 +264,32 @@ function CategorySlide({
 }) {
   const photos = (tc.photos ?? []).filter(Boolean);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const photoScrollRef = useRef<HTMLDivElement>(null);
 
   const includedCats = tc.includedCategories
     ? tc.includedCategories.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
 
+  const goToPhoto = (idx: number) => {
+    const el = photoScrollRef.current;
+    if (!el) return;
+    const clamped = Math.max(0, Math.min(photos.length - 1, idx));
+    el.scrollTo({ left: clamped * el.clientWidth, behavior: 'smooth' });
+  };
+  const handlePhotoScroll = () => {
+    const el = photoScrollRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== photoIdx) setPhotoIdx(idx);
+  };
+
   const photoPrev = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setPhotoIdx((i) => (i - 1 + photos.length) % photos.length);
+    goToPhoto(photoIdx - 1);
   };
   const photoNext = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setPhotoIdx((i) => (i + 1) % photos.length);
+    goToPhoto(photoIdx + 1);
   };
 
   return (
@@ -311,13 +325,28 @@ function CategorySlide({
         }}>
           {photos.length > 0 ? (
             <>
-              <button type="button"
-                onClick={() => onLightbox(getPhotoUrl(photos[photoIdx]) ?? '')}
-                style={{ display: 'block', width: '100%', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}>
-                <img key={photoIdx} src={getPhotoUrl(photos[photoIdx])} alt={tc.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  className="scale-in" />
-              </button>
+              {/* Horizontal swipe carousel — one image per snap point. */}
+              <div
+                ref={photoScrollRef}
+                onScroll={handlePhotoScroll}
+                className="scrollbar-none"
+                style={{
+                  display: 'flex', width: '100%', height: '100%',
+                  overflowX: 'auto', overflowY: 'hidden',
+                  scrollSnapType: 'x mandatory',
+                  overscrollBehaviorX: 'contain',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {photos.map((p, i) => (
+                  <button key={i} type="button"
+                    onClick={() => onLightbox(getPhotoUrl(p) ?? '')}
+                    style={{ flex: '0 0 100%', scrollSnapAlign: 'center', display: 'block', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}>
+                    <img src={getPhotoUrl(p)} alt={tc.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
               {photos.length > 1 && (
                 <>
                   <button type="button" onClick={photoPrev}
@@ -1308,7 +1337,7 @@ export const TabletMenuPage = () => {
                   {sortedAndFiltered.map((item, i) => (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} />
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} toggleMode />
                     </div>
                   ))}
                 </div>

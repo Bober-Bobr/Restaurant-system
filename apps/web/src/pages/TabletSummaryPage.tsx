@@ -157,7 +157,18 @@ export const TabletSummaryPage = () => {
     [menuItems, selectedItems]
   );
 
-  const pricing        = usePriceCalculator(menuItems ?? [], selectedItems, selectedTableCategory, guestCount);
+  // Each selected Extra is served to every guest, so it's priced as
+  // price × guestCount. The store only records selection (1/0); the per-guest
+  // quantity is derived here from the live guest count for pricing + exports.
+  const pricedSelections = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const id of Object.keys(selectedItems)) {
+      if (selectedItems[id] > 0) out[id] = guestCount;
+    }
+    return out;
+  }, [selectedItems, guestCount]);
+
+  const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount);
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
 
   // Dishes included with the chosen table category — with localized category
@@ -256,7 +267,7 @@ export const TabletSummaryPage = () => {
         hallName: selectedHall?.name || '',
         tableCategoryName: selectedTableCategory?.name || '',
         guestCount,
-        selectedItems: { ...selectedItems },
+        selectedItems: { ...pricedSelections },
         menuItems,
         includedDishes: buildIncludedDishes(),
         pricing: exportPricing,
@@ -288,7 +299,7 @@ export const TabletSummaryPage = () => {
       const response = await httpClient.post(
         url,
         { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
+          guestCount, selectedItems: pricedSelections, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -552,14 +563,14 @@ export const TabletSummaryPage = () => {
                     <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl px-3 sm:px-4 py-3"
                       style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                        <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-xs font-bold"
                           style={{ background: '#c9a42c', color: '#1a3320' }}>
-                          {selectedItems[item.id]}
+                          ×{guestCount}
                         </span>
                         <p className="text-sm font-medium text-white truncate">{dishName(item, locale)}</p>
                       </div>
                       <p className="text-sm font-semibold whitespace-nowrap" style={{ color: '#c9a42c' }}>
-                        {formatSum(item.priceCents * selectedItems[item.id])}
+                        {formatSum(item.priceCents * guestCount)}
                       </p>
                     </div>
                   ))}

@@ -3,7 +3,7 @@ import type { MenuItem } from '../../types/domain';
 import { getPhotoUrl } from '../../utils/photoUrl';
 import { formatSum } from '../../utils/currency';
 import { dishName, dishDescription } from '../../utils/menuI18n';
-import { defaultLocale, type Locale } from '../../utils/translate';
+import { defaultLocale, translate, type Locale } from '../../utils/translate';
 import { Card } from '../ui/card';
 import { Lightbox } from '../ui/lightbox';
 
@@ -14,9 +14,12 @@ type MenuItemCardProps = {
   dark?: boolean;
   viewOnly?: boolean;
   locale?: Locale;
+  // Toggle mode: select/deselect only, no quantity counter (used for Extras,
+  // which are priced per guest rather than by an entered quantity).
+  toggleMode?: boolean;
 };
 
-export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale }: MenuItemCardProps) => {
+export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale, toggleMode = false }: MenuItemCardProps) => {
   const localizedName = dishName(item, locale);
   const localizedDescription = dishDescription(item, locale);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -78,7 +81,11 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
             className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shadow-lg"
             style={dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' }}
           >
-            {quantity}
+            {toggleMode ? (
+              <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : quantity}
           </div>
         )}
       </div>
@@ -110,7 +117,23 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
         </div>
 
         {/* Controls — hidden in view-only mode */}
-        {!viewOnly && (
+        {!viewOnly && toggleMode && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => onQuantityChange(selected ? 0 : 1)}
+            className="w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
+            style={selected
+              ? (dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' })
+              : (dark ? { background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' } : { background: '#1c1917', color: 'white' })}
+          >
+            {selected ? `✓ ${translate('selected', locale)}` : translate('add', locale)}
+          </button>
+        </div>
+        )}
+
+        {/* Controls — hidden in view-only mode */}
+        {!viewOnly && !toggleMode && (
         <div className="mt-3">
           {quantity === 0 ? (
             <button
