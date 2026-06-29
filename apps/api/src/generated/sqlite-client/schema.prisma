@@ -322,25 +322,26 @@ model Review {
 }
 
 model TableCategory {
-  id                 String                  @id @default(cuid())
-  name               String
-  includedCategories String                  @default("")
-  ratePerPerson      Int                     @default(0)
-  discountPercent    Int                     @default(0)
+  id                      String                  @id @default(cuid())
+  name                    String
+  includedCategories      String                  @default("")
+  ratePerPerson           Int                     @default(0)
+  discountPercent         Int                     @default(0)
   // Table audience: ADULT (default) or CHILDREN. A CHILDREN table is shown as an
   // optional add-on table on the tablet, priced by a separate children count.
-  tableType          String                  @default("ADULT")
-  description        String?
-  photoUrl           String?
-  photos             Json                    @default("[]")
-  isActive           Boolean                 @default(true)
-  sortOrder          Int                     @default(0)
-  restaurantId       String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  events             Event[]
-  packageItems       TableCategoryMenuItem[]
-  restaurant         Restaurant?             @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  tableType               String                  @default("ADULT")
+  description             String?
+  photoUrl                String?
+  photos                  Json                    @default("[]")
+  freeSubstitutionItemIds Json?
+  isActive                Boolean                 @default(true)
+  sortOrder               Int                     @default(0)
+  restaurantId            String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  events                  Event[]
+  packageItems            TableCategoryMenuItem[]
+  restaurant              Restaurant?             @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   @@unique([restaurantId, name])
   @@index([restaurantId])

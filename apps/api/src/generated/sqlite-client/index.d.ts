@@ -17798,6 +17798,7 @@ export namespace Prisma {
     description: number
     photoUrl: number
     photos: number
+    freeSubstitutionItemIds: number
     isActive: number
     sortOrder: number
     restaurantId: number
@@ -17861,6 +17862,7 @@ export namespace Prisma {
     description?: true
     photoUrl?: true
     photos?: true
+    freeSubstitutionItemIds?: true
     isActive?: true
     sortOrder?: true
     restaurantId?: true
@@ -17965,6 +17967,7 @@ export namespace Prisma {
     description: string | null
     photoUrl: string | null
     photos: JsonValue
+    freeSubstitutionItemIds: JsonValue | null
     isActive: boolean
     sortOrder: number
     restaurantId: string | null
@@ -18001,6 +18004,7 @@ export namespace Prisma {
     description?: boolean
     photoUrl?: boolean
     photos?: boolean
+    freeSubstitutionItemIds?: boolean
     isActive?: boolean
     sortOrder?: boolean
     restaurantId?: boolean
@@ -18022,6 +18026,7 @@ export namespace Prisma {
     description?: boolean
     photoUrl?: boolean
     photos?: boolean
+    freeSubstitutionItemIds?: boolean
     isActive?: boolean
     sortOrder?: boolean
     restaurantId?: boolean
@@ -18040,6 +18045,7 @@ export namespace Prisma {
     description?: boolean
     photoUrl?: boolean
     photos?: boolean
+    freeSubstitutionItemIds?: boolean
     isActive?: boolean
     sortOrder?: boolean
     restaurantId?: boolean
@@ -18058,6 +18064,7 @@ export namespace Prisma {
     description?: boolean
     photoUrl?: boolean
     photos?: boolean
+    freeSubstitutionItemIds?: boolean
     isActive?: boolean
     sortOrder?: boolean
     restaurantId?: boolean
@@ -18065,7 +18072,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type TableCategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "includedCategories" | "ratePerPerson" | "discountPercent" | "tableType" | "description" | "photoUrl" | "photos" | "isActive" | "sortOrder" | "restaurantId" | "createdAt" | "updatedAt", ExtArgs["result"]["tableCategory"]>
+  export type TableCategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "includedCategories" | "ratePerPerson" | "discountPercent" | "tableType" | "description" | "photoUrl" | "photos" | "freeSubstitutionItemIds" | "isActive" | "sortOrder" | "restaurantId" | "createdAt" | "updatedAt", ExtArgs["result"]["tableCategory"]>
   export type TableCategoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     events?: boolean | TableCategory$eventsArgs<ExtArgs>
     packageItems?: boolean | TableCategory$packageItemsArgs<ExtArgs>
@@ -18096,6 +18103,7 @@ export namespace Prisma {
       description: string | null
       photoUrl: string | null
       photos: Prisma.JsonValue
+      freeSubstitutionItemIds: Prisma.JsonValue | null
       isActive: boolean
       sortOrder: number
       restaurantId: string | null
@@ -18536,6 +18544,7 @@ export namespace Prisma {
     readonly description: FieldRef<"TableCategory", 'String'>
     readonly photoUrl: FieldRef<"TableCategory", 'String'>
     readonly photos: FieldRef<"TableCategory", 'Json'>
+    readonly freeSubstitutionItemIds: FieldRef<"TableCategory", 'Json'>
     readonly isActive: FieldRef<"TableCategory", 'Boolean'>
     readonly sortOrder: FieldRef<"TableCategory", 'Int'>
     readonly restaurantId: FieldRef<"TableCategory", 'String'>
@@ -30264,6 +30273,7 @@ export namespace Prisma {
     description: 'description',
     photoUrl: 'photoUrl',
     photos: 'photos',
+    freeSubstitutionItemIds: 'freeSubstitutionItemIds',
     isActive: 'isActive',
     sortOrder: 'sortOrder',
     restaurantId: 'restaurantId',
@@ -31603,6 +31613,7 @@ export namespace Prisma {
     description?: StringNullableFilter<"TableCategory"> | string | null
     photoUrl?: StringNullableFilter<"TableCategory"> | string | null
     photos?: JsonFilter<"TableCategory">
+    freeSubstitutionItemIds?: JsonNullableFilter<"TableCategory">
     isActive?: BoolFilter<"TableCategory"> | boolean
     sortOrder?: IntFilter<"TableCategory"> | number
     restaurantId?: StringNullableFilter<"TableCategory"> | string | null
@@ -31623,6 +31634,7 @@ export namespace Prisma {
     description?: SortOrderInput | SortOrder
     photoUrl?: SortOrderInput | SortOrder
     photos?: SortOrder
+    freeSubstitutionItemIds?: SortOrderInput | SortOrder
     isActive?: SortOrder
     sortOrder?: SortOrder
     restaurantId?: SortOrderInput | SortOrder
@@ -31647,6 +31659,7 @@ export namespace Prisma {
     description?: StringNullableFilter<"TableCategory"> | string | null
     photoUrl?: StringNullableFilter<"TableCategory"> | string | null
     photos?: JsonFilter<"TableCategory">
+    freeSubstitutionItemIds?: JsonNullableFilter<"TableCategory">
     isActive?: BoolFilter<"TableCategory"> | boolean
     sortOrder?: IntFilter<"TableCategory"> | number
     restaurantId?: StringNullableFilter<"TableCategory"> | string | null
@@ -31667,6 +31680,7 @@ export namespace Prisma {
     description?: SortOrderInput | SortOrder
     photoUrl?: SortOrderInput | SortOrder
     photos?: SortOrder
+    freeSubstitutionItemIds?: SortOrderInput | SortOrder
     isActive?: SortOrder
     sortOrder?: SortOrder
     restaurantId?: SortOrderInput | SortOrder
@@ -31692,6 +31706,7 @@ export namespace Prisma {
     description?: StringNullableWithAggregatesFilter<"TableCategory"> | string | null
     photoUrl?: StringNullableWithAggregatesFilter<"TableCategory"> | string | null
     photos?: JsonWithAggregatesFilter<"TableCategory">
+    freeSubstitutionItemIds?: JsonNullableWithAggregatesFilter<"TableCategory">
     isActive?: BoolWithAggregatesFilter<"TableCategory"> | boolean
     sortOrder?: IntWithAggregatesFilter<"TableCategory"> | number
     restaurantId?: StringNullableWithAggregatesFilter<"TableCategory"> | string | null
@@ -33746,6 +33761,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -33765,6 +33781,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     restaurantId?: string | null
@@ -33784,6 +33801,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33803,6 +33821,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     restaurantId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33822,6 +33841,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     restaurantId?: string | null
@@ -33839,6 +33859,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -33855,6 +33876,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     restaurantId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -35997,6 +36019,24 @@ export namespace Prisma {
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
+  export type JsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
 
   export type TableCategoryMenuItemListRelationFilter = {
     every?: TableCategoryMenuItemWhereInput
@@ -36023,6 +36063,7 @@ export namespace Prisma {
     description?: SortOrder
     photoUrl?: SortOrder
     photos?: SortOrder
+    freeSubstitutionItemIds?: SortOrder
     isActive?: SortOrder
     sortOrder?: SortOrder
     restaurantId?: SortOrder
@@ -36093,6 +36134,27 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedJsonFilter<$PrismaModel>
     _max?: NestedJsonFilter<$PrismaModel>
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type TableCategoryScalarRelationFilter = {
@@ -36188,24 +36250,6 @@ export namespace Prisma {
   export type HallSumOrderByAggregateInput = {
     capacity?: SortOrder
   }
-  export type JsonNullableFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonNullableFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type EnumMenuCategoryFilter<$PrismaModel = never> = {
     equals?: $Enums.MenuCategory | EnumMenuCategoryFieldRefInput<$PrismaModel>
@@ -36286,27 +36330,6 @@ export namespace Prisma {
   export type MenuItemSumOrderByAggregateInput = {
     priceCents?: SortOrder
     sortOrder?: SortOrder
-  }
-  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedJsonNullableFilter<$PrismaModel>
-    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type EnumMenuCategoryWithAggregatesFilter<$PrismaModel = never> = {
@@ -38678,13 +38701,6 @@ export namespace Prisma {
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
-
-  export type NestedEnumMenuCategoryFilter<$PrismaModel = never> = {
-    equals?: $Enums.MenuCategory | EnumMenuCategoryFieldRefInput<$PrismaModel>
-    in?: $Enums.MenuCategory[]
-    notIn?: $Enums.MenuCategory[]
-    not?: NestedEnumMenuCategoryFilter<$PrismaModel> | $Enums.MenuCategory
-  }
   export type NestedJsonNullableFilter<$PrismaModel = never> =
     | PatchUndefined<
         Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
@@ -38702,6 +38718,13 @@ export namespace Prisma {
     array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedEnumMenuCategoryFilter<$PrismaModel = never> = {
+    equals?: $Enums.MenuCategory | EnumMenuCategoryFieldRefInput<$PrismaModel>
+    in?: $Enums.MenuCategory[]
+    notIn?: $Enums.MenuCategory[]
+    not?: NestedEnumMenuCategoryFilter<$PrismaModel> | $Enums.MenuCategory
   }
 
   export type NestedEnumMenuCategoryWithAggregatesFilter<$PrismaModel = never> = {
@@ -38859,6 +38882,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -38877,6 +38901,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     restaurantId?: string | null
@@ -39115,6 +39140,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -39133,6 +39159,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     restaurantId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -40984,6 +41011,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -41002,6 +41030,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -41408,6 +41437,7 @@ export namespace Prisma {
     description?: StringNullableFilter<"TableCategory"> | string | null
     photoUrl?: StringNullableFilter<"TableCategory"> | string | null
     photos?: JsonFilter<"TableCategory">
+    freeSubstitutionItemIds?: JsonNullableFilter<"TableCategory">
     isActive?: BoolFilter<"TableCategory"> | boolean
     sortOrder?: IntFilter<"TableCategory"> | number
     restaurantId?: StringNullableFilter<"TableCategory"> | string | null
@@ -41897,6 +41927,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -41915,6 +41946,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     restaurantId?: string | null
@@ -41998,6 +42030,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -42016,6 +42049,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     restaurantId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -44312,6 +44346,7 @@ export namespace Prisma {
     description?: string | null
     photoUrl?: string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: boolean
     sortOrder?: number
     createdAt?: Date | string
@@ -44597,6 +44632,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44615,6 +44651,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -44633,6 +44670,7 @@ export namespace Prisma {
     description?: NullableStringFieldUpdateOperationsInput | string | null
     photoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     photos?: JsonNullValueInput | InputJsonValue
+    freeSubstitutionItemIds?: NullableJsonNullValueInput | InputJsonValue
     isActive?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string

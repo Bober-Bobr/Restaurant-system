@@ -272,6 +272,7 @@ exports.Prisma.TableCategoryScalarFieldEnum = {
   description: 'description',
   photoUrl: 'photoUrl',
   photos: 'photos',
+  freeSubstitutionItemIds: 'freeSubstitutionItemIds',
   isActive: 'isActive',
   sortOrder: 'sortOrder',
   restaurantId: 'restaurantId',

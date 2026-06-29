@@ -1,10 +1,17 @@
+// READ-ONLY source schema for the one-time SQLite -> Postgres data migration.
+// It mirrors the SQLite database as it was before the cutover and generates a
+// SEPARATE client (output below) so the ETL script can open the old SQLite DB
+// and the new Postgres DB at the same time. Do not edit models here for new
+// features — schema.prisma is the source of truth. Safe to delete once the
+// migration is done.
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/sqlite-client"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("SQLITE_URL")
 }
 
 enum EventStatus {
@@ -326,9 +333,6 @@ model TableCategory {
   description        String?
   photoUrl           String?
   photos             Json                      @default("[]")
-  // Per-table-category free-substitution dishes: MenuItem ids offered as free
-  // swaps on the tablet for THIS table only. null = fall back to the legacy
-  // global MenuItem.tabletStatus === 'FREE' behavior.
   freeSubstitutionItemIds Json?
   isActive           Boolean                   @default(true)
   sortOrder          Int                       @default(0)

@@ -1,1 +1,0 @@
--- DRIED_FRUITS and CANDIES added to MenuCategory enum (SQLite stores enums as TEXT, no DDL needed)

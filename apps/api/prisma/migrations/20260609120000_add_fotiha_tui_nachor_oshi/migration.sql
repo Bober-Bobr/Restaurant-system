@@ -1,2 +1,0 @@
--- SQLite stores enum values as TEXT; no DDL change needed to add new enum members.
--- The new EventType values FOTIHA_TUI and NACHOR_OSHI are valid after regenerating the Prisma client.

@@ -10,6 +10,8 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:generate:sqlite": "prisma generate --schema prisma/schema.sqlite.prisma",
+    "migrate:to-postgres": "prisma generate --schema prisma/schema.sqlite.prisma && tsx src/scripts/migrate-to-postgres.ts",
     "seed": "tsx src/scripts/seed-test-users.ts",
     "cleanup:orphan-restaurants": "tsx src/scripts/cleanup-orphan-restaurants.ts"
   },

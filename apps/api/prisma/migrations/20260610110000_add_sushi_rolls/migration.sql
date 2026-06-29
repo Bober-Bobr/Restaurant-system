@@ -1,2 +1,0 @@
--- Add SUSHI_ROLLS to MenuCategory. SQLite stores enum values as TEXT, so the new
--- member needs no DDL change; regenerating the Prisma client is sufficient.

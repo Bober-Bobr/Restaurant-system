@@ -1,0 +1,25 @@
+# PostgreSQL for v-menu.uz. Used both locally (dev) and on the server (prod).
+# Port is bound to 127.0.0.1 only, so the DB is never exposed to the internet —
+# the API talks to it over localhost. Credentials come from a .env file next to
+# this compose file (see .env.docker.example).
+services:
+  postgres:
+    image: postgres:16
+    container_name: vmenu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vmenu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vmenu}
+      POSTGRES_DB: ${POSTGRES_DB:-vmenu}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - vmenu-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vmenu} -d ${POSTGRES_DB:-vmenu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  vmenu-pgdata:

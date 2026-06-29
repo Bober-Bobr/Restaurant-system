@@ -20,3 +20,12 @@ apps/api/uploads/
 .env.local
 apps/api/.env.local
 apps/web/.env.local
+
+# Postgres docker credentials (the .env next to docker-compose.yml)
+/.env
+
+# Generated read-only client for the one-time SQLite->Postgres migration
+apps/api/src/generated/
+
+# Old SQLite migrations kept locally for reference (still in git history)
+apps/api/prisma/migrations.sqlite-archive/
