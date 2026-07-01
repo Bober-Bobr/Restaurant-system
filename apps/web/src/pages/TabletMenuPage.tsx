@@ -6,6 +6,7 @@ import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
 import type { MenuItem, TableCategory, TableCategoryPackageItem, TabletStatus } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName, dishDescription } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
@@ -67,7 +68,7 @@ function PageBackground() {
       <div style={{
         position: 'absolute', top: '-140px', right: '-140px',
         width: '560px', height: '560px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(201,164,44,0.22) 0%, transparent 65%)',
+        background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.22) 0%, transparent 65%)',
         filter: 'blur(50px)',
       }} />
       <div style={{
@@ -79,7 +80,7 @@ function PageBackground() {
       <div style={{
         position: 'absolute', top: '50%', right: '15%',
         width: '300px', height: '300px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(201,164,44,0.07) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.07) 0%, transparent 70%)',
         filter: 'blur(30px)',
       }} />
     </div>
@@ -144,9 +145,9 @@ function TableCategoryFullscreen({
                 padding: '5px 12px',
                 borderRadius: 8,
                 border: '1px solid',
-                borderColor: locale === loc ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.15)',
-                background: locale === loc ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-                color: locale === loc ? '#c9a42c' : 'rgba(255,255,255,0.7)',
+                borderColor: locale === loc ? 'rgba(var(--rg-accent-rgb),0.6)' : 'rgba(255,255,255,0.15)',
+                background: locale === loc ? 'rgba(var(--rg-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+                color: locale === loc ? 'var(--rg-accent)' : 'rgba(255,255,255,0.7)',
                 fontWeight: locale === loc ? 700 : 500,
                 fontSize: 11,
                 letterSpacing: '0.06em',
@@ -201,9 +202,9 @@ function TableCategoryFullscreen({
           disabled={currentIdx === 0}
           style={{
             width: 44, height: 44, borderRadius: '50%',
-            border: '1px solid rgba(201,164,44,0.35)',
-            background: 'rgba(201,164,44,0.1)',
-            color: '#c9a42c', fontSize: 22, fontWeight: 700, lineHeight: 1,
+            border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+            background: 'rgba(var(--rg-accent-rgb),0.1)',
+            color: 'var(--rg-accent)', fontSize: 22, fontWeight: 700, lineHeight: 1,
             cursor: currentIdx === 0 ? 'not-allowed' : 'pointer',
             opacity: currentIdx === 0 ? 0.35 : 1,
             transition: 'opacity 0.2s',
@@ -221,7 +222,7 @@ function TableCategoryFullscreen({
                 width: i === currentIdx ? 24 : 8,
                 height: 8,
                 borderRadius: 4,
-                background: i === currentIdx ? '#c9a42c' : 'rgba(255,255,255,0.25)',
+                background: i === currentIdx ? 'var(--rg-accent)' : 'rgba(255,255,255,0.25)',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'width 0.25s, background 0.25s',
@@ -238,9 +239,9 @@ function TableCategoryFullscreen({
           disabled={currentIdx === tableCategories.length - 1}
           style={{
             width: 44, height: 44, borderRadius: '50%',
-            border: '1px solid rgba(201,164,44,0.35)',
-            background: 'rgba(201,164,44,0.1)',
-            color: '#c9a42c', fontSize: 22, fontWeight: 700, lineHeight: 1,
+            border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+            background: 'rgba(var(--rg-accent-rgb),0.1)',
+            color: 'var(--rg-accent)', fontSize: 22, fontWeight: 700, lineHeight: 1,
             cursor: currentIdx === tableCategories.length - 1 ? 'not-allowed' : 'pointer',
             opacity: currentIdx === tableCategories.length - 1 ? 0.35 : 1,
             transition: 'opacity 0.2s',
@@ -395,7 +396,7 @@ function CategorySlide({
             margin: 0, fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
           }}>{tc.name}</h2>
           <p style={{
-            margin: '8px 0 0', fontSize: 18, fontWeight: 700, color: '#c9a42c',
+            margin: '8px 0 0', fontSize: 18, fontWeight: 700, color: 'var(--rg-accent)',
           }}>
             {formatSum(tc.ratePerPerson)}
             <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.55)', marginLeft: 6 }}>
@@ -418,8 +419,8 @@ function CategorySlide({
             {includedCats.map((cat) => (
               <span key={cat} style={{
                 padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-                background: 'rgba(201,164,44,0.15)', color: '#c9a42c',
-                border: '1px solid rgba(201,164,44,0.3)',
+                background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)',
+                border: '1px solid rgba(var(--rg-accent-rgb),0.3)',
               }}>
                 {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
               </span>
@@ -434,11 +435,11 @@ function CategorySlide({
             padding: '14px 48px',
             borderRadius: 14,
             border: 'none',
-            background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
-            color: '#1a3320',
+            background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
+            color: 'var(--rg-bg)',
             fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
             cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(201,164,44,0.35)',
+            boxShadow: '0 8px 24px rgba(var(--rg-accent-rgb),0.35)',
           }}>
           {t('select_table')} →
         </button>
@@ -488,15 +489,15 @@ function CourseChoiceSection({
         <h2 style={{
           margin: '6px 0 0', fontSize: 28, fontWeight: 800,
           letterSpacing: '0.04em', textTransform: 'uppercase',
-          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 60%, #b8941f 100%)',
+          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 60%, #b8941f 100%)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text',
-          WebkitTextFillColor: 'transparent', color: '#c9a42c',
-          textShadow: '0 2px 18px rgba(201,164,44,0.25)',
+          WebkitTextFillColor: 'transparent', color: 'var(--rg-accent)',
+          textShadow: '0 2px 18px rgba(var(--rg-accent-rgb),0.25)',
         }}>{t('courses')}</h2>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 12 }}>
-          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, transparent, rgba(201,164,44,0.7))' }} />
-          <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: '#c9a42c', boxShadow: '0 0 10px rgba(201,164,44,0.85)' }} />
-          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, rgba(201,164,44,0.7), transparent)' }} />
+          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, transparent, rgba(var(--rg-accent-rgb),0.7))' }} />
+          <span style={{ width: 8, height: 8, transform: 'rotate(45deg)', background: 'var(--rg-accent)', boxShadow: '0 0 10px rgba(var(--rg-accent-rgb),0.85)' }} />
+          <span style={{ height: 1, width: 64, background: 'linear-gradient(90deg, rgba(var(--rg-accent-rgb),0.7), transparent)' }} />
         </div>
       </div>
 
@@ -506,9 +507,9 @@ function CourseChoiceSection({
             <div style={{
               width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundImage: 'linear-gradient(135deg, #f0d878 0%, #c9a42c 100%)',
-              color: '#1a3320', fontWeight: 800, fontSize: 20,
-              boxShadow: '0 6px 18px rgba(201,164,44,0.45)',
+              backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+              color: 'var(--rg-bg)', fontWeight: 800, fontSize: 20,
+              boxShadow: '0 6px 18px rgba(var(--rg-accent-rgb),0.45)',
               border: '2px solid rgba(255,255,255,0.3)',
             }}>{gi + 1}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -520,7 +521,7 @@ function CourseChoiceSection({
                   display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
                   padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700,
                   letterSpacing: '0.03em',
-                  color: '#e0c25a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.34)',
+                  color: '#e0c25a', background: 'rgba(var(--rg-accent-rgb),0.14)', border: '1px solid rgba(var(--rg-accent-rgb),0.34)',
                 }}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -541,9 +542,9 @@ function CourseChoiceSection({
                   style={{
                     animationDelay: `${i * 50}ms`,
                     position: 'relative', borderRadius: 14, overflow: 'hidden',
-                    outline: selected ? '2px solid #c9a42c' : '1px solid rgba(255,255,255,0.12)',
+                    outline: selected ? '2px solid var(--rg-accent)' : '1px solid rgba(255,255,255,0.12)',
                     outlineOffset: selected ? 2 : 0,
-                    background: selected ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.06)',
+                    background: selected ? 'rgba(var(--rg-accent-rgb),0.12)' : 'rgba(255,255,255,0.06)',
                     transition: 'outline 0.18s, background 0.18s',
                   }}>
                   {photoSrc ? (
@@ -570,19 +571,19 @@ function CourseChoiceSection({
                     <div style={{
                       flexShrink: 0,
                       width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
-                      border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.3)'}`,
-                      background: selected ? '#c9a42c' : 'transparent',
+                      border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.3)'}`,
+                      background: selected ? 'var(--rg-accent)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.15s',
                     }}>
                       {selected && (
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2 6l3 3 5-5" stroke="var(--rg-bg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dishName(item, locale)}</p>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? 'var(--rg-accent)' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dishName(item, locale)}</p>
                       {dishDescription(item, locale) && (
                         <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {dishDescription(item, locale)}
@@ -635,8 +636,8 @@ function DishSwapModal({
           width: '100%', maxWidth: 760, maxHeight: '88vh',
           display: 'flex', flexDirection: 'column',
           borderRadius: 24,
-          background: 'linear-gradient(135deg, rgba(26,51,32,0.98) 0%, rgba(15,33,20,0.98) 100%)',
-          border: '1px solid rgba(201,164,44,0.35)',
+          background: 'linear-gradient(135deg, rgba(var(--rg-bg-rgb),0.98) 0%, rgba(var(--rg-bg-dark-rgb),0.98) 100%)',
+          border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
           boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
         }}>
         {/* Header */}
@@ -668,8 +669,8 @@ function DishSwapModal({
                 style={{
                   textAlign: 'left', padding: 0, cursor: 'pointer',
                   borderRadius: 16, overflow: 'hidden',
-                  background: selected ? 'rgba(201,164,44,0.14)' : 'rgba(255,255,255,0.05)',
-                  border: `2px solid ${selected ? '#c9a42c' : 'rgba(255,255,255,0.1)'}`,
+                  background: selected ? 'rgba(var(--rg-accent-rgb),0.14)' : 'rgba(255,255,255,0.05)',
+                  border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.1)'}`,
                   transition: 'border 0.18s, background 0.18s',
                 }}>
                 {photoSrc ? (
@@ -684,13 +685,13 @@ function DishSwapModal({
                 )}
                 <div style={{ padding: '10px 12px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: selected ? '#c9a42c' : '#fff', lineHeight: 1.25 }}>
+                    <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: selected ? 'var(--rg-accent)' : '#fff', lineHeight: 1.25 }}>
                       {dishName(item, locale)}
                     </p>
                     {selected && (
-                      <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: '#c9a42c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--rg-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6l3 3 5-5" stroke="#1a3320" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2 6l3 3 5-5" stroke="var(--rg-bg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </span>
                     )}
@@ -712,8 +713,8 @@ function DishSwapModal({
             <button type="button" onClick={() => onChoose(null)}
               style={{
                 width: '100%', padding: '10px', borderRadius: 10, cursor: 'pointer',
-                fontSize: 13, fontWeight: 700, color: '#d9b84a',
-                background: 'rgba(201,164,44,0.1)', border: '1px solid rgba(201,164,44,0.3)',
+                fontSize: 13, fontWeight: 700, color: 'var(--rg-accent-soft)',
+                background: 'rgba(var(--rg-accent-rgb),0.1)', border: '1px solid rgba(var(--rg-accent-rgb),0.3)',
               }}>
               ↺ {t('revert_to_default')}
             </button>
@@ -788,11 +789,11 @@ function IncludedDishesSection({
           borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <div style={{ width: 3, height: 16, borderRadius: 2, background: '#c9a42c', flexShrink: 0 }} />
+            <div style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--rg-accent)', flexShrink: 0 }} />
             <span style={{
               display: 'inline-block', padding: '3px 10px', borderRadius: 999,
               fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: '#d9b84a', background: 'rgba(201,164,44,0.12)', border: '1px solid rgba(201,164,44,0.28)',
+              color: 'var(--rg-accent-soft)', background: 'rgba(var(--rg-accent-rgb),0.12)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)',
             }}>
               {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
             </span>
@@ -836,9 +837,9 @@ function IncludedDishesSection({
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                           width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
                           fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
-                          color: isSwapped ? '#93c5fd' : '#d9b84a',
-                          background: isSwapped ? 'rgba(59,130,246,0.12)' : 'rgba(201,164,44,0.1)',
-                          border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(201,164,44,0.3)'}`,
+                          color: isSwapped ? '#93c5fd' : 'var(--rg-accent-soft)',
+                          background: isSwapped ? 'rgba(59,130,246,0.12)' : 'rgba(var(--rg-accent-rgb),0.1)',
+                          border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(var(--rg-accent-rgb),0.3)'}`,
                         }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -969,6 +970,8 @@ export const TabletMenuPage = () => {
   const tableCategories   = usePublicDataStore((s) => s.tableCategories);
   const restaurantName    = usePublicDataStore((s) => s.restaurantName);
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
+  const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
+  const tabletBgColor     = usePublicDataStore((s) => s.tabletBgColor);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const error             = usePublicDataStore((s) => s.error);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
@@ -1022,7 +1025,8 @@ export const TabletMenuPage = () => {
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8">
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8"
+      style={tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties}>
       {!welcomeShown && (
         <div
           style={{
@@ -1037,9 +1041,9 @@ export const TabletMenuPage = () => {
             style={{
               width: '100%', maxWidth: 560,
               borderRadius: 28,
-              background: 'linear-gradient(135deg, rgba(26,51,32,0.95) 0%, rgba(15,33,20,0.95) 100%)',
-              border: '1px solid rgba(201,164,44,0.35)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 80px rgba(201,164,44,0.12)',
+              background: 'linear-gradient(135deg, rgba(var(--rg-bg-rgb),0.95) 0%, rgba(var(--rg-bg-dark-rgb),0.95) 100%)',
+              border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 80px rgba(var(--rg-accent-rgb),0.12)',
               padding: '32px 28px',
               textAlign: 'center',
               color: '#fff',
@@ -1056,9 +1060,9 @@ export const TabletMenuPage = () => {
                     padding: '5px 12px',
                     borderRadius: 8,
                     border: '1px solid',
-                    borderColor: locale === loc ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.15)',
-                    background: locale === loc ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-                    color: locale === loc ? '#c9a42c' : 'rgba(255,255,255,0.7)',
+                    borderColor: locale === loc ? 'rgba(var(--rg-accent-rgb),0.6)' : 'rgba(255,255,255,0.15)',
+                    background: locale === loc ? 'rgba(var(--rg-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+                    color: locale === loc ? 'var(--rg-accent)' : 'rgba(255,255,255,0.7)',
                     fontWeight: locale === loc ? 700 : 500,
                     fontSize: 11,
                     letterSpacing: '0.06em',
@@ -1085,7 +1089,7 @@ export const TabletMenuPage = () => {
             )}
             <h2 style={{
               margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em',
-              color: '#c9a42c',
+              color: 'var(--rg-accent)',
             }}>
               {t('welcome_title', { restaurant: restaurantName ?? '' })}
             </h2>
@@ -1108,13 +1112,13 @@ export const TabletMenuPage = () => {
                 padding: '12px 36px',
                 borderRadius: 14,
                 border: 'none',
-                background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
-                color: '#1a3320',
+                background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
+                color: 'var(--rg-bg)',
                 fontWeight: 700,
                 fontSize: 15,
                 letterSpacing: '0.02em',
                 cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(201,164,44,0.35)',
+                boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)',
               }}
             >
               {t('welcome_continue')} →
@@ -1136,7 +1140,7 @@ export const TabletMenuPage = () => {
         )}
 
       <PageBackground />
-      <FingerTrail accent="#c9a42c" />
+      <FingerTrail accent="var(--rg-accent)" />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
       <div ref={revealRef} className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
@@ -1215,8 +1219,8 @@ export const TabletMenuPage = () => {
               {selectedHallId && selectedTableCategoryId && (
                 <div className="mt-5 flex flex-wrap gap-2 tablet-fade-in">
                   <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium"
-                    style={{ background: 'rgba(201,164,44,0.2)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' }}>
-                    <span className="h-2 w-2 rounded-full" style={{ background: '#c9a42c' }} />
+                    style={{ background: 'rgba(var(--rg-accent-rgb),0.2)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }}>
+                    <span className="h-2 w-2 rounded-full" style={{ background: 'var(--rg-accent)' }} />
                     {halls.find((h) => h.id === selectedHallId)?.name}
                   </span>
                   <span className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium"
@@ -1293,31 +1297,31 @@ export const TabletMenuPage = () => {
             {/* Additional — premium highlighted section */}
             <section className="reveal" style={{
               position: 'relative', borderRadius: 24, padding: 'clamp(16px, 3vw, 26px)',
-              background: 'linear-gradient(165deg, rgba(201,164,44,0.13) 0%, rgba(26,51,32,0.35) 45%, rgba(255,255,255,0.03) 100%)',
-              border: '1px solid rgba(201,164,44,0.32)',
+              background: 'linear-gradient(165deg, rgba(var(--rg-accent-rgb),0.13) 0%, rgba(var(--rg-bg-rgb),0.35) 45%, rgba(255,255,255,0.03) 100%)',
+              border: '1px solid rgba(var(--rg-accent-rgb),0.32)',
               boxShadow: '0 14px 44px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.07)',
             }}>
               {/* Soft gold glow accent in the corner */}
               <div aria-hidden style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', pointerEvents: 'none',
-                background: 'radial-gradient(circle, rgba(201,164,44,0.22) 0%, transparent 70%)' }} />
+                background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.22) 0%, transparent 70%)' }} />
 
               {/* Premium header */}
               <div className="mb-4 flex items-center gap-3" style={{ position: 'relative' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 14, flexShrink: 0,
-                  background: 'linear-gradient(145deg, #f3d98b, #c9a42c)', boxShadow: '0 6px 20px rgba(201,164,44,0.45)' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#1a3320">
+                  background: 'linear-gradient(145deg, var(--rg-accent-soft), var(--rg-accent))', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.45)' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--rg-bg)">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                   </svg>
                 </span>
                 <div>
                   <p className="rg-heading" style={{ margin: 0, fontSize: 'clamp(18px, 2.4vw, 23px)',
-                    background: 'linear-gradient(90deg, #f7e6a8, #c9a42c)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                    background: 'linear-gradient(90deg, var(--rg-accent-soft), var(--rg-accent))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
                     {t('additional')}
                   </p>
                   <p className="text-sm" style={{ margin: '2px 0 0', color: 'rgba(255,255,255,0.55)' }}>{t('browse_menu_items')}</p>
                 </div>
               </div>
-              <div style={{ height: 1, marginBottom: 18, background: 'linear-gradient(90deg, rgba(201,164,44,0.7) 0%, rgba(201,164,44,0.08) 70%, transparent 100%)' }} />
+              <div style={{ height: 1, marginBottom: 18, background: 'linear-gradient(90deg, rgba(var(--rg-accent-rgb),0.7) 0%, rgba(var(--rg-accent-rgb),0.08) 70%, transparent 100%)' }} />
 
               {/* Category pills */}
               <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
@@ -1325,8 +1329,8 @@ export const TabletMenuPage = () => {
                   <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
                     className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200"
                     style={activeCategory === cat
-                      ? { background: '#c9a42c', color: '#1a3320', boxShadow: '0 4px 14px rgba(201,164,44,0.35)' }
-                      : { background: 'rgba(201,164,44,0.08)', color: 'rgba(217,184,74,0.9)', border: '1px solid rgba(201,164,44,0.28)' }}>
+                      ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 4px 14px rgba(var(--rg-accent-rgb),0.35)' }
+                      : { background: 'rgba(var(--rg-accent-rgb),0.08)', color: 'rgba(217,184,74,0.9)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)' }}>
                     {cat === null ? t('filter_all') : t(cat.toLowerCase() as Parameters<typeof translate>[0])}
                   </button>
                 ))}
@@ -1377,7 +1381,7 @@ export const TabletMenuPage = () => {
           <div className="mx-auto max-w-7xl">
             <button type="button" onClick={() => navigate('/tablet/summary')}
               className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99]"
-              style={{ background: '#c9a42c', color: '#1a3320', boxShadow: '0 6px 20px rgba(201,164,44,0.35)' }}>
+              style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)' }}>
               {t('view_summary')} →
             </button>
           </div>

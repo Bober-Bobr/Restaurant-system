@@ -18,7 +18,7 @@ export type PublicRestaurantSummary = {
 };
 
 export const publicRestaurantService = {
-  async get(restaurantId: string): Promise<{ id: string; name: string; logoUrl: string | null }> {
+  async get(restaurantId: string): Promise<{ id: string; name: string; logoUrl: string | null; tabletAccentColor: string | null; tabletBgColor: string | null }> {
     const { data } = await axios.get(`${apiRoot()}/public/restaurant`, { params: { restaurantId } });
     return data;
   },

@@ -42,11 +42,11 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
         className: 'group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
         style: {
           background: selected
-            ? 'linear-gradient(160deg, rgba(201,164,44,0.16) 0%, rgba(255,255,255,0.05) 60%)'
+            ? 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.16) 0%, rgba(255,255,255,0.05) 60%)'
             : 'rgba(255,255,255,0.06)',
-          border: selected ? '1px solid rgba(201,164,44,0.55)' : '1px solid rgba(255,255,255,0.12)',
+          border: selected ? '1px solid rgba(var(--rg-accent-rgb),0.55)' : '1px solid rgba(255,255,255,0.12)',
           backdropFilter: 'blur(8px)',
-          boxShadow: selected ? '0 10px 28px rgba(201,164,44,0.20)' : undefined,
+          boxShadow: selected ? '0 10px 28px rgba(var(--rg-accent-rgb),0.20)' : undefined,
         },
       }
     : { className: 'group flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-lg' };
@@ -79,7 +79,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
         {quantity > 0 && (
           <div
             className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shadow-lg"
-            style={dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' }}
+            style={dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' }}
           >
             {toggleMode ? (
               <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
@@ -96,7 +96,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
           {/* Category chip — gold-tinted so categories read at a glance */}
           <span className="mb-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
             style={dark
-              ? { background: 'rgba(201,164,44,0.16)', color: '#d9b84a', border: '1px solid rgba(201,164,44,0.32)' }
+              ? { background: 'rgba(var(--rg-accent-rgb),0.16)', color: 'var(--rg-accent-soft)', border: '1px solid rgba(var(--rg-accent-rgb),0.32)' }
               : { background: '#f6efd9', color: '#8a6d1a', border: '1px solid #ecdfb4' }}>
             {item.category ? item.category.replace(/_/g, ' ') : 'General'}
           </span>
@@ -104,7 +104,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
             <h3 className="text-sm font-semibold leading-snug" style={{ color: dark ? 'white' : '#1c1917' }}>
               {localizedName || 'Menu Item'}
             </h3>
-            <span className="shrink-0 text-sm font-bold" style={{ color: dark ? '#c9a42c' : '#1c1917' }}>
+            <span className="shrink-0 text-sm font-bold" style={{ color: dark ? 'var(--rg-accent)' : '#1c1917' }}>
               {formatSum(Number(item.priceCents ?? 0))}
             </span>
           </div>
@@ -124,8 +124,8 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
             onClick={() => onQuantityChange(selected ? 0 : 1)}
             className="w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
             style={selected
-              ? (dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' })
-              : (dark ? { background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' } : { background: '#1c1917', color: 'white' })}
+              ? (dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' })
+              : (dark ? { background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' } : { background: '#1c1917', color: 'white' })}
           >
             {selected ? `✓ ${translate('selected', locale)}` : translate('add', locale)}
           </button>
@@ -141,7 +141,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
               onClick={() => onQuantityChange(1)}
               className="w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
               style={dark
-                ? { background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' }
+                ? { background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }
                 : { background: '#1c1917', color: 'white' }}
             >
               Add
@@ -182,7 +182,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
                   type="button"
                   onClick={() => onQuantityChange(quantity + 1)}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
-                  style={dark ? { background: '#c9a42c', color: '#1a3320' } : { background: '#1c1917', color: 'white' }}
+                  style={dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' }}
                   aria-label="Increase"
                 >
                   +

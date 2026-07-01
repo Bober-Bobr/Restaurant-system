@@ -11,6 +11,8 @@ type PublicDataState = {
   tableCategories: TableCategory[];
   restaurantName: string | null;
   restaurantLogoUrl: string | null;
+  tabletAccentColor: string | null;
+  tabletBgColor: string | null;
   isLoading: boolean;
   error?: string;
   isLoaded: boolean;
@@ -23,12 +25,14 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   tableCategories: [],
   restaurantName: null,
   restaurantLogoUrl: null,
+  tabletAccentColor: null,
+  tabletBgColor: null,
   isLoading: false,
   error: undefined,
   isLoaded: false,
   loadPublicData: async (restaurantId: string) => {
     if (!restaurantId) {
-      set({ menuItems: [], halls: [], tableCategories: [], restaurantName: null, restaurantLogoUrl: null, isLoaded: true, isLoading: false });
+      set({ menuItems: [], halls: [], tableCategories: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, isLoaded: true, isLoading: false });
       return;
     }
     if (get().isLoading) return;
@@ -48,6 +52,8 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
         tableCategories,
         restaurantName: restaurant.name,
         restaurantLogoUrl: restaurant.logoUrl,
+        tabletAccentColor: restaurant.tabletAccentColor ?? null,
+        tabletBgColor: restaurant.tabletBgColor ?? null,
         isLoaded: true
       });
     } catch (error) {

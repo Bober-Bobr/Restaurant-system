@@ -408,9 +408,22 @@
 .adm-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
 .adm-table tbody td { padding: 0.85rem 1rem; color: #e2e8f0; }
 
-/* ── Tablet dark-green theme ── */
+/* ── Tablet dark-green theme ──
+   Colors are driven by CSS variables so each restaurant can theme the tablet +
+   summary pages. Defaults reproduce the original gold-on-green palette; the page
+   roots override --rg-accent / --rg-bg (and derived vars) inline from the
+   restaurant's saved theme. See utils/tabletTheme.ts. */
+:root {
+  --rg-accent: #c9a42c;
+  --rg-accent-rgb: 201, 164, 44;
+  --rg-accent-soft: #d9b84a;
+  --rg-bg: #1a3320;
+  --rg-bg-rgb: 26, 51, 32;
+  --rg-bg-dark: #0f2114;
+  --rg-bg-dark-rgb: 15, 33, 20;
+}
 .rg-bg {
-  background: #1a3320;
+  background: var(--rg-bg);
 }
 
 .rg-card {
@@ -421,7 +434,7 @@
 }
 
 .rg-heading {
-  color: #c9a42c;
+  color: var(--rg-accent);
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -453,8 +466,8 @@
   textarea.rg-input { height: auto; }
 }
 .rg-input::placeholder { color: rgba(255,255,255,0.3); }
-.rg-input:focus { border-color: #c9a42c; }
-.rg-input option { background: #1a3320; color: white; }
+.rg-input:focus { border-color: var(--rg-accent); }
+.rg-input option { background: var(--rg-bg); color: white; }
 
 .rg-shimmer {
   background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);

@@ -31,6 +31,86 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+const DEFAULT_ACCENT = '#c9a42c';
+const DEFAULT_BG = '#1a3320';
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
+// Per-restaurant tablet/summary color palette. Two colors (accent + background)
+// drive the whole tablet theme; null values fall back to the default gold theme.
+function TabletThemeEditor({ r, locale }: { r: Restaurant; locale: Lang }) {
+  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
+  const queryClient = useQueryClient();
+
+  const [accent, setAccent] = useState(r.tabletAccentColor ?? DEFAULT_ACCENT);
+  const [bg, setBg] = useState(r.tabletBgColor ?? DEFAULT_BG);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setAccent(r.tabletAccentColor ?? DEFAULT_ACCENT);
+    setBg(r.tabletBgColor ?? DEFAULT_BG);
+  }, [r.id, r.tabletAccentColor, r.tabletBgColor]);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] });
+  const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
+
+  const save = useMutation({
+    mutationFn: () => restaurantService.update(r.id, { tabletAccentColor: accent, tabletBgColor: bg }),
+    onSuccess: () => { flash(); invalidate(); },
+  });
+  const reset = useMutation({
+    mutationFn: () => restaurantService.update(r.id, { tabletAccentColor: null, tabletBgColor: null }),
+    onSuccess: () => { setAccent(DEFAULT_ACCENT); setBg(DEFAULT_BG); flash(); invalidate(); },
+  });
+
+  const dirty = accent !== (r.tabletAccentColor ?? DEFAULT_ACCENT) || bg !== (r.tabletBgColor ?? DEFAULT_BG);
+  const isDefault = !r.tabletAccentColor && !r.tabletBgColor;
+  const swatch = (value: string, onChange: (v: string) => void, label: string) => (
+    <label style={{ display: 'grid', gap: 4 }}>
+      <span style={labelStyle}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input type="color" value={value} onChange={(e) => onChange(e.target.value)}
+          style={{ width: 44, height: 40, padding: 2, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer' }} />
+        <input value={value}
+          onChange={(e) => { const v = e.target.value; onChange(v); }}
+          style={{ ...inputStyle, width: 110, fontFamily: 'monospace', textTransform: 'lowercase' }} placeholder="#000000" />
+      </div>
+    </label>
+  );
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <p style={{ margin: '0 0 4px', ...labelStyle, fontSize: 12 }}>{t('tablet_theme')}</p>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('tablet_theme_help')}</p>
+
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        {swatch(accent, setAccent, t('accent_color'))}
+        {swatch(bg, setBg, t('background_color'))}
+
+        {/* Live preview mirroring the tablet look */}
+        <div style={{ display: 'grid', gap: 4 }}>
+          <span style={labelStyle}>{t('preview')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: bg, border: '1px solid rgba(255,255,255,0.12)' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: accent }}>{r.name}</span>
+            <span style={{ padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: accent, color: bg }}>{t('view_summary')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+        <button type="button" className="adm-btn-primary" style={{ fontSize: 13, opacity: HEX6.test(accent) && HEX6.test(bg) && dirty ? 1 : 0.5 }}
+          disabled={save.isPending || !dirty || !HEX6.test(accent) || !HEX6.test(bg)} onClick={() => save.mutate()}>
+          {save.isPending ? t('saving') : t('save')}
+        </button>
+        <button type="button" className="adm-btn-danger" style={{ fontSize: 13, opacity: isDefault ? 0.5 : 1 }}
+          disabled={reset.isPending || isDefault} onClick={() => reset.mutate()}>
+          {t('reset_theme')}
+        </button>
+        {saved && <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓</span>}
+      </div>
+    </div>
+  );
+}
+
 function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'uz' }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const queryClient = useQueryClient();
@@ -109,6 +189,9 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
         </button>
         {saved && <span style={{ color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓ {t('credentials_saved')}</span>}
       </div>
+
+      {/* Tablet/summary color palette */}
+      <TabletThemeEditor r={r} locale={locale} />
 
       {/* Halls management */}
       <HallsManager restaurantId={r.id} locale={locale} />

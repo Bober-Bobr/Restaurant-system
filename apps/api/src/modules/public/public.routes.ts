@@ -97,6 +97,8 @@ router.get('/restaurant', async (request, response, next) => {
       name: restaurant.name,
       logoUrl: restaurant.logoUrl ?? company?.logoUrl ?? null,
       companyName: company?.name ?? null,
+      tabletAccentColor: restaurant.tabletAccentColor ?? null,
+      tabletBgColor: restaurant.tabletBgColor ?? null,
     });
   } catch (error) { next(error); }
 });

@@ -8,6 +8,7 @@ import { httpClient } from '../services/http';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import type { Event } from '../types/domain';
 import { formatSum } from '../utils/currency';
@@ -25,7 +26,7 @@ function PageBackground() {
       <div style={{
         position: 'absolute', top: '-140px', right: '-140px',
         width: '560px', height: '560px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(201,164,44,0.22) 0%, transparent 65%)',
+        background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.22) 0%, transparent 65%)',
         filter: 'blur(50px)',
       }} />
       <div style={{
@@ -37,7 +38,7 @@ function PageBackground() {
       <div style={{
         position: 'absolute', top: '50%', right: '15%',
         width: '300px', height: '300px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(201,164,44,0.07) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.07) 0%, transparent 70%)',
         filter: 'blur(30px)',
       }} />
     </div>
@@ -106,8 +107,11 @@ export const TabletSummaryPage = () => {
   const tableCategories   = usePublicDataStore((s) => s.tableCategories);
   const restaurantName    = usePublicDataStore((s) => s.restaurantName);
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
+  const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
+  const tabletBgColor     = usePublicDataStore((s) => s.tabletBgColor);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
+  const themeStyle = tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties;
 
   // Reveal-on-scroll: re-scan once data finishes loading and sections render.
   const revealRef = useScrollReveal<HTMLDivElement>([isLoading]);
@@ -333,22 +337,22 @@ export const TabletSummaryPage = () => {
   // ── Success screen ────────────────────────────────────────────────────────
   if (confirmedEventId !== null) {
     return (
-      <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-12 sm:px-6">
+      <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-12 sm:px-6" style={themeStyle}>
         <PageBackground />
         <div className="relative mx-auto max-w-md space-y-6">
           <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
 
           <div className="rg-card p-6 sm:p-10 text-center space-y-6 tablet-fade-up" style={{ animationDelay: '80ms' }}>
             <div className="scale-in mx-auto flex h-24 w-24 items-center justify-center rounded-full"
-              style={{ background: 'rgba(201,164,44,0.15)', border: '2px solid rgba(201,164,44,0.4)' }}>
-              <svg className="h-12 w-12" style={{ color: '#c9a42c' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              style={{ background: 'rgba(var(--rg-accent-rgb),0.15)', border: '2px solid rgba(var(--rg-accent-rgb),0.4)' }}>
+              <svg className="h-12 w-12" style={{ color: 'var(--rg-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div className="space-y-2">
               <p className="text-2xl font-bold text-white">{t('event_confirmed')}</p>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('thank_you')}</p>
-              <p className="mt-3 font-mono text-sm" style={{ color: 'rgba(201,164,44,0.7)' }}>Event #{confirmedEventId}</p>
+              <p className="mt-3 font-mono text-sm" style={{ color: 'rgba(var(--rg-accent-rgb),0.7)' }}>Event #{confirmedEventId}</p>
             </div>
             {confirmedExportSnapshot && (
               <div className="grid gap-2 w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
@@ -361,7 +365,7 @@ export const TabletSummaryPage = () => {
                   <button key={label} type="button" onClick={fn}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
                     style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                    <svg className="h-4 w-4" style={{ color: 'rgba(201,164,44,0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4" style={{ color: 'rgba(var(--rg-accent-rgb),0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
                     </svg>
                     {label}
@@ -380,7 +384,7 @@ export const TabletSummaryPage = () => {
                   navigate('/tablet');
                 }}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
-                style={{ background: '#c9a42c', color: '#1a3320' }}
+                style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}
               >
                 {t('start_new_booking')}
               </button>
@@ -401,10 +405,10 @@ export const TabletSummaryPage = () => {
 
   // ── Main summary screen ───────────────────────────────────────────────────
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8" style={themeStyle}>
 
       <PageBackground />
-      <FingerTrail accent="#c9a42c" />
+      <FingerTrail accent="var(--rg-accent)" />
 
       <div ref={revealRef} className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
         <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
@@ -564,12 +568,12 @@ export const TabletSummaryPage = () => {
                       style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-xs font-bold"
-                          style={{ background: '#c9a42c', color: '#1a3320' }}>
+                          style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}>
                           ×{guestCount}
                         </span>
                         <p className="text-sm font-medium text-white truncate">{dishName(item, locale)}</p>
                       </div>
-                      <p className="text-sm font-semibold whitespace-nowrap" style={{ color: '#c9a42c' }}>
+                      <p className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--rg-accent)' }}>
                         {formatSum(item.priceCents * guestCount)}
                       </p>
                     </div>
@@ -596,7 +600,7 @@ export const TabletSummaryPage = () => {
                     type="checkbox"
                     checked={discountEnabled}
                     onChange={(e) => setDiscountEnabled(e.target.checked)}
-                    style={{ accentColor: '#c9a42c', width: 18, height: 18 }}
+                    style={{ accentColor: 'var(--rg-accent)', width: 18, height: 18 }}
                   />
                   <span className="text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>{t('apply_discount')}</span>
                 </label>
@@ -612,7 +616,7 @@ export const TabletSummaryPage = () => {
                       className="rg-input"
                       style={{ width: 110 }}
                     />
-                    <span className="text-sm font-semibold" style={{ color: '#c9a42c' }}>%</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--rg-accent)' }}>%</span>
                   </div>
                 )}
               </div>
@@ -660,7 +664,7 @@ export const TabletSummaryPage = () => {
               {/* Total */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
                 <div className="rounded-2xl px-4 sm:px-5 py-3 sm:py-4"
-                  style={{ background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.4)' }}>
+                  style={{ background: 'rgba(var(--rg-accent-rgb),0.15)', border: '1px solid rgba(var(--rg-accent-rgb),0.4)' }}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="rg-label">{t('total')}</span>
                     <div className="flex flex-col items-end">
@@ -675,7 +679,7 @@ export const TabletSummaryPage = () => {
                           </span>
                         </span>
                       )}
-                      <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: '#c9a42c' }}>
+                      <span className="text-lg sm:text-2xl font-bold whitespace-nowrap" style={{ color: 'var(--rg-accent)' }}>
                         {formatSum(finalTotalCents)}
                       </span>
                     </div>
@@ -698,7 +702,7 @@ export const TabletSummaryPage = () => {
                 disabled={confirmDisabled || isSubmitting}
                 onClick={handleConfirm}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg"
-                style={{ background: '#c9a42c', color: '#1a3320' }}>
+                style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}>
                 {isSubmitting ? t('submitting') : t('confirm')}
               </button>
 
@@ -716,7 +720,7 @@ export const TabletSummaryPage = () => {
                   <button key={label} type="button" onClick={fn}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
                     style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                    <svg className="h-4 w-4" style={{ color: 'rgba(201,164,44,0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4" style={{ color: 'rgba(var(--rg-accent-rgb),0.7)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
                     </svg>
                     {label}

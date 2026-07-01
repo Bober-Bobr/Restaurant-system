@@ -9,6 +9,8 @@ type RestaurantUpdateData = {
   history?: string | null;
   logoUrl?: string;
   backgroundImageUrl?: string | null;
+  tabletAccentColor?: string | null;
+  tabletBgColor?: string | null;
 };
 
 export class RestaurantService {

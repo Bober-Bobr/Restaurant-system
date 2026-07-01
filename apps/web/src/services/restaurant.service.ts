@@ -10,6 +10,8 @@ export type Restaurant = {
   logoUrl: string | null;
   backgroundImageUrl: string | null;
   categoryOrder: string | null;
+  tabletAccentColor: string | null;
+  tabletBgColor: string | null;
   ownerId: string;
   companyId: string | null;
   company: { id: string; name: string; logoUrl: string | null } | null;
@@ -26,6 +28,8 @@ export type CreateRestaurantPayload = {
   logoUrl?: string;
   backgroundImageUrl?: string | null;
   companyId?: string;
+  tabletAccentColor?: string | null;
+  tabletBgColor?: string | null;
 };
 
 export const restaurantService = {
