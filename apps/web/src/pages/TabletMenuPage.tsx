@@ -1013,7 +1013,7 @@ export const TabletMenuPage = () => {
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pb-8">
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8">
       {!welcomeShown && (
         <div
           style={{
@@ -1166,10 +1166,10 @@ export const TabletMenuPage = () => {
           </div>
         </header>
 
-        {/* ── Main grid ── */}
-        <section className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.35fr_0.65fr]">
+        {/* ── Main content (full width — CTA lives in the fixed bottom bar) ── */}
+        <section className="grid grid-cols-1 gap-4 lg:gap-6">
 
-          {/* ── Left column ── */}
+          {/* ── Content column ── */}
           <div className="min-w-0 space-y-4 lg:space-y-6">
 
             {/* Settings — hidden in view-only mode */}
@@ -1353,38 +1353,25 @@ export const TabletMenuPage = () => {
               )}
             </section>
           </div>
-
-          {/* ── Sidebar — desktop only, hidden in view-only mode ── */}
-          {!viewOnly && (
-          <aside className="hidden min-w-0 space-y-4 lg:block lg:sticky lg:top-6 lg:self-start">
-            {/* CTA */}
-            <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('review_and_confirm')}</p>
-              <button type="button" onClick={() => navigate('/tablet/summary')}
-                className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
-                style={{ background: '#c9a42c', color: '#1a3320' }}>
-                {t('view_summary')} →
-              </button>
-            </section>
-          </aside>
-          )}
         </section>
       </div>
 
-      {/* ── Mobile sticky CTA — hidden on desktop & in view-only mode ── */}
+      {/* ── Sticky bottom CTA — all screen sizes, hidden in view-only mode ── */}
       {!viewOnly && (
-        <div className="lg:hidden"
+        <div
           style={{
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
             padding: '10px 12px calc(10px + env(safe-area-inset-bottom))',
             background: 'rgba(8,18,12,0.85)', backdropFilter: 'blur(14px)',
             borderTop: '1px solid rgba(255,255,255,0.1)',
           }}>
-          <button type="button" onClick={() => navigate('/tablet/summary')}
-            className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99]"
-            style={{ background: '#c9a42c', color: '#1a3320', boxShadow: '0 6px 20px rgba(201,164,44,0.35)' }}>
-            {t('view_summary')} →
-          </button>
+          <div className="mx-auto max-w-7xl">
+            <button type="button" onClick={() => navigate('/tablet/summary')}
+              className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99]"
+              style={{ background: '#c9a42c', color: '#1a3320', boxShadow: '0 6px 20px rgba(201,164,44,0.35)' }}>
+              {t('view_summary')} →
+            </button>
+          </div>
         </div>
       )}
     </main>
