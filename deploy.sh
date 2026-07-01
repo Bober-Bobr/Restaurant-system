@@ -15,11 +15,28 @@ git merge --ff-only origin/main
 echo "==> Installing dependencies..."
 npm install
 
-export DATABASE_URL="file:$REPO_DIR/apps/api/prisma/dev.db"
+# Database is PostgreSQL (Docker). Read the connection string from apps/api/.env
+# so `prisma migrate deploy` and the PM2 restart below all use the same URL.
+# (dotenv does NOT override an already-set env var, so exporting it here makes it
+# authoritative for the pm2 --update-env restart too.)
+echo "==> Loading DATABASE_URL from apps/api/.env..."
+DATABASE_URL="$(grep -E '^DATABASE_URL=' apps/api/.env | head -1 | cut -d= -f2-)"
+DATABASE_URL="${DATABASE_URL%\"}"; DATABASE_URL="${DATABASE_URL#\"}"   # strip optional surrounding quotes
+export DATABASE_URL
+if [[ "$DATABASE_URL" != postgresql://* ]]; then
+  echo "ERROR: DATABASE_URL in apps/api/.env is not a postgresql:// URL."
+  echo "       Aborting before touching the database. Check apps/api/.env."
+  exit 1
+fi
 
-echo "==> Fixing database permissions..."
-chmod 664 apps/api/prisma/dev.db 2>/dev/null || true
-chmod 775 apps/api/prisma/
+echo "==> Ensuring PostgreSQL container is running..."
+docker compose up -d postgres
+# Wait until Postgres accepts connections before running migrations.
+for i in $(seq 1 30); do
+  if docker compose exec -T postgres pg_isready -q; then break; fi
+  [ "$i" -eq 30 ] && { echo "ERROR: PostgreSQL did not become ready in time."; exit 1; }
+  sleep 1
+done
 
 echo "==> Generating Prisma client..."
 "$REPO_DIR/apps/api/node_modules/.bin/prisma" generate --schema=apps/api/prisma/schema.prisma
