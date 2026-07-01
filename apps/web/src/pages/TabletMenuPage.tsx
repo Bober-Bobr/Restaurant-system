@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
@@ -623,14 +624,21 @@ function DishSwapModal({
   // guest picks any available option for this position; clicking the currently
   // selected one again reverts the position back to its default dish.
   const currentValue = chosenId ?? null;
+  const themeAccent = usePublicDataStore((s) => s.tabletAccentColor);
+  const themeBg = usePublicDataStore((s) => s.tabletBgColor);
 
-  return (
+  // Rendered through a portal to <body>: the swap picker lives inside a .rg-card
+  // whose backdrop-filter establishes a containing block, which would otherwise
+  // clip this position:fixed overlay to the card instead of the full viewport.
+  // The portal escapes the themed <main>, so re-apply the restaurant theme vars.
+  return createPortal(
     <div onClick={onClose}
       style={{
+        ...tabletThemeVars({ accent: themeAccent, bg: themeBg }),
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(6,14,9,0.8)', backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-      }}>
+      } as React.CSSProperties}>
       <div onClick={(e) => e.stopPropagation()} className="tablet-fade-up"
         style={{
           width: '100%', maxWidth: 760, maxHeight: '88vh',
@@ -721,7 +729,8 @@ function DishSwapModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

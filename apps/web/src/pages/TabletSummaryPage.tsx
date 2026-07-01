@@ -10,7 +10,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
-import type { Event } from '../types/domain';
+import type { Event, TableCategoryPackageItem } from '../types/domain';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
@@ -96,8 +96,10 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
-    childrenTableSelected, childrenCount, childReplacements,
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
+    childrenTableSelected, childrenCount,
+    selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
+    childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
     locale, setLocale, setGuestCount, reset,
     customerName: draftCustomerName, customerPhone: draftCustomerPhone,
     eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
@@ -175,20 +177,36 @@ export const TabletSummaryPage = () => {
   const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount);
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
 
-  // Dishes included with the chosen table category — with localized category
-  // labels and per-table serving counts, for grouping/printing in the export.
+  // The export lists ONLY the first/second/third courses the guest actually
+  // selected on the tablet — not every package option or the fixed included
+  // dishes. Package items are filtered to the chosen course ids, in course order.
+  const selectedCourseDishes = (
+    packageItems: TableCategoryPackageItem[],
+    firstId: string | undefined,
+    secondIds: string[],
+    thirdIds: string[],
+  ) => {
+    const pick = (category: string, isSelected: (id: string) => boolean) =>
+      packageItems
+        .filter((pi) => pi.menuItem.category === category && isSelected(pi.menuItem.id))
+        .map((pi) => ({
+          name: pi.menuItem.name,
+          category: pi.menuItem.category,
+          categoryLabel: t(pi.menuItem.category.toLowerCase() as Parameters<typeof translate>[0]),
+          servings: pi.servings ?? 1,
+        }));
+    return [
+      ...pick('FIRST_COURSE', (id) => id === firstId),
+      ...pick('SECOND_COURSE', (id) => secondIds.includes(id)),
+      ...pick('THIRD_COURSE', (id) => thirdIds.includes(id)),
+    ];
+  };
+
   const buildIncludedDishes = () =>
-    (selectedTableCategory?.packageItems ?? []).map((pi) => {
-      // If the guest swapped this included dish for a free alternative, show that instead.
-      const swapId = replacements[pi.id];
-      const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
-      return {
-        name: dish.name,
-        category: dish.category,
-        categoryLabel: t(dish.category.toLowerCase() as Parameters<typeof translate>[0]),
-        servings: pi.servings ?? 1,
-      };
-    });
+    selectedCourseDishes(
+      selectedTableCategory?.packageItems ?? [],
+      selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
+    );
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
   const discountPercent = discountEnabled
@@ -201,16 +219,10 @@ export const TabletSummaryPage = () => {
   // when the children's table is included.
   const buildChildrenDishes = () =>
     childrenActive
-      ? (childrenTableCategory!.packageItems ?? []).map((pi) => {
-          const swapId = childReplacements[pi.id];
-          const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
-          return {
-            name: dish.name,
-            category: dish.category,
-            categoryLabel: t(dish.category.toLowerCase() as Parameters<typeof translate>[0]),
-            servings: pi.servings ?? 1,
-          };
-        })
+      ? selectedCourseDishes(
+          childrenTableCategory!.packageItems ?? [],
+          childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
+        )
       : [];
 
   const originalPerGuestCents = pricing.perGuestCents;
