@@ -1,5 +1,21 @@
 import { create } from 'zustand';
 import { Locale, defaultLocale } from '../utils/translate';
+import type { EventMenuConfig } from '../types/domain';
+
+// Draft handed to the tablet when the admin Events page opens the menu flow for
+// an event (new or existing). `config` restores the exact prior selections.
+export type EventDraft = {
+  editingEventId?: number;
+  hallId?: string;
+  tableCategoryId?: string;
+  guestCount: number;
+  customerName: string;
+  customerPhone: string;
+  eventDate: string;
+  eventTime: string;
+  childrenCount?: number;
+  config?: EventMenuConfig | null;
+};
 
 type SelectionState = {
   selectedItems: Record<string, number>;
@@ -13,6 +29,9 @@ type SelectionState = {
   // Free replacements: included package-item id → chosen FREE menu-item id.
   replacements: Record<string, string>;
   guestCount: number;
+  // The event being edited via the menu flow (undefined = creating a new event).
+  // When set, confirming on the Summary page UPDATES this event instead of creating.
+  editingEventId?: number;
   // ── Event draft handed off from the admin Events page "Change Menu" button ──
   // Pre-fills the tablet flow; contact + date/time surface again on the Summary.
   customerName: string;
@@ -46,6 +65,8 @@ type SelectionState = {
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
+  // Load a full event draft (meta + prior menu selections) in one atomic update.
+  loadEventDraft: (draft: EventDraft) => void;
   reset: () => void;
 };
 
@@ -58,6 +79,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedThirdCourseIds: [],
   replacements: {},
   guestCount: 0,
+  editingEventId: undefined,
   customerName: '',
   customerPhone: '',
   eventDate: '',
@@ -194,6 +216,38 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setLocale: (locale) => {
     set({ locale });
   },
+  loadEventDraft: (d) => {
+    const cfg = d.config;
+    const childrenSelected =
+      (d.childrenCount ?? 0) > 0 ||
+      !!cfg?.childFirstCourseId ||
+      (cfg?.childSecondCourseIds?.length ?? 0) > 0 ||
+      (cfg?.childThirdCourseIds?.length ?? 0) > 0 ||
+      Object.keys(cfg?.childReplacements ?? {}).length > 0;
+    set({
+      editingEventId: d.editingEventId,
+      selectedHallId: d.hallId || undefined,
+      selectedTableCategoryId: d.tableCategoryId || undefined,
+      guestCount: Math.max(d.guestCount, 0),
+      customerName: d.customerName,
+      customerPhone: d.customerPhone,
+      eventDate: d.eventDate,
+      eventTime: d.eventTime,
+      // Prior adult selections (empty for a brand-new event).
+      selectedFirstCourseId: cfg?.firstCourseId,
+      selectedSecondCourseIds: cfg?.secondCourseIds ?? [],
+      selectedThirdCourseIds: cfg?.thirdCourseIds ?? [],
+      replacements: cfg?.replacements ?? {},
+      selectedItems: cfg?.extras ?? {},
+      // Children's table.
+      childrenTableSelected: childrenSelected,
+      childrenCount: d.childrenCount ?? 0,
+      childFirstCourseId: cfg?.childFirstCourseId,
+      childSecondCourseIds: cfg?.childSecondCourseIds ?? [],
+      childThirdCourseIds: cfg?.childThirdCourseIds ?? [],
+      childReplacements: cfg?.childReplacements ?? {},
+    });
+  },
   reset: () => {
     set({
       selectedItems: {},
@@ -204,6 +258,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedThirdCourseIds: [],
       replacements: {},
       guestCount: 0,
+      editingEventId: undefined,
       customerName: '',
       customerPhone: '',
       eventDate: '',

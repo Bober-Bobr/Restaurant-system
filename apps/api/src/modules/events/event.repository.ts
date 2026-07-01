@@ -13,6 +13,7 @@ export type CreateEventData = {
   tableCategoryId?: string;
   childrenTableCategoryId?: string;
   childrenCount?: number;
+  menuConfig?: Prisma.InputJsonValue;
   notes?: string;
   birthdayPersonName?: string;
   brideName?: string;

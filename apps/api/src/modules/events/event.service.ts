@@ -44,6 +44,15 @@ export class EventService {
     if (payload.tableCategoryId !== undefined) {
       updateData.tableCategoryId = payload.tableCategoryId || null;
     }
+    if (payload.childrenTableCategoryId !== undefined) {
+      updateData.childrenTableCategoryId = payload.childrenTableCategoryId || null;
+    }
+    if (payload.childrenCount !== undefined) {
+      updateData.childrenCount = payload.childrenCount;
+    }
+    if (payload.menuConfig !== undefined) {
+      updateData.menuConfig = payload.menuConfig;
+    }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
     return this.mapEventToExternalId(updatedEvent);

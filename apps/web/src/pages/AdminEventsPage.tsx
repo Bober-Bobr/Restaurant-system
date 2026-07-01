@@ -253,14 +253,22 @@ export const AdminEventsPage = () => {
   // the tablet menu page to keep the pre-selected table category instead of
   // resetting it. Contact + date/time resurface on the tablet Summary page.
   const goToTabletWithDraft = () => {
-    const tablet = useTabletStore.getState();
-    tablet.setGuestCount(parsePositiveInt(guestCountText) ?? 0);
-    tablet.setHall(hallId);
-    tablet.setTableCategory(tableCategoryId);
-    tablet.setCustomerName(customerName.trim());
-    tablet.setCustomerPhone(customerPhone.trim());
-    tablet.setEventDate(eventDate);
-    tablet.setEventTime(eventTime);
+    // When editing an existing event, carry its saved menu config so the tablet
+    // reopens with every dish the guest originally selected. A brand-new event
+    // (editingId null) starts the menu flow empty and will CREATE on confirm.
+    const event = editingId ? (events ?? []).find((e) => e.id === editingId) : undefined;
+    useTabletStore.getState().loadEventDraft({
+      editingEventId: editingId ?? undefined,
+      hallId,
+      tableCategoryId,
+      guestCount: parsePositiveInt(guestCountText) ?? 0,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      eventDate,
+      eventTime,
+      childrenCount: event?.childrenCount ?? 0,
+      config: event?.menuConfig ?? null,
+    });
     navigate(`/tablet?restaurantId=${encodeURIComponent(tabletRestaurantId)}&prefill=1`);
   };
 
@@ -480,7 +488,8 @@ export const AdminEventsPage = () => {
             ) : null}
           </div>
 
-          {/* Change Menu — hand the entered details to the tablet flow to pick the menu */}
+          {/* Create/Edit Menu — hand the entered details to the tablet flow to pick
+              the menu. Reads "Create Menu" for a new event, "Edit Menu" when editing. */}
           <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16, display: 'flex' }}>
             <Button
               type="button"
@@ -488,7 +497,7 @@ export const AdminEventsPage = () => {
               onClick={goToTabletWithDraft}
               disabled={!tabletRestaurantId}
             >
-              {t('change_menu')} →
+              {editingId ? t('edit_menu') : t('create_menu')} →
             </Button>
           </div>
         </form>

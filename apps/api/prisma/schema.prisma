@@ -97,6 +97,9 @@ model Event {
   // Optional children's table add-on chosen on the tablet (plain refs, no FK).
   childrenTableCategoryId String?
   childrenCount        Int               @default(0)
+  // Full tablet menu-selection snapshot (courses, free swaps, extras, children)
+  // so the event round-trips between the Events page and the Tablet page.
+  menuConfig           Json?
   restaurantId         String?
   notes                String?
   birthdayPersonName   String?

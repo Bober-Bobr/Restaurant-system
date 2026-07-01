@@ -10,7 +10,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
-import type { Event, TableCategoryPackageItem } from '../types/domain';
+import type { Event, EventMenuConfig, TableCategoryPackageItem } from '../types/domain';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
@@ -100,6 +100,7 @@ export const TabletSummaryPage = () => {
     childrenTableSelected, childrenCount, childReplacements,
     selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
+    editingEventId,
     locale, setLocale, setGuestCount, reset,
     customerName: draftCustomerName, customerPhone: draftCustomerPhone,
     eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
@@ -269,28 +270,52 @@ export const TabletSummaryPage = () => {
       }
     : {};
 
+  // Snapshot of every tablet selection, persisted on the event so it round-trips
+  // back to the tablet when the menu is edited later from the Events page.
+  const buildMenuConfig = (): EventMenuConfig => ({
+    firstCourseId: selectedFirstCourseId,
+    secondCourseIds: selectedSecondCourseIds,
+    thirdCourseIds: selectedThirdCourseIds,
+    replacements,
+    childFirstCourseId: childrenActive ? childFirstCourseId : undefined,
+    childSecondCourseIds: childrenActive ? childSecondCourseIds : [],
+    childThirdCourseIds: childrenActive ? childThirdCourseIds : [],
+    childReplacements: childrenActive ? childReplacements : {},
+    extras: Object.fromEntries(Object.entries(selectedItems).filter(([, q]) => q > 0)),
+  });
+
   const handleConfirm = async () => {
     if (confirmDisabled || isSubmitting) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const event = await eventService.create({
+      // Fields the menu flow owns — sent on both create and update.
+      const menuFields = {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || undefined,
         eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         guestCount,
-        status: 'CONFIRMED',
-        eventType,
+        status: 'CONFIRMED' as const,
         hallId: selectedHallId || undefined,
         tableCategoryId: selectedTableCategoryId || undefined,
         childrenTableCategoryId: childrenActive ? childrenTableCategory!.id : undefined,
-        childrenCount: childrenActive ? childrenCount : undefined,
-        notes: eventNotes.trim() || undefined,
-        birthdayPersonName:  eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
-        brideName:           eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
-        groomName:           eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
-        honoreePersonName:   !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
-      });
+        childrenCount: childrenActive ? childrenCount : 0,
+        menuConfig: buildMenuConfig(),
+      };
+      // Editing an existing event (opened via the Events page) updates it in
+      // place; otherwise a new event is created. Event-type/person fields are
+      // only set on create so an admin edit doesn't clobber them.
+      const event = editingEventId
+        ? await eventService.update(editingEventId, menuFields)
+        : await eventService.create({
+            ...menuFields,
+            eventType,
+            notes: eventNotes.trim() || undefined,
+            birthdayPersonName:  eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
+            brideName:           eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
+            groomName:           eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
+            honoreePersonName:   !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
+          });
       setConfirmedEventId(event.id);
       setConfirmedExportSnapshot({
         customerName: customerName.trim(),

@@ -1,4 +1,4 @@
-import type { Event } from '../types/domain';
+import type { Event, EventMenuConfig } from '../types/domain';
 import { httpClient } from './http';
 
 export const eventService = {
@@ -18,6 +18,7 @@ export const eventService = {
     tableCategoryId?: string;
     childrenTableCategoryId?: string;
     childrenCount?: number;
+    menuConfig?: EventMenuConfig;
     notes?: string;
     birthdayPersonName?: string;
     brideName?: string;
@@ -37,6 +38,9 @@ export const eventService = {
     region?: Event['region'];
     hallId?: string;
     tableCategoryId?: string;
+    childrenTableCategoryId?: string;
+    childrenCount?: number;
+    menuConfig?: EventMenuConfig;
     notes?: string;
     birthdayPersonName?: string;
     brideName?: string;

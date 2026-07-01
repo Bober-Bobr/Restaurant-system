@@ -5,8 +5,24 @@ export type EventMenuSelection = {
   unitPriceCents: number;
 };
 
+// Full tablet menu-selection snapshot persisted on an event so it round-trips
+// between the admin Events page and the Tablet page.
+export type EventMenuConfig = {
+  firstCourseId?: string;
+  secondCourseIds: string[];
+  thirdCourseIds: string[];
+  replacements: Record<string, string>;
+  childFirstCourseId?: string;
+  childSecondCourseIds: string[];
+  childThirdCourseIds: string[];
+  childReplacements: Record<string, string>;
+  // Selected paid "Extras": menu-item id → quantity (per-guest handled elsewhere).
+  extras: Record<string, number>;
+};
+
 export type Event = {
   id: number;
+  menuConfig?: EventMenuConfig | null;
   customerName: string;
   customerPhone?: string;
   eventDate: string;
