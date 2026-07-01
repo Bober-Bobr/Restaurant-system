@@ -618,10 +618,9 @@ function DishSwapModal({
   onChoose: (menuItemId: string | null) => void;
   onClose: () => void;
 }) {
-  const options: { item: TableCategoryPackageItem['menuItem']; value: string | null; isDefault: boolean }[] = [
-    { item: pi.menuItem, value: null, isDefault: true },
-    ...alternatives.map((m) => ({ item: m, value: m.id as string | null, isDefault: false })),
-  ];
+  // Only the free-swap options are shown — never the included/default dish. The
+  // guest picks any available option for this position; clicking the currently
+  // selected one again reverts the position back to its default dish.
   const currentValue = chosenId ?? null;
 
   return (
@@ -660,11 +659,12 @@ function DishSwapModal({
         {/* Options grid */}
         <div className="scrollbar-none"
           style={{ overflowY: 'auto', padding: 18, display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))' }}>
-          {options.map(({ item, value, isDefault }) => {
-            const selected = currentValue === value;
+          {alternatives.map((item) => {
+            const selected = currentValue === item.id;
             const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
             return (
-              <button key={value ?? 'default'} type="button" onClick={() => onChoose(value)}
+              // Clicking the selected option again reverts to the default dish.
+              <button key={item.id} type="button" onClick={() => onChoose(selected ? null : item.id)}
                 style={{
                   textAlign: 'left', padding: 0, cursor: 'pointer',
                   borderRadius: 16, overflow: 'hidden',
@@ -695,11 +695,6 @@ function DishSwapModal({
                       </span>
                     )}
                   </div>
-                  {isDefault && (
-                    <span style={{ display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#d9b84a', background: 'rgba(201,164,44,0.14)', border: '1px solid rgba(201,164,44,0.3)' }}>
-                      {t('included_default')}
-                    </span>
-                  )}
                   {dishDescription(item, locale) && (
                     <p style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>
                       {dishDescription(item, locale)}
@@ -710,6 +705,20 @@ function DishSwapModal({
             );
           })}
         </div>
+
+        {/* Revert — only when this position is currently swapped. */}
+        {currentValue != null && (
+          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+            <button type="button" onClick={() => onChoose(null)}
+              style={{
+                width: '100%', padding: '10px', borderRadius: 10, cursor: 'pointer',
+                fontSize: 13, fontWeight: 700, color: '#d9b84a',
+                background: 'rgba(201,164,44,0.1)', border: '1px solid rgba(201,164,44,0.3)',
+              }}>
+              ↺ {t('revert_to_default')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
