@@ -96,8 +96,8 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
-    childrenTableSelected, childrenCount,
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
+    childrenTableSelected, childrenCount, childReplacements,
     selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
     locale, setLocale, setGuestCount, reset,
@@ -177,34 +177,49 @@ export const TabletSummaryPage = () => {
   const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount);
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
 
-  // The export lists ONLY the first/second/third courses the guest actually
-  // selected on the tablet — not every package option or the fixed included
-  // dishes. Package items are filtered to the chosen course ids, in course order.
-  const selectedCourseDishes = (
+  // The export lists the dishes that make up the table: the non-course included
+  // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
+  // the guest actually selected. Course options the guest didn't pick are left
+  // out, but every other included dish is shown.
+  const COURSE_CATEGORIES = ['FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
+  const dishEntry = (name: string, category: string, servings?: number) => ({
+    name,
+    category,
+    categoryLabel: t(category.toLowerCase() as Parameters<typeof translate>[0]),
+    servings: servings ?? 1,
+  });
+
+  const buildTableDishes = (
     packageItems: TableCategoryPackageItem[],
+    swaps: Record<string, string>,
     firstId: string | undefined,
     secondIds: string[],
     thirdIds: string[],
   ) => {
-    const pick = (category: string, isSelected: (id: string) => boolean) =>
+    // Fixed included dishes (salads, appetizers, …), with free swaps applied.
+    const included = packageItems
+      .filter((pi) => !COURSE_CATEGORIES.includes(pi.menuItem.category))
+      .map((pi) => {
+        const swapId = swaps[pi.id];
+        const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
+        return dishEntry(dish.name, dish.category, pi.servings);
+      });
+    // Only the selected courses, in course order.
+    const course = (category: string, isSelected: (id: string) => boolean) =>
       packageItems
         .filter((pi) => pi.menuItem.category === category && isSelected(pi.menuItem.id))
-        .map((pi) => ({
-          name: pi.menuItem.name,
-          category: pi.menuItem.category,
-          categoryLabel: t(pi.menuItem.category.toLowerCase() as Parameters<typeof translate>[0]),
-          servings: pi.servings ?? 1,
-        }));
+        .map((pi) => dishEntry(pi.menuItem.name, pi.menuItem.category, pi.servings));
     return [
-      ...pick('FIRST_COURSE', (id) => id === firstId),
-      ...pick('SECOND_COURSE', (id) => secondIds.includes(id)),
-      ...pick('THIRD_COURSE', (id) => thirdIds.includes(id)),
+      ...included,
+      ...course('FIRST_COURSE', (id) => id === firstId),
+      ...course('SECOND_COURSE', (id) => secondIds.includes(id)),
+      ...course('THIRD_COURSE', (id) => thirdIds.includes(id)),
     ];
   };
 
   const buildIncludedDishes = () =>
-    selectedCourseDishes(
-      selectedTableCategory?.packageItems ?? [],
+    buildTableDishes(
+      selectedTableCategory?.packageItems ?? [], replacements,
       selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     );
 
@@ -219,8 +234,8 @@ export const TabletSummaryPage = () => {
   // when the children's table is included.
   const buildChildrenDishes = () =>
     childrenActive
-      ? selectedCourseDishes(
-          childrenTableCategory!.packageItems ?? [],
+      ? buildTableDishes(
+          childrenTableCategory!.packageItems ?? [], childReplacements,
           childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
         )
       : [];
