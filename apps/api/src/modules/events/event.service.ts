@@ -26,6 +26,8 @@ export class EventService {
     const updateData: Record<string, any> = {
       customerName: payload.customerName,
       customerPhone: payload.customerPhone,
+      secondCustomerName: payload.secondCustomerName,
+      secondCustomerPhone: payload.secondCustomerPhone,
       eventDate: payload.eventDate,
       guestCount: payload.guestCount,
       status: payload.status,

@@ -103,6 +103,7 @@ export const TabletSummaryPage = () => {
     editingEventId,
     locale, setLocale, setGuestCount, reset,
     customerName: draftCustomerName, customerPhone: draftCustomerPhone,
+    secondCustomerName: draftSecondCustomerName, secondCustomerPhone: draftSecondCustomerPhone,
     eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
@@ -123,6 +124,8 @@ export const TabletSummaryPage = () => {
   // and handed off via "Change Menu" (falls back to empty in the normal flow).
   const [customerName, setCustomerName]             = useState(draftCustomerName);
   const [customerPhone, setCustomerPhone]           = useState(draftCustomerPhone);
+  const [secondCustomerName, setSecondCustomerName] = useState(draftSecondCustomerName);
+  const [secondCustomerPhone, setSecondCustomerPhone] = useState(draftSecondCustomerPhone);
   const [eventDate, setEventDate]                   = useState(draftEventDate);
   const [eventTime, setEventTime]                   = useState(draftEventTime);
   const [eventNotes, setEventNotes]                 = useState('');
@@ -137,7 +140,8 @@ export const TabletSummaryPage = () => {
   const [discountEnabled, setDiscountEnabled]       = useState(false);
   const [discountText, setDiscountText]             = useState('');
   const [confirmedExportSnapshot, setConfirmedExportSnapshot] = useState<null | {
-    customerName: string; customerPhone: string; hallName: string; tableCategoryName: string;
+    customerName: string; customerPhone: string; secondCustomerName: string; secondCustomerPhone: string;
+    eventDate: string; hallName: string; tableCategoryName: string;
     guestCount: number; selectedItems: Record<string, number>; menuItems: typeof menuItems;
     includedDishes: { name: string; category: string; categoryLabel: string; servings: number }[];
     pricing: { perGuestCents: number; originalPerGuestCents: number; totalCents: number;
@@ -293,6 +297,8 @@ export const TabletSummaryPage = () => {
       const menuFields = {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() || undefined,
+        secondCustomerName: secondCustomerName.trim() || undefined,
+        secondCustomerPhone: secondCustomerPhone.trim() || undefined,
         eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         guestCount,
         status: 'CONFIRMED' as const,
@@ -320,6 +326,9 @@ export const TabletSummaryPage = () => {
       setConfirmedExportSnapshot({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
+        secondCustomerName: secondCustomerName.trim(),
+        secondCustomerPhone: secondCustomerPhone.trim(),
+        eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         hallName: selectedHall?.name || '',
         tableCategoryName: selectedTableCategory?.name || '',
         guestCount,
@@ -354,7 +363,10 @@ export const TabletSummaryPage = () => {
       const includedDishes = buildIncludedDishes();
       const response = await httpClient.post(
         url,
-        { customerName, customerPhone, hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
+        { customerName, customerPhone,
+          secondCustomerName: secondCustomerName.trim() || undefined, secondCustomerPhone: secondCustomerPhone.trim() || undefined,
+          eventDate: eventDate && eventTime ? new Date(`${eventDate}T${eventTime}`).toISOString() : undefined,
+          hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
           guestCount, selectedItems: pricedSelections, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
@@ -430,7 +442,7 @@ export const TabletSummaryPage = () => {
                 type="button"
                 onClick={() => {
                   setConfirmedEventId(null);
-                  setCustomerName(''); setCustomerPhone(''); setEventDate(''); setEventTime('');
+                  setCustomerName(''); setCustomerPhone(''); setSecondCustomerName(''); setSecondCustomerPhone(''); setEventDate(''); setEventTime('');
                   setEventNotes(''); setEventType('RESERVATION');
                   setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreeName('');
                   navigate('/tablet');
@@ -488,6 +500,18 @@ export const TabletSummaryPage = () => {
                   <label className="rg-label">{t('customer_phone')}</label>
                   <input className="rg-input" type="tel" placeholder={t('customer_phone')}
                     value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <label className="rg-label">{t('second_customer_name')}</label>
+                  <input className="rg-input" placeholder={t('second_customer_name')}
+                    value={secondCustomerName} onChange={(e) => setSecondCustomerName(e.target.value)} />
+                </div>
+
+                <div className="grid gap-1.5">
+                  <label className="rg-label">{t('second_customer_phone')}</label>
+                  <input className="rg-input" type="tel" placeholder={t('second_customer_phone')}
+                    value={secondCustomerPhone} onChange={(e) => setSecondCustomerPhone(e.target.value)} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

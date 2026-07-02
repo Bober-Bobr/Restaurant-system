@@ -25,6 +25,8 @@ export type Event = {
   menuConfig?: EventMenuConfig | null;
   customerName: string;
   customerPhone?: string;
+  secondCustomerName?: string;
+  secondCustomerPhone?: string;
   eventDate: string;
   guestCount: number;
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'MENU_NOT_SELECTED';

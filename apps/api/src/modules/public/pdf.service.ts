@@ -19,6 +19,11 @@ interface MenuItem {
 interface SummaryData {
   customerName: string;
   customerPhone: string;
+  secondCustomerName?: string;
+  secondCustomerPhone?: string;
+  // ISO date string of the event itself. When present the PDF shows this as the
+  // event date instead of the download date.
+  eventDate?: string;
   hallName: string;
   tableCategoryName: string;
   guestCount: number;
@@ -196,16 +201,20 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
 
     // ── Info block (two-column label/value grid) ──────────────────────────
 
-    const today = new Date().toLocaleDateString(
-      data.locale === 'ru' ? 'ru-RU' : data.locale === 'uz' ? 'uz-UZ' : 'en-GB',
-      { day: '2-digit', month: '2-digit', year: '2-digit' }
-    );
+    const localeTag = data.locale === 'ru' ? 'ru-RU' : data.locale === 'uz' ? 'uz-UZ' : 'en-GB';
+    // The event date (the banquet date) — not the day the file was downloaded.
+    const eventDateStr = (data.eventDate ? new Date(data.eventDate) : new Date())
+      .toLocaleDateString(localeTag, { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-    const infoRows = [
-      [t('hall') + ':', data.hallName, t('date') + ':', today],
+    const infoRows: [string, string, string, string][] = [
+      [t('hall') + ':', data.hallName, t('date') + ':', eventDateStr],
       [t('name') + ':', data.customerName, t('phone') + ':', data.customerPhone],
-      [t('table_category') + ':', data.tableCategoryName, t('guest_count') + ':', String(data.guestCount)],
     ];
+    // Optional second contact person.
+    if (data.secondCustomerName || data.secondCustomerPhone) {
+      infoRows.push([t('name') + ':', data.secondCustomerName ?? '', t('phone') + ':', data.secondCustomerPhone ?? '']);
+    }
+    infoRows.push([t('table_category') + ':', data.tableCategoryName, t('guest_count') + ':', String(data.guestCount)]);
 
     const halfW = TW / 2 - 4;
     for (const [lbl1, val1, lbl2, val2] of infoRows) {

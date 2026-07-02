@@ -5,10 +5,13 @@ import { EventList } from '../components/events/EventList';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
 import { tableCategoryService } from '../services/tableCategory.service';
+import { menuService } from '../services/menu.service';
+import { httpClient } from '../services/http';
 import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
 import { useTabletStore } from '../store/tablet.store';
 import { translate } from '../utils/translate';
+import { buildEventExportPayload } from '../utils/eventPdf';
 import type { Event } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -62,6 +65,7 @@ export const AdminEventsPage = () => {
   const navigate = useNavigate();
   const { locale } = useAdminStore();
   const tabletRestaurantId = useAuthStore((s) => s.restaurantId) ?? '';
+  const restaurantName = useAuthStore((s) => s.restaurantName);
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const { data: events, isLoading, isError } = useQuery({
     queryKey: ['events'],
@@ -78,8 +82,42 @@ export const AdminEventsPage = () => {
     queryFn: () => tableCategoryService.list()
   });
 
+  const { data: menuItems } = useQuery({
+    queryKey: ['menuItems'],
+    queryFn: () => menuService.list()
+  });
+
+  // Download the banquet summary PDF for a single event, rebuilt from its saved
+  // menu config (courses, free swaps, extras, children) via the public exporter.
+  const downloadEventPdf = async (event: Event) => {
+    try {
+      const payload = buildEventExportPayload(event, {
+        menuItems: menuItems ?? [],
+        tableCategories: tableCategories ?? [],
+        halls: halls ?? [],
+        restaurantName,
+        restaurantLogoUrl: null,
+        locale,
+        t,
+      });
+      const response = await httpClient.post('/public/export/pdf', payload, { responseType: 'blob' });
+      const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `event-${event.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch {
+      window.alert(t('download_failed'));
+    }
+  };
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [secondCustomerName, setSecondCustomerName] = useState('');
+  const [secondCustomerPhone, setSecondCustomerPhone] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [guestCountText, setGuestCountText] = useState('50');
@@ -137,6 +175,8 @@ export const AdminEventsPage = () => {
       return eventService.create({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim() ? customerPhone.trim() : undefined,
+        secondCustomerName: secondCustomerName.trim() ? secondCustomerName.trim() : undefined,
+        secondCustomerPhone: secondCustomerPhone.trim() ? secondCustomerPhone.trim() : undefined,
         eventDate: date.toISOString(),
         guestCount: validation.guestCount,
         status,
@@ -153,6 +193,8 @@ export const AdminEventsPage = () => {
     onSuccess: async () => {
       setCustomerName('');
       setCustomerPhone('');
+      setSecondCustomerName('');
+      setSecondCustomerPhone('');
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
@@ -176,6 +218,8 @@ export const AdminEventsPage = () => {
       setEditingId(null);
       setCustomerName('');
       setCustomerPhone('');
+      setSecondCustomerName('');
+      setSecondCustomerPhone('');
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
@@ -231,6 +275,8 @@ export const AdminEventsPage = () => {
     setEditingId(event.id);
     setCustomerName(event.customerName);
     setCustomerPhone(event.customerPhone ?? '');
+    setSecondCustomerName(event.secondCustomerName ?? '');
+    setSecondCustomerPhone(event.secondCustomerPhone ?? '');
     const evDate = new Date(event.eventDate);
     const evLocal = new Date(evDate.getTime() - evDate.getTimezoneOffset() * 60000).toISOString();
     setEventDate(evLocal.slice(0, 10));
@@ -264,6 +310,8 @@ export const AdminEventsPage = () => {
       guestCount: parsePositiveInt(guestCountText) ?? 0,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
+      secondCustomerName: secondCustomerName.trim(),
+      secondCustomerPhone: secondCustomerPhone.trim(),
       eventDate,
       eventTime,
       childrenCount: event?.childrenCount ?? 0,
@@ -308,6 +356,8 @@ export const AdminEventsPage = () => {
                 data: {
                   customerName: customerName.trim(),
                   customerPhone: customerPhone.trim() ? customerPhone.trim() : undefined,
+                  secondCustomerName: secondCustomerName.trim() ? secondCustomerName.trim() : undefined,
+                  secondCustomerPhone: secondCustomerPhone.trim() ? secondCustomerPhone.trim() : undefined,
                   eventDate: date.toISOString(),
                   guestCount: validation.guestCount ?? 0,
                   status,
@@ -339,6 +389,22 @@ export const AdminEventsPage = () => {
               placeholder="e.g., +7 999 123 45 67"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
+            />
+          </label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            {t('second_customer_name')}
+            <Input
+              value={secondCustomerName}
+              onChange={(e) => setSecondCustomerName(e.target.value)}
+            />
+          </label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            {t('second_customer_phone')}
+            <Input
+              type="tel"
+              placeholder="e.g., +7 999 123 45 67"
+              value={secondCustomerPhone}
+              onChange={(e) => setSecondCustomerPhone(e.target.value)}
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -455,6 +521,8 @@ export const AdminEventsPage = () => {
                   setEditingId(null);
                   setCustomerName('');
                   setCustomerPhone('');
+                  setSecondCustomerName('');
+                  setSecondCustomerPhone('');
                   setEventDate('');
                   setEventTime('');
                   setGuestCountText('50');
@@ -630,6 +698,13 @@ export const AdminEventsPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => downloadEventPdf(searchResult)}
+                >
+                  {t('download_pdf')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => startEditing(searchResult)}
                 >
                   {t('edit')}
@@ -662,6 +737,10 @@ export const AdminEventsPage = () => {
           onEdit={(eventId) => {
             const event = events.find((item) => item.id === eventId);
             if (event) startEditing(event);
+          }}
+          onDownloadPdf={(eventId) => {
+            const event = events.find((item) => item.id === eventId);
+            if (event) downloadEventPdf(event);
           }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}

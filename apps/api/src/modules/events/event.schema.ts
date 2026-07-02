@@ -24,6 +24,8 @@ export const createEventSchema = z
   .object({
     customerName: z.string().min(2).max(120),
     customerPhone: phoneValidator,
+    secondCustomerName: z.string().max(120).optional(),
+    secondCustomerPhone: z.string().max(40).optional(),
     eventDate: z.string().datetime(),
     guestCount: z.number().int().positive().max(5000),
     status: z.nativeEnum(EventStatus).optional(),
@@ -57,6 +59,8 @@ export const updateEventSchema = z
   .object({
     customerName: z.string().min(2).max(120).optional(),
     customerPhone: phoneValidator,
+    secondCustomerName: z.string().max(120).optional(),
+    secondCustomerPhone: z.string().max(40).optional(),
     eventDate: z.string().datetime().optional(),
     guestCount: z.number().int().positive().max(5000).optional(),
     status: z.nativeEnum(EventStatus).optional(),

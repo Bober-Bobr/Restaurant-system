@@ -11,6 +11,8 @@ export type EventDraft = {
   guestCount: number;
   customerName: string;
   customerPhone: string;
+  secondCustomerName: string;
+  secondCustomerPhone: string;
   eventDate: string;
   eventTime: string;
   childrenCount?: number;
@@ -36,6 +38,8 @@ type SelectionState = {
   // Pre-fills the tablet flow; contact + date/time surface again on the Summary.
   customerName: string;
   customerPhone: string;
+  secondCustomerName: string;
+  secondCustomerPhone: string;
   eventDate: string;
   eventTime: string;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
@@ -62,6 +66,8 @@ type SelectionState = {
   setGuestCount: (count: number) => void;
   setCustomerName: (value: string) => void;
   setCustomerPhone: (value: string) => void;
+  setSecondCustomerName: (value: string) => void;
+  setSecondCustomerPhone: (value: string) => void;
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
@@ -82,6 +88,8 @@ export const useTabletStore = create<SelectionState>((set) => ({
   editingEventId: undefined,
   customerName: '',
   customerPhone: '',
+  secondCustomerName: '',
+  secondCustomerPhone: '',
   eventDate: '',
   eventTime: '',
   childrenTableSelected: false,
@@ -207,6 +215,12 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setCustomerPhone: (value) => {
     set({ customerPhone: value });
   },
+  setSecondCustomerName: (value) => {
+    set({ secondCustomerName: value });
+  },
+  setSecondCustomerPhone: (value) => {
+    set({ secondCustomerPhone: value });
+  },
   setEventDate: (value) => {
     set({ eventDate: value });
   },
@@ -231,6 +245,8 @@ export const useTabletStore = create<SelectionState>((set) => ({
       guestCount: Math.max(d.guestCount, 0),
       customerName: d.customerName,
       customerPhone: d.customerPhone,
+      secondCustomerName: d.secondCustomerName,
+      secondCustomerPhone: d.secondCustomerPhone,
       eventDate: d.eventDate,
       eventTime: d.eventTime,
       // Prior adult selections (empty for a brand-new event).
@@ -261,6 +277,8 @@ export const useTabletStore = create<SelectionState>((set) => ({
       editingEventId: undefined,
       customerName: '',
       customerPhone: '',
+      secondCustomerName: '',
+      secondCustomerPhone: '',
       eventDate: '',
       eventTime: '',
       childrenTableSelected: false,

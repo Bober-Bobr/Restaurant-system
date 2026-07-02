@@ -7,6 +7,7 @@ type EventListProps = {
   events: Event[];
   onDelete?: (eventId: number) => void;
   onEdit?: (eventId: number) => void;
+  onDownloadPdf?: (eventId: number) => void;
   deletingId?: number | null;
 };
 
@@ -45,7 +46,7 @@ function formatDateTime(iso: string) {
   };
 }
 
-export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListProps) => {
+export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId }: EventListProps) => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -65,7 +66,7 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
     );
   }
 
-  const hasActions = onEdit || onDelete;
+  const hasActions = onEdit || onDelete || onDownloadPdf;
 
   return (
     <div className="adm-card tablet-fade-up" style={{ overflow: 'auto' }}>
@@ -162,6 +163,16 @@ export const EventList = ({ events, onDelete, onEdit, deletingId }: EventListPro
                 {hasActions ? (
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
+                      {onDownloadPdf && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDownloadPdf(event.id)}
+                        >
+                          {t('download_pdf')}
+                        </Button>
+                      )}
                       {onEdit && (
                         <Button
                           type="button"

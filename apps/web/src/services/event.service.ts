@@ -9,6 +9,8 @@ export const eventService = {
   async create(payload: {
     customerName: string;
     customerPhone?: string;
+    secondCustomerName?: string;
+    secondCustomerPhone?: string;
     eventDate: string;
     guestCount: number;
     status?: Event['status'];
@@ -31,6 +33,8 @@ export const eventService = {
   async update(eventId: number, payload: Partial<{
     customerName: string;
     customerPhone?: string;
+    secondCustomerName?: string;
+    secondCustomerPhone?: string;
     eventDate: string;
     guestCount: number;
     status?: Event['status'];

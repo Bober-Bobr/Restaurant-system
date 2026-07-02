@@ -4,6 +4,8 @@ import { prisma } from '../../db/prisma.js';
 export type CreateEventData = {
   customerName: string;
   customerPhone?: string;
+  secondCustomerName?: string;
+  secondCustomerPhone?: string;
   eventDate: Date;
   guestCount: number;
   status?: EventStatus;
