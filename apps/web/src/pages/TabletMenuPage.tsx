@@ -103,6 +103,32 @@ function TableCategoryFullscreen({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentIdx, setCurrentIdx] = useState(0);
 
+  // When several table categories share the same price, guests need to see how
+  // they differ. For each price bracket, compute the menu-item ids COMMON to
+  // every category in it; anything not common is what makes a given category
+  // distinctive, so we flag those ids to highlight them on each slide.
+  const { distinctiveByCat, samePriceCountByCat } = (() => {
+    const priceGroups = new Map<number, TableCategory[]>();
+    for (const tc of tableCategories) {
+      const arr = priceGroups.get(tc.ratePerPerson) ?? [];
+      arr.push(tc);
+      priceGroups.set(tc.ratePerPerson, arr);
+    }
+    const distinctive = new Map<string, Set<string>>();
+    const counts = new Map<string, number>();
+    for (const group of priceGroups.values()) {
+      for (const tc of group) counts.set(tc.id, group.length);
+      if (group.length < 2) continue;
+      const idSets = group.map((g) => new Set((g.packageItems ?? []).map((pi) => pi.menuItem.id)));
+      const common = new Set([...idSets[0]].filter((id) => idSets.every((s) => s.has(id))));
+      for (const g of group) {
+        const own = (g.packageItems ?? []).map((pi) => pi.menuItem.id).filter((id) => !common.has(id));
+        distinctive.set(g.id, new Set(own));
+      }
+    }
+    return { distinctiveByCat: distinctive, samePriceCountByCat: counts };
+  })();
+
   const goTo = (idx: number) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -183,7 +209,10 @@ function TableCategoryFullscreen({
             total={tableCategories.length}
             onSelect={() => onSelect(tc.id)}
             onLightbox={onLightbox}
+            locale={locale}
             t={t}
+            distinctiveItemIds={distinctiveByCat.get(tc.id)}
+            samePriceCount={samePriceCountByCat.get(tc.id) ?? 1}
           />
         ))}
       </div>
@@ -255,14 +284,17 @@ function TableCategoryFullscreen({
 }
 
 function CategorySlide({
-  tc, index, total, onSelect, onLightbox, t,
+  tc, index, total, onSelect, onLightbox, locale, t, distinctiveItemIds, samePriceCount,
 }: {
   tc: TableCategory;
   index: number;
   total: number;
   onSelect: () => void;
   onLightbox: (src: string) => void;
+  locale: Locale;
   t: TFn;
+  distinctiveItemIds?: Set<string>;
+  samePriceCount: number;
 }) {
   const photos = (tc.photos ?? []).filter(Boolean);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -271,6 +303,22 @@ function CategorySlide({
   const includedCats = tc.includedCategories
     ? tc.includedCategories.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
+
+  // The actual included dishes, grouped by their menu category (in first-seen
+  // order). When categories share a price, distinctive dishes are highlighted.
+  const dishGroups: { category: string; items: TableCategoryPackageItem[] }[] = [];
+  const groupByCat = new Map<string, { category: string; items: TableCategoryPackageItem[] }>();
+  for (const pi of tc.packageItems ?? []) {
+    let g = groupByCat.get(pi.menuItem.category);
+    if (!g) {
+      g = { category: pi.menuItem.category, items: [] };
+      groupByCat.set(pi.menuItem.category, g);
+      dishGroups.push(g);
+    }
+    g.items.push(pi);
+  }
+  const sharedPrice = samePriceCount > 1;
+  const hasDistinctive = !!distinctiveItemIds && distinctiveItemIds.size > 0;
 
   const goToPhoto = (idx: number) => {
     const el = photoScrollRef.current;
@@ -414,8 +462,51 @@ function CategorySlide({
           }}>{tc.description}</p>
         )}
 
-        {/* Included categories */}
-        {includedCats.length > 0 && (
+        {/* Included dishes — grouped by category. When several tables share this
+            price, the dishes that make this one different are highlighted. */}
+        {dishGroups.length > 0 ? (
+          <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
+                {t('included_dishes')}
+              </p>
+              {sharedPrice && hasDistinctive && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                  color: 'var(--rg-bg)', background: 'var(--rg-accent)',
+                }}>
+                  ★ {t('differences_highlighted')}
+                </span>
+              )}
+            </div>
+            {dishGroups.map((g) => (
+              <div key={g.category}>
+                <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(var(--rg-accent-rgb),0.75)' }}>
+                  {t(g.category.toLowerCase() as Parameters<typeof translate>[0])}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                  {g.items.map((pi) => {
+                    const distinct = sharedPrice && !!distinctiveItemIds?.has(pi.menuItem.id);
+                    return (
+                      <span key={pi.id} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: distinct ? 700 : 500,
+                        background: distinct ? 'rgba(var(--rg-accent-rgb),0.22)' : 'rgba(255,255,255,0.06)',
+                        color: distinct ? 'var(--rg-accent)' : 'rgba(255,255,255,0.8)',
+                        border: `1px solid ${distinct ? 'var(--rg-accent)' : 'rgba(255,255,255,0.12)'}`,
+                        boxShadow: distinct ? '0 2px 12px rgba(var(--rg-accent-rgb),0.25)' : 'none',
+                      }}>
+                        {distinct && <span style={{ fontSize: 11 }}>★</span>}
+                        {dishName(pi.menuItem, locale)}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : includedCats.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             {includedCats.map((cat) => (
               <span key={cat} style={{
