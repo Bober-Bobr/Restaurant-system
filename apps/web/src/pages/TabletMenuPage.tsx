@@ -1020,12 +1020,18 @@ function IncludedDishesSection({
             padding: 16,
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(var(--rg-accent-rgb),0.22)',
+            // Small categories sit side by side in a single row, separated by
+            // vertical divider lines (wrapping to new rows only when too narrow).
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'stretch',
           }}>
             {smallGroups.map(([cat, items], si) => (
               <div key={cat} style={{
-                paddingTop: si > 0 ? 16 : 0,
-                marginTop: si > 0 ? 16 : 0,
-                borderTop: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
+                flex: '1 1 200px',
+                minWidth: 0,
+                paddingLeft: si > 0 ? 16 : 0,
+                borderLeft: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
               }}>
                 {categoryHeader(cat)}
                 {dishGrid(items!)}
