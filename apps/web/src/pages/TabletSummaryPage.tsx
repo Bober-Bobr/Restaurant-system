@@ -11,7 +11,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, TableCategoryPackageItem } from '../types/domain';
-import { formatSum } from '../utils/currency';
+import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
@@ -104,6 +104,7 @@ export const TabletSummaryPage = () => {
     locale, setLocale, setGuestCount, reset,
     customerName: draftCustomerName, customerPhone: draftCustomerPhone,
     secondCustomerName: draftSecondCustomerName, secondCustomerPhone: draftSecondCustomerPhone,
+    depositCents: draftDepositCents,
     eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
@@ -126,6 +127,7 @@ export const TabletSummaryPage = () => {
   const [customerPhone, setCustomerPhone]           = useState(draftCustomerPhone);
   const [secondCustomerName, setSecondCustomerName] = useState(draftSecondCustomerName);
   const [secondCustomerPhone, setSecondCustomerPhone] = useState(draftSecondCustomerPhone);
+  const [depositText, setDepositText] = useState(draftDepositCents ? String(Math.round(draftDepositCents / 100)) : '');
   const [eventDate, setEventDate]                   = useState(draftEventDate);
   const [eventTime, setEventTime]                   = useState(draftEventTime);
   const [eventNotes, setEventNotes]                 = useState('');
@@ -145,7 +147,8 @@ export const TabletSummaryPage = () => {
     guestCount: number; selectedItems: Record<string, number>; menuItems: typeof menuItems;
     includedDishes: { name: string; category: string; categoryLabel: string; servings: number }[];
     pricing: { perGuestCents: number; originalPerGuestCents: number; totalCents: number;
-      originalTotalCents: number; discountPercent: number; hasDiscount: boolean; guestCount: number };
+      originalTotalCents: number; discountPercent: number; hasDiscount: boolean;
+      depositCents: number; amountDueCents: number; guestCount: number };
     childrenTableName?: string; childrenCount?: number; childrenRateCents?: number; childrenSubtotalCents?: number;
     childrenDishes?: { name: string; category: string; categoryLabel: string; servings: number }[];
     locale: Locale; restaurantName: string; restaurantLogoUrl: string | null;
@@ -252,6 +255,10 @@ export const TabletSummaryPage = () => {
   const finalTotalCents = Math.round(originalTotalCents * factor);
   const finalChildrenSubtotalCents = Math.round(childrenSubtotalCents * factor);
 
+  // Prepaid deposit — subtracted from the (post-discount) total.
+  const depositCents = parseSumToTiyin(depositText) ?? 0;
+  const amountDueCents = Math.max(0, finalTotalCents - depositCents);
+
   // Pricing payload for exports — per-guest and total figures.
   const exportPricing = {
     perGuestCents: finalPerGuestCents,
@@ -260,6 +267,8 @@ export const TabletSummaryPage = () => {
     originalTotalCents,
     discountPercent,
     hasDiscount,
+    depositCents,
+    amountDueCents,
     guestCount,
   };
 
@@ -299,6 +308,7 @@ export const TabletSummaryPage = () => {
         customerPhone: customerPhone.trim() || undefined,
         secondCustomerName: secondCustomerName.trim() || undefined,
         secondCustomerPhone: secondCustomerPhone.trim() || undefined,
+        depositCents,
         eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         guestCount,
         status: 'CONFIRMED' as const,
@@ -442,7 +452,7 @@ export const TabletSummaryPage = () => {
                 type="button"
                 onClick={() => {
                   setConfirmedEventId(null);
-                  setCustomerName(''); setCustomerPhone(''); setSecondCustomerName(''); setSecondCustomerPhone(''); setEventDate(''); setEventTime('');
+                  setCustomerName(''); setCustomerPhone(''); setSecondCustomerName(''); setSecondCustomerPhone(''); setDepositText(''); setEventDate(''); setEventTime('');
                   setEventNotes(''); setEventType('RESERVATION');
                   setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreeName('');
                   navigate('/tablet');
@@ -695,6 +705,23 @@ export const TabletSummaryPage = () => {
                     <span className="text-sm font-semibold" style={{ color: 'var(--rg-accent)' }}>%</span>
                   </div>
                 )}
+
+                {/* Deposit — subtracted from the total below */}
+                <div className="mt-3">
+                  <label className="rg-label">{t('deposit')}</label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={depositText}
+                      onChange={(e) => setDepositText(e.target.value)}
+                      placeholder="0"
+                      className="rg-input"
+                      style={{ width: 160 }}
+                    />
+                    <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>so'm</span>
+                  </div>
+                </div>
               </div>
 
               {/* Price per guest */}
@@ -761,6 +788,27 @@ export const TabletSummaryPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Deposit + amount due (only when a deposit was entered) */}
+                {depositCents > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span style={{ color: 'rgba(255,255,255,0.55)' }} className="text-sm">{t('deposit')}</span>
+                      <span className="font-semibold whitespace-nowrap" style={{ color: '#f87171' }}>
+                        −{formatSum(depositCents)}
+                      </span>
+                    </div>
+                    <div className="rounded-2xl px-4 sm:px-5 py-3"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="rg-label">{t('amount_due')}</span>
+                        <span className="text-lg sm:text-2xl font-bold whitespace-nowrap text-white">
+                          {formatSum(amountDueCents)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 

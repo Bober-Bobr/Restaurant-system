@@ -7,12 +7,13 @@ export const eventService = {
     return data;
   },
   async create(payload: {
-    customerName: string;
+    customerName?: string;
     customerPhone?: string;
     secondCustomerName?: string;
     secondCustomerPhone?: string;
-    eventDate: string;
-    guestCount: number;
+    eventDate?: string;
+    guestCount?: number;
+    depositCents?: number;
     status?: Event['status'];
     eventType?: Event['eventType'];
     region?: Event['region'];
@@ -35,8 +36,9 @@ export const eventService = {
     customerPhone?: string;
     secondCustomerName?: string;
     secondCustomerPhone?: string;
-    eventDate: string;
-    guestCount: number;
+    eventDate?: string;
+    guestCount?: number;
+    depositCents?: number;
     status?: Event['status'];
     eventType?: Event['eventType'];
     region?: Event['region'];

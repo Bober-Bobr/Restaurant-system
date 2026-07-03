@@ -16,9 +16,12 @@ export class EventController {
   async create(request: Request, response: Response) {
     const restaurantId = request.restaurantId!;
     const payload = createEventSchema.parse(request.body);
+    // A blank event is allowed: fall back to safe defaults for the required columns.
     const event = await eventService.createEvent(restaurantId, {
       ...payload,
-      eventDate: new Date(payload.eventDate)
+      customerName: payload.customerName ?? '',
+      guestCount: payload.guestCount ?? 0,
+      eventDate: payload.eventDate ? new Date(payload.eventDate) : new Date()
     });
     response.status(201).json(event);
   }

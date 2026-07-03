@@ -8,6 +8,7 @@ export type CreateEventData = {
   secondCustomerPhone?: string;
   eventDate: Date;
   guestCount: number;
+  depositCents?: number;
   status?: EventStatus;
   eventType?: EventType;
   region?: Region;

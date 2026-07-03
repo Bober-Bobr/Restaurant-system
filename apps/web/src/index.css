@@ -386,6 +386,12 @@
 }
 .adm-glow { animation: admGlow 2.4s ease-in-out infinite; }
 
+/* Pulse for the highlighted "Create/Edit Menu" call-to-action on the Events page. */
+@keyframes menuCtaPulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(201, 164, 44, 0.40); transform: translateY(0); }
+  50% { box-shadow: 0 8px 28px rgba(201, 164, 44, 0.65); transform: translateY(-1px); }
+}
+
 .adm-table {
   width: 100%;
   border-collapse: collapse;

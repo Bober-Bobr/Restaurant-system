@@ -16,7 +16,7 @@ import type { Event } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
-import { formatSum } from '../utils/currency';
+import { formatSum, parseSumToTiyin } from '../utils/currency';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -118,6 +118,7 @@ export const AdminEventsPage = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [secondCustomerName, setSecondCustomerName] = useState('');
   const [secondCustomerPhone, setSecondCustomerPhone] = useState('');
+  const [depositText, setDepositText] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [guestCountText, setGuestCountText] = useState('50');
@@ -140,18 +141,14 @@ export const AdminEventsPage = () => {
   const validation = useMemo(() => {
     const errors: string[] = [];
 
-    if (customerName.trim().length < 2) errors.push('Customer name must be at least 2 characters.');
-
-    if (!eventDate) {
-      errors.push('Event date is required.');
-    } else if (!eventTime) {
-      errors.push('Event time is required.');
-    } else if (Number.isNaN(new Date(`${eventDate}T${eventTime}`).getTime())) {
+    // A completely blank event is allowed (for later editing). Only values the
+    // user actually typed are validated.
+    if (eventDate && eventTime && Number.isNaN(new Date(`${eventDate}T${eventTime}`).getTime())) {
       errors.push('Event date/time is invalid.');
     }
 
     const guestCount = parsePositiveInt(guestCountText);
-    if (guestCount === null) errors.push('Guest count must be a positive integer.');
+    if (guestCountText.trim() && guestCount === null) errors.push('Guest count must be a positive integer.');
     if (guestCount !== null && guestCount > 5000) errors.push('Guest count must be 5000 or less.');
 
     if (tableCategoryId && tableCategories && !tableCategories.find((category) => category.id === tableCategoryId)) {
@@ -159,26 +156,29 @@ export const AdminEventsPage = () => {
     }
 
     return { errors, guestCount };
-  }, [customerName, eventDate, eventTime, guestCountText, tableCategoryId, tableCategories]);
+  }, [eventDate, eventTime, guestCountText, tableCategoryId, tableCategories]);
 
   const createMutation = useMutation({
     mutationFn: () => {
-      if (validation.errors.length > 0 || validation.guestCount === null) {
+      if (validation.errors.length > 0) {
         throw new Error(validation.errors[0] ?? 'Invalid form');
       }
 
-      const date = new Date(`${eventDate}T${eventTime}`);
-      if (Number.isNaN(date.getTime())) {
+      // A blank event is allowed: only send a date when both parts were entered.
+      const hasDateTime = !!(eventDate && eventTime);
+      const date = hasDateTime ? new Date(`${eventDate}T${eventTime}`) : null;
+      if (date && Number.isNaN(date.getTime())) {
         throw new Error('Invalid event date/time');
       }
 
       return eventService.create({
-        customerName: customerName.trim(),
+        customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() ? customerPhone.trim() : undefined,
         secondCustomerName: secondCustomerName.trim() ? secondCustomerName.trim() : undefined,
         secondCustomerPhone: secondCustomerPhone.trim() ? secondCustomerPhone.trim() : undefined,
-        eventDate: date.toISOString(),
-        guestCount: validation.guestCount,
+        eventDate: date ? date.toISOString() : undefined,
+        guestCount: validation.guestCount ?? undefined,
+        depositCents: parseSumToTiyin(depositText) ?? undefined,
         status,
         eventType,
         hallId: hallId ? hallId : undefined,
@@ -195,6 +195,7 @@ export const AdminEventsPage = () => {
       setCustomerPhone('');
       setSecondCustomerName('');
       setSecondCustomerPhone('');
+      setDepositText('');
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
@@ -220,6 +221,7 @@ export const AdminEventsPage = () => {
       setCustomerPhone('');
       setSecondCustomerName('');
       setSecondCustomerPhone('');
+      setDepositText('');
       setEventDate('');
       setEventTime('');
       setGuestCountText('50');
@@ -277,6 +279,7 @@ export const AdminEventsPage = () => {
     setCustomerPhone(event.customerPhone ?? '');
     setSecondCustomerName(event.secondCustomerName ?? '');
     setSecondCustomerPhone(event.secondCustomerPhone ?? '');
+    setDepositText(event.depositCents ? String(Math.round(event.depositCents / 100)) : '');
     const evDate = new Date(event.eventDate);
     const evLocal = new Date(evDate.getTime() - evDate.getTimezoneOffset() * 60000).toISOString();
     setEventDate(evLocal.slice(0, 10));
@@ -312,6 +315,7 @@ export const AdminEventsPage = () => {
       customerPhone: customerPhone.trim(),
       secondCustomerName: secondCustomerName.trim(),
       secondCustomerPhone: secondCustomerPhone.trim(),
+      depositCents: parseSumToTiyin(depositText) ?? 0,
       eventDate,
       eventTime,
       childrenCount: event?.childrenCount ?? 0,
@@ -346,8 +350,10 @@ export const AdminEventsPage = () => {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            const date = new Date(`${eventDate}T${eventTime}`);
-            if (!eventDate || !eventTime || Number.isNaN(date.getTime())) return;
+            // Blank events are allowed: only send a date when both parts are set.
+            const hasDateTime = !!(eventDate && eventTime);
+            const date = hasDateTime ? new Date(`${eventDate}T${eventTime}`) : null;
+            if (date && Number.isNaN(date.getTime())) return;
 
             if (editingId) {
               if (!canSave || updateMutation.isPending) return;
@@ -358,8 +364,9 @@ export const AdminEventsPage = () => {
                   customerPhone: customerPhone.trim() ? customerPhone.trim() : undefined,
                   secondCustomerName: secondCustomerName.trim() ? secondCustomerName.trim() : undefined,
                   secondCustomerPhone: secondCustomerPhone.trim() ? secondCustomerPhone.trim() : undefined,
-                  eventDate: date.toISOString(),
+                  eventDate: date ? date.toISOString() : undefined,
                   guestCount: validation.guestCount ?? 0,
+                  depositCents: parseSumToTiyin(depositText) ?? 0,
                   status,
                   eventType,
                   hallId: hallId ? hallId : undefined,
@@ -405,6 +412,17 @@ export const AdminEventsPage = () => {
               placeholder="e.g., +7 999 123 45 67"
               value={secondCustomerPhone}
               onChange={(e) => setSecondCustomerPhone(e.target.value)}
+            />
+          </label>
+          <label style={{ display: 'grid', gap: 6 }}>
+            {t('deposit_optional')}
+            <Input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              placeholder="0"
+              value={depositText}
+              onChange={(e) => setDepositText(e.target.value)}
             />
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
@@ -523,6 +541,7 @@ export const AdminEventsPage = () => {
                   setCustomerPhone('');
                   setSecondCustomerName('');
                   setSecondCustomerPhone('');
+                  setDepositText('');
                   setEventDate('');
                   setEventTime('');
                   setGuestCountText('50');
@@ -561,11 +580,22 @@ export const AdminEventsPage = () => {
           <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16, display: 'flex' }}>
             <Button
               type="button"
-              variant="outline"
+              variant="accent"
+              size="lg"
               onClick={goToTabletWithDraft}
               disabled={!tabletRestaurantId}
+              style={{
+                background: 'linear-gradient(135deg, var(--rg-accent, #c9a42c), var(--rg-accent-soft, #d9b84a))',
+                color: '#1a1205',
+                fontWeight: 700,
+                fontSize: '1rem',
+                padding: '12px 28px',
+                border: 'none',
+                boxShadow: '0 6px 20px rgba(201,164,44,0.45)',
+                animation: 'menuCtaPulse 2.4s ease-in-out infinite',
+              }}
             >
-              {editingId ? t('edit_menu') : t('create_menu')} →
+              🍽 {editingId ? t('edit_menu') : t('create_menu')} →
             </Button>
           </div>
         </form>

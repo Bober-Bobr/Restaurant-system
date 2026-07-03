@@ -29,6 +29,8 @@ export type Event = {
   secondCustomerPhone?: string;
   eventDate: string;
   guestCount: number;
+  // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
+  depositCents?: number;
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'MENU_NOT_SELECTED';
   eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE' | 'FOTIHA_TUI' | 'NACHOR_OSHI';
   birthdayPersonName?: string;

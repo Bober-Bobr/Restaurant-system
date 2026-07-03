@@ -15,6 +15,7 @@ export type EventDraft = {
   secondCustomerPhone: string;
   eventDate: string;
   eventTime: string;
+  depositCents?: number;
   childrenCount?: number;
   config?: EventMenuConfig | null;
 };
@@ -42,6 +43,8 @@ type SelectionState = {
   secondCustomerPhone: string;
   eventDate: string;
   eventTime: string;
+  // Prepaid deposit in tiyin, subtracted from the total on the summary + PDF.
+  depositCents: number;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
@@ -68,6 +71,7 @@ type SelectionState = {
   setCustomerPhone: (value: string) => void;
   setSecondCustomerName: (value: string) => void;
   setSecondCustomerPhone: (value: string) => void;
+  setDepositCents: (value: number) => void;
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
@@ -92,6 +96,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   secondCustomerPhone: '',
   eventDate: '',
   eventTime: '',
+  depositCents: 0,
   childrenTableSelected: false,
   childrenCount: 0,
   childFirstCourseId: undefined,
@@ -221,6 +226,9 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setSecondCustomerPhone: (value) => {
     set({ secondCustomerPhone: value });
   },
+  setDepositCents: (value) => {
+    set({ depositCents: Math.max(value, 0) });
+  },
   setEventDate: (value) => {
     set({ eventDate: value });
   },
@@ -249,6 +257,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       secondCustomerPhone: d.secondCustomerPhone,
       eventDate: d.eventDate,
       eventTime: d.eventTime,
+      depositCents: d.depositCents ?? 0,
       // Prior adult selections (empty for a brand-new event).
       selectedFirstCourseId: cfg?.firstCourseId,
       selectedSecondCourseIds: cfg?.secondCourseIds ?? [],
@@ -281,6 +290,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       secondCustomerPhone: '',
       eventDate: '',
       eventTime: '',
+      depositCents: 0,
       childrenTableSelected: false,
       childrenCount: 0,
       childFirstCourseId: undefined,

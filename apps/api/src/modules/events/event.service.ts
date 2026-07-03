@@ -30,6 +30,7 @@ export class EventService {
       secondCustomerPhone: payload.secondCustomerPhone,
       eventDate: payload.eventDate,
       guestCount: payload.guestCount,
+      depositCents: payload.depositCents,
       status: payload.status,
       eventType: payload.eventType,
       region: payload.region,

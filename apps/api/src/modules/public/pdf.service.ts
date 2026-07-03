@@ -43,6 +43,9 @@ interface SummaryData {
     originalTotalCents?: number;
     discountPercent?: number;
     hasDiscount?: boolean;
+    // Prepaid deposit subtracted from the total, and the resulting amount due.
+    depositCents?: number;
+    amountDueCents?: number;
   };
   locale: Locale;
   restaurantName?: string;
@@ -343,6 +346,17 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     cell(ML, curY, COL1, ROW_H + 4, t('total'), { bold: true, fontSize: 10, fillColor: '#f0f0f0' });
     cell(ML + COL1, curY, COL2, ROW_H + 4, formatSom(totalCents), { bold: true, fontSize: 10, align: 'center', fillColor: '#f0f0f0' });
     curY += ROW_H + 4;
+
+    // ── Deposit + amount due (only when a deposit was entered) ─────────────
+    const depositCents = data.pricing.depositCents ?? 0;
+    if (depositCents > 0) {
+      dataRow(t('deposit'), `−${formatSom(depositCents)}`, false);
+      const amountDueCents = data.pricing.amountDueCents ?? Math.max(0, totalCents - depositCents);
+      ensureSpace(ROW_H + 4);
+      cell(ML, curY, COL1, ROW_H + 4, t('amount_due'), { bold: true, fontSize: 10, fillColor: '#f0f0f0' });
+      cell(ML + COL1, curY, COL2, ROW_H + 4, formatSom(amountDueCents), { bold: true, fontSize: 10, align: 'center', fillColor: '#f0f0f0' });
+      curY += ROW_H + 4;
+    }
 
     // ── Footer note ───────────────────────────────────────────────────────
     curY += 14;

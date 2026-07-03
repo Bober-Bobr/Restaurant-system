@@ -92,6 +92,8 @@ model Event {
   secondCustomerPhone String?
   eventDate       DateTime
   guestCount      Int
+  // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
+  depositCents    Int               @default(0)
   status          EventStatus       @default(DRAFT)
   eventType            EventType         @default(RESERVATION)
   region               Region?

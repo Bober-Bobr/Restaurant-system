@@ -22,12 +22,15 @@ const phoneValidator = z.string().optional();
 
 export const createEventSchema = z
   .object({
-    customerName: z.string().min(2).max(120),
+    // All core fields are optional so a completely blank event can be created
+    // for later editing. Missing values are defaulted in the controller.
+    customerName: z.string().max(120).optional(),
     customerPhone: phoneValidator,
     secondCustomerName: z.string().max(120).optional(),
     secondCustomerPhone: z.string().max(40).optional(),
-    eventDate: z.string().datetime(),
-    guestCount: z.number().int().positive().max(5000),
+    eventDate: z.string().datetime().optional(),
+    guestCount: z.number().int().min(0).max(5000).optional(),
+    depositCents: z.number().int().min(0).optional(),
     status: z.nativeEnum(EventStatus).optional(),
     eventType: z.nativeEnum(EventType).optional(),
     region: z.nativeEnum(Region).optional(),
@@ -57,12 +60,13 @@ export const createEventSchema = z
 
 export const updateEventSchema = z
   .object({
-    customerName: z.string().min(2).max(120).optional(),
+    customerName: z.string().max(120).optional(),
     customerPhone: phoneValidator,
     secondCustomerName: z.string().max(120).optional(),
     secondCustomerPhone: z.string().max(40).optional(),
     eventDate: z.string().datetime().optional(),
-    guestCount: z.number().int().positive().max(5000).optional(),
+    guestCount: z.number().int().min(0).max(5000).optional(),
+    depositCents: z.number().int().min(0).optional(),
     status: z.nativeEnum(EventStatus).optional(),
     eventType: z.nativeEnum(EventType).optional(),
     region: z.nativeEnum(Region).optional(),

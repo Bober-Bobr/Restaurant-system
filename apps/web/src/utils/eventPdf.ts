@@ -93,6 +93,10 @@ export function buildEventExportPayload(
   const childrenSubtotalCents = childrenActive ? childrenTableCategory!.ratePerPerson * childrenCount : 0;
   const totalCents = subtotalCents + childrenSubtotalCents;
 
+  // Prepaid deposit, subtracted from the total.
+  const depositCents = event.depositCents ?? 0;
+  const amountDueCents = Math.max(0, totalCents - depositCents);
+
   const childrenExport = childrenActive
     ? {
         childrenTableName: childrenTableCategory!.name,
@@ -126,6 +130,8 @@ export function buildEventExportPayload(
       originalTotalCents: totalCents,
       discountPercent: 0,
       hasDiscount: false,
+      depositCents,
+      amountDueCents,
     },
     ...childrenExport,
     locale,
