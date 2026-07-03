@@ -15,33 +15,30 @@ export const Lightbox = ({ src, alt = '', onClose }: LightboxProps) => {
   }, [onClose]);
 
   return createPortal(
-    // The overlay scrolls so an image larger than the viewport can be viewed at
-    // its own (native) resolution instead of being shrunk to the device screen.
     <div
-      className="fixed inset-0 z-[9999] overflow-auto bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
       onClick={onClose}
     >
       <button
         type="button"
         onClick={onClose}
-        className="fixed right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+        className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
         aria-label="Close"
       >
         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      {/* min-w/min-h-full keeps a smaller-than-viewport image centered, while a
-          larger one overflows into the scroll container at full resolution. */}
-      <div className="flex min-h-full min-w-full items-center justify-center p-4">
-        <img
-          src={src}
-          alt={alt}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded-2xl shadow-2xl"
-          style={{ maxWidth: 'none', maxHeight: 'none', width: 'auto', height: 'auto' }}
-        />
-      </div>
+      {/* Scaled down to comfortably fit the viewport; object-contain preserves the
+          aspect ratio and never upscales past the image's own size, so nothing
+          looks stretched. */}
+      <img
+        src={src}
+        alt={alt}
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-2xl object-contain shadow-2xl"
+        style={{ maxWidth: '80vw', maxHeight: '80vh', width: 'auto', height: 'auto' }}
+      />
     </div>,
     document.body
   );
