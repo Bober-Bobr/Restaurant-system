@@ -109,6 +109,9 @@ export const AdminInvoicesPage = () => {
           const rounded = roundedIds.has(event.id);
           const shownTotal = rounded ? roundDownToMillion(exactTotal) : exactTotal;
           const isRounded = rounded && shownTotal !== exactTotal;
+          // Prepaid deposit is subtracted from the total to give the amount due.
+          const deposit = event.depositCents ?? 0;
+          const amountDue = Math.max(0, shownTotal - deposit);
           const isPaid = event.status === 'COMPLETED';
           const isCancelled = event.status === 'CANCELLED';
 
@@ -147,6 +150,17 @@ export const AdminInvoicesPage = () => {
                     )}
                   </span>
                 </div>
+
+                {/* Deposit + amount due — only when a deposit was recorded */}
+                {deposit > 0 && (
+                  <>
+                    <Row label={t('deposit')} value={`−${formatSum(deposit)}`} muted />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8, marginTop: 2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{t('amount_due')}</span>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: '#4ade80' }}>{formatSum(amountDue)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Action */}
