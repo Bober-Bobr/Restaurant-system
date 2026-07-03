@@ -483,6 +483,10 @@ function CourseChoiceSection({
     .filter((group) => group.items.length > 0);
   if (courseGroups.length === 0) return null;
 
+  // First course is single-select: once chosen, collapse the list to just the
+  // picked dish and offer a button to expand it again to change the choice.
+  const [firstExpanded, setFirstExpanded] = useState(false);
+
   const inner = (
     <>
       <div className="mb-6" style={{ textAlign: 'center' }}>
@@ -502,7 +506,14 @@ function CourseChoiceSection({
         </div>
       </div>
 
-      {courseGroups.map((group, gi) => (
+      {courseGroups.map((group, gi) => {
+        const isFirst = !group.multi;
+        const selectedFirst = isFirst ? group.items.find((pi) => group.isSelected(pi.menuItem.id)) : undefined;
+        const collapsed = isFirst && !!selectedFirst && !firstExpanded;
+        const displayItems = collapsed
+          ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
+          : group.items;
+        return (
         <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <div style={{
@@ -533,7 +544,7 @@ function CourseChoiceSection({
             </div>
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-            {group.items.map((pi, i) => {
+            {displayItems.map((pi, i) => {
               const item = pi.menuItem;
               const selected = group.isSelected(item.id);
               const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
@@ -563,7 +574,7 @@ function CourseChoiceSection({
                     </div>
                   )}
                   <button type="button"
-                    onClick={() => group.onToggle(item.id)}
+                    onClick={() => { group.onToggle(item.id); if (isFirst) setFirstExpanded(false); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       width: '100%', padding: '8px 10px',
@@ -596,8 +607,30 @@ function CourseChoiceSection({
               );
             })}
           </div>
+
+          {/* First course: expand/collapse the options once one is picked */}
+          {isFirst && selectedFirst && group.items.length > 1 && (
+            <div style={{ marginTop: 14, textAlign: 'center' }}>
+              <button type="button"
+                onClick={() => setFirstExpanded((v) => !v)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '9px 18px', borderRadius: 999, cursor: 'pointer',
+                  fontSize: 13.5, fontWeight: 700, letterSpacing: '0.01em',
+                  color: 'var(--rg-accent)', background: 'rgba(var(--rg-accent-rgb),0.1)',
+                  border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
+                }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                  style={{ transform: collapsed ? 'none' : 'rotate(180deg)', transition: 'transform 0.2s' }}>
+                  <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {collapsed ? t('change_first_course') : t('collapse_options')}
+              </button>
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
     </>
   );
 
@@ -1100,7 +1133,7 @@ export const TabletMenuPage = () => {
               margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em',
               color: 'var(--rg-accent)',
             }}>
-              {t('welcome_title', { restaurant: restaurantName ?? '' })}
+              {t('welcome_title')}
             </h2>
             <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.82)' }}>
