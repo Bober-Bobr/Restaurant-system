@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
+import { AdminNotificationsPage } from '../pages/AdminNotificationsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
 import { AdminArrangementAdminPage } from '../pages/AdminArrangementAdminPage';
 import { AdminMenuPage } from '../pages/AdminMenuPage';
@@ -307,6 +308,7 @@ export const App = () => {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
+        <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
         <Route path="/admin/menu" element={<AdminMenuPage />} />
         <Route path="/admin/subcategories" element={<AdminSubcategoriesPage />} />
         <Route path="/admin/additional" element={<AdminAdditionalPage />} />

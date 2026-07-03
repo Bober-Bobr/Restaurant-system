@@ -97,6 +97,9 @@ model Event {
   guestCount      Int
   // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
   depositCents    Int               @default(0)
+  // Deadline for settling the remaining balance once the event has started with
+  // an outstanding amount (a "debt"). Past-due debts surface as notifications.
+  debtDeadline    DateTime?
   status          EventStatus       @default(DRAFT)
   eventType            EventType         @default(RESERVATION)
   region               Region?
@@ -117,6 +120,7 @@ model Event {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   selections      EventMenuSelection[]
+  payments        EventPayment[]
   invitation      Invitation?
   hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
@@ -125,6 +129,19 @@ model Event {
   @@index([hallId])
   @@index([tableCategoryId])
   @@index([restaurantId])
+}
+
+// A partial (installment) payment towards an event's invoice, in tiyin.
+// The invoice's outstanding balance = total − deposit − sum(payments).
+model EventPayment {
+  id          String   @id @default(cuid())
+  eventId     String
+  amountCents Int
+  note        String?
+  createdAt   DateTime @default(now())
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 enum AdminRole {

@@ -62,6 +62,24 @@ export const eventService = {
     return data;
   },
 
+  // Record a partial (installment) payment towards the invoice; returns the
+  // refreshed event including its payments list.
+  async addPayment(eventId: number, amountCents: number, note?: string) {
+    const { data } = await httpClient.post<Event>(`/events/${eventId}/payments`, { amountCents, note });
+    return data;
+  },
+
+  async removePayment(eventId: number, paymentId: string) {
+    const { data } = await httpClient.delete<Event>(`/events/${eventId}/payments/${paymentId}`);
+    return data;
+  },
+
+  // Set (ISO string) or clear (null) the debt-settlement deadline.
+  async setDebtDeadline(eventId: number, debtDeadline: string | null) {
+    const { data } = await httpClient.patch<Event>(`/events/${eventId}`, { debtDeadline });
+    return data;
+  },
+
   async remove(eventId: number) {
     await httpClient.delete(`/events/${eventId}`);
   }

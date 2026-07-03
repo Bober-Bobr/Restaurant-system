@@ -3,20 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { formatSum } from '../utils/currency';
+import { formatSum, parseSumToTiyin } from '../utils/currency';
+import { invoiceTotalCents, isDebt } from '../utils/invoice';
 import type { Event } from '../types/domain';
 
 // 1,000,000 so'm expressed in tiyin (amounts are stored as tiyin = 1/100 so'm).
 const MILLION_TIYIN = 100_000_000;
 const roundDownToMillion = (tiyin: number) => Math.floor(tiyin / MILLION_TIYIN) * MILLION_TIYIN;
 
-// Total billable price of an event: the table package (rate per guest × guests)
-// plus every additional dish (quantity × unit price snapshot).
-const eventTotalCents = (event: Event) => {
-  const tableRate = (event.tableCategory?.ratePerPerson ?? 0) * event.guestCount;
-  const dishes = (event.selections ?? []).reduce((sum, s) => sum + s.quantity * s.unitPriceCents, 0);
-  return tableRate + dishes;
-};
+const eventTotalCents = invoiceTotalCents;
 
 const STATUS_BADGE: Record<Event['status'], { bg: string; fg: string; border: string; key: Parameters<typeof translate>[0] }> = {
   DRAFT:     { bg: 'rgba(148,163,184,0.15)', fg: '#cbd5e1', border: 'rgba(148,163,184,0.3)', key: 'status_draft' },
@@ -57,6 +52,46 @@ export const AdminInvoicesPage = () => {
     mutationFn: (eventId: number) => eventService.update(eventId, { status: 'COMPLETED' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
+
+  // ── Partial payments + debt deadline ──
+  // Per-invoice input drafts (amount in so'm / deadline date string).
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<number, string>>({});
+  const [deadlineDrafts, setDeadlineDrafts] = useState<Record<number, string>>({});
+
+  const addPaymentMutation = useMutation({
+    mutationFn: ({ eventId, amountCents }: { eventId: number; amountCents: number }) =>
+      eventService.addPayment(eventId, amountCents),
+    onSuccess: (_data, { eventId }) => {
+      setPaymentDrafts((prev) => ({ ...prev, [eventId]: '' }));
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+
+  const removePaymentMutation = useMutation({
+    mutationFn: ({ eventId, paymentId }: { eventId: number; paymentId: string }) =>
+      eventService.removePayment(eventId, paymentId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+  });
+
+  const deadlineMutation = useMutation({
+    mutationFn: ({ eventId, iso }: { eventId: number; iso: string | null }) =>
+      eventService.setDebtDeadline(eventId, iso),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+  });
+
+  const submitPayment = (eventId: number) => {
+    const amountCents = parseSumToTiyin(paymentDrafts[eventId] ?? '');
+    if (!amountCents || amountCents <= 0 || addPaymentMutation.isPending) return;
+    addPaymentMutation.mutate({ eventId, amountCents });
+  };
+
+  const saveDeadline = (event: Event) => {
+    const draft = deadlineDrafts[event.id];
+    if (draft === undefined || deadlineMutation.isPending) return;
+    // End of the chosen day, local time — the debt is overdue after this moment.
+    const iso = draft ? new Date(`${draft}T23:59:59`).toISOString() : null;
+    deadlineMutation.mutate({ eventId: event.id, iso });
+  };
 
   const visibleEvents = useMemo(() => {
     if (filter === 'OPEN') return events.filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED');
@@ -109,9 +144,15 @@ export const AdminInvoicesPage = () => {
           const rounded = roundedIds.has(event.id);
           const shownTotal = rounded ? roundDownToMillion(exactTotal) : exactTotal;
           const isRounded = rounded && shownTotal !== exactTotal;
-          // Prepaid deposit is subtracted from the total to give the amount due.
+          // Everything paid so far: the deposit plus recorded partial payments.
           const deposit = event.depositCents ?? 0;
-          const amountDue = Math.max(0, shownTotal - deposit);
+          const payments = event.payments ?? [];
+          const paymentsSum = payments.reduce((s, p) => s + p.amountCents, 0);
+          const amountDue = Math.max(0, shownTotal - deposit - paymentsSum);
+          // Debt: the event has started but the invoice still isn't settled.
+          const debt = isDebt(event) && amountDue > 0 && event.status !== 'COMPLETED';
+          const deadlineDraft = deadlineDrafts[event.id] ?? (event.debtDeadline ? event.debtDeadline.slice(0, 10) : '');
+          const overdue = debt && !!event.debtDeadline && new Date(event.debtDeadline).getTime() < Date.now();
           const isPaid = event.status === 'COMPLETED';
           const isCancelled = event.status === 'CANCELLED';
 
@@ -124,6 +165,16 @@ export const AdminInvoicesPage = () => {
                 <span className="adm-badge" style={{ background: status.bg, color: status.fg, border: `1px solid ${status.border}` }}>
                   {t(status.key)}
                 </span>
+                {debt && (
+                  <span className="adm-badge" style={{
+                    background: overdue ? 'rgba(220,38,38,0.25)' : 'rgba(220,38,38,0.12)',
+                    color: '#fca5a5',
+                    border: `1px solid ${overdue ? 'rgba(220,38,38,0.6)' : 'rgba(220,38,38,0.35)'}`,
+                    fontWeight: 700,
+                  }}>
+                    {overdue ? `⚠ ${t('debt_overdue')}` : t('debt')}
+                  </span>
+                )}
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>
                   {formatDate(event.eventDate, locale)}
                 </span>
@@ -151,15 +202,104 @@ export const AdminInvoicesPage = () => {
                   </span>
                 </div>
 
-                {/* Deposit + amount due — only when a deposit was recorded */}
-                {deposit > 0 && (
-                  <>
-                    <Row label={t('deposit')} value={`−${formatSum(deposit)}`} muted />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8, marginTop: 2 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{t('amount_due')}</span>
-                      <span style={{ fontSize: 17, fontWeight: 800, color: '#4ade80' }}>{formatSum(amountDue)}</span>
-                    </div>
-                  </>
+                {/* Deposit + recorded partial payments */}
+                {deposit > 0 && <Row label={t('deposit')} value={`−${formatSum(deposit)}`} muted />}
+                {payments.map((p) => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: 13 }}>
+                    <span style={{ color: 'rgba(226,232,240,0.6)' }}>
+                      {t('payment')} · {formatDate(p.createdAt, locale)}
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'rgba(226,232,240,0.75)', fontWeight: 600 }}>−{formatSum(p.amountCents)}</span>
+                      {!isCancelled && (
+                        <button
+                          type="button"
+                          onClick={() => removePaymentMutation.mutate({ eventId: event.id, paymentId: p.id })}
+                          disabled={removePaymentMutation.isPending}
+                          title={t('delete')}
+                          style={{
+                            width: 20, height: 20, borderRadius: 6, cursor: 'pointer', lineHeight: 1,
+                            background: 'rgba(220,38,38,0.12)', color: '#fca5a5',
+                            border: '1px solid rgba(220,38,38,0.3)', fontSize: 12, padding: 0,
+                          }}
+                        >×</button>
+                      )}
+                    </span>
+                  </div>
+                ))}
+
+                {/* Amount still due after deposit + installments */}
+                {(deposit > 0 || payments.length > 0) && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8, marginTop: 2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{t('amount_due')}</span>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: amountDue === 0 ? '#4ade80' : debt ? '#fca5a5' : '#e2e8f0' }}>
+                      {formatSum(amountDue)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Record a new partial payment */}
+                {!isCancelled && !isPaid && amountDue > 0 && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder={t('payment_amount')}
+                      value={paymentDrafts[event.id] ?? ''}
+                      onChange={(e) => setPaymentDrafts((prev) => ({ ...prev, [event.id]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') submitPayment(event.id); }}
+                      style={{
+                        width: 170, padding: '7px 10px', borderRadius: 8, fontSize: 13,
+                        background: 'rgba(255,255,255,0.05)', color: '#e2e8f0',
+                        border: '1px solid rgba(255,255,255,0.12)', outline: 'none',
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>so'm</span>
+                    <button
+                      type="button"
+                      className="adm-btn-ghost"
+                      onClick={() => submitPayment(event.id)}
+                      disabled={addPaymentMutation.isPending || !(parseSumToTiyin(paymentDrafts[event.id] ?? '') ?? 0)}
+                      style={{ fontSize: 13 }}
+                    >
+                      + {t('add_payment')}
+                    </button>
+                  </div>
+                )}
+
+                {/* Debt: settlement deadline set by the administrator */}
+                {debt && (
+                  <div style={{
+                    marginTop: 6, padding: '10px 12px', borderRadius: 10,
+                    background: overdue ? 'rgba(220,38,38,0.10)' : 'rgba(245,158,11,0.08)',
+                    border: `1px solid ${overdue ? 'rgba(220,38,38,0.4)' : 'rgba(245,158,11,0.3)'}`,
+                    display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: overdue ? '#fca5a5' : '#fbbf24' }}>
+                      {overdue
+                        ? t('debt_overdue_notice', { amount: formatSum(amountDue) })
+                        : t('debt_deadline')}
+                    </span>
+                    <input
+                      type="date"
+                      value={deadlineDraft}
+                      onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [event.id]: e.target.value }))}
+                      style={{
+                        padding: '6px 10px', borderRadius: 8, fontSize: 13,
+                        background: 'rgba(255,255,255,0.05)', color: '#e2e8f0',
+                        border: '1px solid rgba(255,255,255,0.12)', outline: 'none', colorScheme: 'dark',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="adm-btn-ghost"
+                      onClick={() => saveDeadline(event)}
+                      disabled={deadlineMutation.isPending || deadlineDrafts[event.id] === undefined}
+                      style={{ fontSize: 13 }}
+                    >
+                      {deadlineMutation.isPending ? t('updating') : t('save')}
+                    </button>
+                  </div>
                 )}
               </div>
 

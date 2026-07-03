@@ -9,6 +9,7 @@ export type CreateEventData = {
   eventDate: Date;
   guestCount: number;
   depositCents?: number;
+  debtDeadline?: Date | null;
   status?: EventStatus;
   eventType?: EventType;
   region?: Region;
@@ -27,7 +28,8 @@ export type CreateEventData = {
 const eventInclude = {
   hall: true,
   tableCategory: true,
-  selections: { include: { menuItem: true } }
+  selections: { include: { menuItem: true } },
+  payments: { orderBy: { createdAt: 'asc' } }
 } as const;
 
 export class EventRepository {
@@ -66,5 +68,16 @@ export class EventRepository {
 
   async deleteByNumber(restaurantId: string, eventNumber: number) {
     return prisma.event.deleteMany({ where: { eventNumber, restaurantId } });
+  }
+
+  // ── Partial (installment) payments towards the event invoice ──
+
+  async addPayment(eventId: string, amountCents: number, note?: string) {
+    return prisma.eventPayment.create({ data: { eventId, amountCents, note } });
+  }
+
+  async deletePayment(eventId: string, paymentId: string) {
+    // Scoped to the event so a payment can't be deleted through another event.
+    return prisma.eventPayment.deleteMany({ where: { id: paymentId, eventId } });
   }
 }

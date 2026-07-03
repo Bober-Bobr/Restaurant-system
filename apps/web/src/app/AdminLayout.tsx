@@ -2,7 +2,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { eventService } from '../services/event.service';
 import { restaurantService } from '../services/restaurant.service';
+import { overdueDebtEvents } from '../utils/invoice';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
@@ -29,6 +31,17 @@ export const AdminLayout = () => {
     queryFn: () => restaurantService.list(),
     enabled: !!accessToken
   });
+
+  // Overdue-debt notifications for the bell: events that started with an unpaid
+  // balance whose settlement deadline has passed. Refreshed periodically so the
+  // badge stays current without a manual reload.
+  const { data: bellEvents = [] } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => eventService.list(),
+    enabled: !!accessToken,
+    refetchInterval: 60_000,
+  });
+  const overdueCount = overdueDebtEvents(bellEvents).length;
 
   const effectiveLogoUrl = restaurants[0]?.logoUrl ?? restaurants[0]?.company?.logoUrl ?? null;
   const restaurantLogoSrc = getPhotoUrl(effectiveLogoUrl);
@@ -213,8 +226,40 @@ export const AdminLayout = () => {
             </Link>
           </div>
 
-          {/* Right side: locale + logout (desktop only) */}
+          {/* Right side: notifications bell + locale + logout */}
           <div className="adm-slide-in-right adm-nav-right" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            {/* Notifications bell — badge counts overdue unpaid debts */}
+            <Link
+              to="/admin/notifications"
+              aria-label={t('notifications')}
+              title={t('notifications')}
+              style={{
+                position: 'relative',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 36, height: 36, borderRadius: 10,
+                color: isActive('/admin/notifications') ? '#c9a42c' : 'rgba(226,232,240,0.75)',
+                background: isActive('/admin/notifications') ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isActive('/admin/notifications') ? 'rgba(201,164,44,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                textDecoration: 'none',
+                transition: 'all 0.18s',
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {overdueCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -5, right: -5,
+                  minWidth: 17, height: 17, padding: '0 4px', borderRadius: 999,
+                  background: '#dc2626', color: '#fff',
+                  fontSize: 10, fontWeight: 800, lineHeight: '17px', textAlign: 'center',
+                  border: '2px solid rgba(15,23,42,0.9)', boxSizing: 'content-box',
+                }}>
+                  {overdueCount > 99 ? '99+' : overdueCount}
+                </span>
+              )}
+            </Link>
             <div className="adm-nav-locale" style={{ display: 'flex', gap: 4 }}>
               {locales.map((loc) => (
                 <button

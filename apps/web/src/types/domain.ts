@@ -5,6 +5,14 @@ export type EventMenuSelection = {
   unitPriceCents: number;
 };
 
+// A partial (installment) payment towards the event invoice, in tiyin.
+export type EventPayment = {
+  id: string;
+  amountCents: number;
+  note?: string | null;
+  createdAt: string;
+};
+
 // Full tablet menu-selection snapshot persisted on an event so it round-trips
 // between the admin Events page and the Tablet page.
 export type EventMenuConfig = {
@@ -33,6 +41,10 @@ export type Event = {
   guestCount: number;
   // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
   depositCents?: number;
+  // Partial payments recorded against the invoice.
+  payments?: EventPayment[];
+  // Deadline for settling the debt (outstanding balance after the event starts).
+  debtDeadline?: string | null;
   status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'MENU_NOT_SELECTED';
   eventType?: 'RESERVATION' | 'BANQUET' | 'WEDDING' | 'BIRTHDAY' | 'PRIVATE_PARTY' | 'CORPORATE' | 'FOTIHA_TUI' | 'NACHOR_OSHI';
   birthdayPersonName?: string;

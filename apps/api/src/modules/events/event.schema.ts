@@ -67,6 +67,8 @@ export const updateEventSchema = z
     eventDate: z.string().datetime().optional(),
     guestCount: z.number().int().min(0).max(5000).optional(),
     depositCents: z.number().int().min(0).optional(),
+    // Debt deadline: ISO datetime to set, null to clear.
+    debtDeadline: z.string().datetime().nullable().optional(),
     status: z.nativeEnum(EventStatus).optional(),
     eventType: z.nativeEnum(EventType).optional(),
     region: z.nativeEnum(Region).optional(),
@@ -96,6 +98,17 @@ export const updateEventSchema = z
 
 export const eventIdSchema = z.object({
   eventId: z.coerce.number().int().positive()
+});
+
+// Partial (installment) payment towards the invoice, in tiyin.
+export const addPaymentSchema = z.object({
+  amountCents: z.number().int().positive(),
+  note: z.string().max(500).optional()
+});
+
+export const paymentIdSchema = z.object({
+  eventId: z.coerce.number().int().positive(),
+  paymentId: z.string().cuid()
 });
 
 export const rescheduleEventSchema = z.object({

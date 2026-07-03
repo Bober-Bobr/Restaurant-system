@@ -56,9 +56,30 @@ export class EventService {
     if (payload.menuConfig !== undefined) {
       updateData.menuConfig = payload.menuConfig;
     }
+    if (payload.debtDeadline !== undefined) {
+      updateData.debtDeadline = payload.debtDeadline; // Date to set, null to clear
+    }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
     return this.mapEventToExternalId(updatedEvent);
+  }
+
+  // ── Partial (installment) payments ──
+
+  async addPayment(restaurantId: string, eventId: number, amountCents: number, note?: string) {
+    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!event) throw createHttpError(404, 'Event not found');
+    await this.eventRepository.addPayment(event.id, amountCents, note);
+    const updated = await this.eventRepository.getByNumber(restaurantId, eventId);
+    return this.mapEventToExternalId(updated);
+  }
+
+  async removePayment(restaurantId: string, eventId: number, paymentId: string) {
+    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!event) throw createHttpError(404, 'Event not found');
+    await this.eventRepository.deletePayment(event.id, paymentId);
+    const updated = await this.eventRepository.getByNumber(restaurantId, eventId);
+    return this.mapEventToExternalId(updated);
   }
 
   async rescheduleEvent(restaurantId: string, eventId: number, newDate: Date) {
