@@ -909,84 +909,123 @@ function IncludedDishesSection({
   };
   const editingPi = editingPiId ? includedItems.find((pi) => pi.id === editingPiId) ?? null : null;
 
+  // Small categories (fewer than five dishes) are folded into one combined group
+  // so the set menu doesn't fragment into many tiny sections; larger categories
+  // keep their own full section. Within the combined group each small category is
+  // still labelled and separated by a divider line.
+  const SMALL_CATEGORY_THRESHOLD = 5;
+  const bigGroups = grouped.filter(([, items]) => (items?.length ?? 0) >= SMALL_CATEGORY_THRESHOLD);
+  const smallGroups = grouped.filter(([, items]) => (items?.length ?? 0) < SMALL_CATEGORY_THRESHOLD);
+
+  const categoryHeader = (cat: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      <div style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--rg-accent)', flexShrink: 0 }} />
+      <span style={{
+        display: 'inline-block', padding: '3px 10px', borderRadius: 999,
+        fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+        color: 'var(--rg-accent-soft)', background: 'rgba(var(--rg-accent-rgb),0.12)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)',
+      }}>
+        {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+      </span>
+    </div>
+  );
+
+  const dishGrid = (items: TableCategoryPackageItem[]) => (
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
+      {items.map((pi, i) => {
+        const freeAlts = getFreeAlts(pi);
+        const chosenId = replacements[pi.id];
+        const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
+        const isSwapped = displayItem.id !== pi.menuItem.id;
+        return (
+          <div key={pi.id}
+            className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
+            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
+            {displayItem.photoUrl ? (
+              <button type="button"
+                onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
+                className="block w-full overflow-hidden">
+                <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
+                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+              </button>
+            ) : (
+              <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+            <div className="p-2.5">
+              <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
+              {dishDescription(displayItem, locale) && (
+                <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  {dishDescription(displayItem, locale)}
+                </p>
+              )}
+              {!viewOnly && freeAlts.length > 0 && (
+                <button type="button" onClick={() => setEditingPiId(pi.id)}
+                  className="mt-2.5"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
+                    color: isSwapped ? '#93c5fd' : 'var(--rg-accent-soft)',
+                    background: isSwapped ? 'rgba(59,130,246,0.12)' : 'rgba(var(--rg-accent-rgb),0.1)',
+                    border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(var(--rg-accent-rgb),0.3)'}`,
+                  }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {t('edit')}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const inner = (
     <>
       <div className="mb-5">
         {showName && <p className="rg-label">{tableCategory.name}</p>}
         <p className="rg-heading mt-1">{t('included_with_table')}</p>
       </div>
-      {grouped.map(([cat, items], catIndex) => (
+
+      {/* Big categories: each keeps its own section */}
+      {bigGroups.map(([cat, items], i) => (
         <div key={cat} style={{
-          paddingTop: catIndex > 0 ? 20 : 0,
-          marginTop: catIndex > 0 ? 20 : 0,
-          borderTop: catIndex > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          paddingTop: i > 0 ? 20 : 0,
+          marginTop: i > 0 ? 20 : 0,
+          borderTop: i > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <div style={{ width: 3, height: 16, borderRadius: 2, background: 'var(--rg-accent)', flexShrink: 0 }} />
-            <span style={{
-              display: 'inline-block', padding: '3px 10px', borderRadius: 999,
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--rg-accent-soft)', background: 'rgba(var(--rg-accent-rgb),0.12)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)',
-            }}>
-              {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-            {items!.map((pi, i) => {
-              const freeAlts = getFreeAlts(pi);
-              const chosenId = replacements[pi.id];
-              const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
-              const isSwapped = displayItem.id !== pi.menuItem.id;
-              return (
-                <div key={pi.id}
-                  className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-                  style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
-                  {displayItem.photoUrl ? (
-                    <button type="button"
-                      onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
-                      className="block w-full overflow-hidden">
-                      <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
-                        className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
-                    </button>
-                  ) : (
-                    <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
-                      <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="p-2.5">
-                    <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
-                    {dishDescription(displayItem, locale) && (
-                      <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                        {dishDescription(displayItem, locale)}
-                      </p>
-                    )}
-                    {!viewOnly && freeAlts.length > 0 && (
-                      <button type="button" onClick={() => setEditingPiId(pi.id)}
-                        className="mt-2.5"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                          width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
-                          fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
-                          color: isSwapped ? '#93c5fd' : 'var(--rg-accent-soft)',
-                          background: isSwapped ? 'rgba(59,130,246,0.12)' : 'rgba(var(--rg-accent-rgb),0.1)',
-                          border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(var(--rg-accent-rgb),0.3)'}`,
-                        }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        {t('edit')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {categoryHeader(cat)}
+          {dishGrid(items!)}
         </div>
       ))}
+
+      {/* Small categories (< 5 items): one combined group, each sub-category
+          labelled and separated by a divider line. */}
+      {smallGroups.length > 0 && (
+        <div style={{
+          paddingTop: bigGroups.length > 0 ? 20 : 0,
+          marginTop: bigGroups.length > 0 ? 20 : 0,
+          borderTop: bigGroups.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        }}>
+          {smallGroups.map(([cat, items], si) => (
+            <div key={cat} style={{
+              paddingTop: si > 0 ? 18 : 0,
+              marginTop: si > 0 ? 18 : 0,
+              borderTop: si > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+            }}>
+              {categoryHeader(cat)}
+              {dishGrid(items!)}
+            </div>
+          ))}
+        </div>
+      )}
 
       {editingPi && (
         <DishSwapModal
