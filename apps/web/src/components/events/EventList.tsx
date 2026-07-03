@@ -8,6 +8,7 @@ type EventListProps = {
   onDelete?: (eventId: number) => void;
   onEdit?: (eventId: number) => void;
   onDownloadPdf?: (eventId: number) => void;
+  onReschedule?: (eventId: number) => void;
   deletingId?: number | null;
 };
 
@@ -46,7 +47,7 @@ function formatDateTime(iso: string) {
   };
 }
 
-export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId }: EventListProps) => {
+export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedule, deletingId }: EventListProps) => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -66,7 +67,7 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId 
     );
   }
 
-  const hasActions = onEdit || onDelete || onDownloadPdf;
+  const hasActions = onEdit || onDelete || onDownloadPdf || onReschedule;
 
   return (
     <div className="adm-card tablet-fade-up" style={{ overflow: 'auto' }}>
@@ -88,6 +89,9 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId 
         <tbody>
           {events.map((event) => {
             const { date, time } = formatDateTime(event.eventDate);
+            const rescheduled = !!event.originalEventDate &&
+              new Date(event.originalEventDate).getTime() !== new Date(event.eventDate).getTime();
+            const original = rescheduled ? formatDateTime(event.originalEventDate!) : null;
             const dishTypes  = event.selections?.length ?? 0;
             const totalPcs   = event.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
 
@@ -105,7 +109,15 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId 
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  <p style={{ margin: 0, color: '#e2e8f0' }}>{date}</p>
+                  {original && (
+                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#f87171', textDecoration: 'line-through' }}
+                      title={t('rescheduled_from')}>
+                      {original.date} · {original.time}
+                    </p>
+                  )}
+                  <p style={{ margin: 0, color: rescheduled ? '#4ade80' : '#e2e8f0', fontWeight: rescheduled ? 600 : 400 }}>
+                    {rescheduled && '→ '}{date}
+                  </p>
                   <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{time}</p>
                 </td>
 
@@ -171,6 +183,16 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, deletingId 
                           onClick={() => onDownloadPdf(event.id)}
                         >
                           {t('download_pdf')}
+                        </Button>
+                      )}
+                      {onReschedule && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onReschedule(event.id)}
+                        >
+                          {t('reschedule')}
                         </Button>
                       )}
                       {onEdit && (

@@ -97,3 +97,7 @@ export const updateEventSchema = z
 export const eventIdSchema = z.object({
   eventId: z.coerce.number().int().positive()
 });
+
+export const rescheduleEventSchema = z.object({
+  eventDate: z.string().datetime()
+});

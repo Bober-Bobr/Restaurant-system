@@ -61,6 +61,21 @@ export class EventService {
     return this.mapEventToExternalId(updatedEvent);
   }
 
+  async rescheduleEvent(restaurantId: string, eventId: number, newDate: Date) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+    if (!existingEvent) throw createHttpError(404, 'Event not found');
+
+    // Preserve the ORIGINAL date across repeated reschedules: only capture it the
+    // first time (when it hasn't been set yet), so we always show the true origin.
+    const originalEventDate = existingEvent.originalEventDate ?? existingEvent.eventDate;
+
+    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, {
+      originalEventDate,
+      eventDate: newDate
+    });
+    return this.mapEventToExternalId(updatedEvent);
+  }
+
   async getEventDetails(restaurantId: string, eventId: number) {
     const event = await this.eventRepository.getByNumber(restaurantId, eventId);
     if (!event) throw createHttpError(404, 'Event not found');

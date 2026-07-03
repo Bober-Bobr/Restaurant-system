@@ -22,6 +22,14 @@ type MenuItemCardProps = {
 export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale, toggleMode = false }: MenuItemCardProps) => {
   const localizedName = dishName(item, locale);
   const localizedDescription = dishDescription(item, locale);
+  // Localized category label for the chip. Falls back to the humanized enum when
+  // a category has no translation key (so nothing ever shows a raw ENUM_VALUE).
+  const categoryLabel = (() => {
+    if (!item.category) return translate('general', locale);
+    const key = item.category.toLowerCase() as Parameters<typeof translate>[0];
+    const translated = translate(key, locale);
+    return translated === key ? item.category.replace(/_/g, ' ') : translated;
+  })();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const photoSrc = getPhotoUrl(item.photoUrl);
   const selected = quantity > 0;
@@ -98,7 +106,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
             style={dark
               ? { background: 'rgba(var(--rg-accent-rgb),0.16)', color: 'var(--rg-accent-soft)', border: '1px solid rgba(var(--rg-accent-rgb),0.32)' }
               : { background: '#f6efd9', color: '#8a6d1a', border: '1px solid #ecdfb4' }}>
-            {item.category ? item.category.replace(/_/g, ' ') : 'General'}
+            {categoryLabel}
           </span>
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold leading-snug" style={{ color: dark ? 'white' : '#1c1917' }}>

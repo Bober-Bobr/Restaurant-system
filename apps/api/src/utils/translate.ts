@@ -67,7 +67,7 @@ const resources = {
     service_fee: 'Плата за обслуживание',
     tax: 'Налог',
     total: 'Итого',
-    deposit: 'Депозит',
+    deposit: 'Залог',
     amount_due: 'К оплате',
     price_per_guest: 'Цена за гостя',
     summary: 'Сводка',

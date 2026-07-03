@@ -57,6 +57,11 @@ export const eventService = {
     return data;
   },
 
+  async reschedule(eventId: number, eventDate: string) {
+    const { data } = await httpClient.post<Event>(`/events/${eventId}/reschedule`, { eventDate });
+    return data;
+  },
+
   async remove(eventId: number) {
     await httpClient.delete(`/events/${eventId}`);
   }

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { getPagination } from '../../utils/http.js';
 import { EventRepository } from './event.repository.js';
-import { createEventSchema, eventIdSchema, updateEventSchema } from './event.schema.js';
+import { createEventSchema, eventIdSchema, rescheduleEventSchema, updateEventSchema } from './event.schema.js';
 import { EventService } from './event.service.js';
 
 const eventService = new EventService(new EventRepository());
@@ -34,6 +34,14 @@ export class EventController {
       ...payload,
       eventDate: payload.eventDate ? new Date(payload.eventDate) : undefined
     });
+    response.json(event);
+  }
+
+  async reschedule(request: Request, response: Response) {
+    const restaurantId = request.restaurantId!;
+    const { eventId } = eventIdSchema.parse(request.params);
+    const { eventDate } = rescheduleEventSchema.parse(request.body);
+    const event = await eventService.rescheduleEvent(restaurantId, eventId, new Date(eventDate));
     response.json(event);
   }
 

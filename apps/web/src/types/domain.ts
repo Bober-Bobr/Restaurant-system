@@ -28,6 +28,8 @@ export type Event = {
   secondCustomerName?: string;
   secondCustomerPhone?: string;
   eventDate: string;
+  // Set when the event was rescheduled: the date it was moved FROM (old → new).
+  originalEventDate?: string | null;
   guestCount: number;
   // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
   depositCents?: number;

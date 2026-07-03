@@ -91,6 +91,9 @@ model Event {
   secondCustomerName  String?
   secondCustomerPhone String?
   eventDate       DateTime
+  // Set when an event is rescheduled: preserves the date it was moved FROM so the
+  // UI can show the change (old date → new date). Null = never rescheduled.
+  originalEventDate DateTime?
   guestCount      Int
   // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
   depositCents    Int               @default(0)

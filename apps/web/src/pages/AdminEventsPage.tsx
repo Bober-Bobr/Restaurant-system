@@ -132,6 +132,12 @@ export const AdminEventsPage = () => {
   const [groomName, setGroomName] = useState('');
   const [honoreePersonName, setHonoreeName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  // The create/edit panel is hidden by default and revealed via a button.
+  const [showForm, setShowForm] = useState(false);
+  // Reschedule modal state (separate from the text-based date edit in the form).
+  const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
 
   // Search functionality
   const [searchId, setSearchId] = useState('');
@@ -208,6 +214,7 @@ export const AdminEventsPage = () => {
       setBrideName('');
       setGroomName('');
       setHonoreeName('');
+      setShowForm(false);
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -234,6 +241,7 @@ export const AdminEventsPage = () => {
       setBrideName('');
       setGroomName('');
       setHonoreeName('');
+      setShowForm(false);
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -244,6 +252,32 @@ export const AdminEventsPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: ({ eventId, iso }: { eventId: number; iso: string }) => eventService.reschedule(eventId, iso),
+    onSuccess: async () => {
+      setReschedulingId(null);
+      setRescheduleDate('');
+      setRescheduleTime('');
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
+    }
+  });
+
+  // Open the reschedule modal for an event, pre-filled with its current date/time.
+  const openReschedule = (event: Event) => {
+    setReschedulingId(event.id);
+    const d = new Date(event.eventDate);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+    setRescheduleDate(local.slice(0, 10));
+    setRescheduleTime(local.slice(11, 16));
+  };
+
+  const submitReschedule = () => {
+    if (!reschedulingId || !rescheduleDate || !rescheduleTime || rescheduleMutation.isPending) return;
+    const date = new Date(`${rescheduleDate}T${rescheduleTime}`);
+    if (Number.isNaN(date.getTime())) return;
+    rescheduleMutation.mutate({ eventId: reschedulingId, iso: date.toISOString() });
+  };
 
   // Search handler
   const handleSearch = () => {
@@ -274,6 +308,7 @@ export const AdminEventsPage = () => {
   // the page (the editing section). Shared by the list, search, and the
   // "focus event" deep-link coming from the calendar.
   const startEditing = (event: Event) => {
+    setShowForm(true);
     setEditingId(event.id);
     setCustomerName(event.customerName);
     setCustomerPhone(event.customerPhone ?? '');
@@ -343,8 +378,27 @@ export const AdminEventsPage = () => {
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-      <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('banquet_events')}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 className="adm-title" style={{ margin: 0 }}>{t('banquet_events')}</h1>
+        {/* The create/edit panel is hidden by default; this button reveals it. */}
+        <Button
+          type="button"
+          onClick={() => {
+            if (showForm) {
+              setShowForm(false);
+            } else {
+              // Opening fresh for a NEW event — clear any leftover edit state.
+              setEditingId(null);
+              setShowForm(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+        >
+          {showForm ? t('hide_form') : `+ ${t('create_new_event_button')}`}
+        </Button>
+      </div>
 
+      {showForm && (
       <section className="adm-card tablet-fade-up adm-section">
         <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{editingId ? t('edit_existing_event') : t('create_new_event')}</h3>
         <form
@@ -554,6 +608,7 @@ export const AdminEventsPage = () => {
                   setBrideName('');
                   setGroomName('');
                   setHonoreeName('');
+                  setShowForm(false);
                 }}
               >
                 {t('cancel')}
@@ -600,6 +655,7 @@ export const AdminEventsPage = () => {
           </div>
         </form>
       </section>
+      )}
 
       {/* Search Section */}
       <section className="adm-card tablet-fade-up adm-section" style={{ animationDelay: '80ms' }}>
@@ -662,6 +718,11 @@ export const AdminEventsPage = () => {
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('event_date_time')}</p>
+                  {searchResult.originalEventDate && new Date(searchResult.originalEventDate).getTime() !== d.getTime() && (
+                    <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#f87171', textDecoration: 'line-through' }}>
+                      {t('rescheduled_from')}: {new Date(searchResult.originalEventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  )}
                   <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>{dateStr}</p>
                   <p style={{ margin: '1px 0 0', fontSize: '0.78rem', color: 'rgba(226,232,240,0.6)' }}>{timeStr}</p>
                 </div>
@@ -735,6 +796,13 @@ export const AdminEventsPage = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => openReschedule(searchResult)}
+                >
+                  {t('reschedule')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => startEditing(searchResult)}
                 >
                   {t('edit')}
@@ -772,10 +840,61 @@ export const AdminEventsPage = () => {
             const event = events.find((item) => item.id === eventId);
             if (event) downloadEventPdf(event);
           }}
+          onReschedule={(eventId) => {
+            const event = events.find((item) => item.id === eventId);
+            if (event) openReschedule(event);
+          }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}
           deletingId={deleteMutation.isPending ? deleteMutation.variables ?? null : null}
         />
       ) : null}
+
+      {/* Reschedule modal — pick a new date/time; the old date is preserved. */}
+      {reschedulingId !== null && (
+        <div
+          onClick={() => setReschedulingId(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: 16,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            className="adm-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 420, padding: 24 }}
+          >
+            <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('reschedule_event')}</h3>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <label style={{ display: 'grid', gap: 6 }}>
+                {t('new_date')}
+                <Input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} />
+              </label>
+              <label style={{ display: 'grid', gap: 6 }}>
+                {t('new_time')}
+                <Input type="time" value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} />
+              </label>
+              {rescheduleMutation.isError && (
+                <span style={{ color: '#b00020' }}>
+                  {rescheduleMutation.error instanceof Error ? rescheduleMutation.error.message : 'Failed to reschedule.'}
+                </span>
+              )}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                <Button type="button" variant="secondary" onClick={() => setReschedulingId(null)}>
+                  {t('cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={submitReschedule}
+                  disabled={!rescheduleDate || !rescheduleTime || rescheduleMutation.isPending}
+                >
+                  {rescheduleMutation.isPending ? t('updating') : t('reschedule')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
