@@ -1006,24 +1006,32 @@ function IncludedDishesSection({
         </div>
       ))}
 
-      {/* Small categories (< 5 items): one combined group, each sub-category
-          labelled and separated by a divider line. */}
+      {/* Small categories (< 5 items): folded into ONE combined group, rendered
+          as a single bordered card so it clearly reads as one unit. Inside, each
+          small category is labelled and separated from the next by a divider. */}
       {smallGroups.length > 0 && (
         <div style={{
           paddingTop: bigGroups.length > 0 ? 20 : 0,
           marginTop: bigGroups.length > 0 ? 20 : 0,
           borderTop: bigGroups.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
-          {smallGroups.map(([cat, items], si) => (
-            <div key={cat} style={{
-              paddingTop: si > 0 ? 18 : 0,
-              marginTop: si > 0 ? 18 : 0,
-              borderTop: si > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            }}>
-              {categoryHeader(cat)}
-              {dishGrid(items!)}
-            </div>
-          ))}
+          <div style={{
+            borderRadius: 18,
+            padding: 16,
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(var(--rg-accent-rgb),0.22)',
+          }}>
+            {smallGroups.map(([cat, items], si) => (
+              <div key={cat} style={{
+                paddingTop: si > 0 ? 16 : 0,
+                marginTop: si > 0 ? 16 : 0,
+                borderTop: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
+              }}>
+                {categoryHeader(cat)}
+                {dishGrid(items!)}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
