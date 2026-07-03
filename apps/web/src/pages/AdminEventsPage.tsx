@@ -52,6 +52,29 @@ const binarySearchEventById = (events: Event[], targetId: number): Event | null 
 
 const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET', 'WEDDING', 'BIRTHDAY', 'PRIVATE_PARTY', 'CORPORATE', 'FOTIHA_TUI', 'NACHOR_OSHI'];
 
+// ── Create/Edit Event form styling ──
+// Field labels are rendered in the brand yellow, and fields are grouped under
+// small yellow section headings with a fading rule line.
+const GOLD = '#c9a42c';
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'grid', gap: 6,
+  fontSize: 12.5, fontWeight: 600, letterSpacing: '0.02em',
+  color: GOLD,
+};
+
+const GroupHeading = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+    <span style={{
+      fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
+      color: GOLD, whiteSpace: 'nowrap',
+    }}>
+      {children}
+    </span>
+    <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(201,164,44,0.45), transparent)' }} />
+  </div>
+);
+
 const STATUS_LABEL_KEY: Record<Event['status'], Parameters<typeof translate>[0]> = {
   DRAFT: 'status_draft',
   CONFIRMED: 'status_confirmed',
@@ -439,11 +462,13 @@ export const AdminEventsPage = () => {
           }}
           className="form-grid-2" style={{ alignItems: 'end' }}
         >
-          <label style={{ display: 'grid', gap: 6 }}>
+          {/* ── Customer information ── */}
+          <GroupHeading>{t('customer_information')}</GroupHeading>
+          <label style={fieldLabelStyle}>
             {t('customer_name')}
             <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('phone_number')}
             <Input
               type="tel"
@@ -452,14 +477,14 @@ export const AdminEventsPage = () => {
               onChange={(e) => setCustomerPhone(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('second_customer_name')}
             <Input
               value={secondCustomerName}
               onChange={(e) => setSecondCustomerName(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('second_customer_phone')}
             <Input
               type="tel"
@@ -468,18 +493,10 @@ export const AdminEventsPage = () => {
               onChange={(e) => setSecondCustomerPhone(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
-            {t('deposit_optional')}
-            <Input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              placeholder="0"
-              value={depositText}
-              onChange={(e) => setDepositText(e.target.value)}
-            />
-          </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+
+          {/* ── Date & time ── */}
+          <GroupHeading>{t('event_date_time')}</GroupHeading>
+          <label style={fieldLabelStyle}>
             {t('event_date')}
             <Input
               type="date"
@@ -487,7 +504,7 @@ export const AdminEventsPage = () => {
               onChange={(e) => setEventDate(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('event_time')}
             <Input
               type="time"
@@ -495,7 +512,10 @@ export const AdminEventsPage = () => {
               onChange={(e) => setEventTime(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+
+          {/* ── Event details ── */}
+          <GroupHeading>{t('event_details')}</GroupHeading>
+          <label style={fieldLabelStyle}>
             {t('guests')}
             <Input
               type="number"
@@ -506,7 +526,7 @@ export const AdminEventsPage = () => {
               onChange={(e) => setGuestCountText(e.target.value)}
             />
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('event_type')}
             <Select value={eventType} onChange={(e) => setEventType(e.target.value as NonNullable<Event['eventType']>)}>
               {eventTypes.map((type) => (
@@ -517,30 +537,30 @@ export const AdminEventsPage = () => {
             </Select>
           </label>
           {eventType === 'BIRTHDAY' && (
-            <label style={{ display: 'grid', gap: 6 }}>
+            <label style={fieldLabelStyle}>
               {t('birthday_person_name')}
               <Input placeholder={t('birthday_person_name_placeholder')} value={birthdayPersonName} onChange={(e) => setBirthdayPersonName(e.target.value)} />
             </label>
           )}
           {eventType === 'WEDDING' && (
             <>
-              <label style={{ display: 'grid', gap: 6 }}>
+              <label style={fieldLabelStyle}>
                 {t('bride_name')}
                 <Input placeholder={t('bride_groom_name_placeholder')} value={brideName} onChange={(e) => setBrideName(e.target.value)} />
               </label>
-              <label style={{ display: 'grid', gap: 6 }}>
+              <label style={fieldLabelStyle}>
                 {t('groom_name')}
                 <Input placeholder={t('bride_groom_name_placeholder')} value={groomName} onChange={(e) => setGroomName(e.target.value)} />
               </label>
             </>
           )}
           {!['BIRTHDAY', 'WEDDING'].includes(eventType) && (
-            <label style={{ display: 'grid', gap: 6 }}>
+            <label style={fieldLabelStyle}>
               {t('honoree_person_name')}
               <Input placeholder={t('honoree_person_name_placeholder')} value={honoreePersonName} onChange={(e) => setHonoreeName(e.target.value)} />
             </label>
           )}
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('status')}
             <Select value={status} onChange={(e) => setStatus(e.target.value as NonNullable<Event['status']>)}>
               <option value="MENU_NOT_SELECTED">{t('status_menu_not_selected')}</option>
@@ -549,7 +569,14 @@ export const AdminEventsPage = () => {
               <option value="COMPLETED">{t('status_completed')}</option>
             </Select>
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={{ ...fieldLabelStyle, gridColumn: '1 / -1' }}>
+            {t('notes')}
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </label>
+
+          {/* ── Hall / Table ── */}
+          <GroupHeading>{t('ev_col_hall_table')}</GroupHeading>
+          <label style={fieldLabelStyle}>
             {t('hall_optional')}
             <Select value={hallId} onChange={(e) => setHallId(e.target.value)}>
               <option value="">{t('select_hall')}</option>
@@ -560,7 +587,7 @@ export const AdminEventsPage = () => {
               ))}
             </Select>
           </label>
-          <label style={{ display: 'grid', gap: 6 }}>
+          <label style={fieldLabelStyle}>
             {t('table_category_optional')}
             <Select value={tableCategoryId} onChange={(e) => setTableCategoryId(e.target.value)}>
               <option value="">{t('choose_table_category')}</option>
@@ -571,9 +598,19 @@ export const AdminEventsPage = () => {
               ))}
             </Select>
           </label>
-          <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
-            {t('notes')}
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+
+          {/* ── Payment ── */}
+          <GroupHeading>{t('payment')}</GroupHeading>
+          <label style={fieldLabelStyle}>
+            {t('deposit_optional')}
+            <Input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              placeholder="0"
+              value={depositText}
+              onChange={(e) => setDepositText(e.target.value)}
+            />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
             <Button type="submit" disabled={editingId ? !canSave : !canSubmit}>
