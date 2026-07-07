@@ -77,13 +77,21 @@ export const ChiefAdminPage = () => {
   const [uName, setUName] = useState('');
   const [uPwd, setUPwd] = useState('');
   const [uRole, setURole] = useState<AdminRole>('OWNER');
+  const [uRestaurantId, setURestaurantId] = useState('');
   const [uError, setUError] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   const createUser = useMutation({
-    mutationFn: () => authService.createUserAsChief({ username: uName.trim(), password: uPwd, role: uRole, restaurantId: null }),
+    mutationFn: () => authService.createUserAsChief({
+      username: uName.trim(),
+      password: uPwd,
+      role: uRole,
+      // A restaurant manager is tied to a restaurant so events created there flow
+      // into their expense ledger. Other roles get their restaurant elsewhere.
+      restaurantId: uRole === 'RESTAURANT_MANAGER' ? (uRestaurantId || null) : null,
+    }),
     onSuccess: () => {
-      setUName(''); setUPwd(''); setURole('OWNER'); setUError(null);
+      setUName(''); setUPwd(''); setURole('OWNER'); setURestaurantId(''); setUError(null);
       queryClient.invalidateQueries({ queryKey: ['cad-users'] });
     },
     onError: (e) => setUError(formatError(e)),
@@ -107,6 +115,11 @@ export const ChiefAdminPage = () => {
 
   // Collect all restaurant IDs that belong to a company
   const assignedRestaurantIds = new Set(companies.flatMap((c) => c.restaurants.map((r) => r.id)));
+
+  // Every restaurant (for the restaurant-manager assignment dropdown).
+  const allRestaurants = companies.flatMap((c) =>
+    c.restaurants.map((r) => ({ id: r.id, name: r.name || c.name, company: c.name }))
+  );
 
   return (
     <div className="adm-bg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -308,7 +321,21 @@ export const ChiefAdminPage = () => {
                   <option value="EMPLOYEE">EMPLOYEE</option>
                   <option value="KITCHEN">KITCHEN</option>
                 </select>
+                {uRole === 'RESTAURANT_MANAGER' && (
+                  <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
+                    <option value="">Assign restaurant…</option>
+                    {allRestaurants.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}{r.name !== r.company ? ` — ${r.company}` : ''}</option>
+                    ))}
+                  </select>
+                )}
               </div>
+              {uRole === 'RESTAURANT_MANAGER' && (
+                <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 12, marginTop: 8 }}>
+                  Events created at this restaurant are mirrored into this manager's expense ledger
+                  (morning → Nahor, afternoon → Fotiha, evening → Wedding).
+                </p>
+              )}
               {uError && <p style={{ color: '#f87171', marginTop: 8 }}>{uError}</p>}
               <button
                 onClick={() => createUser.mutate()}

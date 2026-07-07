@@ -1,5 +1,6 @@
 import createHttpError from 'http-errors';
 import { EventRepository, type CreateEventData } from './event.repository.js';
+import { syncEventToLedger } from './event.ledgerSync.js';
 
 export class EventService {
   constructor(private readonly eventRepository: EventRepository) {}
@@ -16,6 +17,9 @@ export class EventService {
 
   async createEvent(restaurantId: string, payload: CreateEventData) {
     const event = await this.eventRepository.create(restaurantId, payload);
+    // Mirror the new event into the assigned restaurant manager's expense ledger
+    // (morning → Nahor, afternoon → Fotiha, evening → Wedding). Best-effort.
+    await syncEventToLedger(event);
     return this.mapEventToExternalId(event);
   }
 
