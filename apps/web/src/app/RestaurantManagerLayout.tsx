@@ -35,7 +35,6 @@ export const RestaurantManagerLayout = () => {
     { to: '/accounts', label: t('accounts') },
     { to: '/ledger', label: t('expense_ledger') },
     { to: '/additional', label: t('additional_expenses') },
-    { to: '/administrators', label: t('administrators') },
     { to: '/devices', label: t('devices') },
   ];
 

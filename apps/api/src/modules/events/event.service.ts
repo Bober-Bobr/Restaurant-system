@@ -65,6 +65,9 @@ export class EventService {
     }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
+    // Keep the manager's ledger in sync when details change (e.g. a blank event
+    // is filled in after creation, or the guest count / date is edited).
+    if (updatedEvent) await syncEventToLedger(updatedEvent);
     return this.mapEventToExternalId(updatedEvent);
   }
 
@@ -98,6 +101,8 @@ export class EventService {
       originalEventDate,
       eventDate: newDate
     });
+    // A reschedule moves the event to a new date/slot — mirror it there too.
+    if (updatedEvent) await syncEventToLedger(updatedEvent);
     return this.mapEventToExternalId(updatedEvent);
   }
 

@@ -36,15 +36,21 @@ type SyncableEvent = {
 // (no restaurant, no assigned manager, or a still-blank event with no name).
 export async function syncEventToLedger(event: SyncableEvent): Promise<void> {
   try {
-    if (!event.restaurantId) return;
+    if (!event.restaurantId) return; // blank/unassigned event — nothing to mirror
     const bookingName = event.customerName?.trim();
-    if (!bookingName) return;
+    if (!bookingName) {
+      console.info('[ledger-sync] skipped: event has no customer name yet.');
+      return;
+    }
 
     const manager = await prisma.adminUser.findFirst({
       where: { role: AdminRole.RESTAURANT_MANAGER, restaurantId: event.restaurantId },
       select: { id: true }
     });
-    if (!manager) return;
+    if (!manager) {
+      console.info(`[ledger-sync] skipped: no RESTAURANT_MANAGER is assigned to restaurant ${event.restaurantId}. Assign one so its events feed the ledger.`);
+      return;
+    }
 
     const local = new Date(event.eventDate.getTime() + UZ_OFFSET_MS);
     const date = local.toISOString().slice(0, 10); // YYYY-MM-DD (Tashkent)
@@ -72,6 +78,7 @@ export async function syncEventToLedger(event: SyncableEvent): Promise<void> {
       where: { id: dept.id },
       data: { bookingName, guestCount: event.guestCount, pricePerGuestSum }
     });
+    console.info(`[ledger-sync] mirrored "${bookingName}" into manager ${manager.id} ledger — ${date} / ${type} (${event.guestCount} guests).`);
   } catch (err) {
     console.error('[ledger-sync] failed to mirror event into the expense ledger:', err);
   }

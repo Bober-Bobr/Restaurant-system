@@ -110,10 +110,20 @@ export class AuthService {
       if (
         payload.role === AdminRole.OWNER ||
         payload.role === AdminRole.CHIEF_ADMIN ||
-        payload.role === AdminRole.MANAGER ||
-        payload.role === AdminRole.RESTAURANT_MANAGER
+        payload.role === AdminRole.MANAGER
       ) {
-        throw createHttpError(403, 'Owners can only create Administrator, Food Admin, Employee, or Kitchen accounts.');
+        throw createHttpError(403, 'Owners can only create Administrator, Food Admin, Restaurant Manager, Employee, or Kitchen accounts.');
+      }
+      // Any restaurant an owner assigns must be one they actually own.
+      if (payload.restaurantId) {
+        const ownedIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
+        if (!ownedIds.includes(payload.restaurantId)) {
+          throw createHttpError(403, 'You can only assign your own restaurants.');
+        }
+      }
+      // A restaurant manager must be tied to a restaurant so its events feed the ledger.
+      if (payload.role === AdminRole.RESTAURANT_MANAGER && !payload.restaurantId) {
+        throw createHttpError(400, 'Select a restaurant for the manager.');
       }
     }
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
@@ -125,17 +135,6 @@ export class AuthService {
         ?? (await this.authRepository.findById(caller.id))?.restaurantId
         ?? null;
       if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
-      payload.restaurantId = restaurantId;
-    }
-    if (caller.role === AdminRole.RESTAURANT_MANAGER) {
-      // A restaurant manager may only create an Administrator for their own restaurant.
-      if (payload.role !== AdminRole.ADMIN) {
-        throw createHttpError(403, 'Restaurant managers can only create Administrator accounts.');
-      }
-      const restaurantId = caller.restaurantId
-        ?? (await this.authRepository.findById(caller.id))?.restaurantId
-        ?? null;
-      if (!restaurantId) throw createHttpError(400, 'Restaurant manager has no restaurant assigned.');
       payload.restaurantId = restaurantId;
     }
     const taken = await this.authRepository.findByUsername(payload.username);

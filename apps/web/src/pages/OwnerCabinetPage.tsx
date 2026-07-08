@@ -480,6 +480,7 @@ export const OwnerCabinetPage = () => {
                 <select value={uRole} onChange={(e) => setURole(e.target.value as AdminRole)} style={inputStyle}>
                   <option value="ADMIN">{t('administrator_role')}</option>
                   <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
+                  <option value="RESTAURANT_MANAGER">{t('restaurant_manager_role')}</option>
                   <option value="EMPLOYEE">{t('employee_role')}</option>
                   <option value="KITCHEN">{t('kitchen_role')}</option>
                 </select>
@@ -488,11 +489,16 @@ export const OwnerCabinetPage = () => {
                   {restaurants.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
+              {uRole === 'RESTAURANT_MANAGER' && (
+                <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 12, marginTop: 8 }}>
+                  {t('restaurant_manager_needs_restaurant')}
+                </p>
+              )}
               {uError && <p style={{ color: '#f87171', marginTop: 8 }}>{uError}</p>}
               <button
                 onClick={() => createUser.mutate()}
-                disabled={!uName.trim() || !uPwd || createUser.isPending}
-                style={{ ...btnStyle, marginTop: 12, opacity: (!uName.trim() || !uPwd) ? 0.5 : 1 }}
+                disabled={!uName.trim() || !uPwd || (uRole === 'RESTAURANT_MANAGER' && !uRestaurantId) || createUser.isPending}
+                style={{ ...btnStyle, marginTop: 12, opacity: (!uName.trim() || !uPwd || (uRole === 'RESTAURANT_MANAGER' && !uRestaurantId)) ? 0.5 : 1 }}
               >
                 {createUser.isPending ? t('creating') : t('create')}
               </button>
@@ -526,6 +532,7 @@ export const OwnerCabinetPage = () => {
                       >
                         <option value="ADMIN">{t('administrator_role')}</option>
                         <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
+                        <option value="RESTAURANT_MANAGER">{t('restaurant_manager_role')}</option>
                         <option value="EMPLOYEE">{t('employee_role')}</option>
                         <option value="KITCHEN">{t('kitchen_role')}</option>
                       </select>
