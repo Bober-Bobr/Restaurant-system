@@ -39,6 +39,11 @@ export const updateRoleSchema = z.object({
   role: z.nativeEnum(AdminRole)
 });
 
+// Chief Admin reassigns a staff user's restaurant affiliation. null = unassign.
+export const updateRestaurantSchema = z.object({
+  restaurantId: z.string().cuid().nullable()
+});
+
 export const updateCredentialsSchema = z
   .object({
     username: z

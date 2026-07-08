@@ -93,6 +93,14 @@ export class AuthRepository {
     });
   }
 
+  async updateRestaurant(userId: string, restaurantId: string | null) {
+    return prisma.adminUser.update({
+      where: { id: userId },
+      data: { restaurantId },
+      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true }
+    });
+  }
+
   async updateCredentials(userId: string, data: { username?: string; passwordHash?: string }) {
     return prisma.adminUser.update({
       where: { id: userId },

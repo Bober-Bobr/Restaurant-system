@@ -107,6 +107,16 @@ export const ChiefAdminPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-users'] }),
   });
 
+  const updateUserRestaurant = useMutation({
+    mutationFn: ({ id, restaurantId }: { id: string; restaurantId: string | null }) =>
+      authService.updateUserRestaurant(id, restaurantId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-users'] }),
+  });
+
+  // Roles whose restaurant affiliation is tracked via restaurantId (so the Chief
+  // Admin can reassign it). Owners derive theirs from ownership; chiefs are global.
+  const RESTAURANT_AFFILIATED: AdminRole[] = ['ADMIN', 'CATERING_ADMIN', 'RESTAURANT_MANAGER', 'EMPLOYEE', 'KITCHEN'];
+
   const handleLogout = async () => {
     try { await authService.logout(); } catch {}
     logout();
@@ -374,6 +384,20 @@ export const ChiefAdminPage = () => {
                       <option value="EMPLOYEE">EMPLOYEE</option>
                       <option value="KITCHEN">KITCHEN</option>
                     </select>
+                    {RESTAURANT_AFFILIATED.includes(u.role) && (
+                      <select
+                        value={u.restaurantId ?? ''}
+                        onChange={(e) => updateUserRestaurant.mutate({ id: u.id, restaurantId: e.target.value || null })}
+                        disabled={updateUserRestaurant.isPending}
+                        title="Affiliated restaurant"
+                        style={{ ...inputStyle, width: 180 }}
+                      >
+                        <option value="">— unassigned —</option>
+                        {allRestaurants.map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}{r.name !== r.company ? ` — ${r.company}` : ''}</option>
+                        ))}
+                      </select>
+                    )}
                     <button
                       onClick={() => setEditingUserId(editingUserId === u.id ? null : u.id)}
                       style={{

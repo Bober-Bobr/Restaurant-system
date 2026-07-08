@@ -127,6 +127,17 @@ export class AuthService {
       if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
       payload.restaurantId = restaurantId;
     }
+    if (caller.role === AdminRole.RESTAURANT_MANAGER) {
+      // A restaurant manager may only create an Administrator for their own restaurant.
+      if (payload.role !== AdminRole.ADMIN) {
+        throw createHttpError(403, 'Restaurant managers can only create Administrator accounts.');
+      }
+      const restaurantId = caller.restaurantId
+        ?? (await this.authRepository.findById(caller.id))?.restaurantId
+        ?? null;
+      if (!restaurantId) throw createHttpError(400, 'Restaurant manager has no restaurant assigned.');
+      payload.restaurantId = restaurantId;
+    }
     const taken = await this.authRepository.findByUsername(payload.username);
     if (taken) throw createHttpError(409, 'Username already taken');
     const passwordHash = await bcrypt.hash(payload.password, 12);
@@ -233,6 +244,25 @@ export class AuthService {
     if (!target) throw createHttpError(404, 'User not found');
 
     return this.authRepository.updateRole(targetId, newRole);
+  }
+
+  // Chief Admin reassigns which restaurant a staff user is affiliated with.
+  // Owners derive their restaurants from ownership, and Chief Admins are
+  // system-wide, so neither can be reassigned this way.
+  async updateUserRestaurant(callerRole: AdminRole, targetId: string, restaurantId: string | null) {
+    if (callerRole !== AdminRole.CHIEF_ADMIN) {
+      throw createHttpError(403, 'Only the Chief Admin can reassign a user\'s restaurant.');
+    }
+    const target = await this.authRepository.findById(targetId);
+    if (!target) throw createHttpError(404, 'User not found');
+    if (target.role === AdminRole.CHIEF_ADMIN || target.role === AdminRole.OWNER) {
+      throw createHttpError(400, 'This user is not affiliated with a restaurant.');
+    }
+    if (restaurantId) {
+      const restaurant = await this.authRepository.findRestaurantById(restaurantId);
+      if (!restaurant) throw createHttpError(404, 'Restaurant not found');
+    }
+    return this.authRepository.updateRestaurant(targetId, restaurantId);
   }
 
   private async issueTokenPair(
