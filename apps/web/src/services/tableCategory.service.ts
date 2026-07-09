@@ -13,6 +13,7 @@ export const tableCategoryService = {
     ratePerPerson: number;
     discountPercent?: number;
     tableType?: 'ADULT' | 'CHILDREN';
+    eventType?: 'NAHOR' | 'FOTIHA' | 'TUI' | 'OTHERS';
     description?: string;
     photoUrl?: string;
     photos?: string[];

@@ -354,6 +354,9 @@ model TableCategory {
   // Table audience: ADULT (default) or CHILDREN. A CHILDREN table is shown as an
   // optional add-on table on the tablet, priced by a separate children count.
   tableType          String                    @default("ADULT")
+  // Banquet event type this table belongs to: NAHOR | FOTIHA | TUI | OTHERS.
+  // On the tablet the guest picks an event type first, then only its tables show.
+  eventType          String                    @default("OTHERS")
   description        String?
   photoUrl           String?
   photos             Json                      @default("[]")

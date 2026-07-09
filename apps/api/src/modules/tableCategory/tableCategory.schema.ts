@@ -12,6 +12,7 @@ export const createTableCategorySchema = z.object({
   ratePerPerson: z.number().int().nonnegative(),
   discountPercent: z.number().int().min(0).max(100).optional(),
   tableType: z.enum(['ADULT', 'CHILDREN']).optional(),
+  eventType: z.enum(['NAHOR', 'FOTIHA', 'TUI', 'OTHERS']).optional(),
   description: z.string().max(500).optional(),
   photoUrl: z.string().min(1).optional(),
   photos: z.array(z.string()).optional(),

@@ -81,6 +81,8 @@ export type TableCategoryPackageItem = {
 };
 
 export type TableType = 'ADULT' | 'CHILDREN';
+// Banquet event type a table category belongs to (guest picks one first on the tablet).
+export type TableEventType = 'NAHOR' | 'FOTIHA' | 'TUI' | 'OTHERS';
 
 export type TableCategory = {
   id: string;
@@ -89,6 +91,7 @@ export type TableCategory = {
   ratePerPerson: number;
   discountPercent?: number;
   tableType?: TableType;
+  eventType?: TableEventType;
   description?: string;
   photoUrl?: string;
   photos?: string[];

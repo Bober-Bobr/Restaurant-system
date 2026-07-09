@@ -5,10 +5,10 @@ import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
-import type { MenuItem, TableCategory, TableCategoryPackageItem, TabletStatus } from '../types/domain';
+import type { MenuItem, TableCategory, TableCategoryPackageItem, TableEventType, TabletStatus } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
-import { dishName, dishDescription } from '../utils/menuI18n';
+import { dishName } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
@@ -16,7 +16,7 @@ import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
 type MenuCategory = MenuItem['category'];
-type TFn = (key: Parameters<typeof translate>[0]) => string;
+type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
 
 const CATEGORY_ORDER: Record<MenuCategory, number> = {
   SOUPS: 0, PIZZA: 1, COLD_APPETIZERS: 2, GRILL: 3, PASTRY: 4, HOT_APPETIZERS: 5,
@@ -102,6 +102,20 @@ function TableCategoryFullscreen({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentIdx, setCurrentIdx] = useState(0);
+  // The guest first picks a banquet event type; only its tables then appear.
+  const [eventType, setEventType] = useState<TableEventType | null>(null);
+
+  const EVENT_TYPE_ORDER: TableEventType[] = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'];
+  const EVENT_TYPE_LABEL: Record<TableEventType, Parameters<typeof translate>[0]> = {
+    NAHOR: 'dept_nahor', FOTIHA: 'dept_fotiha', TUI: 'dept_tui', OTHERS: 'dept_others',
+  };
+  const catEventType = (tc: TableCategory): TableEventType => tc.eventType ?? 'OTHERS';
+  const availableTypes = EVENT_TYPE_ORDER.filter((et) => tableCategories.some((tc) => catEventType(tc) === et));
+  // Only gate behind an event-type choice when the tables span more than one type.
+  const gated = availableTypes.length > 1;
+  const shown = gated && eventType ? tableCategories.filter((tc) => catEventType(tc) === eventType) : tableCategories;
+
+  const pickEventType = (et: TableEventType) => { setEventType(et); setCurrentIdx(0); };
 
   // When several table categories share the same price, guests need to see how
   // they differ. For each price bracket, compute the menu-item ids COMMON to
@@ -109,7 +123,7 @@ function TableCategoryFullscreen({
   // distinctive, so we flag those ids to highlight them on each slide.
   const { distinctiveByCat, samePriceCountByCat } = (() => {
     const priceGroups = new Map<number, TableCategory[]>();
-    for (const tc of tableCategories) {
+    for (const tc of shown) {
       const arr = priceGroups.get(tc.ratePerPerson) ?? [];
       arr.push(tc);
       priceGroups.set(tc.ratePerPerson, arr);
@@ -156,12 +170,26 @@ function TableCategoryFullscreen({
         background: 'rgba(0,0,0,0.25)',
         backdropFilter: 'blur(12px)',
       }}>
-        <p style={{
-          margin: 0, color: 'rgba(255,255,255,0.55)',
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase',
-        }}>
-          {t('choose_table_category')}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          {gated && eventType && (
+            <button type="button" onClick={() => setEventType(null)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                padding: '5px 11px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                color: 'var(--rg-accent)', background: 'rgba(var(--rg-accent-rgb),0.12)',
+                border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
+              }}>
+              ‹ {t(EVENT_TYPE_LABEL[eventType])}
+            </button>
+          )}
+          <p style={{
+            margin: 0, color: 'rgba(255,255,255,0.55)',
+            fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase',
+          }}>
+            {gated && !eventType ? t('choose_event_type') : t('choose_table_category')}
+          </p>
+        </div>
         <div style={{ display: 'flex', gap: 4 }}>
           {locales.map((loc) => (
             <button
@@ -188,6 +216,33 @@ function TableCategoryFullscreen({
         </div>
       </div>
 
+      {gated && !eventType ? (
+        /* Event-type chooser — shown before any table categories appear. */
+        <div className="scrollbar-none" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+          <div style={{ width: '100%', maxWidth: 760, display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' }}>
+            {availableTypes.map((et) => {
+              const count = tableCategories.filter((tc) => catEventType(tc) === et).length;
+              return (
+                <button key={et} type="button" onClick={() => pickEventType(et)}
+                  className="tablet-fade-up"
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+                    padding: '26px 24px', borderRadius: 20, cursor: 'pointer', textAlign: 'left',
+                    background: 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.14), rgba(255,255,255,0.03))',
+                    border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
+                    color: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+                  }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--rg-accent)', letterSpacing: '-0.01em' }}>
+                    {t(EVENT_TYPE_LABEL[et])}
+                  </span>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{t('tables_available', { count })}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Slides */}
       <div
         ref={scrollRef}
@@ -201,12 +256,12 @@ function TableCategoryFullscreen({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {tableCategories.map((tc, i) => (
+        {shown.map((tc, i) => (
           <CategorySlide
             key={tc.id}
             tc={tc}
             index={i + 1}
-            total={tableCategories.length}
+            total={shown.length}
             onSelect={() => onSelect(tc.id)}
             onLightbox={onLightbox}
             locale={locale}
@@ -243,7 +298,7 @@ function TableCategoryFullscreen({
         >‹</button>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {tableCategories.map((_, i) => (
+          {shown.map((_, i) => (
             <button
               key={i}
               type="button"
@@ -265,20 +320,22 @@ function TableCategoryFullscreen({
 
         <button
           type="button"
-          onClick={() => goTo(Math.min(tableCategories.length - 1, currentIdx + 1))}
-          disabled={currentIdx === tableCategories.length - 1}
+          onClick={() => goTo(Math.min(shown.length - 1, currentIdx + 1))}
+          disabled={currentIdx === shown.length - 1}
           style={{
             width: 44, height: 44, borderRadius: '50%',
             border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
             background: 'rgba(var(--rg-accent-rgb),0.1)',
             color: 'var(--rg-accent)', fontSize: 22, fontWeight: 700, lineHeight: 1,
-            cursor: currentIdx === tableCategories.length - 1 ? 'not-allowed' : 'pointer',
-            opacity: currentIdx === tableCategories.length - 1 ? 0.35 : 1,
+            cursor: currentIdx === shown.length - 1 ? 'not-allowed' : 'pointer',
+            opacity: currentIdx === shown.length - 1 ? 0.35 : 1,
             transition: 'opacity 0.2s',
           }}
           aria-label="Next"
         >›</button>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -710,11 +767,6 @@ function CourseChoiceSection({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? 'var(--rg-accent)' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dishName(item, locale)}</p>
-                      {dishDescription(item, locale) && (
-                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {dishDescription(item, locale)}
-                        </p>
-                      )}
                     </div>
                   </button>
                 </div>
@@ -851,11 +903,6 @@ function DishSwapModal({
                       </span>
                     )}
                   </div>
-                  {dishDescription(item, locale) && (
-                    <p style={{ margin: '6px 0 0', fontSize: 12.5, lineHeight: 1.5, color: 'rgba(255,255,255,0.6)' }}>
-                      {dishDescription(item, locale)}
-                    </p>
-                  )}
                 </div>
               </button>
             );
@@ -994,11 +1041,6 @@ function IncludedDishesSection({
             )}
             <div className="p-2.5">
               <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
-              {dishDescription(displayItem, locale) && (
-                <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                  {dishDescription(displayItem, locale)}
-                </p>
-              )}
               {!viewOnly && freeAlts.length > 0 && (
                 <button type="button" onClick={() => setEditingPiId(pi.id)}
                   className="mt-2.5"

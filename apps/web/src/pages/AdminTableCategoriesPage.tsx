@@ -5,7 +5,7 @@ import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
-import type { MenuItem, TableCategory } from '../types/domain';
+import type { MenuItem, TableCategory, TableEventType } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
@@ -347,6 +347,7 @@ export const AdminTableCategoriesPage = () => {
   const [servingsById, setServingsById] = useState<Record<string, number>>({});
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
   const [tableType, setTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
+  const [eventType, setEventType] = useState<TableEventType>('OTHERS');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -358,6 +359,7 @@ export const AdminTableCategoriesPage = () => {
   const [editServingsById, setEditServingsById] = useState<Record<string, number>>({});
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
   const [editTableType, setEditTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
+  const [editEventType, setEditEventType] = useState<TableEventType>('OTHERS');
   const [editDescription, setEditDescription] = useState('');
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -389,6 +391,7 @@ export const AdminTableCategoriesPage = () => {
         packageItems: selectedItemIds.map((id) => ({ menuItemId: id, servings: servingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
         tableType,
+        eventType,
         description: description.trim() || undefined,
         photos,
         isActive: true,
@@ -401,6 +404,7 @@ export const AdminTableCategoriesPage = () => {
       setServingsById({});
       setRatePerPersonText('0');
       setTableType('ADULT');
+      setEventType('OTHERS');
       setDescription('');
       setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
@@ -431,6 +435,7 @@ export const AdminTableCategoriesPage = () => {
     setEditServingsById(Object.fromEntries((category.packageItems ?? []).map((pi) => [pi.menuItem.id, pi.servings ?? 1])));
     setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
     setEditTableType(category.tableType === 'CHILDREN' ? 'CHILDREN' : 'ADULT');
+    setEditEventType(category.eventType ?? 'OTHERS');
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -446,6 +451,7 @@ export const AdminTableCategoriesPage = () => {
         packageItems: editSelectedItemIds.map((id) => ({ menuItemId: id, servings: editServingsById[id] ?? 1 })),
         ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
         tableType: editTableType,
+        eventType: editEventType,
         description: editDescription.trim() || undefined,
         photos: editPhotos,
         isActive: editIsActive,
@@ -478,14 +484,26 @@ export const AdminTableCategoriesPage = () => {
             </label>
           </div>
 
-          <label style={{ display: 'grid', gap: 6, maxWidth: 320 }}>
-            {t('table_type')}
-            <select className="adm-input" value={tableType}
-              onChange={(e) => setTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
-              <option value="ADULT">{t('table_type_adult')}</option>
-              <option value="CHILDREN">{t('table_type_children')}</option>
-            </select>
-          </label>
+          <div className="form-grid-2">
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('table_type')}
+              <select className="adm-input" value={tableType}
+                onChange={(e) => setTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
+                <option value="ADULT">{t('table_type_adult')}</option>
+                <option value="CHILDREN">{t('table_type_children')}</option>
+              </select>
+            </label>
+            <label style={{ display: 'grid', gap: 6 }}>
+              {t('table_event_type')}
+              <select className="adm-input" value={eventType}
+                onChange={(e) => setEventType(e.target.value as TableEventType)}>
+                <option value="NAHOR">{t('dept_nahor')}</option>
+                <option value="FOTIHA">{t('dept_fotiha')}</option>
+                <option value="TUI">{t('dept_tui')}</option>
+                <option value="OTHERS">{t('dept_others')}</option>
+              </select>
+            </label>
+          </div>
 
           <FoodPackageSection
             selectedCats={selectedCats}
@@ -545,14 +563,26 @@ export const AdminTableCategoriesPage = () => {
                         </label>
                       </div>
 
-                      <label style={{ display: 'grid', gap: 4, maxWidth: 320 }}>
-                        {t('table_type')}
-                        <select className="adm-input" value={editTableType}
-                          onChange={(e) => setEditTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
-                          <option value="ADULT">{t('table_type_adult')}</option>
-                          <option value="CHILDREN">{t('table_type_children')}</option>
-                        </select>
-                      </label>
+                      <div className="form-grid-2">
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('table_type')}
+                          <select className="adm-input" value={editTableType}
+                            onChange={(e) => setEditTableType(e.target.value as 'ADULT' | 'CHILDREN')}>
+                            <option value="ADULT">{t('table_type_adult')}</option>
+                            <option value="CHILDREN">{t('table_type_children')}</option>
+                          </select>
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          {t('table_event_type')}
+                          <select className="adm-input" value={editEventType}
+                            onChange={(e) => setEditEventType(e.target.value as TableEventType)}>
+                            <option value="NAHOR">{t('dept_nahor')}</option>
+                            <option value="FOTIHA">{t('dept_fotiha')}</option>
+                            <option value="TUI">{t('dept_tui')}</option>
+                            <option value="OTHERS">{t('dept_others')}</option>
+                          </select>
+                        </label>
+                      </div>
 
                       <FoodPackageSection
                         selectedCats={editSelectedCats}
