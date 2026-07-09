@@ -18,6 +18,8 @@ export type BlockType =
   | 'socials'
   | 'contacts'
   | 'rsvp'
+  | 'form'
+  | 'savecontact'
   | 'map'
   | 'promo'
   | 'divider';
@@ -194,17 +196,48 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'subtitle', labelKey: 'bf_subtitle', type: 'textarea' },
     ],
   },
+  // Lead-capture form: submits a call-back request to the manager.
+  form: {
+    type: 'form', icon: '📝', labelKey: 'block_form',
+    defaultProps: { title: 'ПЛАНИРУЕТЕ МЕРОПРИЯТИЕ?', subtitle: 'Оставьте номер телефона — администратор перезвонит вам', buttonLabel: '', showMessage: true },
+    defaultAnim: { type: 'slide-up', durationMs: 800, delayMs: 0 },
+    fields: [
+      { key: 'title', labelKey: 'bf_title', type: 'text' },
+      { key: 'subtitle', labelKey: 'bf_subtitle', type: 'textarea' },
+      { key: 'buttonLabel', labelKey: 'bf_button_label', type: 'text' },
+      { key: 'showMessage', labelKey: 'bf_show_message', type: 'boolean' },
+    ],
+  },
+  // "Save contact" button — downloads a vCard with the given name + phone.
+  savecontact: {
+    type: 'savecontact', icon: '📇', labelKey: 'block_savecontact',
+    defaultProps: { label: '', name: '', phone: '' },
+    defaultAnim: { type: 'fade', durationMs: 600, delayMs: 0 },
+    fields: [
+      { key: 'name', labelKey: 'bf_contact_name', type: 'text' },
+      { key: 'phone', labelKey: 'bf_phone', type: 'text' },
+      { key: 'label', labelKey: 'bf_button_label', type: 'text' },
+    ],
+  },
   divider: {
     type: 'divider', icon: '—', labelKey: 'block_divider',
-    defaultProps: {},
+    defaultProps: { shape: 'line', text: '' },
     defaultAnim: { type: 'fade', durationMs: 400, delayMs: 0 },
-    fields: [],
+    fields: [
+      { key: 'shape', labelKey: 'bf_shape', type: 'select', options: [
+        { value: 'spacer', labelKey: 'shape_spacer' }, { value: 'icon', labelKey: 'shape_icon' },
+        { value: 'text', labelKey: 'shape_text' }, { value: 'line', labelKey: 'shape_line' },
+        { value: 'wave', labelKey: 'shape_wave' }, { value: 'zigzag', labelKey: 'shape_zigzag' },
+      ] },
+      { key: 'text', labelKey: 'bf_text', type: 'text' },
+    ],
   },
 };
 
 // All block types, in the order they appear in the Add-block palette.
+// `menu` is intentionally omitted — flyers use a static photo (image block) instead.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'hero', 'countdown', 'timing', 'gallery', 'menu', 'map', 'rsvp', 'contacts', 'socials', 'promo', 'divider',
+  'heading', 'text', 'image', 'button', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {

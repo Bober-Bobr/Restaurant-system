@@ -81,3 +81,11 @@ export const updateInvitationSchema = z.object({
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 export type UpdateInvitationInput = z.infer<typeof updateInvitationSchema>;
+
+// Public lead submitted from a flyer's "form" block.
+export const invitationRequestSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().min(1).max(60),
+  message: z.string().max(1000).optional().nullable(),
+});
+export type InvitationRequestInput = z.infer<typeof invitationRequestSchema>;

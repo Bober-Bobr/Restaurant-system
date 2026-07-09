@@ -87,7 +87,11 @@ export const PublicInvitationPage = () => {
 
   // New block-based layout takes over when present; legacy fixed layout otherwise.
   if (invitation.blocks && invitation.blocks.length > 0) {
-    const ctx: RenderCtx = { accent, text: bgImage ? '#f5f5f5' : readableText(bgColor) };
+    const ctx: RenderCtx = {
+      accent,
+      text: bgImage ? '#f5f5f5' : readableText(bgColor),
+      submitLead: (p) => invitationService.submitRequest(slug, p),
+    };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
         <FingerTrail accent={accent} />

@@ -109,25 +109,21 @@ function restaurantFlyer(): BuiltinTemplate {
 
       b('countdown', { targetAt: null, label: '' }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
 
-      b('menu', {
-        title: 'МЕНЮ · MENU',
-        items: [
-          { number: 1, name: 'Самса', photoUrl: null },
-          { number: 2, name: 'Долма', photoUrl: null },
-          { number: 3, name: 'Мастова', photoUrl: null },
-          { number: 4, name: 'Умакай', photoUrl: null },
-          { number: 5, name: 'Кичири', photoUrl: null },
-        ],
-      }, { type: 'slide-up', durationMs: 800, delayMs: 0 }),
+      b('heading', { text: 'МЕНЮ · MENU', align: 'center' }, { type: 'slide-up', durationMs: 800, delayMs: 0 }),
+      b('image', { url: '', rounded: true }, { type: 'fade', durationMs: 700, delayMs: 0 }),
 
       b('heading', { text: 'НАШ РЕСТОРАН', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
       b('gallery', { items: [] }, { type: 'fade', durationMs: 700, delayMs: 0 }),
 
-      b('heading', { text: 'ПЛАНИРУЕТЕ МЕРОПРИЯТИЕ?', align: 'center' }, { type: 'slide-up', durationMs: 700, delayMs: 0 }),
-      b('text', { text: 'Оставьте номер телефона — администратор перезвонит вам', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 80 }),
-      b('button', { label: 'ПОЗВОНИТЬ', action: { kind: 'phone', value: PHONE } }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+      b('form', {
+        title: 'ПЛАНИРУЕТЕ МЕРОПРИЯТИЕ?',
+        subtitle: 'Оставьте номер телефона — администратор перезвонит вам',
+        buttonLabel: '',
+        showMessage: true,
+      }, { type: 'slide-up', durationMs: 800, delayMs: 0 }),
 
       b('contacts', { title: 'НАШИ КОНТАКТЫ', telegramUrl: 'https://t.me/madinabek', phone: PHONE, instagramUrl: 'https://instagram.com/madinabek_restaurant_by_havas' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('savecontact', { label: 'СОХРАНИТЬ КОНТАКТЫ', name: '', phone: PHONE }, { type: 'fade', durationMs: 600, delayMs: 0 }),
 
       b('socials', {
         title: 'ПОДПИСЫВАЙТЕСЬ НА НАШИ СТРАНИЦЫ',

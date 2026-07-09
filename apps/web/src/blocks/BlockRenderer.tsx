@@ -11,6 +11,8 @@ export type RenderCtx = {
   replayAnim?: boolean;
   // When provided (invitations), the RSVP block persists responses.
   submitRsvp?: (p: { guestName: string; attending: boolean }) => Promise<void>;
+  // When provided (flyers), the form block sends a call-back request to the manager.
+  submitLead?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
 };
 
 const TEXT = '#1a1a1a';
@@ -85,8 +87,12 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <PromoCard p={p} accent={accent} />;
     case 'rsvp':
       return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} />;
+    case 'form':
+      return <LeadForm title={str(p, 'title')} subtitle={str(p, 'subtitle')} buttonLabel={str(p, 'buttonLabel')} showMessage={bool(p, 'showMessage')} accent={accent} submit={ctx.submitLead} />;
+    case 'savecontact':
+      return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} />;
     case 'divider':
-      return <div style={{ padding: '14px 24px' }}><div style={{ height: 1, background: 'rgba(0,0,0,0.12)' }} /></div>;
+      return <Divider shape={str(p, 'shape', 'line')} text={str(p, 'text')} accent={accent} />;
     default:
       return null;
   }
@@ -301,6 +307,110 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
       )}
     </section>
   );
+}
+
+// Lead-capture form (flyer). Collects name + phone (+ optional message) and
+// posts a call-back request the manager can review.
+function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }: {
+  title: string; subtitle: string; buttonLabel: string; showMessage: boolean;
+  accent: string; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
+}) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [message, setMessage] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const canSend = name.trim().length > 0 && phone.trim().length > 0;
+  const go = async () => {
+    if (!canSend) return;
+    setState('sending');
+    try {
+      if (submit) await submit({ name: name.trim(), phone: phone.trim(), message: message.trim() || undefined });
+      setState('done');
+    } catch { setState('error'); }
+  };
+  const field: React.CSSProperties = { padding: '16px 18px', fontSize: 15, border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box' };
+  return (
+    <section style={{ padding: '36px 24px', textAlign: 'center' }}>
+      {title && <h2 style={{ margin: '0 0 8px', fontSize: 26, letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
+      {subtitle && <p style={{ margin: '0 0 22px', fontSize: 13, lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
+      {state === 'done' ? (
+        <p style={{ margin: 0, fontSize: 17, color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="+998 Телефон" style={field} />
+          {showMessage && <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текстовое поле" rows={3} style={{ ...field, resize: 'vertical' }} />}
+          <button type="button" onClick={go} disabled={state === 'sending' || !canSend} style={{ alignSelf: 'stretch', padding: '15px 24px', borderRadius: 12, border: 'none', cursor: canSend ? 'pointer' : 'default', background: accent, color: readableText(accent), fontSize: 14, fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', opacity: canSend ? 1 : 0.5 }}>{state === 'sending' ? '...' : (buttonLabel || 'ОТПРАВИТЬ')}</button>
+          {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// "Save contact" button — builds a vCard on the fly and downloads it.
+function SaveContactButton({ label, name, phone, accent }: { label: string; name: string; phone: string; accent: string }) {
+  const save = () => {
+    const vcard = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${name || phone}`, phone ? `TEL;TYPE=CELL:${phone}` : '', 'END:VCARD']
+      .filter(Boolean).join('\r\n');
+    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(name || 'contact').replace(/\s+/g, '_')}.vcf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <div style={{ padding: '14px 20px' }}>
+      <button type="button" onClick={save} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#0d0d0d', color: accent, fontFamily: 'system-ui, sans-serif' }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span style={{ textAlign: 'left' }}>
+          <span style={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em' }}>{label || 'СОХРАНИТЬ КОНТАКТЫ'}</span>
+          {(name || phone) && <span style={{ display: 'block', fontSize: 11, fontWeight: 400, opacity: 0.85 }}>{name || phone}</span>}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// Section divider with a selectable shape.
+function Divider({ shape, text, accent }: { shape: string; text: string; accent: string }) {
+  if (shape === 'spacer') return <div style={{ height: 44 }} />;
+  if (shape === 'icon') {
+    return (
+      <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ color: accent, fontSize: 18 }}>★</span>
+        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+      </div>
+    );
+  }
+  if (shape === 'text') {
+    return (
+      <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ fontSize: 12, letterSpacing: '0.15em', opacity: 0.7, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{text || 'или'}</span>
+        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+      </div>
+    );
+  }
+  if (shape === 'wave' || shape === 'zigzag') {
+    const path = shape === 'wave'
+      ? 'M0,5 C7.5,0 12.5,10 20,5 C27.5,0 32.5,10 40,5'
+      : 'M0,8 L5,2 L10,8 L15,2 L20,8 L25,2 L30,8 L35,2 L40,8';
+    return (
+      <div style={{ padding: '16px 24px' }}>
+        <svg viewBox="0 0 40 10" preserveAspectRatio="none" style={{ width: '100%', height: 14, display: 'block' }}>
+          <path d={path} fill="none" stroke={accent} strokeWidth={1.2} />
+        </svg>
+      </div>
+    );
+  }
+  // 'line' (default)
+  return <div style={{ padding: '14px 24px' }}><div style={{ height: 1, background: 'currentColor', opacity: 0.18 }} /></div>;
 }
 
 // Render an ordered block list (used by both the editor preview and public pages).

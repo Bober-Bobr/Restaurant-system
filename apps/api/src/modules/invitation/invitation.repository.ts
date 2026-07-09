@@ -37,7 +37,20 @@ export class InvitationRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         event: { select: { id: true, customerName: true, eventDate: true } },
+        _count: { select: { requests: true } },
       },
+    });
+  }
+
+  // ── Leads from the flyer "form" block ──
+  async addRequest(invitationId: string, data: { name: string; phone: string; message?: string | null }) {
+    return prisma.invitationRequest.create({ data: { ...data, invitationId } });
+  }
+
+  async listRequests(invitationId: string) {
+    return prisma.invitationRequest.findMany({
+      where: { invitationId },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

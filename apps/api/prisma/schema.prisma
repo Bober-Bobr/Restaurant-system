@@ -539,9 +539,25 @@ model Invitation {
 
   event       Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
   restaurant  Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  requests    InvitationRequest[]
 
   @@index([restaurantId])
   @@index([eventId])
+}
+
+// ── Lead captured from a flyer's public "form" block ──────────────────────────
+// A visitor leaves their contact so the manager can call them back.
+model InvitationRequest {
+  id           String   @id @default(cuid())
+  invitationId String
+  name         String
+  phone        String
+  message      String?
+  createdAt    DateTime @default(now())
+
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
 }
 
 // ── Standalone guest invitation (wedding-style, not tied to a restaurant/event) ──

@@ -61,6 +61,17 @@ export type Invitation = {
 
   restaurant?: { id: string; name: string; logoUrl: string | null };
   event?: { id: string; customerName: string; eventDate: string } | null;
+  _count?: { requests: number };
+};
+
+// A call-back lead left by a visitor via the flyer's "form" block.
+export type InvitationRequest = {
+  id: string;
+  invitationId: string;
+  name: string;
+  phone: string;
+  message: string | null;
+  createdAt: string;
 };
 
 const apiRoot = (): string =>
@@ -107,5 +118,12 @@ export const invitationService = {
   async publicBySlug(slug: string): Promise<Invitation> {
     const { data } = await axios.get<Invitation>(`${apiRoot()}/public/invitations/${slug}`);
     return data;
+  },
+  async listRequests(id: string): Promise<InvitationRequest[]> {
+    const { data } = await httpClient.get<InvitationRequest[]>(`/invitations/${id}/requests`);
+    return data;
+  },
+  async submitRequest(slug: string, payload: { name: string; phone: string; message?: string | null }): Promise<void> {
+    await axios.post(`${apiRoot()}/public/invitations/${slug}/requests`, payload);
   },
 };

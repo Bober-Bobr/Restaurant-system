@@ -44,6 +44,8 @@ const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
+// Flyer "form" block → call-back request for the manager.
+router.post('/invitations/:slug/requests', invitationController.submitRequest.bind(invitationController));
 
 // Standalone guest invitations (wedding-style) + RSVP submission.
 router.get('/guest-invitations/:slug', guestInvitationController.publicBySlug.bind(guestInvitationController));

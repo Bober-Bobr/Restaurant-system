@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { InvitationRepository } from './invitation.repository.js';
-import { createInvitationSchema, updateInvitationSchema } from './invitation.schema.js';
+import { createInvitationSchema, updateInvitationSchema, invitationRequestSchema } from './invitation.schema.js';
 
 const repo = new InvitationRepository();
 
@@ -104,5 +104,22 @@ export class InvitationController {
       return;
     }
     response.json(invitation);
+  }
+
+  // Manager: leads captured from this flyer's form block.
+  async listRequests(request: Request, response: Response) {
+    response.json(await repo.listRequests(String(request.params.id)));
+  }
+
+  // Public: a visitor submits the flyer's "form" block (call-back request).
+  async submitRequest(request: Request, response: Response) {
+    const invitation = await repo.findBySlug(String(request.params.slug));
+    if (!invitation || !invitation.isPublished) {
+      response.status(404).json({ message: 'Not found' });
+      return;
+    }
+    const data = invitationRequestSchema.parse(request.body);
+    const created = await repo.addRequest(invitation.id, data);
+    response.status(201).json({ ok: true, id: created.id });
   }
 }
