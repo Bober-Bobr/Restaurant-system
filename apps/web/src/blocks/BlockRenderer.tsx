@@ -13,6 +13,10 @@ export type RenderCtx = {
   submitRsvp?: (p: { guestName: string; attending: boolean }) => Promise<void>;
   // When provided (flyers), the form block sends a call-back request to the manager.
   submitLead?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
+  // Event start (ISO): countdown blocks without an explicit target count down to it.
+  eventDate?: string | null;
+  // Restaurant logo: image blocks with "useLogo" render it automatically.
+  logoUrl?: string | null;
 };
 
 const TEXT = '#1a1a1a';
@@ -64,6 +68,12 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'text':
       return <p style={{ margin: 0, padding: '10px 24px', fontSize: 14, lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
     case 'image': {
+      // "useLogo" → always show the restaurant's current logo instead of a fixed photo.
+      if (bool(p, 'useLogo')) {
+        const logo = img(ctx.logoUrl);
+        if (!logo) return <Placeholder label="Logo" />;
+        return <div style={{ padding: '16px 16px', textAlign: 'center' }}><img src={logo} alt="" style={{ maxWidth: 200, maxHeight: 150, width: 'auto', height: 'auto', objectFit: 'contain', display: 'inline-block' }} /></div>;
+      }
       const src = img(str(p, 'url'));
       if (!src) return <Placeholder label="Image" />;
       return <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: bool(p, 'rounded') ? 16 : 4 }} /></div>;
@@ -71,7 +81,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'button':
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
-      return <CountdownView targetAt={(p.targetAt as string) ?? null} label={str(p, 'label')} accent={accent} />;
+      // No explicit target → count down to the linked event's start time.
+      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} accent={accent} />;
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
@@ -314,6 +325,20 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
   );
 }
 
+// Country dialing codes selectable in the lead form's phone field.
+const DIAL_CODES: { flag: string; code: string; name: string }[] = [
+  { flag: '🇺🇿', code: '+998', name: 'UZ' },
+  { flag: '🇷🇺', code: '+7', name: 'RU' },
+  { flag: '🇰🇿', code: '+7', name: 'KZ' },
+  { flag: '🇰🇬', code: '+996', name: 'KG' },
+  { flag: '🇹🇯', code: '+992', name: 'TJ' },
+  { flag: '🇹🇲', code: '+993', name: 'TM' },
+  { flag: '🇦🇿', code: '+994', name: 'AZ' },
+  { flag: '🇹🇷', code: '+90', name: 'TR' },
+  { flag: '🇦🇪', code: '+971', name: 'AE' },
+  { flag: '🇺🇸', code: '+1', name: 'US' },
+];
+
 // Lead-capture form (flyer). Collects name + phone (+ optional message) and
 // posts a call-back request the manager can review.
 function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }: {
@@ -321,6 +346,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
   accent: string; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
 }) {
   const [name, setName] = useState('');
+  const [country, setCountry] = useState(0);
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
@@ -329,7 +355,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
     if (!canSend) return;
     setState('sending');
     try {
-      if (submit) await submit({ name: name.trim(), phone: phone.trim(), message: message.trim() || undefined });
+      if (submit) await submit({ name: name.trim(), phone: `${DIAL_CODES[country].code} ${phone.trim()}`, message: message.trim() || undefined });
       setState('done');
     } catch { setState('error'); }
   };
@@ -343,7 +369,19 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="+998 Телефон" style={field} />
+          {/* Phone: country/dial-code picker + the number input side by side in one box */}
+          <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid currentColor', borderRadius: 12, overflow: 'hidden' }}>
+            <select
+              value={country}
+              onChange={(e) => setCountry(Number(e.target.value))}
+              style={{ border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: 15, fontFamily: 'system-ui, sans-serif', padding: '16px 6px 16px 14px', cursor: 'pointer', appearance: 'auto' }}
+            >
+              {DIAL_CODES.map((c, i) => <option key={c.name} value={i} style={{ color: '#111' }}>{c.flag} {c.code}</option>)}
+            </select>
+            <span style={{ alignSelf: 'center', width: 1, height: 26, background: 'currentColor', opacity: 0.3 }} />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Телефон"
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: 15, fontFamily: 'system-ui, sans-serif', padding: '16px 18px 16px 12px' }} />
+          </div>
           {showMessage && <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текстовое поле" rows={3} style={{ ...field, resize: 'vertical' }} />}
           <button type="button" onClick={go} disabled={state === 'sending' || !canSend} style={{ alignSelf: 'stretch', padding: '15px 24px', borderRadius: 12, border: 'none', cursor: canSend ? 'pointer' : 'default', background: accent, color: readableText(accent), fontSize: 14, fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', opacity: canSend ? 1 : 0.5 }}>{state === 'sending' ? '...' : (buttonLabel || 'ОТПРАВИТЬ')}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}

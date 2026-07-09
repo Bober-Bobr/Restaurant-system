@@ -7,6 +7,8 @@ export class InvitationRepository {
       where: { slug },
       include: {
         restaurant: { select: { id: true, name: true, logoUrl: true } },
+        // eventDate feeds the auto-countdown on the public flyer.
+        event: { select: { id: true, customerName: true, eventDate: true } },
       },
     });
   }

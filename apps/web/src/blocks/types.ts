@@ -104,11 +104,12 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   image: {
     type: 'image', icon: '🖼', labelKey: 'block_image',
-    defaultProps: { url: '', rounded: false },
+    defaultProps: { url: '', rounded: false, useLogo: false },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
     fields: [
       { key: 'url', labelKey: 'bf_image', type: 'image' },
       { key: 'rounded', labelKey: 'bf_rounded', type: 'boolean' },
+      { key: 'useLogo', labelKey: 'bf_use_logo', type: 'boolean' },
     ],
   },
   button: {

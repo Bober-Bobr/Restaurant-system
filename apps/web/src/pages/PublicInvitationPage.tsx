@@ -91,6 +91,8 @@ export const PublicInvitationPage = () => {
       accent,
       text: bgImage ? '#f5f5f5' : readableText(bgColor),
       submitLead: (p) => invitationService.submitRequest(slug, p),
+      eventDate: invitation.event?.eventDate ?? null,
+      logoUrl: invitation.restaurant?.logoUrl ?? null,
     };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>

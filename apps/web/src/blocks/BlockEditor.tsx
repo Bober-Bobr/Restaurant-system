@@ -20,6 +20,10 @@ export type BlockEditorProps = {
   t: T;
   restaurantId?: string;
   showTrail?: boolean;
+  // Linked event start: countdown blocks without an explicit target use it.
+  eventDate?: string | null;
+  // Restaurant logo shown by image blocks with "useLogo" enabled.
+  logoUrl?: string | null;
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -34,7 +38,7 @@ const panelInput: React.CSSProperties = {
 };
 const panelLabel: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
 
-export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange, t, restaurantId = '', showTrail }: BlockEditorProps) {
+export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange, t, restaurantId = '', showTrail, eventDate, logoUrl }: BlockEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -48,7 +52,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
     ? `linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.35)), url(${bgImage}) center / cover, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
-  const ctx: RenderCtx = { accent, replayAnim: true, text: bgImage ? '#f5f5f5' : readableText(bgColor) };
+  const ctx: RenderCtx = { accent, replayAnim: true, text: bgImage ? '#f5f5f5' : readableText(bgColor), eventDate, logoUrl };
 
   const setBlock = (b: Block) => onBlocksChange(blocks.map((x) => (x.id === b.id ? b : x)));
   const addBlock = (type: BlockType) => {

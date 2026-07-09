@@ -723,6 +723,7 @@ const resources = {
     bf_marquee: 'Scrolling text',
     bf_color: 'Color',
     bf_artists: 'Artists',
+    bf_use_logo: 'Restaurant logo',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -1441,6 +1442,7 @@ const resources = {
     bf_marquee: 'Бегущая строка',
     bf_color: 'Цвет',
     bf_artists: 'Артисты',
+    bf_use_logo: 'Логотип ресторана',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -2159,6 +2161,7 @@ const resources = {
     bf_marquee: 'Yuguruvchi matn',
     bf_color: 'Rang',
     bf_artists: 'Ijrochilar',
+    bf_use_logo: 'Restoran logotipi',
   }
 } as const;
 
