@@ -620,8 +620,11 @@ function CourseChoiceSection({
       </div>
 
       {courseGroups.map((group, gi) => {
-        const selectedItem = group.items.find((pi) => group.isSelected(pi.menuItem.id));
-        const collapsed = !!selectedItem && !expandedCats[group.category];
+        const selectedCount = group.items.filter((pi) => group.isSelected(pi.menuItem.id)).length;
+        // Single-select courses collapse once their one dish is chosen; the
+        // multi-select hot appetizers only collapse after BOTH picks are made.
+        const full = group.multi ? selectedCount >= 2 : selectedCount >= 1;
+        const collapsed = full && !expandedCats[group.category];
         const displayItems = collapsed
           ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
           : group.items;
@@ -719,8 +722,8 @@ function CourseChoiceSection({
             })}
           </div>
 
-          {/* Once a dish is picked, collapse the options; button re-expands them. */}
-          {selectedItem && group.items.length > 1 && (
+          {/* Once the picks are complete, collapse the options; button re-expands. */}
+          {(full || expandedCats[group.category]) && group.items.length > 1 && (
             <div style={{ marginTop: 14, textAlign: 'center' }}>
               <button type="button"
                 onClick={() => setExpandedCats((e) => ({ ...e, [group.category]: !e[group.category] }))}
@@ -1056,12 +1059,13 @@ function IncludedDishesSection({
                 {t('assorted')}
               </span>
             </div>
-            {/* The small categories sit side by side in a single row. */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
+            {/* The small categories sit side by side in a single row; it scrolls
+                horizontally only if there are too many to fit. */}
+            <div className="scrollbar-none" style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'stretch', overflowX: 'auto' }}>
               {smallGroups.map(([cat, items], si) => (
                 <div key={cat} style={{
-                  flex: '1 1 200px',
-                  minWidth: 0,
+                  flex: '1 1 160px',
+                  minWidth: 150,
                   paddingLeft: si > 0 ? 16 : 0,
                   borderLeft: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
                 }}>
@@ -1518,19 +1522,6 @@ export const TabletMenuPage = () => {
             </section>
             )}
 
-            {/* Selected dishes summary — at the very top, above the table photo */}
-            {selectedTableCategory && (
-              <SelectedDishesBar
-                hotIds={selectedHotAppetizerIds}
-                firstId={selectedFirstCourseId}
-                secondIds={selectedSecondCourseIds}
-                thirdIds={selectedThirdCourseIds}
-                menuItems={menuItems ?? []}
-                locale={locale}
-                t={t}
-              />
-            )}
-
             {/* Table category photos */}
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
               <section className="rg-card overflow-hidden reveal">
@@ -1557,6 +1548,19 @@ export const TabletMenuPage = () => {
                   ))}
                 </div>
               </section>
+            )}
+
+            {/* Selected dishes summary — below the table photos */}
+            {selectedTableCategory && (
+              <SelectedDishesBar
+                hotIds={selectedHotAppetizerIds}
+                firstId={selectedFirstCourseId}
+                secondIds={selectedSecondCourseIds}
+                thirdIds={selectedThirdCourseIds}
+                menuItems={menuItems ?? []}
+                locale={locale}
+                t={t}
+              />
             )}
 
             {/* Course choice — shared component (adult table) */}
