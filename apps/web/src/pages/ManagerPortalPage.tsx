@@ -186,7 +186,13 @@ export const ManagerPortalPage = () => {
         )}
 
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {restaurants.map((r) => (
+          {restaurants.map((r) => {
+            // Fall back to the company logo (as every other view does), so a
+            // restaurant created without its own logo still shows one once the
+            // company has a logo — and never depends on a logo just to appear.
+            const effLogo = r.logoUrl || r.company?.logoUrl || null;
+            const displayName = r.name || r.company?.name || '—';
+            return (
             <button
               key={r.id}
               type="button"
@@ -199,22 +205,23 @@ export const ManagerPortalPage = () => {
                 color: '#e2e8f0',
               }}
             >
-              {r.logoUrl
-                ? <img src={getPhotoUrl(r.logoUrl) ?? undefined} alt={r.name}
+              {effLogo
+                ? <img src={getPhotoUrl(effLogo) ?? undefined} alt={displayName}
                     style={{ height: 56, width: 'auto', maxWidth: 96, objectFit: 'contain', flexShrink: 0 }} />
                 : <div style={{ width: 56, height: 56, borderRadius: 12, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 22, fontWeight: 700, color: '#c9a42c' }}>{r.name.charAt(0)}</span>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: '#c9a42c' }}>{displayName.charAt(0)}</span>
                   </div>
               }
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>{r.name}</p>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>{displayName}</p>
                 {r.address && (
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{r.address}</p>
                 )}
               </div>
               <span style={{ color: '#c9a42c', fontSize: 22, flexShrink: 0 }}>›</span>
             </button>
-          ))}
+          );
+          })}
         </div>
       </main>
     </div>

@@ -142,15 +142,18 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] }),
   });
 
-  const logo = r.logoUrl ? getPhotoUrl(r.logoUrl) : null;
+  // Fall back to the company logo, matching every other view in the app.
+  const effLogo = r.logoUrl || r.company?.logoUrl || null;
+  const logo = effLogo ? getPhotoUrl(effLogo) : null;
+  const displayName = r.name || r.company?.name || '—';
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 18 }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         {logo
           ? <img src={logo ?? undefined} alt="" style={{ height: 44, width: 'auto', maxWidth: 80, objectFit: 'contain' }} />
-          : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a42c', fontWeight: 700 }}>{r.name.charAt(0)}</div>}
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{r.name}</h2>
+          : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a42c', fontWeight: 700 }}>{displayName.charAt(0)}</div>}
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{displayName}</h2>
       </header>
 
       {/* Info form */}
