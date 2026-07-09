@@ -3,7 +3,7 @@ import type { Locale, translate } from './translate';
 
 type TranslateFn = (key: Parameters<typeof translate>[0]) => string;
 
-const COURSE_CATEGORIES = ['FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
+const COURSE_CATEGORIES = ['HOT_APPETIZERS', 'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
 
 type DishRow = { name: string; category: string; categoryLabel: string; servings: number };
 
@@ -17,6 +17,7 @@ function buildTableDishes(
   firstId: string | undefined,
   secondIds: string[],
   thirdIds: string[],
+  hotAppetizerIds: string[],
   menuItems: MenuItem[],
   t: TranslateFn,
 ): DishRow[] {
@@ -33,6 +34,7 @@ function buildTableDishes(
       .filter((pi) => pi.menuItem.category === category && isSelected(pi.menuItem.id))
       .map((pi) => ({ name: pi.menuItem.name, category: pi.menuItem.category, categoryLabel: label(pi.menuItem.category), servings: pi.servings }));
   return [
+    ...course('HOT_APPETIZERS', (id) => hotAppetizerIds.includes(id)),
     ...included,
     ...course('FIRST_COURSE', (id) => id === firstId),
     ...course('SECOND_COURSE', (id) => secondIds.includes(id)),
@@ -72,6 +74,7 @@ export function buildEventExportPayload(
     ? buildTableDishes(
         tableCategory.packageItems ?? [], cfg?.replacements ?? {},
         cfg?.firstCourseId, cfg?.secondCourseIds ?? [], cfg?.thirdCourseIds ?? [],
+        cfg?.hotAppetizerIds ?? [],
         menuItems, t,
       )
     : [];
@@ -106,6 +109,7 @@ export function buildEventExportPayload(
         childrenDishes: buildTableDishes(
           childrenTableCategory!.packageItems ?? [], cfg?.childReplacements ?? {},
           cfg?.childFirstCourseId, cfg?.childSecondCourseIds ?? [], cfg?.childThirdCourseIds ?? [],
+          cfg?.childHotAppetizerIds ?? [],
           menuItems, t,
         ),
       }

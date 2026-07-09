@@ -562,8 +562,8 @@ function CategorySlide({
 
 function CourseChoiceSection({
   tableCategory, t, locale, onLightbox, card = false, showName = true,
-  firstSelectedId, secondSelectedIds, thirdSelectedIds,
-  onFirst, onToggleSecond, onToggleThird,
+  hotAppetizerSelectedIds, firstSelectedId, secondSelectedIds, thirdSelectedIds,
+  onToggleHotAppetizer, onFirst, onToggleSecond, onToggleThird,
 }: {
   tableCategory: TableCategory;
   t: TFn;
@@ -571,21 +571,26 @@ function CourseChoiceSection({
   onLightbox: (src: string | null) => void;
   card?: boolean;
   showName?: boolean;
+  hotAppetizerSelectedIds: string[];
   firstSelectedId?: string;
   secondSelectedIds: string[];
   thirdSelectedIds: string[];
+  onToggleHotAppetizer: (id: string) => void;
   onFirst: (id: string) => void;
   onToggleSecond: (id: string) => void;
   onToggleThird: (id: string) => void;
 }) {
-  // All three courses are single-select: pick exactly one dish per course.
+  // Hot appetizers come first — multi-select, up to two. The three courses that
+  // follow are each single-select (exactly one dish).
   const courseGroups = [
+    { category: 'HOT_APPETIZERS' as const, labelKey: 'choose_hot_appetizers' as const, changeKey: 'change_hot_appetizers' as const,
+      multi: true, isSelected: (id: string) => hotAppetizerSelectedIds.includes(id), onToggle: onToggleHotAppetizer },
     { category: 'FIRST_COURSE' as const, labelKey: 'choose_first_course' as const, changeKey: 'change_first_course' as const,
-      isSelected: (id: string) => firstSelectedId === id, onToggle: onFirst },
+      multi: false, isSelected: (id: string) => firstSelectedId === id, onToggle: onFirst },
     { category: 'SECOND_COURSE' as const, labelKey: 'choose_second_course' as const, changeKey: 'change_second_course' as const,
-      isSelected: (id: string) => secondSelectedIds.includes(id), onToggle: onToggleSecond },
+      multi: false, isSelected: (id: string) => secondSelectedIds.includes(id), onToggle: onToggleSecond },
     { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, changeKey: 'change_third_course' as const,
-      isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
+      multi: false, isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
   ]
     .map((cfg) => ({ ...cfg, items: (tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category) }))
     .filter((group) => group.items.length > 0);
@@ -635,6 +640,18 @@ function CourseChoiceSection({
               <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
                 {t(group.labelKey)}
               </h3>
+              {group.multi && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
+                  padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em',
+                  color: '#e0c25a', background: 'rgba(var(--rg-accent-rgb),0.14)', border: '1px solid rgba(var(--rg-accent-rgb),0.34)',
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {t('up_to_two')}
+                </span>
+              )}
             </div>
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
@@ -668,7 +685,7 @@ function CourseChoiceSection({
                     </div>
                   )}
                   <button type="button"
-                    onClick={() => { group.onToggle(item.id); setExpandedCats((e) => ({ ...e, [group.category]: false })); }}
+                    onClick={() => { group.onToggle(item.id); if (!group.multi) setExpandedCats((e) => ({ ...e, [group.category]: false })); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       width: '100%', padding: '8px 10px',
@@ -676,7 +693,7 @@ function CourseChoiceSection({
                     }}>
                     <div style={{
                       flexShrink: 0,
-                      width: 20, height: 20, borderRadius: '50%',
+                      width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
                       border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.3)'}`,
                       background: selected ? 'var(--rg-accent)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -880,7 +897,8 @@ function IncludedDishesSection({
 }) {
   const [editingPiId, setEditingPiId] = useState<string | null>(null);
   const includedItems = (tableCategory.packageItems ?? []).filter(
-    (pi) => pi.menuItem.category !== 'FIRST_COURSE' && pi.menuItem.category !== 'SECOND_COURSE' && pi.menuItem.category !== 'THIRD_COURSE'
+    (pi) => pi.menuItem.category !== 'HOT_APPETIZERS' &&
+      pi.menuItem.category !== 'FIRST_COURSE' && pi.menuItem.category !== 'SECOND_COURSE' && pi.menuItem.category !== 'THIRD_COURSE'
   );
   if (includedItems.length === 0) return null;
   // Dishes already included in the package by default must never be offered as a
@@ -1010,9 +1028,10 @@ function IncludedDishesSection({
         </div>
       ))}
 
-      {/* Small categories (< 5 items): folded into ONE combined group, rendered
-          as a single bordered card so it clearly reads as one unit. Inside, each
-          small category is labelled and separated from the next by a divider. */}
+      {/* Small categories (< 5 items): folded into ONE combined group presented
+          as its own distinct "Assorted" category — an accent-tinted card with a
+          single header, the small categories laid out side by side in one row and
+          separated by vertical divider lines. */}
       {smallGroups.length > 0 && (
         <div style={{
           paddingTop: bigGroups.length > 0 ? 20 : 0,
@@ -1022,25 +1041,35 @@ function IncludedDishesSection({
           <div style={{
             borderRadius: 18,
             padding: 16,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(var(--rg-accent-rgb),0.22)',
-            // Small categories sit side by side in a single row, separated by
-            // vertical divider lines (wrapping to new rows only when too narrow).
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'stretch',
+            background: 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.10), rgba(255,255,255,0.02))',
+            border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
           }}>
-            {smallGroups.map(([cat, items], si) => (
-              <div key={cat} style={{
-                flex: '1 1 200px',
-                minWidth: 0,
-                paddingLeft: si > 0 ? 16 : 0,
-                borderLeft: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
+            {/* One category header for the whole grouped set. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <div style={{ width: 3, height: 18, borderRadius: 2, background: 'var(--rg-accent)', flexShrink: 0 }} />
+              <span style={{
+                display: 'inline-block', padding: '4px 12px', borderRadius: 999,
+                fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--rg-bg)', background: 'var(--rg-accent)',
               }}>
-                {categoryHeader(cat)}
-                {dishGrid(items!)}
-              </div>
-            ))}
+                {t('assorted')}
+              </span>
+            </div>
+            {/* The small categories sit side by side in a single row. */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch' }}>
+              {smallGroups.map(([cat, items], si) => (
+                <div key={cat} style={{
+                  flex: '1 1 200px',
+                  minWidth: 0,
+                  paddingLeft: si > 0 ? 16 : 0,
+                  borderLeft: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
+                }}>
+                  {categoryHeader(cat)}
+                  {dishGrid(items!)}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1076,9 +1105,9 @@ function ChildrenTableSection({
 }) {
   const {
     childrenTableSelected, childrenCount,
-    childFirstCourseId, childSecondCourseIds, childThirdCourseIds, childReplacements,
+    childHotAppetizerIds, childFirstCourseId, childSecondCourseIds, childThirdCourseIds, childReplacements,
     setChildrenTableSelected, setChildrenCount,
-    setChildFirstCourse, toggleChildSecondCourse, toggleChildThirdCourse, setChildReplacement,
+    toggleChildHotAppetizer, setChildFirstCourse, toggleChildSecondCourse, toggleChildThirdCourse, setChildReplacement,
   } = useTabletStore();
 
   return (
@@ -1120,9 +1149,11 @@ function ChildrenTableSection({
 
           <CourseChoiceSection
             tableCategory={tableCategory} t={t} locale={locale} onLightbox={onLightbox} showName={false}
+            hotAppetizerSelectedIds={childHotAppetizerIds}
             firstSelectedId={childFirstCourseId}
             secondSelectedIds={childSecondCourseIds}
             thirdSelectedIds={childThirdCourseIds}
+            onToggleHotAppetizer={toggleChildHotAppetizer}
             onFirst={setChildFirstCourse}
             onToggleSecond={toggleChildSecondCourse}
             onToggleThird={toggleChildThirdCourse}
@@ -1141,6 +1172,67 @@ function ChildrenTableSection({
   );
 }
 
+// ── Selected-dishes summary shown at the very top, above the table photo ──────
+// Lists the chosen hot appetizers (up to two) and the first/second/third courses
+// so the guest sees their picks without scrolling back down.
+
+function SelectedDishesBar({
+  hotIds, firstId, secondIds, thirdIds, menuItems, locale, t,
+}: {
+  hotIds: string[];
+  firstId?: string;
+  secondIds: string[];
+  thirdIds: string[];
+  menuItems: MenuItem[];
+  locale: Locale;
+  t: TFn;
+}) {
+  const resolve = (ids: string[]) =>
+    ids.map((id) => menuItems.find((m) => m.id === id)).filter((m): m is MenuItem => !!m);
+
+  const rows = ([
+    { key: 'hot_appetizers', items: resolve(hotIds) },
+    { key: 'first_course', items: resolve(firstId ? [firstId] : []) },
+    { key: 'second_course', items: resolve(secondIds) },
+    { key: 'third_course', items: resolve(thirdIds) },
+  ] as { key: Parameters<typeof translate>[0]; items: MenuItem[] }[])
+    .filter((r) => r.items.length > 0);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="rg-card reveal" style={{ padding: 'clamp(14px, 2.5vw, 20px)' }}>
+      <p className="rg-label" style={{ marginBottom: 12 }}>{t('your_selection')}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {rows.map((r) => (
+          <div key={r.key} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{
+              flexShrink: 0, minWidth: 118,
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'rgba(var(--rg-accent-rgb),0.85)',
+            }}>
+              {t(r.key)}
+            </span>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {r.items.map((it) => (
+                <span key={it.id} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                  color: '#fff', background: 'rgba(var(--rg-accent-rgb),0.16)',
+                  border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--rg-accent)' }} />
+                  {dishName(it, locale)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export const TabletMenuPage = () => {
@@ -1150,8 +1242,8 @@ export const TabletMenuPage = () => {
   const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
-    selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
-    setQuantity, setHall, setTableCategory, setFirstCourse, toggleSecondCourse, toggleThirdCourse,
+    selectedHotAppetizerIds, selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
+    setQuantity, setHall, setTableCategory, toggleHotAppetizer, setFirstCourse, toggleSecondCourse, toggleThirdCourse,
     replacements, setReplacement,
     setGuestCount, locale, setLocale,
   } = useTabletStore();
@@ -1426,6 +1518,19 @@ export const TabletMenuPage = () => {
             </section>
             )}
 
+            {/* Selected dishes summary — at the very top, above the table photo */}
+            {selectedTableCategory && (
+              <SelectedDishesBar
+                hotIds={selectedHotAppetizerIds}
+                firstId={selectedFirstCourseId}
+                secondIds={selectedSecondCourseIds}
+                thirdIds={selectedThirdCourseIds}
+                menuItems={menuItems ?? []}
+                locale={locale}
+                t={t}
+              />
+            )}
+
             {/* Table category photos */}
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
               <section className="rg-card overflow-hidden reveal">
@@ -1458,9 +1563,11 @@ export const TabletMenuPage = () => {
             {selectedTableCategory && (
               <CourseChoiceSection
                 tableCategory={selectedTableCategory} t={t} locale={locale} onLightbox={setLightboxSrc} card
+                hotAppetizerSelectedIds={selectedHotAppetizerIds}
                 firstSelectedId={selectedFirstCourseId}
                 secondSelectedIds={selectedSecondCourseIds}
                 thirdSelectedIds={selectedThirdCourseIds}
+                onToggleHotAppetizer={toggleHotAppetizer}
                 onFirst={setFirstCourse}
                 onToggleSecond={toggleSecondCourse}
                 onToggleThird={toggleThirdCourse}

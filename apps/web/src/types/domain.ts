@@ -16,10 +16,12 @@ export type EventPayment = {
 // Full tablet menu-selection snapshot persisted on an event so it round-trips
 // between the admin Events page and the Tablet page.
 export type EventMenuConfig = {
+  hotAppetizerIds?: string[];
   firstCourseId?: string;
   secondCourseIds: string[];
   thirdCourseIds: string[];
   replacements: Record<string, string>;
+  childHotAppetizerIds?: string[];
   childFirstCourseId?: string;
   childSecondCourseIds: string[];
   childThirdCourseIds: string[];

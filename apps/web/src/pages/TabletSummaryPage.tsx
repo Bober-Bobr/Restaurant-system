@@ -98,6 +98,7 @@ export const TabletSummaryPage = () => {
   const restaurantId = searchParams.get('restaurantId') ?? '';
   const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
     childrenTableSelected, childrenCount, childReplacements,
+    selectedHotAppetizerIds, childHotAppetizerIds,
     selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
     editingEventId,
@@ -189,7 +190,9 @@ export const TabletSummaryPage = () => {
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
   // the guest actually selected. Course options the guest didn't pick are left
   // out, but every other included dish is shown.
-  const COURSE_CATEGORIES = ['FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
+  // Hot appetizers are also a guest choice now (up to two), so unpicked ones must
+  // not be dumped into the included list — they're handled like the courses below.
+  const COURSE_CATEGORIES = ['HOT_APPETIZERS', 'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
   const dishEntry = (name: string, category: string, servings?: number) => ({
     name,
     category,
@@ -203,6 +206,7 @@ export const TabletSummaryPage = () => {
     firstId: string | undefined,
     secondIds: string[],
     thirdIds: string[],
+    hotAppetizerIds: string[],
   ) => {
     // Fixed included dishes (salads, appetizers, …), with free swaps applied.
     const included = packageItems
@@ -218,6 +222,7 @@ export const TabletSummaryPage = () => {
         .filter((pi) => pi.menuItem.category === category && isSelected(pi.menuItem.id))
         .map((pi) => dishEntry(pi.menuItem.name, pi.menuItem.category, pi.servings));
     return [
+      ...course('HOT_APPETIZERS', (id) => hotAppetizerIds.includes(id)),
       ...included,
       ...course('FIRST_COURSE', (id) => id === firstId),
       ...course('SECOND_COURSE', (id) => secondIds.includes(id)),
@@ -229,6 +234,7 @@ export const TabletSummaryPage = () => {
     buildTableDishes(
       selectedTableCategory?.packageItems ?? [], replacements,
       selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
+      selectedHotAppetizerIds,
     );
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
@@ -245,6 +251,7 @@ export const TabletSummaryPage = () => {
       ? buildTableDishes(
           childrenTableCategory!.packageItems ?? [], childReplacements,
           childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
+          childHotAppetizerIds,
         )
       : [];
 
@@ -286,10 +293,12 @@ export const TabletSummaryPage = () => {
   // Snapshot of every tablet selection, persisted on the event so it round-trips
   // back to the tablet when the menu is edited later from the Events page.
   const buildMenuConfig = (): EventMenuConfig => ({
+    hotAppetizerIds: selectedHotAppetizerIds,
     firstCourseId: selectedFirstCourseId,
     secondCourseIds: selectedSecondCourseIds,
     thirdCourseIds: selectedThirdCourseIds,
     replacements,
+    childHotAppetizerIds: childrenActive ? childHotAppetizerIds : [],
     childFirstCourseId: childrenActive ? childFirstCourseId : undefined,
     childSecondCourseIds: childrenActive ? childSecondCourseIds : [],
     childThirdCourseIds: childrenActive ? childThirdCourseIds : [],

@@ -24,9 +24,10 @@ type SelectionState = {
   selectedItems: Record<string, number>;
   selectedHallId?: string;
   selectedTableCategoryId?: string;
-  // First course: single-select (radio)
+  // Hot appetizers: multi-select, capped at two (shown above the courses).
+  selectedHotAppetizerIds: string[];
+  // Courses: single-select (one dish each).
   selectedFirstCourseId?: string;
-  // Second and third course: multi-select (checkboxes)
   selectedSecondCourseIds: string[];
   selectedThirdCourseIds: string[];
   // Free replacements: included package-item id → chosen FREE menu-item id.
@@ -48,6 +49,7 @@ type SelectionState = {
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
+  childHotAppetizerIds: string[];
   childFirstCourseId?: string;
   childSecondCourseIds: string[];
   childThirdCourseIds: string[];
@@ -59,12 +61,14 @@ type SelectionState = {
   setFirstCourse: (menuItemId: string) => void;
   toggleSecondCourse: (menuItemId: string) => void;
   toggleThirdCourse: (menuItemId: string) => void;
+  toggleHotAppetizer: (menuItemId: string) => void;
   setReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setChildrenTableSelected: (selected: boolean) => void;
   setChildrenCount: (count: number) => void;
   setChildFirstCourse: (menuItemId: string) => void;
   toggleChildSecondCourse: (menuItemId: string) => void;
   toggleChildThirdCourse: (menuItemId: string) => void;
+  toggleChildHotAppetizer: (menuItemId: string) => void;
   setChildReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setGuestCount: (count: number) => void;
   setCustomerName: (value: string) => void;
@@ -84,6 +88,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedItems: {},
   selectedHallId: undefined,
   selectedTableCategoryId: undefined,
+  selectedHotAppetizerIds: [],
   selectedFirstCourseId: undefined,
   selectedSecondCourseIds: [],
   selectedThirdCourseIds: [],
@@ -99,6 +104,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   depositCents: 0,
   childrenTableSelected: false,
   childrenCount: 0,
+  childHotAppetizerIds: [],
   childFirstCourseId: undefined,
   childSecondCourseIds: [],
   childThirdCourseIds: [],
@@ -118,6 +124,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setTableCategory: (tableCategoryId) => {
     set({
       selectedTableCategoryId: tableCategoryId,
+      selectedHotAppetizerIds: [],
       selectedFirstCourseId: undefined,
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
@@ -125,6 +132,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       // Reset the children's-table add-on whenever the main table changes.
       childrenTableSelected: false,
       childrenCount: 0,
+      childHotAppetizerIds: [],
       childFirstCourseId: undefined,
       childSecondCourseIds: [],
       childThirdCourseIds: [],
@@ -146,6 +154,15 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedThirdCourseIds: state.selectedThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
     }));
   },
+  // Hot appetizers: up to two. Re-tapping a chosen one removes it; adding a third
+  // drops the oldest so only the latest two are kept.
+  toggleHotAppetizer: (menuItemId) => {
+    set((state) => ({
+      selectedHotAppetizerIds: state.selectedHotAppetizerIds.includes(menuItemId)
+        ? state.selectedHotAppetizerIds.filter((id) => id !== menuItemId)
+        : [...state.selectedHotAppetizerIds, menuItemId].slice(-2),
+    }));
+  },
   setReplacement: (packageItemId, menuItemId) => {
     set((state) => {
       const next = { ...state.replacements };
@@ -162,6 +179,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       set({
         childrenTableSelected: false,
         childrenCount: 0,
+        childHotAppetizerIds: [],
         childFirstCourseId: undefined,
         childSecondCourseIds: [],
         childThirdCourseIds: [],
@@ -183,6 +201,13 @@ export const useTabletStore = create<SelectionState>((set) => ({
   toggleChildThirdCourse: (menuItemId) => {
     set((state) => ({
       childThirdCourseIds: state.childThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
+    }));
+  },
+  toggleChildHotAppetizer: (menuItemId) => {
+    set((state) => ({
+      childHotAppetizerIds: state.childHotAppetizerIds.includes(menuItemId)
+        ? state.childHotAppetizerIds.filter((id) => id !== menuItemId)
+        : [...state.childHotAppetizerIds, menuItemId].slice(-2),
     }));
   },
   setChildReplacement: (packageItemId, menuItemId) => {
@@ -227,6 +252,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       !!cfg?.childFirstCourseId ||
       (cfg?.childSecondCourseIds?.length ?? 0) > 0 ||
       (cfg?.childThirdCourseIds?.length ?? 0) > 0 ||
+      (cfg?.childHotAppetizerIds?.length ?? 0) > 0 ||
       Object.keys(cfg?.childReplacements ?? {}).length > 0;
     set({
       editingEventId: d.editingEventId,
@@ -241,6 +267,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       eventTime: d.eventTime,
       depositCents: d.depositCents ?? 0,
       // Prior adult selections (empty for a brand-new event).
+      selectedHotAppetizerIds: cfg?.hotAppetizerIds ?? [],
       selectedFirstCourseId: cfg?.firstCourseId,
       selectedSecondCourseIds: cfg?.secondCourseIds ?? [],
       selectedThirdCourseIds: cfg?.thirdCourseIds ?? [],
@@ -249,6 +276,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       // Children's table.
       childrenTableSelected: childrenSelected,
       childrenCount: d.childrenCount ?? 0,
+      childHotAppetizerIds: cfg?.childHotAppetizerIds ?? [],
       childFirstCourseId: cfg?.childFirstCourseId,
       childSecondCourseIds: cfg?.childSecondCourseIds ?? [],
       childThirdCourseIds: cfg?.childThirdCourseIds ?? [],
@@ -260,6 +288,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedItems: {},
       selectedHallId: undefined,
       selectedTableCategoryId: undefined,
+      selectedHotAppetizerIds: [],
       selectedFirstCourseId: undefined,
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
@@ -275,6 +304,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       depositCents: 0,
       childrenTableSelected: false,
       childrenCount: 0,
+      childHotAppetizerIds: [],
       childFirstCourseId: undefined,
       childSecondCourseIds: [],
       childThirdCourseIds: [],
