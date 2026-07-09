@@ -134,25 +134,17 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setFirstCourse: (menuItemId) => {
     set({ selectedFirstCourseId: menuItemId });
   },
+  // Second/third courses are single-select (like the first): picking one
+  // replaces any previous choice; picking the current one clears it.
   toggleSecondCourse: (menuItemId) => {
-    set((state) => {
-      const ids = state.selectedSecondCourseIds;
-      return {
-        selectedSecondCourseIds: ids.includes(menuItemId)
-          ? ids.filter((id) => id !== menuItemId)
-          : [...ids, menuItemId],
-      };
-    });
+    set((state) => ({
+      selectedSecondCourseIds: state.selectedSecondCourseIds.includes(menuItemId) ? [] : [menuItemId],
+    }));
   },
   toggleThirdCourse: (menuItemId) => {
-    set((state) => {
-      const ids = state.selectedThirdCourseIds;
-      return {
-        selectedThirdCourseIds: ids.includes(menuItemId)
-          ? ids.filter((id) => id !== menuItemId)
-          : [...ids, menuItemId],
-      };
-    });
+    set((state) => ({
+      selectedThirdCourseIds: state.selectedThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
+    }));
   },
   setReplacement: (packageItemId, menuItemId) => {
     set((state) => {
@@ -184,24 +176,14 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set({ childFirstCourseId: menuItemId });
   },
   toggleChildSecondCourse: (menuItemId) => {
-    set((state) => {
-      const ids = state.childSecondCourseIds;
-      return {
-        childSecondCourseIds: ids.includes(menuItemId)
-          ? ids.filter((id) => id !== menuItemId)
-          : [...ids, menuItemId],
-      };
-    });
+    set((state) => ({
+      childSecondCourseIds: state.childSecondCourseIds.includes(menuItemId) ? [] : [menuItemId],
+    }));
   },
   toggleChildThirdCourse: (menuItemId) => {
-    set((state) => {
-      const ids = state.childThirdCourseIds;
-      return {
-        childThirdCourseIds: ids.includes(menuItemId)
-          ? ids.filter((id) => id !== menuItemId)
-          : [...ids, menuItemId],
-      };
-    });
+    set((state) => ({
+      childThirdCourseIds: state.childThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
+    }));
   },
   setChildReplacement: (packageItemId, menuItemId) => {
     set((state) => {

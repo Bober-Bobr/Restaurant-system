@@ -298,6 +298,8 @@ function CategorySlide({
 }) {
   const photos = (tc.photos ?? []).filter(Boolean);
   const [photoIdx, setPhotoIdx] = useState(0);
+  // The included-dishes list is hidden until the guest taps to reveal it.
+  const [showDishes, setShowDishes] = useState(false);
   const photoScrollRef = useRef<HTMLDivElement>(null);
 
   const includedCats = tc.includedCategories
@@ -454,6 +456,17 @@ function CategorySlide({
           </p>
         </div>
 
+        {/* Select button — moved up, just under the price, and made compact. */}
+        <button type="button" onClick={onSelect}
+          style={{
+            padding: '11px 34px', borderRadius: 12, border: 'none',
+            background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
+            color: 'var(--rg-bg)', fontSize: 15, fontWeight: 700, letterSpacing: '0.02em',
+            cursor: 'pointer', boxShadow: '0 6px 18px rgba(var(--rg-accent-rgb),0.35)',
+          }}>
+          {t('select_table')} →
+        </button>
+
         {/* Description */}
         {tc.description && (
           <p style={{
@@ -462,24 +475,40 @@ function CategorySlide({
           }}>{tc.description}</p>
         )}
 
-        {/* Included dishes — grouped by category. When several tables share this
-            price, the dishes that make this one different are highlighted. */}
-        {dishGroups.length > 0 ? (
-          <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>
-                {t('included_dishes')}
-              </p>
+        {/* Included dishes — hidden until the guest taps the button. Grouped by
+            category; when several tables share this price, the dishes that make
+            this one different are highlighted. */}
+        {(dishGroups.length > 0 || includedCats.length > 0) && (
+          <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+            <button type="button" onClick={() => setShowDishes((v) => !v)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '9px 18px', borderRadius: 999, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.16)',
+              }}>
+              {t('included_dishes')}
               {sharedPrice && hasDistinctive && (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                  padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: '0.02em',
                   color: 'var(--rg-bg)', background: 'var(--rg-accent)',
                 }}>
                   ★ {t('differences_highlighted')}
                 </span>
               )}
-            </div>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                style={{ transform: showDishes ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* The revealed list (dishes when available, otherwise category chips). */}
+        {showDishes && dishGroups.length > 0 && (
+          <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
             {dishGroups.map((g) => (
               <div key={g.category}>
                 <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(var(--rg-accent-rgb),0.75)' }}>
@@ -506,7 +535,10 @@ function CategorySlide({
               </div>
             ))}
           </div>
-        ) : includedCats.length > 0 && (
+        )}
+
+        {/* No dish detail configured — reveal the included category chips instead. */}
+        {showDishes && dishGroups.length === 0 && includedCats.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             {includedCats.map((cat) => (
               <span key={cat} style={{
@@ -519,22 +551,6 @@ function CategorySlide({
             ))}
           </div>
         )}
-
-        {/* Select button */}
-        <button type="button" onClick={onSelect}
-          style={{
-            marginTop: 4,
-            padding: '14px 48px',
-            borderRadius: 14,
-            border: 'none',
-            background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
-            color: 'var(--rg-bg)',
-            fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
-            cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(var(--rg-accent-rgb),0.35)',
-          }}>
-          {t('select_table')} →
-        </button>
       </div>
     </div>
   );
@@ -562,21 +578,22 @@ function CourseChoiceSection({
   onToggleSecond: (id: string) => void;
   onToggleThird: (id: string) => void;
 }) {
+  // All three courses are single-select: pick exactly one dish per course.
   const courseGroups = [
-    { category: 'FIRST_COURSE' as const, labelKey: 'choose_first_course' as const, multi: false,
+    { category: 'FIRST_COURSE' as const, labelKey: 'choose_first_course' as const, changeKey: 'change_first_course' as const,
       isSelected: (id: string) => firstSelectedId === id, onToggle: onFirst },
-    { category: 'SECOND_COURSE' as const, labelKey: 'choose_second_course' as const, multi: true,
+    { category: 'SECOND_COURSE' as const, labelKey: 'choose_second_course' as const, changeKey: 'change_second_course' as const,
       isSelected: (id: string) => secondSelectedIds.includes(id), onToggle: onToggleSecond },
-    { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, multi: true,
+    { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, changeKey: 'change_third_course' as const,
       isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
   ]
     .map((cfg) => ({ ...cfg, items: (tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category) }))
     .filter((group) => group.items.length > 0);
   if (courseGroups.length === 0) return null;
 
-  // First course is single-select: once chosen, collapse the list to just the
+  // Each course is single-select: once chosen, collapse its list to just the
   // picked dish and offer a button to expand it again to change the choice.
-  const [firstExpanded, setFirstExpanded] = useState(false);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
 
   const inner = (
     <>
@@ -598,9 +615,8 @@ function CourseChoiceSection({
       </div>
 
       {courseGroups.map((group, gi) => {
-        const isFirst = !group.multi;
-        const selectedFirst = isFirst ? group.items.find((pi) => group.isSelected(pi.menuItem.id)) : undefined;
-        const collapsed = isFirst && !!selectedFirst && !firstExpanded;
+        const selectedItem = group.items.find((pi) => group.isSelected(pi.menuItem.id));
+        const collapsed = !!selectedItem && !expandedCats[group.category];
         const displayItems = collapsed
           ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
           : group.items;
@@ -619,19 +635,6 @@ function CourseChoiceSection({
               <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
                 {t(group.labelKey)}
               </h3>
-              {group.multi && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
-                  padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700,
-                  letterSpacing: '0.03em',
-                  color: '#e0c25a', background: 'rgba(var(--rg-accent-rgb),0.14)', border: '1px solid rgba(var(--rg-accent-rgb),0.34)',
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {t('multi_select')}
-                </span>
-              )}
             </div>
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
@@ -665,7 +668,7 @@ function CourseChoiceSection({
                     </div>
                   )}
                   <button type="button"
-                    onClick={() => { group.onToggle(item.id); if (isFirst) setFirstExpanded(false); }}
+                    onClick={() => { group.onToggle(item.id); setExpandedCats((e) => ({ ...e, [group.category]: false })); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       width: '100%', padding: '8px 10px',
@@ -673,7 +676,7 @@ function CourseChoiceSection({
                     }}>
                     <div style={{
                       flexShrink: 0,
-                      width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
+                      width: 20, height: 20, borderRadius: '50%',
                       border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.3)'}`,
                       background: selected ? 'var(--rg-accent)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -699,11 +702,11 @@ function CourseChoiceSection({
             })}
           </div>
 
-          {/* First course: expand/collapse the options once one is picked */}
-          {isFirst && selectedFirst && group.items.length > 1 && (
+          {/* Once a dish is picked, collapse the options; button re-expands them. */}
+          {selectedItem && group.items.length > 1 && (
             <div style={{ marginTop: 14, textAlign: 'center' }}>
               <button type="button"
-                onClick={() => setFirstExpanded((v) => !v)}
+                onClick={() => setExpandedCats((e) => ({ ...e, [group.category]: !e[group.category] }))}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   padding: '9px 18px', borderRadius: 999, cursor: 'pointer',
@@ -715,7 +718,7 @@ function CourseChoiceSection({
                   style={{ transform: collapsed ? 'none' : 'rotate(180deg)', transition: 'transform 0.2s' }}>
                   <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                {collapsed ? t('change_first_course') : t('collapse_options')}
+                {collapsed ? t(group.changeKey) : t('collapse_options')}
               </button>
             </div>
           )}
