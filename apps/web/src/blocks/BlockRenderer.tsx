@@ -59,6 +59,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       );
     }
     case 'heading':
+      if (bool(p, 'marquee')) return <MarqueeHeading text={str(p, 'text')} />;
       return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: 26, letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
     case 'text':
       return <p style={{ margin: 0, padding: '10px 24px', fontSize: 14, lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
@@ -77,6 +78,10 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} />;
     case 'menu':
       return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
+    case 'artist':
+      return <ArtistShowcase title={str(p, 'title')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
+    case 'link':
+      return <LinkBar label={str(p, 'label', 'Link')} sublabel={str(p, 'sublabel')} action={p.action as ButtonAction | undefined} color={str(p, 'color')} accent={accent} />;
     case 'socials':
       return <SocialsView title={str(p, 'title')} links={arr<SocialLink>(p, 'links')} accent={accent} />;
     case 'contacts':
@@ -383,7 +388,7 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
     return (
       <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
-        <span style={{ color: accent, fontSize: 18 }}>★</span>
+        <span style={{ color: accent, fontSize: 18 }}>{text || '★'}</span>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
       </div>
     );
@@ -411,6 +416,80 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
   }
   // 'line' (default)
   return <div style={{ padding: '14px 24px' }}><div style={{ height: 1, background: 'currentColor', opacity: 0.18 }} /></div>;
+}
+
+// Heading in "scrolling text" (ticker) mode: the text loops horizontally forever.
+// Content is duplicated so the -50% translate loops seamlessly.
+function MarqueeHeading({ text }: { text: string }) {
+  const content = Array(4).fill(text || '…').join('   •   ');
+  const half: React.CSSProperties = { paddingRight: 36, flexShrink: 0 };
+  return (
+    <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '18px 0 8px' }}>
+      <style>{'@keyframes blkMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }'}</style>
+      <div style={{ display: 'inline-flex', animation: 'blkMarquee 16s linear infinite', willChange: 'transform' }}>
+        <h2 style={{ ...half, margin: 0, fontSize: 26, letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }}>{content}</h2>
+        <h2 style={{ ...half, margin: 0, fontSize: 26, letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
+      </div>
+    </div>
+  );
+}
+
+// Performing-artist card: photo carousel with a name badge and dots.
+function ArtistShowcase({ title, items, accent }: { title: string; items: MenuShowcaseItem[]; accent: string }) {
+  const [idx, setIdx] = useState(0);
+  return (
+    <section style={{ padding: '20px 0 10px' }}>
+      {title && <h2 style={{ margin: '0 0 14px', padding: '0 24px', fontSize: 24, letterSpacing: '0.08em', textAlign: 'center', color: 'inherit' }}>{title}</h2>}
+      {items.length === 0 ? <Placeholder label="Artist" /> : (() => {
+        const cur = items[Math.min(idx, items.length - 1)];
+        const src = img(cur.photoUrl);
+        return (
+          <div style={{ padding: '0 16px' }}>
+            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#111' }}>
+              <div style={{ aspectRatio: '4/5' }}>
+                {src && <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+              </div>
+              {cur.name && (
+                <div style={{ position: 'absolute', bottom: 14, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  {cur.name.split('\n').map((line, i) => (
+                    <span key={i} style={{ background: 'rgba(250,250,247,0.92)', color: '#111', padding: '5px 16px', borderRadius: 8, fontSize: 15, fontStyle: 'italic', fontWeight: 700, boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>{line}</span>
+                  ))}
+                </div>
+              )}
+              {items.length > 1 && (
+                <>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + items.length) % items.length); }} style={navBtn('left', accent)}>‹</button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % items.length); }} style={navBtn('right', accent)}>›</button>
+                </>
+              )}
+            </div>
+            {items.length > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? accent : '#ccc' }} />)}</div>}
+          </div>
+        );
+      })()}
+    </section>
+  );
+}
+
+// Single wide link button with a label + sub-label and a custom background color.
+function LinkBar({ label, sublabel, action, color, accent }: { label: string; sublabel: string; action?: ButtonAction; color: string; accent: string }) {
+  const onClick = () => {
+    if (!action?.value) return;
+    if (action.kind === 'phone') window.location.href = `tel:${action.value}`;
+    else if (action.kind === 'map') yandexMaps(action.value);
+    else window.open(action.value, '_blank', 'noopener,noreferrer');
+  };
+  return (
+    <div style={{ padding: '10px 20px' }}>
+      <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: color || accent, color: '#fff', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
+        <span style={{ fontSize: 22, lineHeight: 1 }}>☰</span>
+        <span>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 800, letterSpacing: '0.1em' }}>{label}</span>
+          {sublabel && <span style={{ display: 'block', fontSize: 12, opacity: 0.9, marginTop: 2 }}>{sublabel}</span>}
+        </span>
+      </button>
+    </div>
+  );
 }
 
 // Render an ordered block list (used by both the editor preview and public pages).

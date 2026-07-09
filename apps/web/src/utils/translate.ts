@@ -718,6 +718,11 @@ const resources = {
     shape_zigzag: 'Zigzag',
     flyer_requests: 'Requests',
     no_requests: 'No requests yet',
+    block_artist: 'Artist',
+    block_link: 'Link',
+    bf_marquee: 'Scrolling text',
+    bf_color: 'Color',
+    bf_artists: 'Artists',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -1431,6 +1436,11 @@ const resources = {
     shape_zigzag: 'Зигзаг',
     flyer_requests: 'Заявки',
     no_requests: 'Заявок пока нет',
+    block_artist: 'Артист',
+    block_link: 'Ссылка',
+    bf_marquee: 'Бегущая строка',
+    bf_color: 'Цвет',
+    bf_artists: 'Артисты',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -2144,6 +2154,11 @@ const resources = {
     shape_zigzag: 'Zigzag',
     flyer_requests: 'Arizalar',
     no_requests: 'Hozircha arizalar yoq',
+    block_artist: 'Ijrochi',
+    block_link: 'Havola',
+    bf_marquee: 'Yuguruvchi matn',
+    bf_color: 'Rang',
+    bf_artists: 'Ijrochilar',
   }
 } as const;
 

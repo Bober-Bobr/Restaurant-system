@@ -85,7 +85,7 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
     case 'gallery':
       return <GalleryItemsEditor items={Array.isArray(value) ? (value as GalleryItem[]) : []} onChange={onChange} t={t} restaurantId={restaurantId} />;
     case 'menu':
-      return <MenuItemsEditor items={Array.isArray(value) ? (value as MenuShowcaseItem[]) : []} onChange={onChange} t={t} restaurantId={restaurantId} />;
+      return <MenuItemsEditor items={Array.isArray(value) ? (value as MenuShowcaseItem[]) : []} onChange={onChange} t={t} restaurantId={restaurantId} labelText={t(field.labelKey)} />;
     case 'socials':
       return <SocialsEditor items={Array.isArray(value) ? (value as SocialLink[]) : []} onChange={onChange} t={t} />;
     case 'timing':
@@ -139,10 +139,10 @@ function GalleryItemsEditor({ items, onChange, t, restaurantId }: { items: Galle
   );
 }
 
-function MenuItemsEditor({ items, onChange, t, restaurantId }: { items: MenuShowcaseItem[]; onChange: (v: MenuShowcaseItem[]) => void; t: T; restaurantId: string }) {
+function MenuItemsEditor({ items, onChange, t, restaurantId, labelText }: { items: MenuShowcaseItem[]; onChange: (v: MenuShowcaseItem[]) => void; t: T; restaurantId: string; labelText?: string }) {
   const renumber = (list: MenuShowcaseItem[]) => list.map((x, i) => ({ ...x, number: i + 1 }));
   return (
-    <Labeled text={t('bf_menu')}>
+    <Labeled text={labelText ?? t('bf_menu')}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map((it, i) => (
           rowBox(<>

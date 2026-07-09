@@ -73,11 +73,13 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   const preview = mode === 'preview';
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 12px 120px' }}>
-      {/* Phone-frame live preview */}
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 12px 120px 56px' }}>
+      {/* Phone-frame live preview (scaled down to 80%). In edit mode overflow stays
+          visible so the per-block drag handles on the left rail are not clipped. */}
       <div style={{
-        width: '100%', maxWidth: 460, borderRadius: 28, overflow: 'hidden',
+        width: '100%', maxWidth: 460, borderRadius: 28, overflow: preview ? 'hidden' : 'visible',
         border: '10px solid #0b1120', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', background: '#000',
+        zoom: 0.8,
       }}>
         <div style={{ background: pageBackground, minHeight: 600, fontFamily: '"Playfair Display", Georgia, serif' }}>
           {blocks.length === 0 && (
@@ -177,7 +179,7 @@ function EditableBlock({ block, index, count, selected, t, children, onSelect, o
       {/* Left drag handle (always visible, like the reference) */}
       <div draggable onDragStart={onDragStart} onClick={(e) => e.stopPropagation()}
         title={block.type}
-        style={{ position: 'absolute', left: -34, top: '50%', transform: 'translateY(-50%)', zIndex: 5, width: 26, height: 40, borderRadius: 6, background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(226,232,240,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 14 }}>☰</div>
+        style={{ position: 'absolute', left: -48, top: '50%', transform: 'translateY(-50%)', zIndex: 5, width: 30, height: 44, borderRadius: 8, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 15 }}>☰</div>
       <div style={{ pointerEvents: 'none' }}>{children}</div>
     </div>
   );

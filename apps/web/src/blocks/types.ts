@@ -15,6 +15,8 @@ export type BlockType =
   | 'timing'
   | 'gallery'
   | 'menu'
+  | 'artist'
+  | 'link'
   | 'socials'
   | 'contacts'
   | 'rsvp'
@@ -79,13 +81,14 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   heading: {
     type: 'heading', icon: 'H', labelKey: 'block_heading',
-    defaultProps: { text: 'Заголовок', align: 'center' },
+    defaultProps: { text: 'Заголовок', align: 'center', marquee: false },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
     fields: [
       { key: 'text', labelKey: 'bf_text', type: 'text' },
       { key: 'align', labelKey: 'bf_align', type: 'select', options: [
         { value: 'left', labelKey: 'align_left' }, { value: 'center', labelKey: 'align_center' }, { value: 'right', labelKey: 'align_right' },
       ] },
+      { key: 'marquee', labelKey: 'bf_marquee', type: 'boolean' },
     ],
   },
   text: {
@@ -148,6 +151,28 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
     fields: [
       { key: 'title', labelKey: 'bf_title', type: 'text' },
       { key: 'items', labelKey: 'bf_menu', type: 'menu' },
+    ],
+  },
+  // Performing artist card: title + a photo carousel with the artist's name badge.
+  artist: {
+    type: 'artist', icon: '🎤', labelKey: 'block_artist',
+    defaultProps: { title: 'ЧТО СЕГОДНЯ ВАС ЖДЕТ ?', items: [] },
+    defaultAnim: { type: 'zoom', durationMs: 800, delayMs: 0 },
+    fields: [
+      { key: 'title', labelKey: 'bf_title', type: 'text' },
+      { key: 'items', labelKey: 'bf_artists', type: 'menu' },
+    ],
+  },
+  // Single wide link button: label + sub-label + custom background color.
+  link: {
+    type: 'link', icon: '🔗', labelKey: 'block_link',
+    defaultProps: { label: 'КАТЕГОРИЯ СТОЛОВ', sublabel: 'Меню', action: { kind: 'link', value: '' }, color: '#e8792e' },
+    defaultAnim: { type: 'fade', durationMs: 600, delayMs: 0 },
+    fields: [
+      { key: 'label', labelKey: 'bf_label', type: 'text' },
+      { key: 'sublabel', labelKey: 'bf_subtitle', type: 'text' },
+      { key: 'action', labelKey: 'bf_action', type: 'action' },
+      { key: 'color', labelKey: 'bf_color', type: 'color' },
     ],
   },
   socials: {
@@ -237,7 +262,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 // All block types, in the order they appear in the Add-block palette.
 // `menu` is intentionally omitted — flyers use a static photo (image block) instead.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
+  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'artist', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {
