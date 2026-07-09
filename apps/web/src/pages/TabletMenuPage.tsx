@@ -966,9 +966,9 @@ function IncludedDishesSection({
     </p>
   );
 
-  const dishGrid = (items: TableCategoryPackageItem[]) => (
-    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-      {items.map((pi, i) => {
+  // One dish card. `fixedWidth` is used by the horizontal small-category row so
+  // the cards keep a constant width and run consecutively on a single line.
+  const dishCard = (pi: TableCategoryPackageItem, i: number, fixedWidth?: number) => {
         const freeAlts = getFreeAlts(pi);
         const chosenId = replacements[pi.id];
         const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
@@ -976,7 +976,7 @@ function IncludedDishesSection({
         return (
           <div key={pi.id}
             className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}` }}>
+            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
             {displayItem.photoUrl ? (
               <button type="button"
                 onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
@@ -1019,7 +1019,11 @@ function IncludedDishesSection({
             </div>
           </div>
         );
-      })}
+  };
+
+  const dishGrid = (items: TableCategoryPackageItem[]) => (
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
+      {items.map((pi, i) => dishCard(pi, i))}
     </div>
   );
 
@@ -1042,10 +1046,10 @@ function IncludedDishesSection({
         </div>
       ))}
 
-      {/* Small categories (< 5 items) are merged into ONE "Assorted" category —
-          presented like a big category (single accent header) but with each small
-          category shown as a minor labelled subdivision above its dishes, all
-          flowing through the SAME full-width grid so every dish card aligns. */}
+      {/* Small categories (< 5 items) are merged into ONE "Assorted" category.
+          Their dishes run consecutively on a single horizontal line; each small
+          category keeps its name above its dishes and is separated from the next
+          by a vertical divider. Scrolls sideways when too wide to fit. */}
       {smallGroups.length > 0 && (
         <div style={{
           paddingTop: bigGroups.length > 0 ? 20 : 0,
@@ -1053,11 +1057,18 @@ function IncludedDishesSection({
           borderTop: bigGroups.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
           {categoryHeader('assorted')}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {smallGroups.map(([cat, items]) => (
-              <div key={cat}>
+          <div className="scrollbar-none" style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'flex-start', overflowX: 'auto' }}>
+            {smallGroups.map(([cat, items], si) => (
+              <div key={cat} style={{
+                flexShrink: 0,
+                paddingLeft: si > 0 ? 16 : 0,
+                marginLeft: si > 0 ? 16 : 0,
+                borderLeft: si > 0 ? '1px solid rgba(var(--rg-accent-rgb),0.3)' : 'none',
+              }}>
                 {minorHeader(cat)}
-                {dishGrid(items!)}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  {items!.map((pi, i) => dishCard(pi, i, 150))}
+                </div>
               </div>
             ))}
           </div>
