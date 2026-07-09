@@ -136,7 +136,7 @@ export const InvitationBuilderPage = () => {
       {savedFlash && <div style={{ maxWidth: 1180, margin: '12px auto 0', padding: 12, borderRadius: 10, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓ {t('save')}</div>}
 
       <BlockEditor kind="flyer" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={t} restaurantId={restaurantId}
-        eventDate={event?.eventDate ?? null} logoUrl={restaurant?.logoUrl ?? null} />
+        eventDate={event?.eventDate ?? null} logoUrl={restaurant?.logoUrl ?? restaurant?.company?.logoUrl ?? null} />
     </div>
   );
 };

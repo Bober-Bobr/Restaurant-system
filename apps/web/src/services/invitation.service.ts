@@ -59,7 +59,7 @@ export type Invitation = {
   createdAt: string;
   updatedAt: string;
 
-  restaurant?: { id: string; name: string; logoUrl: string | null };
+  restaurant?: { id: string; name: string; logoUrl: string | null; company?: { logoUrl: string | null } | null };
   event?: { id: string; customerName: string; eventDate: string } | null;
   _count?: { requests: number };
 };

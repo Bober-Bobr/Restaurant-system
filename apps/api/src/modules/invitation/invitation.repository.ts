@@ -6,7 +6,8 @@ export class InvitationRepository {
     return prisma.invitation.findUnique({
       where: { slug },
       include: {
-        restaurant: { select: { id: true, name: true, logoUrl: true } },
+        // company.logoUrl is the fallback for the flyer's auto-logo image block.
+        restaurant: { select: { id: true, name: true, logoUrl: true, company: { select: { logoUrl: true } } } },
         // eventDate feeds the auto-countdown on the public flyer.
         event: { select: { id: true, customerName: true, eventDate: true } },
       },
