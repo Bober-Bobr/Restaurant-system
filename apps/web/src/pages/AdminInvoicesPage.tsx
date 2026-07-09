@@ -4,7 +4,7 @@ import { eventService } from '../services/event.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
-import { invoiceTotalCents, isDebt } from '../utils/invoice';
+import { invoiceOutstandingCents, invoiceTotalCents, isDebt } from '../utils/invoice';
 import type { Event } from '../types/domain';
 
 // 1,000,000 so'm expressed in tiyin (amounts are stored as tiyin = 1/100 so'm).
@@ -26,7 +26,7 @@ const formatDate = (iso: string, locale: string) =>
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
-type InvoiceFilter = 'ALL' | 'OPEN' | 'PAID';
+type InvoiceFilter = 'ALL' | 'OPEN' | 'OUTSTANDING' | 'PAID';
 
 export const AdminInvoicesPage = () => {
   const queryClient = useQueryClient();
@@ -96,12 +96,15 @@ export const AdminInvoicesPage = () => {
   const visibleEvents = useMemo(() => {
     if (filter === 'OPEN') return events.filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED');
     if (filter === 'PAID') return events.filter((e) => e.status === 'COMPLETED');
+    // Outstanding: any non-cancelled invoice that still has a balance left to pay.
+    if (filter === 'OUTSTANDING') return events.filter((e) => e.status !== 'CANCELLED' && invoiceOutstandingCents(e) > 0);
     return events;
   }, [events, filter]);
 
   const filters: { id: InvoiceFilter; label: string }[] = [
     { id: 'ALL', label: t('filter_all') },
     { id: 'OPEN', label: t('invoices_open') },
+    { id: 'OUTSTANDING', label: t('invoices_outstanding') },
     { id: 'PAID', label: t('invoices_paid') },
   ];
 

@@ -5,9 +5,11 @@ interface LightboxProps {
   src: string;
   alt?: string;
   onClose: () => void;
+  // Dish photos open much smaller so they don't dominate the tablet screen.
+  compact?: boolean;
 }
 
-export const Lightbox = ({ src, alt = '', onClose }: LightboxProps) => {
+export const Lightbox = ({ src, alt = '', onClose, compact = false }: LightboxProps) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -37,7 +39,11 @@ export const Lightbox = ({ src, alt = '', onClose }: LightboxProps) => {
         alt={alt}
         onClick={(e) => e.stopPropagation()}
         className="rounded-2xl object-contain shadow-2xl"
-        style={{ maxWidth: '80vw', maxHeight: '80vh', width: 'auto', height: 'auto' }}
+        style={
+          compact
+            ? { maxWidth: 'min(420px, 86vw)', maxHeight: 'min(420px, 60vh)', width: 'auto', height: 'auto' }
+            : { maxWidth: '80vw', maxHeight: '80vh', width: 'auto', height: 'auto' }
+        }
       />
     </div>,
     document.body

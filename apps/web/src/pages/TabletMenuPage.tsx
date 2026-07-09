@@ -889,12 +889,13 @@ function IncludedDishesSection({
     )
   ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
 
-  // Dishes allowed as free substitutions for THIS table category. When the
-  // category has its own list use it; otherwise fall back to the legacy global
-  // MenuItem.tabletStatus === 'FREE' behavior.
-  const catFreeIds = tableCategory.freeSubstitutionItemIds;
+  // Any dish is free to swap in for this table as long as it is not a PAID extra
+  // and not one of the table's default dishes (those defaults are filtered out in
+  // getFreeAlts via packageDefaultIds). Hidden (NONE) dishes stay hidden. This
+  // makes every non-paid, non-default dish selectable for free without having to
+  // curate a per-table list.
   const isFreeForThisTable = (m: MenuItem) =>
-    catFreeIds != null ? catFreeIds.includes(m.id) : tabletStatusOf(m) === 'FREE';
+    m.isActive !== false && tabletStatusOf(m) !== 'PAID' && tabletStatusOf(m) !== 'NONE';
 
   // Free alternatives for a package item: same category, allowed as a free swap
   // for this table, not already part of the package and not swapped-in elsewhere.
@@ -1327,7 +1328,7 @@ export const TabletMenuPage = () => {
 
       <PageBackground />
       <FingerTrail accent="var(--rg-accent)" />
-      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} compact />}
 
       <div ref={revealRef} className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
 
