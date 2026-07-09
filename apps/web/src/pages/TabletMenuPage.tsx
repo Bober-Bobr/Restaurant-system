@@ -955,6 +955,17 @@ function IncludedDishesSection({
     </div>
   );
 
+  // A lighter label used for the small-category subdivisions inside the combined
+  // "Assorted" category (minor, so the group still reads as one category).
+  const minorHeader = (cat: string) => (
+    <p style={{
+      margin: '0 0 8px', fontSize: 10.5, fontWeight: 700,
+      letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)',
+    }}>
+      {t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+    </p>
+  );
+
   const dishGrid = (items: TableCategoryPackageItem[]) => (
     <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
       {items.map((pi, i) => {
@@ -1031,49 +1042,24 @@ function IncludedDishesSection({
         </div>
       ))}
 
-      {/* Small categories (< 5 items): folded into ONE combined group presented
-          as its own distinct "Assorted" category — an accent-tinted card with a
-          single header, the small categories laid out side by side in one row and
-          separated by vertical divider lines. */}
+      {/* Small categories (< 5 items) are merged into ONE "Assorted" category —
+          presented like a big category (single accent header) but with each small
+          category shown as a minor labelled subdivision above its dishes, all
+          flowing through the SAME full-width grid so every dish card aligns. */}
       {smallGroups.length > 0 && (
         <div style={{
           paddingTop: bigGroups.length > 0 ? 20 : 0,
           marginTop: bigGroups.length > 0 ? 20 : 0,
           borderTop: bigGroups.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
-          <div style={{
-            borderRadius: 18,
-            padding: 16,
-            background: 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.10), rgba(255,255,255,0.02))',
-            border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-          }}>
-            {/* One category header for the whole grouped set. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 3, height: 18, borderRadius: 2, background: 'var(--rg-accent)', flexShrink: 0 }} />
-              <span style={{
-                display: 'inline-block', padding: '4px 12px', borderRadius: 999,
-                fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: 'var(--rg-bg)', background: 'var(--rg-accent)',
-              }}>
-                {t('assorted')}
-              </span>
-            </div>
-            {/* The small categories sit side by side in a single row; it scrolls
-                horizontally only if there are too many to fit. */}
-            <div className="scrollbar-none" style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'stretch', overflowX: 'auto' }}>
-              {smallGroups.map(([cat, items], si) => (
-                <div key={cat} style={{
-                  flex: '1 1 160px',
-                  minWidth: 150,
-                  paddingLeft: si > 0 ? 16 : 0,
-                  borderLeft: si > 0 ? '1px dashed rgba(var(--rg-accent-rgb),0.3)' : 'none',
-                }}>
-                  {categoryHeader(cat)}
-                  {dishGrid(items!)}
-                </div>
-              ))}
-            </div>
+          {categoryHeader('assorted')}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {smallGroups.map(([cat, items]) => (
+              <div key={cat}>
+                {minorHeader(cat)}
+                {dishGrid(items!)}
+              </div>
+            ))}
           </div>
         </div>
       )}
