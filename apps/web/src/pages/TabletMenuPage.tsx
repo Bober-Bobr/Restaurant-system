@@ -11,7 +11,7 @@ import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
-import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown } from '../utils/tabletMusic';
+import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTabletMusicStarted, pauseTabletMusic, resumeTabletMusic } from '../utils/tabletMusic';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
@@ -105,11 +105,13 @@ function TableCategoryFullscreen({
   // The guest first picks a banquet event type; only its tables then appear.
   const [eventType, setEventType] = useState<TableEventType | null>(null);
 
-  const EVENT_TYPE_ORDER: TableEventType[] = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'];
+  // Only two banquet event types remain: Nahor and Events (Tantana). Legacy
+  // FOTIHA/TUI categories collapse into OTHERS ("Events").
+  const EVENT_TYPE_ORDER: TableEventType[] = ['NAHOR', 'OTHERS'];
   const EVENT_TYPE_LABEL: Record<TableEventType, Parameters<typeof translate>[0]> = {
-    NAHOR: 'dept_nahor', FOTIHA: 'dept_fotiha', TUI: 'dept_tui', OTHERS: 'dept_others',
+    NAHOR: 'dept_nahor', FOTIHA: 'table_event_events', TUI: 'table_event_events', OTHERS: 'table_event_events',
   };
-  const catEventType = (tc: TableCategory): TableEventType => tc.eventType ?? 'OTHERS';
+  const catEventType = (tc: TableCategory): TableEventType => (tc.eventType === 'NAHOR' ? 'NAHOR' : 'OTHERS');
   const availableTypes = EVENT_TYPE_ORDER.filter((et) => tableCategories.some((tc) => catEventType(tc) === et));
   // Only gate behind an event-type choice when the tables span more than one type.
   const gated = availableTypes.length > 1;
@@ -1276,6 +1278,36 @@ function SelectedDishesBar({
   );
 }
 
+// Fixed bottom-right button to toggle the kiosk background music on/off.
+function TabletMusicToggle() {
+  const [playing, setPlaying] = useState(isTabletMusicStarted());
+  const toggle = () => {
+    if (isTabletMusicStarted()) { pauseTabletMusic(); setPlaying(false); }
+    else { resumeTabletMusic(); setPlaying(true); }
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={playing ? 'Pause music' : 'Play music'}
+      style={{
+        position: 'fixed', bottom: 18, right: 18, zIndex: 60,
+        width: 52, height: 52, borderRadius: '50%',
+        background: 'var(--rg-accent)', color: '#1a1a1a',
+        border: '2px solid rgba(255,255,255,0.85)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+      }}
+    >
+      {playing ? (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+      ) : (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+      )}
+    </button>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export const TabletMenuPage = () => {
@@ -1352,6 +1384,8 @@ export const TabletMenuPage = () => {
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8"
       style={tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties}>
+      {/* Bottom-right music on/off toggle, like the catering site. */}
+      {welcomeShown && <TabletMusicToggle />}
       {!welcomeShown && (
         <div
           style={{

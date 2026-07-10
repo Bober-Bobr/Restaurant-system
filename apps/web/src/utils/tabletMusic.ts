@@ -49,6 +49,21 @@ export function isTabletMusicStarted() {
   return started && !!audio && !audio.paused;
 }
 
+// Pause without resetting the welcome flag/position (for the on-screen toggle).
+export function pauseTabletMusic() {
+  if (audio) audio.pause();
+  started = false;
+}
+
+// Resume the current track, or start a fresh one if none is loaded yet.
+export function resumeTabletMusic() {
+  if (audio && audio.src) {
+    audio.play().then(() => { started = true; }).catch(() => {});
+  } else {
+    startTabletMusic();
+  }
+}
+
 export function markTabletWelcomeShown() {
   welcomeShown = true;
 }

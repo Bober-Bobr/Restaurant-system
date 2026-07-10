@@ -435,7 +435,8 @@ export const AdminTableCategoriesPage = () => {
     setEditServingsById(Object.fromEntries((category.packageItems ?? []).map((pi) => [pi.menuItem.id, pi.servings ?? 1])));
     setEditRatePerPersonText(formatSumInput(category.ratePerPerson));
     setEditTableType(category.tableType === 'CHILDREN' ? 'CHILDREN' : 'ADULT');
-    setEditEventType(category.eventType ?? 'OTHERS');
+    // Only NAHOR and OTHERS remain; legacy FOTIHA/TUI collapse into OTHERS.
+    setEditEventType(category.eventType === 'NAHOR' ? 'NAHOR' : 'OTHERS');
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -498,9 +499,7 @@ export const AdminTableCategoriesPage = () => {
               <select className="adm-input" value={eventType}
                 onChange={(e) => setEventType(e.target.value as TableEventType)}>
                 <option value="NAHOR">{t('dept_nahor')}</option>
-                <option value="FOTIHA">{t('dept_fotiha')}</option>
-                <option value="TUI">{t('dept_tui')}</option>
-                <option value="OTHERS">{t('dept_others')}</option>
+                <option value="OTHERS">{t('table_event_events')}</option>
               </select>
             </label>
           </div>
@@ -577,9 +576,7 @@ export const AdminTableCategoriesPage = () => {
                           <select className="adm-input" value={editEventType}
                             onChange={(e) => setEditEventType(e.target.value as TableEventType)}>
                             <option value="NAHOR">{t('dept_nahor')}</option>
-                            <option value="FOTIHA">{t('dept_fotiha')}</option>
-                            <option value="TUI">{t('dept_tui')}</option>
-                            <option value="OTHERS">{t('dept_others')}</option>
+                            <option value="OTHERS">{t('table_event_events')}</option>
                           </select>
                         </label>
                       </div>
