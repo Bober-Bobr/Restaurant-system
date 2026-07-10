@@ -1291,7 +1291,8 @@ function TabletMusicToggle() {
       onClick={toggle}
       aria-label={playing ? 'Pause music' : 'Play music'}
       style={{
-        position: 'fixed', bottom: 18, right: 18, zIndex: 60,
+        // Sits above the fixed "View Summary" CTA bar so it's never obscured.
+        position: 'fixed', bottom: 'calc(84px + env(safe-area-inset-bottom))', right: 18, zIndex: 61,
         width: 52, height: 52, borderRadius: '50%',
         background: 'var(--rg-accent)', color: '#1a1a1a',
         border: '2px solid rgba(255,255,255,0.85)', cursor: 'pointer',
