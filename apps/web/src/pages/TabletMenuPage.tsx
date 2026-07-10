@@ -639,7 +639,7 @@ function CourseChoiceSection({
   onToggleSecond: (id: string) => void;
   onToggleThird: (id: string) => void;
 }) {
-  // Hot appetizers come first — multi-select, up to two. The three courses that
+  // Hot appetizers come first — multi-select, up to three. The three courses that
   // follow are each single-select (exactly one dish).
   const courseGroups = [
     { category: 'HOT_APPETIZERS' as const, labelKey: 'choose_hot_appetizers' as const, changeKey: 'change_hot_appetizers' as const,
@@ -681,8 +681,8 @@ function CourseChoiceSection({
       {courseGroups.map((group, gi) => {
         const selectedCount = group.items.filter((pi) => group.isSelected(pi.menuItem.id)).length;
         // Single-select courses collapse once their one dish is chosen; the
-        // multi-select hot appetizers only collapse after BOTH picks are made.
-        const full = group.multi ? selectedCount >= 2 : selectedCount >= 1;
+        // multi-select hot appetizers only collapse after all three picks are made.
+        const full = group.multi ? selectedCount >= 3 : selectedCount >= 1;
         const collapsed = full && !expandedCats[group.category];
         const displayItems = collapsed
           ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
@@ -711,7 +711,7 @@ function CourseChoiceSection({
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  {t('up_to_two')}
+                  {t('up_to_three')}
                 </span>
               )}
             </div>
@@ -1218,11 +1218,27 @@ function ChildrenTableSection({
 }
 
 // ── Selected-dishes summary shown at the very top, above the table photo ──────
-// Lists the chosen hot appetizers (up to two) and the first/second/third courses
-// so the guest sees their picks without scrolling back down.
+// The guest's picks (hot appetizers + first/second/third courses) are flattened
+// into a single ordered list where each dish is identified primarily by its
+// SERVING ORDER ("First Serving", "Second Serving", …) rather than its menu
+// category. Each row shows an expandable photo beside the dish name.
+
+// Ordinal words 1..10 per locale; beyond that we fall back to the raw number.
+const SERVING_ORDINALS: Record<Locale, string[]> = {
+  en: ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'],
+  ru: ['Первая', 'Вторая', 'Третья', 'Четвёртая', 'Пятая', 'Шестая', 'Седьмая', 'Восьмая', 'Девятая', 'Десятая'],
+  uz: ['Birinchi', 'Ikkinchi', 'Uchinchi', 'Tortinchi', 'Beshinchi', 'Oltinchi', 'Yettinchi', 'Sakkizinchi', 'Toqqizinchi', 'Oninchi'],
+};
+
+function servingLabel(index: number, locale: Locale, t: TFn) {
+  const ordinal = SERVING_ORDINALS[locale]?.[index] ?? String(index + 1);
+  const word = t('serving_word');
+  // Uzbek/English read "Ordinal Word"; Russian reads "Ordinal word" too.
+  return `${ordinal} ${word}`;
+}
 
 function SelectedDishesBar({
-  hotIds, firstId, secondIds, thirdIds, menuItems, locale, t,
+  hotIds, firstId, secondIds, thirdIds, menuItems, locale, t, onLightbox,
 }: {
   hotIds: string[];
   firstId?: string;
@@ -1231,48 +1247,80 @@ function SelectedDishesBar({
   menuItems: MenuItem[];
   locale: Locale;
   t: TFn;
+  onLightbox: (src: string | null) => void;
 }) {
   const resolve = (ids: string[]) =>
     ids.map((id) => menuItems.find((m) => m.id === id)).filter((m): m is MenuItem => !!m);
 
-  const rows = ([
-    { key: 'hot_appetizers', items: resolve(hotIds) },
-    { key: 'first_course', items: resolve(firstId ? [firstId] : []) },
-    { key: 'second_course', items: resolve(secondIds) },
-    { key: 'third_course', items: resolve(thirdIds) },
-  ] as { key: Parameters<typeof translate>[0]; items: MenuItem[] }[])
-    .filter((r) => r.items.length > 0);
+  // Flatten every pick into the order it is served in.
+  const dishes = [
+    ...resolve(hotIds),
+    ...resolve(firstId ? [firstId] : []),
+    ...resolve(secondIds),
+    ...resolve(thirdIds),
+  ];
 
-  if (rows.length === 0) return null;
+  if (dishes.length === 0) return null;
 
   return (
     <section className="rg-card reveal" style={{ padding: 'clamp(14px, 2.5vw, 20px)' }}>
       <p className="rg-label" style={{ marginBottom: 12 }}>{t('your_selection')}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {rows.map((r) => (
-          <div key={r.key} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{
-              flexShrink: 0, minWidth: 118,
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: 'rgba(var(--rg-accent-rgb),0.85)',
+        {dishes.map((it, i) => {
+          const photoSrc = it.photoUrl ? getPhotoUrl(it.photoUrl) : null;
+          return (
+            <div key={`${it.id}-${i}`} style={{
+              display: 'flex', gap: 12, alignItems: 'center',
+              padding: 8, borderRadius: 14,
+              background: 'rgba(var(--rg-accent-rgb),0.08)',
+              border: '1px solid rgba(var(--rg-accent-rgb),0.22)',
             }}>
-              {t(r.key)}
-            </span>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {r.items.map((it) => (
-                <span key={it.id} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600,
-                  color: '#fff', background: 'rgba(var(--rg-accent-rgb),0.16)',
-                  border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+              {/* Serving-order badge */}
+              <span style={{
+                flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 30, height: 30, borderRadius: '50%',
+                backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+                color: 'var(--rg-bg)', fontWeight: 800, fontSize: 14,
+                boxShadow: '0 4px 12px rgba(var(--rg-accent-rgb),0.4)',
+              }}>{i + 1}</span>
+
+              {/* Expandable photo, matching the dish cards below */}
+              {photoSrc ? (
+                <button type="button" onClick={() => onLightbox(photoSrc)}
+                  style={{
+                    flexShrink: 0, width: 56, height: 56, borderRadius: 10, overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.14)', padding: 0, cursor: 'zoom-in', background: 'transparent',
+                  }}>
+                  <img src={photoSrc} alt={dishName(it, locale)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </button>
+              ) : (
+                <div style={{
+                  flexShrink: 0, width: 56, height: 56, borderRadius: 10,
+                  background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--rg-accent)' }} />
+                  <svg width="22" height="22" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+
+              {/* Serving label (primary) + dish name (secondary) */}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{
+                  margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: 'rgba(var(--rg-accent-rgb),0.9)',
+                }}>
+                  {servingLabel(i, locale, t)}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.25 }}>
                   {dishName(it, locale)}
-                </span>
-              ))}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -1634,6 +1682,7 @@ export const TabletMenuPage = () => {
                 menuItems={menuItems ?? []}
                 locale={locale}
                 t={t}
+                onLightbox={setLightboxSrc}
               />
             )}
 

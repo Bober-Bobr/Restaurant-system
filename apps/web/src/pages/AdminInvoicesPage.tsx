@@ -28,6 +28,20 @@ const formatDate = (iso: string, locale: string) =>
 
 type InvoiceFilter = 'ALL' | 'OPEN' | 'OUTSTANDING' | 'PAID';
 
+// Month-of-year keys for labelling the month filter (index 0 = January).
+const MONTH_KEYS: Parameters<typeof translate>[0][] = [
+  'month_january', 'month_february', 'month_march', 'month_april', 'month_may', 'month_june',
+  'month_july', 'month_august', 'month_september', 'month_october', 'month_november', 'month_december',
+];
+
+// 'YYYY-MM' bucket for an event's date (local time), or null when it has no date.
+const eventMonthKey = (iso: string | null | undefined): string | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 export const AdminInvoicesPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -35,6 +49,8 @@ export const AdminInvoicesPage = () => {
     translate(key, locale, params);
 
   const [filter, setFilter] = useState<InvoiceFilter>('ALL');
+  // '' = all months; otherwise a 'YYYY-MM' bucket.
+  const [monthFilter, setMonthFilter] = useState<string>('');
   // Round-up is decided per invoice: this holds the event ids that are rounded.
   const [roundedIds, setRoundedIds] = useState<Set<number>>(new Set());
   const toggleRounded = (eventId: number) =>
@@ -93,13 +109,30 @@ export const AdminInvoicesPage = () => {
     deadlineMutation.mutate({ eventId: event.id, iso });
   };
 
+  // Distinct months present in the data, newest first, for the month dropdown.
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of events) {
+      const key = eventMonthKey(e.eventDate);
+      if (key) set.add(key);
+    }
+    return [...set].sort().reverse();
+  }, [events]);
+
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number);
+    return `${t(MONTH_KEYS[m - 1])} ${y}`;
+  };
+
   const visibleEvents = useMemo(() => {
-    if (filter === 'OPEN') return events.filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED');
-    if (filter === 'PAID') return events.filter((e) => e.status === 'COMPLETED');
+    let list = events;
+    if (monthFilter) list = list.filter((e) => eventMonthKey(e.eventDate) === monthFilter);
+    if (filter === 'OPEN') return list.filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED');
+    if (filter === 'PAID') return list.filter((e) => e.status === 'COMPLETED');
     // Outstanding: any non-cancelled invoice that still has a balance left to pay.
-    if (filter === 'OUTSTANDING') return events.filter((e) => e.status !== 'CANCELLED' && invoiceOutstandingCents(e) > 0);
-    return events;
-  }, [events, filter]);
+    if (filter === 'OUTSTANDING') return list.filter((e) => e.status !== 'CANCELLED' && invoiceOutstandingCents(e) > 0);
+    return list;
+  }, [events, filter, monthFilter]);
 
   const filters: { id: InvoiceFilter; label: string }[] = [
     { id: 'ALL', label: t('filter_all') },
@@ -115,7 +148,7 @@ export const AdminInvoicesPage = () => {
         {visibleEvents.length} {visibleEvents.length === 1 ? t('invoice_one') : t('invoice_many')}
       </p>
 
-      {/* Controls: status filter */}
+      {/* Controls: status filter + month filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 20 }}>
         {filters.map((f) => (
           <button
@@ -133,6 +166,24 @@ export const AdminInvoicesPage = () => {
             {f.label}
           </button>
         ))}
+        <select
+          value={monthFilter}
+          onChange={(e) => setMonthFilter(e.target.value)}
+          className="adm-input"
+          style={{
+            marginLeft: 'auto', padding: '6px 12px', fontSize: 13, fontWeight: 600,
+            borderRadius: 999, cursor: 'pointer',
+            background: monthFilter ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
+            color: monthFilter ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+            border: `1px solid ${monthFilter ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            colorScheme: 'dark',
+          }}
+        >
+          <option value="">{t('all_months')}</option>
+          {availableMonths.map((ym) => (
+            <option key={ym} value={ym}>{monthLabel(ym)}</option>
+          ))}
+        </select>
       </div>
 
       {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_events')}</p>}

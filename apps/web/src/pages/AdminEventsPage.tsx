@@ -75,6 +75,20 @@ const GroupHeading = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+// Month-of-year keys for labelling the month filter (index 0 = January).
+const MONTH_KEYS: Parameters<typeof translate>[0][] = [
+  'month_january', 'month_february', 'month_march', 'month_april', 'month_may', 'month_june',
+  'month_july', 'month_august', 'month_september', 'month_october', 'month_november', 'month_december',
+];
+
+// 'YYYY-MM' bucket for an event's date (local time), or null when it has no date.
+const eventMonthKey = (iso: string | null | undefined): string | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const STATUS_LABEL_KEY: Record<Event['status'], Parameters<typeof translate>[0]> = {
   DRAFT: 'status_draft',
   CONFIRMED: 'status_confirmed',
@@ -166,6 +180,25 @@ export const AdminEventsPage = () => {
   const [searchId, setSearchId] = useState('');
   const [searchResult, setSearchResult] = useState<Event | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Month filter for the events list ('' = all months, otherwise 'YYYY-MM').
+  const [monthFilter, setMonthFilter] = useState<string>('');
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of events ?? []) {
+      const key = eventMonthKey(e.eventDate);
+      if (key) set.add(key);
+    }
+    return [...set].sort().reverse();
+  }, [events]);
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split('-').map(Number);
+    return `${t(MONTH_KEYS[m - 1])} ${y}`;
+  };
+  const filteredEvents = useMemo(
+    () => (monthFilter ? (events ?? []).filter((e) => eventMonthKey(e.eventDate) === monthFilter) : events),
+    [events, monthFilter],
+  );
 
   const validation = useMemo(() => {
     const errors: string[] = [];
@@ -864,21 +897,45 @@ export const AdminEventsPage = () => {
         })()}
       </section>
 
+      {/* Month filter for the events list */}
+      {events && events.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(226,232,240,0.6)' }}>{t('event_date')}:</span>
+          <select
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            className="adm-input"
+            style={{
+              padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 999, cursor: 'pointer',
+              background: monthFilter ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
+              color: monthFilter ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${monthFilter ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              colorScheme: 'dark', width: 'auto',
+            }}
+          >
+            <option value="">{t('all_months')}</option>
+            {availableMonths.map((ym) => (
+              <option key={ym} value={ym}>{monthLabel(ym)}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {isLoading ? <p>{t('loading_events')}</p> : null}
       {isError ? <p>{t('failed_load_events')}</p> : null}
-      {events ? (
+      {filteredEvents ? (
         <EventList
-          events={events}
+          events={filteredEvents}
           onEdit={(eventId) => {
-            const event = events.find((item) => item.id === eventId);
+            const event = filteredEvents.find((item) => item.id === eventId);
             if (event) startEditing(event);
           }}
           onDownloadPdf={(eventId) => {
-            const event = events.find((item) => item.id === eventId);
+            const event = filteredEvents.find((item) => item.id === eventId);
             if (event) downloadEventPdf(event);
           }}
           onReschedule={(eventId) => {
-            const event = events.find((item) => item.id === eventId);
+            const event = filteredEvents.find((item) => item.id === eventId);
             if (event) openReschedule(event);
           }}
           onDelete={(eventId) => deleteMutation.mutate(eventId)}

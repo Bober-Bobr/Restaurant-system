@@ -160,7 +160,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set((state) => ({
       selectedHotAppetizerIds: state.selectedHotAppetizerIds.includes(menuItemId)
         ? state.selectedHotAppetizerIds.filter((id) => id !== menuItemId)
-        : [...state.selectedHotAppetizerIds, menuItemId].slice(-2),
+        : [...state.selectedHotAppetizerIds, menuItemId].slice(-3),
     }));
   },
   setReplacement: (packageItemId, menuItemId) => {
@@ -207,7 +207,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
     set((state) => ({
       childHotAppetizerIds: state.childHotAppetizerIds.includes(menuItemId)
         ? state.childHotAppetizerIds.filter((id) => id !== menuItemId)
-        : [...state.childHotAppetizerIds, menuItemId].slice(-2),
+        : [...state.childHotAppetizerIds, menuItemId].slice(-3),
     }));
   },
   setChildReplacement: (packageItemId, menuItemId) => {
