@@ -79,7 +79,7 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
         </Labeled>
       );
     case 'image':
-      return <PhotoUploadField label={t(field.labelKey)} value={txt || null} onChange={(url) => onChange(url)} restaurantId={restaurantId} />;
+      return <PhotoUploadField label={t(field.labelKey)} value={txt || null} onChange={(url) => onChange(url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />;
     case 'action':
       return <ActionEditor value={value as ButtonAction | undefined} onChange={onChange} t={t} />;
     case 'gallery':
@@ -133,7 +133,7 @@ function GalleryItemsEditor({ items, onChange, t, restaurantId }: { items: Galle
             {delBtn(() => onChange(items.filter((_, j) => j !== i)))}
           </>)
         ))}
-        <PhotoUploadField label={t('add_item')} value={null} onChange={(url) => { if (url) onChange([...items, { photoUrl: url, videoUrl: null }]); }} restaurantId={restaurantId} height={90} />
+        <PhotoUploadField label={t('add_item')} value={null} onChange={(url) => { if (url) onChange([...items, { photoUrl: url, videoUrl: null }]); }} restaurantId={restaurantId} height={90} hint={t('drop_or_paste')} />
       </div>
     </Labeled>
   );
@@ -154,7 +154,7 @@ function MenuItemsEditor({ items, onChange, t, restaurantId, labelText }: { item
             {delBtn(() => onChange(renumber(items.filter((_, j) => j !== i))))}
           </>)
         ))}
-        <PhotoUploadField label={t('add_item')} value={null} onChange={(url) => { if (url) onChange(renumber([...items, { number: items.length + 1, name: '', photoUrl: url }])); }} restaurantId={restaurantId} height={90} />
+        <PhotoUploadField label={t('add_item')} value={null} onChange={(url) => { if (url) onChange(renumber([...items, { number: items.length + 1, name: '', photoUrl: url }])); }} restaurantId={restaurantId} height={90} hint={t('drop_or_paste')} />
         {addBtn(() => onChange(renumber([...items, { number: items.length + 1, name: '', photoUrl: null }])), t('add_row'))}
       </div>
     </Labeled>

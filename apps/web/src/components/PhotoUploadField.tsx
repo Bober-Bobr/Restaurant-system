@@ -9,12 +9,32 @@ type Props = {
   restaurantId: string;
   label?: string;
   height?: number;
+  // Localized "or drag & drop / paste" hint under the empty dropzone.
+  hint?: string;
 };
 
-export const PhotoUploadField = ({ value, onChange, restaurantId, label, height = 140 }: Props) => {
+// Pull the first image file out of a drag or paste payload.
+function imageFromData(data: DataTransfer | null): File | null {
+  if (!data) return null;
+  if (data.files && data.files.length) {
+    for (const f of Array.from(data.files)) if (f.type.startsWith('image/')) return f;
+  }
+  if (data.items && data.items.length) {
+    for (const it of Array.from(data.items)) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) return f;
+      }
+    }
+  }
+  return null;
+}
+
+export const PhotoUploadField = ({ value, onChange, restaurantId, label, height = 140, hint = 'or drag & drop / paste' }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleFile = async (file: File) => {
     setError(null);
@@ -30,6 +50,28 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
     }
   };
 
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (uploading) return;
+    const f = imageFromData(e.dataTransfer);
+    if (f) handleFile(f);
+  };
+  const onPaste = (e: React.ClipboardEvent) => {
+    if (uploading) return;
+    const f = imageFromData(e.clipboardData);
+    if (f) { e.preventDefault(); handleFile(f); }
+  };
+  // Drag/paste target props shared by both the filled and empty states. tabIndex
+  // makes the region focusable so a Ctrl/Cmd+V paste lands here.
+  const dropProps = {
+    onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (!dragOver) setDragOver(true); },
+    onDragLeave: (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); },
+    onDrop,
+    onPaste,
+    tabIndex: 0,
+  };
+
   const src = value ? (getPhotoUrl(value) ?? value) : null;
 
   return (
@@ -43,7 +85,7 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
         style={{ display: 'none' }}
       />
       {src ? (
-        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div {...dropProps} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(15,23,42,0.5)', border: dragOver ? '1px solid #c9a42c' : '1px solid rgba(255,255,255,0.08)', outline: 'none' }}>
           <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
             <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
@@ -53,21 +95,26 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
             <button type="button" onClick={() => onChange(null)} disabled={uploading}
               style={iconBtnStyle('rgba(220,38,38,0.9)', '#fff')}>×</button>
           </div>
+          {dragOver && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(201,164,44,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
+          )}
         </div>
       ) : (
         <button
+          {...dropProps}
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           style={{
             height,
             borderRadius: 12,
-            border: '1px dashed rgba(201,164,44,0.35)',
-            background: 'rgba(201,164,44,0.05)',
+            border: `1px dashed ${dragOver ? '#c9a42c' : 'rgba(201,164,44,0.35)'}`,
+            background: dragOver ? 'rgba(201,164,44,0.14)' : 'rgba(201,164,44,0.05)',
             color: '#c9a42c',
             cursor: uploading ? 'wait' : 'pointer',
             fontSize: 13, fontWeight: 600,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+            outline: 'none',
           }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,6 +123,7 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           {uploading ? 'Uploading…' : 'Upload from device'}
+          <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(201,164,44,0.65)', textTransform: 'none', letterSpacing: 0 }}>{hint}</span>
         </button>
       )}
       {error && <p style={{ margin: 0, fontSize: 11, color: '#fca5a5' }}>{error}</p>}

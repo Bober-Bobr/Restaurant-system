@@ -242,7 +242,7 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('accent_color')}</span>{colorRow('accentColor', '#c9a42c')}</label>
       <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('background_color')}</span>{colorRow('backgroundColor', '#fafaf7')}</label>
-      <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} />
+      <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (
         <>
           <label style={{ display: 'grid', gap: 5 }}>

@@ -14,6 +14,7 @@ import type { Block } from '../blocks/types';
 import type { PickedDesign } from '../blocks/builtinTemplates';
 import { seedInvitationBlocks, invitationTheme } from '../blocks/seed';
 import { TemplateChooser, useDesignSave } from './designerShared';
+import { LinkQrButton } from '../components/LinkQrButton';
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60) || 'invitation';
@@ -176,6 +177,7 @@ export function DesignerTopBar({ t, title, subtitle, slug, onSlug, publicUrl, is
             <input type="checkbox" checked={isPublished} onChange={(e) => onPublished(e.target.checked)} />
             {t('published_label')}
           </label>
+          {publicUrl && <LinkQrButton url={publicUrl} filename={slug || 'invitation'} t={t} />}
           {publicUrl && <a href={publicUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#c9a42c', textDecoration: 'none', padding: '6px 12px', borderRadius: 8, background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.3)' }}>↗</a>}
           <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={onSaveTemplate}>{t('save_as_template')}</button>
           {onDelete && <button type="button" className="adm-btn-danger" style={{ fontSize: 12 }} onClick={onDelete}>{t('delete_block')}</button>}
