@@ -22,7 +22,10 @@ function slugify(s: string): string {
 }
 
 export const InvitationBuilderPage = () => {
-  const { restaurantId = '', eventId = '' } = useParams();
+  const { restaurantId = '', eventId = '', flyerId = '' } = useParams();
+  // Standalone flyers (restaurant not in the system) are opened without a
+  // restaurantId/eventId — they use /flyers/new and /flyers/:flyerId.
+  const standalone = !restaurantId;
   const accessToken = useAuthStore((s) => s.accessToken);
   const role = useAuthStore((s) => s.role);
   const { locale } = useAdminStore();
@@ -30,9 +33,13 @@ export const InvitationBuilderPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const restaurantsQuery = useQuery({ queryKey: ['manager-restaurants'], queryFn: () => restaurantService.list(), enabled: !!accessToken });
-  const eventsQuery = useQuery({ queryKey: ['manager-events', restaurantId], queryFn: () => eventService.list({ restaurantId }), enabled: !!accessToken && !!restaurantId });
-  const existingQuery = useQuery({ queryKey: ['invitation-by-event', eventId], queryFn: () => invitationService.byEvent(String(eventId), restaurantId), enabled: !!accessToken && !!eventId });
+  const restaurantsQuery = useQuery({ queryKey: ['manager-restaurants'], queryFn: () => restaurantService.list(), enabled: !!accessToken && !standalone });
+  const eventsQuery = useQuery({ queryKey: ['manager-events', restaurantId], queryFn: () => eventService.list({ restaurantId }), enabled: !!accessToken && !standalone && !!restaurantId });
+  const byEventQuery = useQuery({ queryKey: ['invitation-by-event', eventId], queryFn: () => invitationService.byEvent(String(eventId), restaurantId), enabled: !!accessToken && !standalone && !!eventId });
+  const byIdQuery = useQuery({ queryKey: ['flyer', flyerId], queryFn: () => invitationService.get(flyerId), enabled: !!accessToken && standalone && !!flyerId });
+
+  const existing = standalone ? byIdQuery.data : byEventQuery.data;
+  const existingLoading = standalone ? byIdQuery.isLoading : byEventQuery.isLoading;
 
   const event = (eventsQuery.data ?? []).find((e) => String(e.id) === String(eventId));
   const restaurant = restaurantsQuery.data?.find((r) => r.id === restaurantId);
@@ -45,21 +52,24 @@ export const InvitationBuilderPage = () => {
   const [chosen, setChosen] = useState(false);
   const { flash, error, setError, savedFlash } = useDesignSave();
 
-  const isEditing = !!existingQuery.data;
+  const isEditing = !!existing;
 
   useEffect(() => {
-    if (existingQuery.data && !initialized) {
-      const inv = existingQuery.data;
+    if (existing && !initialized) {
+      const inv = existing;
       setBlocks(inv.blocks && inv.blocks.length ? inv.blocks : seedFlyerBlocks(inv));
       setTheme(flyerTheme(inv));
       setSlug(inv.slug);
       setIsPublished(inv.isPublished);
       setInitialized(true);
       setChosen(true);
-    } else if (!existingQuery.isLoading && !existingQuery.data && restaurant && event && !initialized && slug === '') {
+    } else if (standalone && !flyerId && !initialized && slug === '') {
+      // Brand-new standalone flyer → a unique default slug the manager can edit.
+      setSlug(slugify(`flyer-${Math.random().toString(36).slice(2, 8)}`));
+    } else if (!standalone && !existingLoading && !existing && restaurant && event && !initialized && slug === '') {
       setSlug(slugify(`${restaurant.name}-${event.customerName}-${event.id}`));
     }
-  }, [existingQuery.data, existingQuery.isLoading, restaurant, event, initialized, slug]);
+  }, [existing, existingLoading, standalone, flyerId, restaurant, event, initialized, slug]);
 
   const applyTemplate = (tpl: PickedDesign | null) => {
     if (tpl) { setBlocks(structuredClone(tpl.blocks)); setTheme({ ...tpl.theme }); }
@@ -70,7 +80,7 @@ export const InvitationBuilderPage = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const finalSlug = slug.trim() || slugify(`${restaurant?.name}-${eventId}`);
+      const finalSlug = slug.trim() || slugify(standalone ? 'flyer' : `${restaurant?.name}-${eventId}`);
       const payload: Partial<Invitation> = {
         slug: finalSlug,
         isPublished,
@@ -80,13 +90,20 @@ export const InvitationBuilderPage = () => {
         backgroundImageUrl: theme.backgroundImageUrl ?? null,
         musicUrl: theme.musicUrl ?? null,
       };
-      if (isEditing && existingQuery.data) return invitationService.update(existingQuery.data.id, payload);
+      if (isEditing && existing) return invitationService.update(existing.id, payload);
+      if (standalone) return invitationService.create({ ...payload, slug: finalSlug });
       return invitationService.create({ ...payload, slug: finalSlug, restaurantId, eventId: String(eventId) });
     },
     onSuccess: (inv) => {
       setError(null); flash();
-      queryClient.setQueryData(['invitation-by-event', eventId], inv);
-      queryClient.invalidateQueries({ queryKey: ['manager-invitations', restaurantId] });
+      if (standalone) {
+        queryClient.setQueryData(['flyer', inv.id], inv);
+        queryClient.invalidateQueries({ queryKey: ['manager-standalone-flyers'] });
+        if (!flyerId) navigate(`/flyers/${inv.id}`, { replace: true });
+      } else {
+        queryClient.setQueryData(['invitation-by-event', eventId], inv);
+        queryClient.invalidateQueries({ queryKey: ['manager-invitations', restaurantId] });
+      }
     },
     onError: (e) => {
       if (axios.isAxiosError(e)) setError((e.response?.data as { message?: string })?.message ?? e.message);
@@ -102,41 +119,52 @@ export const InvitationBuilderPage = () => {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: () => existingQuery.data ? invitationService.remove(existingQuery.data.id) : Promise.resolve(),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invitation-by-event', eventId] }); navigate(`/restaurants/${restaurantId}`); },
+    mutationFn: () => existing ? invitationService.remove(existing.id) : Promise.resolve(),
+    onSuccess: () => {
+      if (standalone) { queryClient.invalidateQueries({ queryKey: ['manager-standalone-flyers'] }); navigate('/'); }
+      else { queryClient.invalidateQueries({ queryKey: ['invitation-by-event', eventId] }); navigate(`/restaurants/${restaurantId}`); }
+    },
   });
 
   if (!accessToken) return <Navigate to="/login" replace />;
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
   const restaurantSlug = useMemo(() => (restaurant ? restaurant.name.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 63) : ''), [restaurant]);
-  const publicUrl = slug && restaurantSlug ? buildSubdomainBase(`${restaurantSlug}.invitation`, `/${slug}`) : '';
+  // Flyers are served from the `.event.` host: event.v-menu.uz/<slug> (standalone)
+  // or <restaurant>.event.v-menu.uz/<slug> (restaurant-linked).
+  const publicUrl = slug
+    ? (standalone
+        ? buildSubdomainBase('event', `/${slug}`)
+        : (restaurantSlug ? buildSubdomainBase(`${restaurantSlug}.event`, `/${slug}`) : ''))
+    : '';
 
-  const backLink = `/restaurants/${restaurantId}`;
+  const backLink = standalone ? '/' : `/restaurants/${restaurantId}`;
 
-  // New flyer (no invitation for this event yet) → template chooser first.
-  if (!existingQuery.isLoading && !isEditing && !chosen) {
+  // New flyer (nothing loaded yet) → template chooser first.
+  if (!existingLoading && !isEditing && !chosen) {
     return <TemplateChooser kind="flyer" t={t} onPick={applyTemplate} backLink={backLink} />;
   }
+
+  const subtitle = standalone ? slug : `${restaurant?.name ?? ''} · ${event?.customerName ?? ''}`;
 
   return (
     <div className="adm-bg">
       <DesignerTopBar
-        t={t} title={t('block_designer_flyer')} subtitle={`${restaurant?.name ?? ''} · ${event?.customerName ?? ''}`}
+        t={t} title={t('block_designer_flyer')} subtitle={subtitle}
         slug={slug} onSlug={setSlug} publicUrl={publicUrl}
         isPublished={isPublished} onPublished={setIsPublished}
         saving={saveMutation.isPending} isNew={!isEditing}
         onSave={() => saveMutation.mutate()} onSaveTemplate={saveTemplate}
         onDelete={isEditing ? () => { if (confirm('Delete?')) deleteMutation.mutate(); } : undefined}
         backLink={backLink}
-        extra={isEditing && existingQuery.data ? <RequestsButton invitationId={existingQuery.data.id} t={t} /> : undefined}
+        extra={isEditing && existing ? <RequestsButton invitationId={existing.id} t={t} /> : undefined}
       />
 
       {error && <div style={{ maxWidth: 1180, margin: '12px auto 0', padding: 12, borderRadius: 10, background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)', color: '#fca5a5', fontSize: 13 }}>{error}</div>}
       {savedFlash && <div style={{ maxWidth: 1180, margin: '12px auto 0', padding: 12, borderRadius: 10, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)', color: '#4ade80', fontSize: 13, fontWeight: 600 }}>✓ {t('save')}</div>}
 
-      <BlockEditor kind="flyer" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={t} restaurantId={restaurantId}
-        eventDate={event?.eventDate ?? null} logoUrl={restaurant?.logoUrl ?? restaurant?.company?.logoUrl ?? null} />
+      <BlockEditor kind="flyer" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={t} restaurantId={standalone ? '' : restaurantId}
+        eventDate={standalone ? null : (event?.eventDate ?? null)} logoUrl={standalone ? null : (restaurant?.logoUrl ?? restaurant?.company?.logoUrl ?? null)} />
     </div>
   );
 };

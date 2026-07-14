@@ -9,6 +9,7 @@ const controller = new InvitationController();
 const managerOrChief = requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER);
 
 router.get('/', adminAuthMiddleware, managerOrChief, controller.listByRestaurant.bind(controller));
+router.get('/standalone', adminAuthMiddleware, managerOrChief, controller.listStandalone.bind(controller));
 router.get('/by-event/:eventId', adminAuthMiddleware, managerOrChief, controller.getByEvent.bind(controller));
 router.get('/:id', adminAuthMiddleware, managerOrChief, controller.getById.bind(controller));
 router.get('/:id/requests', adminAuthMiddleware, managerOrChief, controller.listRequests.bind(controller));

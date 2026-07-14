@@ -481,7 +481,8 @@ model Invitation {
   id              String    @id @default(cuid())
   slug            String    @unique
   eventId         String?   @unique
-  restaurantId    String
+  // Optional: standalone flyers (for restaurants not in the system) have no restaurant.
+  restaurantId    String?
   createdById     String?
 
   // Ordered freeform block layout for the WYSIWYG designer (JSON array of Block).
@@ -538,7 +539,7 @@ model Invitation {
   updatedAt       DateTime  @updatedAt
 
   event       Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  restaurant  Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant  Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   requests    InvitationRequest[]
 
   @@index([restaurantId])

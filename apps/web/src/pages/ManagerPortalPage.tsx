@@ -168,10 +168,17 @@ export const ManagerPortalPage = () => {
     enabled: !!accessToken,
   });
 
+  const standaloneFlyersQuery = useQuery({
+    queryKey: ['manager-standalone-flyers'],
+    queryFn: () => invitationService.listStandalone(),
+    enabled: !!accessToken,
+  });
+
   if (!accessToken) return <Navigate to="/login" replace />;
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
   const restaurants = restaurantsQuery.data ?? [];
+  const standaloneFlyers = standaloneFlyersQuery.data ?? [];
 
   return (
     <div className="adm-bg">
@@ -222,6 +229,42 @@ export const ManagerPortalPage = () => {
             </button>
           );
           })}
+        </div>
+
+        {/* Standalone flyers — for restaurants not in the system. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '36px 0 16px', flexWrap: 'wrap' }}>
+          <div>
+            <h2 className="adm-title" style={{ margin: 0, fontSize: 20 }}>{t('standalone_flyers')}</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('standalone_flyers_hint')}</p>
+          </div>
+          <button type="button" className="adm-btn-primary" style={{ fontSize: 13 }} onClick={() => navigate('/flyers/new')}>
+            + {t('new_flyer')}
+          </button>
+        </div>
+
+        {standaloneFlyers.length === 0 && !standaloneFlyersQuery.isLoading && (
+          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_flyers_yet')}</p>
+        )}
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          {standaloneFlyers.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => navigate(`/flyers/${f.id}`)}
+              className="adm-card adm-card-hover"
+              style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', cursor: 'pointer', color: '#e2e8f0', flexWrap: 'wrap' }}
+            >
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>{f.slug}</p>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{new Date(f.createdAt).toLocaleDateString()}</p>
+              </div>
+              {!f.isPublished && (
+                <span className="adm-badge" style={{ background: 'rgba(148,163,184,0.15)', color: 'rgba(226,232,240,0.7)', border: '1px solid rgba(148,163,184,0.3)' }}>Draft</span>
+              )}
+              <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
+            </button>
+          ))}
         </div>
       </main>
     </div>

@@ -11,7 +11,8 @@ export function buildSubdomainBase(subdomain: string, path = '/'): string {
 }
 
 // Single-label subdomains reserved for platform roles — never treated as a restaurant slug.
-const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'rmanager', 'www']);
+// `event` is the bare flyer host (event.v-menu.uz) for flyers with no restaurant.
+const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'rmanager', 'www', 'event']);
 
 export function toSubdomainSlug(name: string): string {
   return name
@@ -52,6 +53,18 @@ export function getInvitationSubdomainSlug(): string | null {
   if (!host.endsWith(suffix)) return null;
   const slug = host.slice(0, -suffix.length);
   return slug || null;
+}
+
+// Flyers live on the `.event.` host: `event.v-menu.uz` (no restaurant) or
+// `<restaurant>.event.v-menu.uz`. The public flyer resolves by PATH slug, so this
+// just detects the host; the restaurant label is cosmetic.
+export function isEventSubdomain(): boolean {
+  const host = window.location.hostname;
+  if (host === `event.${ROOT_DOMAIN}`) return true;
+  const suffix = `.event.${ROOT_DOMAIN}`;
+  if (!host.endsWith(suffix)) return false;
+  const label = host.slice(0, -suffix.length);
+  return !!label && !label.includes('.'); // only single-label restaurant slugs
 }
 
 // Matches <restaurant>.food-admin.v-menu.uz — true when on that subdomain.

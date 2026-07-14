@@ -45,6 +45,17 @@ export class InvitationRepository {
     });
   }
 
+  // Standalone flyers (no restaurant) created by a given manager.
+  async listStandaloneByCreator(createdById: string) {
+    return prisma.invitation.findMany({
+      where: { restaurantId: null, createdById },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { requests: true } },
+      },
+    });
+  }
+
   // ── Leads from the flyer "form" block ──
   async addRequest(invitationId: string, data: { name: string; phone: string; message?: string | null }) {
     return prisma.invitationRequest.create({ data: { ...data, invitationId } });
@@ -90,12 +101,12 @@ export class InvitationRepository {
 
   // Events are externally identified by their per-restaurant `eventNumber` (int),
   // not their cuid `id`. The invitation FK is on `id`, so we resolve here.
-  async resolveEventId(eventIdOrNumber: string | null | undefined, restaurantId: string): Promise<string | null> {
+  async resolveEventId(eventIdOrNumber: string | null | undefined, restaurantId: string | null | undefined): Promise<string | null> {
     if (!eventIdOrNumber) return null;
     const trimmed = String(eventIdOrNumber).trim();
     if (!trimmed) return null;
     const asInt = Number(trimmed);
-    if (Number.isInteger(asInt) && asInt > 0) {
+    if (Number.isInteger(asInt) && asInt > 0 && restaurantId) {
       const event = await prisma.event.findFirst({
         where: { eventNumber: asInt, restaurantId },
         select: { id: true },

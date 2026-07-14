@@ -25,7 +25,8 @@ const baseShape = {
   slug: z.string().min(1).max(120).regex(/^[a-zA-Z0-9_-]+$/),
   blocks: blockArray.optional(),
   eventId: z.string().max(40).optional().nullable(),
-  restaurantId: z.string().min(1).max(40),
+  // Optional: standalone flyers (restaurant not in the system) have no restaurantId.
+  restaurantId: z.string().min(1).max(40).optional().nullable(),
 
   promoTitle: z.string().max(120).optional().nullable(),
   promoSubtitle: z.string().max(240).optional().nullable(),

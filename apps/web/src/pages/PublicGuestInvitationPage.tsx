@@ -12,7 +12,6 @@ import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { getInvitationSubdomainSlug } from '../utils/subdomain';
 import { useParams } from 'react-router-dom';
-import { PublicInvitationPage } from './PublicInvitationPage';
 import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 
 const TEXT = '#1a1a1a';
@@ -100,8 +99,10 @@ export const InvitationSubdomainDispatcher = () => {
   if (isLoading) {
     return <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafaf7' }}>...</main>;
   }
-  // Not a guest invitation → fall back to the restaurant flyer renderer.
-  if (isError || !data) return <PublicInvitationPage />;
+  // Flyers now live on the `.event.` host; this subdomain serves only guest invitations.
+  if (isError || !data) {
+    return <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafaf7', color: '#1a1a1a', fontFamily: 'serif' }}>Not found</main>;
+  }
   return <GuestInvitationView invitation={data} />;
 };
 

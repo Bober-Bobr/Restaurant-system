@@ -18,7 +18,8 @@ export type Invitation = {
   id: string;
   slug: string;
   eventId: string | null;
-  restaurantId: string;
+  // null for standalone flyers (restaurant not in the system).
+  restaurantId: string | null;
 
   // Freeform WYSIWYG block layout (empty → legacy fixed renderer is used).
   blocks?: import('../blocks/types').Block[];
@@ -91,6 +92,11 @@ export const invitationService = {
     const { data } = await httpClient.get<Invitation[]>('/invitations', { params: { restaurantId } });
     return data;
   },
+  // Standalone flyers (no restaurant) created by the signed-in manager.
+  async listStandalone(): Promise<Invitation[]> {
+    const { data } = await httpClient.get<Invitation[]>('/invitations/standalone');
+    return data;
+  },
   async byEvent(eventId: string, restaurantId: string): Promise<Invitation | null> {
     try {
       const { data } = await httpClient.get<Invitation>(`/invitations/by-event/${eventId}`, { params: { restaurantId } });
@@ -104,7 +110,7 @@ export const invitationService = {
     const { data } = await httpClient.get<Invitation>(`/invitations/${id}`);
     return data;
   },
-  async create(payload: Partial<Invitation> & { slug: string; restaurantId: string }): Promise<Invitation> {
+  async create(payload: Partial<Invitation> & { slug: string }): Promise<Invitation> {
     const { data } = await httpClient.post<Invitation>('/invitations', payload);
     return data;
   },

@@ -21,6 +21,7 @@ import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
 import { GuestInvitationsPage } from '../pages/GuestInvitationsPage';
 import { GuestInvitationBuilderPage } from '../pages/GuestInvitationBuilderPage';
 import { InvitationSubdomainDispatcher } from '../pages/PublicGuestInvitationPage';
+import { PublicInvitationPage } from '../pages/PublicInvitationPage';
 import { CateringSite } from '../pages/CateringSite';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
@@ -40,7 +41,7 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -67,9 +68,19 @@ export const App = () => {
     return <CateringSite slug={cateringSlug} />;
   }
 
-  // Invitation subdomain (<slug>.invitation.v-menu.uz) → public viewer.
-  // The dispatcher resolves the slug against standalone guest invitations first,
-  // then falls back to the restaurant flyer renderer.
+  // Flyer host (event.v-menu.uz or <restaurant>.event.v-menu.uz) → public flyer,
+  // resolved by the path slug.
+  if (isEventSubdomain()) {
+    return (
+      <Routes>
+        <Route path="/:slug" element={<PublicInvitationPage />} />
+        <Route path="/" element={<PublicInvitationPage />} />
+        <Route path="*" element={<PublicInvitationPage />} />
+      </Routes>
+    );
+  }
+
+  // Invitation subdomain (<slug>.invitation.v-menu.uz) → public guest-invitation viewer.
   if (getInvitationSubdomainSlug()) {
     return (
       <Routes>
@@ -100,6 +111,8 @@ export const App = () => {
         <Route path="/" element={<ManagerPortalPage />} />
         <Route path="/restaurants/:restaurantId" element={<ManagerRestaurantEventsPage />} />
         <Route path="/restaurants/:restaurantId/events/:eventId/invitation" element={<InvitationBuilderPage />} />
+        <Route path="/flyers/new" element={<InvitationBuilderPage />} />
+        <Route path="/flyers/:flyerId" element={<InvitationBuilderPage />} />
         <Route path="/invitations" element={<GuestInvitationsPage />} />
         <Route path="/invitations/new" element={<GuestInvitationBuilderPage />} />
         <Route path="/invitations/:id" element={<GuestInvitationBuilderPage />} />

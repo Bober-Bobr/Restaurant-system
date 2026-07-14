@@ -24,6 +24,12 @@ export class InvitationController {
     response.json(await repo.listByRestaurant(restaurantId));
   }
 
+  // Standalone flyers (no restaurant) created by the signed-in manager.
+  async listStandalone(request: Request, response: Response) {
+    const admin = request.admin!;
+    response.json(await repo.listStandaloneByCreator(admin.id));
+  }
+
   async getByEvent(request: Request, response: Response) {
     const eventIdOrNumber = String(request.params.eventId);
     const restaurantId = String(request.query.restaurantId ?? '').trim();
