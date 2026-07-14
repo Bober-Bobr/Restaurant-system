@@ -76,7 +76,12 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       }
       const src = img(str(p, 'url'));
       if (!src) return <Placeholder label="Image" />;
-      return <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: bool(p, 'rounded') ? 16 : 4 }} /></div>;
+      // Full-bleed: no padding so the photo meets the page edges. The "rounded"
+      // toggle keeps a small inset so its corners aren't clipped at the edge.
+      const rounded = bool(p, 'rounded');
+      return rounded
+        ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
+        : <img src={src} alt="" style={{ width: '100%', display: 'block' }} />;
     }
     case 'button':
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
