@@ -5,7 +5,8 @@ export class DesignTemplateRepository {
   listByOwner(ownerId: string, kind?: string) {
     return prisma.designTemplate.findMany({
       where: { ownerId, ...(kind ? { kind } : {}) },
-      orderBy: { createdAt: 'desc' },
+      // Favorites pinned first, then newest.
+      orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -15,6 +16,10 @@ export class DesignTemplateRepository {
 
   create(data: Prisma.DesignTemplateUncheckedCreateInput) {
     return prisma.designTemplate.create({ data });
+  }
+
+  update(id: string, data: Prisma.DesignTemplateUncheckedUpdateInput) {
+    return prisma.designTemplate.update({ where: { id }, data });
   }
 
   delete(id: string) {

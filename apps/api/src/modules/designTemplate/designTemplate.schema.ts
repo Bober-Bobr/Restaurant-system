@@ -19,3 +19,12 @@ export const createDesignTemplateSchema = z.object({
 });
 
 export type CreateDesignTemplateInput = z.infer<typeof createDesignTemplateSchema>;
+
+export const updateDesignTemplateSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  blocks: blockArray.optional(),
+  theme: z.record(z.string(), z.any()).optional(),
+  isFavorite: z.boolean().optional(),
+});
+
+export type UpdateDesignTemplateInput = z.infer<typeof updateDesignTemplateSchema>;

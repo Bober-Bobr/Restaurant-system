@@ -649,6 +649,8 @@ model DesignTemplate {
   kind      String // flyer | invitation
   blocks    Json     @default("[]")
   theme     Json     @default("{}")
+  // Pinned to the top of the template chooser.
+  isFavorite Boolean @default(false)
   createdAt DateTime @default(now())
 
   owner AdminUser? @relation("ManagerDesignTemplates", fields: [ownerId], references: [id], onDelete: SetNull)

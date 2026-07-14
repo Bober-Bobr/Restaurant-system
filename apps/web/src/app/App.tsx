@@ -20,6 +20,7 @@ import { ManagerRestaurantsPage } from '../pages/ManagerRestaurantsPage';
 import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
 import { GuestInvitationsPage } from '../pages/GuestInvitationsPage';
 import { GuestInvitationBuilderPage } from '../pages/GuestInvitationBuilderPage';
+import { TemplateEditorPage } from '../pages/TemplateEditorPage';
 import { InvitationSubdomainDispatcher } from '../pages/PublicGuestInvitationPage';
 import { PublicInvitationPage } from '../pages/PublicInvitationPage';
 import { CateringSite } from '../pages/CateringSite';
@@ -111,6 +112,7 @@ export const App = () => {
         <Route path="/" element={<ManagerPortalPage />} />
         <Route path="/flyers/new" element={<InvitationBuilderPage />} />
         <Route path="/flyers/:flyerId" element={<InvitationBuilderPage />} />
+        <Route path="/templates/:templateId" element={<TemplateEditorPage />} />
         <Route path="/invitations" element={<GuestInvitationsPage />} />
         <Route path="/invitations/new" element={<GuestInvitationBuilderPage />} />
         <Route path="/invitations/:id" element={<GuestInvitationBuilderPage />} />
