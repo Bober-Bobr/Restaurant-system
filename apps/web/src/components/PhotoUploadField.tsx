@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { photoService } from '../services/photo.service';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { IMAGE_ACCEPT } from '../utils/uploadFormats';
@@ -32,11 +32,18 @@ function imageFromData(data: DataTransfer | null): File | null {
 
 export const PhotoUploadField = ({ value, onChange, restaurantId, label, height = 140, hint = 'or drag & drop / paste' }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Hover flag drives the document-level paste handler (paste events don't reach
+  // a non-editable element by focus, so we route them by which field is hovered).
+  const hoverRef = useRef(false);
+  const uploadingRef = useRef(false);
 
   const handleFile = async (file: File) => {
+    if (uploadingRef.current) return;
+    uploadingRef.current = true;
     setError(null);
     setUploading(true);
     try {
@@ -45,37 +52,57 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
+  // Keep the latest handler for the document paste listener (avoids stale onChange).
+  const handleRef = useRef(handleFile);
+  handleRef.current = handleFile;
+
+  useEffect(() => {
+    const onDocPaste = (e: ClipboardEvent) => {
+      if (!hoverRef.current) return;
+      const f = imageFromData(e.clipboardData);
+      if (f) { e.preventDefault(); handleRef.current(f); }
+    };
+    document.addEventListener('paste', onDocPaste);
+    return () => document.removeEventListener('paste', onDocPaste);
+  }, []);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
-    if (uploading) return;
     const f = imageFromData(e.dataTransfer);
     if (f) handleFile(f);
   };
-  const onPaste = (e: React.ClipboardEvent) => {
-    if (uploading) return;
-    const f = imageFromData(e.clipboardData);
-    if (f) { e.preventDefault(); handleFile(f); }
+  const onDragOver = (e: React.DragEvent) => {
+    // Signal we accept the drop; without this the browser rejects it.
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!dragOver) setDragOver(true);
   };
-  // Drag/paste target props shared by both the filled and empty states. tabIndex
-  // makes the region focusable so a Ctrl/Cmd+V paste lands here.
-  const dropProps = {
-    onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (!dragOver) setDragOver(true); },
-    onDragLeave: (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); },
-    onDrop,
-    onPaste,
-    tabIndex: 0,
+  const onDragLeave = (e: React.DragEvent) => {
+    // Only clear when the pointer actually leaves the field (not a child).
+    if (!rootRef.current || !rootRef.current.contains(e.relatedTarget as Node | null)) setDragOver(false);
   };
 
   const src = value ? (getPhotoUrl(value) ?? value) : null;
 
   return (
-    <div style={{ display: 'grid', gap: 6 }}>
+    <div
+      ref={rootRef}
+      onDragEnter={onDragOver}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onMouseEnter={() => { hoverRef.current = true; }}
+      onMouseLeave={() => { hoverRef.current = false; }}
+      style={{ display: 'grid', gap: 6 }}
+    >
       {label && <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>}
       <input
         ref={inputRef}
@@ -85,8 +112,8 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
         style={{ display: 'none' }}
       />
       {src ? (
-        <div {...dropProps} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(15,23,42,0.5)', border: dragOver ? '1px solid #c9a42c' : '1px solid rgba(255,255,255,0.08)', outline: 'none' }}>
-          <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(15,23,42,0.5)', border: dragOver ? '1px solid #c9a42c' : '1px solid rgba(255,255,255,0.08)' }}>
+          <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
             <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
               style={iconBtnStyle('rgba(201,164,44,0.9)', '#1a1a1a')}>
@@ -96,12 +123,11 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
               style={iconBtnStyle('rgba(220,38,38,0.9)', '#fff')}>×</button>
           </div>
           {dragOver && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(201,164,44,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(201,164,44,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
           )}
         </div>
       ) : (
         <button
-          {...dropProps}
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
@@ -114,15 +140,14 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
             cursor: uploading ? 'wait' : 'pointer',
             fontSize: 13, fontWeight: 600,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-            outline: 'none',
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          {uploading ? 'Uploading…' : 'Upload from device'}
+          {dragOver ? 'Drop image' : uploading ? 'Uploading…' : 'Upload from device'}
           <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(201,164,44,0.65)', textTransform: 'none', letterSpacing: 0 }}>{hint}</span>
         </button>
       )}
