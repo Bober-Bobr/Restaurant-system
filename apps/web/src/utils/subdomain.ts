@@ -64,7 +64,18 @@ export function isEventSubdomain(): boolean {
   const suffix = `.event.${ROOT_DOMAIN}`;
   if (!host.endsWith(suffix)) return false;
   const label = host.slice(0, -suffix.length);
-  return !!label && !label.includes('.'); // only single-label restaurant slugs
+  return !!label && !label.includes('.'); // only single-label slugs
+}
+
+// The flyer slug IS the subdomain label: <slug>.event.v-menu.uz → slug (or null
+// on the bare event host, where the slug comes from the path instead).
+export function getEventSubdomainSlug(): string | null {
+  const host = window.location.hostname;
+  const suffix = `.event.${ROOT_DOMAIN}`;
+  if (!host.endsWith(suffix)) return null;
+  const slug = host.slice(0, -suffix.length);
+  if (!slug || slug.includes('.')) return null;
+  return slug;
 }
 
 // Matches <restaurant>.food-admin.v-menu.uz — true when on that subdomain.

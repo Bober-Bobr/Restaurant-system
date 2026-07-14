@@ -15,7 +15,7 @@ import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { ChiefAdminPage } from '../pages/ChiefAdminPage';
 import { OwnerCabinetPage } from '../pages/OwnerCabinetPage';
-import { ManagerPortalPage, ManagerRestaurantEventsPage } from '../pages/ManagerPortalPage';
+import { ManagerPortalPage } from '../pages/ManagerPortalPage';
 import { ManagerRestaurantsPage } from '../pages/ManagerRestaurantsPage';
 import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
 import { GuestInvitationsPage } from '../pages/GuestInvitationsPage';
@@ -109,8 +109,6 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/" element={<ManagerPortalPage />} />
-        <Route path="/restaurants/:restaurantId" element={<ManagerRestaurantEventsPage />} />
-        <Route path="/restaurants/:restaurantId/events/:eventId/invitation" element={<InvitationBuilderPage />} />
         <Route path="/flyers/new" element={<InvitationBuilderPage />} />
         <Route path="/flyers/:flyerId" element={<InvitationBuilderPage />} />
         <Route path="/invitations" element={<GuestInvitationsPage />} />

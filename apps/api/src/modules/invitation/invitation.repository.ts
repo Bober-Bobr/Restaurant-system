@@ -45,10 +45,11 @@ export class InvitationRepository {
     });
   }
 
-  // Standalone flyers (no restaurant) created by a given manager.
-  async listStandaloneByCreator(createdById: string) {
+  // All flyer projects created by a given manager (flyers are standalone now —
+  // restaurant linkage is legacy and no longer drives the flyer menu).
+  async listByCreator(createdById: string) {
     return prisma.invitation.findMany({
-      where: { restaurantId: null, createdById },
+      where: { createdById },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { requests: true } },

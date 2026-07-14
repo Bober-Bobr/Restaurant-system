@@ -92,9 +92,9 @@ export const invitationService = {
     const { data } = await httpClient.get<Invitation[]>('/invitations', { params: { restaurantId } });
     return data;
   },
-  // Standalone flyers (no restaurant) created by the signed-in manager.
-  async listStandalone(): Promise<Invitation[]> {
-    const { data } = await httpClient.get<Invitation[]>('/invitations/standalone');
+  // All flyer projects created by the signed-in manager.
+  async listMine(): Promise<Invitation[]> {
+    const { data } = await httpClient.get<Invitation[]>('/invitations/mine');
     return data;
   },
   async byEvent(eventId: string, restaurantId: string): Promise<Invitation | null> {

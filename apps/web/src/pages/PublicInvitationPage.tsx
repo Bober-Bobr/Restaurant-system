@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { invitationService, normalizeGalleryItems, type Invitation, type InvitationGalleryItem } from '../services/invitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { getEventSubdomainSlug } from '../utils/subdomain';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
@@ -54,7 +55,10 @@ function Block({ children, padded = true }: { children: React.ReactNode; padded?
 }
 
 export const PublicInvitationPage = () => {
-  const { slug = '' } = useParams();
+  // Flyers publish at <slug>.event.v-menu.uz — the slug is the subdomain label.
+  // A path slug (event.v-menu.uz/<slug>) still works as a fallback.
+  const { slug: pathSlug = '' } = useParams();
+  const slug = getEventSubdomainSlug() || pathSlug;
   const { data: invitation, isLoading, isError } = useQuery<Invitation>({
     queryKey: ['public-invitation', slug],
     queryFn: () => invitationService.publicBySlug(slug),

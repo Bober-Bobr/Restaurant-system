@@ -1,9 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
-import { restaurantService } from '../services/restaurant.service';
-import { eventService } from '../services/event.service';
 import { invitationService } from '../services/invitation.service';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
@@ -11,7 +8,8 @@ import { translate, locales, type Locale } from '../utils/translate';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
-import { buildAbsoluteUrl } from '../utils/subdomain';
+import { buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
+import { flyerCoverUrl } from '../blocks/cover';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
@@ -122,8 +120,7 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
   );
 }
 
-// Top-level switch between the two designer sections: Flyers (restaurant/event
-// linked) and standalone Invitations.
+// Top-level switch between the two designer sections: Flyers and Invitations.
 export function ManagerTabs({ active, locale }: { active: 'flyers' | 'invitations'; locale: Locale }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const navigate = useNavigate();
@@ -153,7 +150,9 @@ export function ManagerTabs({ active, locale }: { active: 'flyers' | 'invitation
   );
 }
 
-// ── /  (restaurant list) ──────────────────────────────────────────────────
+// ── /  (flyer project gallery, Taplink-style) ─────────────────────────────
+// Flyers are standalone projects: each card shows the cover image, the project
+// name (slug) and its public link. Restaurants are no longer part of this flow.
 
 export const ManagerPortalPage = () => {
   const role = useAuthStore((s) => s.role);
@@ -162,228 +161,92 @@ export const ManagerPortalPage = () => {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const navigate = useNavigate();
 
-  const restaurantsQuery = useQuery({
-    queryKey: ['manager-restaurants'],
-    queryFn: () => restaurantService.list(),
-    enabled: !!accessToken,
-  });
-
-  const standaloneFlyersQuery = useQuery({
-    queryKey: ['manager-standalone-flyers'],
-    queryFn: () => invitationService.listStandalone(),
+  const flyersQuery = useQuery({
+    queryKey: ['manager-my-flyers'],
+    queryFn: () => invitationService.listMine(),
     enabled: !!accessToken,
   });
 
   if (!accessToken) return <Navigate to="/login" replace />;
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
-  const restaurants = restaurantsQuery.data ?? [];
-  const standaloneFlyers = standaloneFlyersQuery.data ?? [];
+  const flyers = flyersQuery.data ?? [];
+  const linkText = (slug: string) => buildSubdomainBase(`${slug}.event`, '/').replace(/^https:\/\//, '').replace(/\/$/, '');
 
   return (
     <div className="adm-bg">
       <ManagerNav locale={locale} />
       <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
         <ManagerTabs active="flyers" locale={locale} />
-        <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('my_restaurants')}</h1>
+        <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('my_flyers')}</h1>
 
-        {restaurantsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
-        {restaurants.length === 0 && !restaurantsQuery.isLoading && (
-          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_restaurants_yet')}</p>
-        )}
+        {flyersQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
 
-        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {restaurants.map((r) => {
-            // Fall back to the company logo (as every other view does), so a
-            // restaurant created without its own logo still shows one once the
-            // company has a logo — and never depends on a logo just to appear.
-            const effLogo = r.logoUrl || r.company?.logoUrl || null;
-            const displayName = r.name || r.company?.name || '—';
-            return (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => navigate(`/restaurants/${r.id}`)}
-              className="adm-card adm-card-hover tablet-fade-up"
-              style={{
-                padding: 18,
-                display: 'flex', alignItems: 'center', gap: 14,
-                textAlign: 'left', cursor: 'pointer',
-                color: '#e2e8f0',
-              }}
-            >
-              {effLogo
-                ? <img src={getPhotoUrl(effLogo) ?? undefined} alt={displayName}
-                    style={{ height: 56, width: 'auto', maxWidth: 96, objectFit: 'contain', flexShrink: 0 }} />
-                : <div style={{ width: 56, height: 56, borderRadius: 12, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 22, fontWeight: 700, color: '#c9a42c' }}>{displayName.charAt(0)}</span>
-                  </div>
-              }
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>{displayName}</p>
-                {r.address && (
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{r.address}</p>
-                )}
-              </div>
-              <span style={{ color: '#c9a42c', fontSize: 22, flexShrink: 0 }}>›</span>
-            </button>
-          );
-          })}
-        </div>
-
-        {/* Standalone flyers — for restaurants not in the system. */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '36px 0 16px', flexWrap: 'wrap' }}>
-          <div>
-            <h2 className="adm-title" style={{ margin: 0, fontSize: 20 }}>{t('standalone_flyers')}</h2>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t('standalone_flyers_hint')}</p>
-          </div>
-          <button type="button" className="adm-btn-primary" style={{ fontSize: 13 }} onClick={() => navigate('/flyers/new')}>
-            + {t('new_flyer')}
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+          {/* New project card */}
+          <button
+            type="button"
+            onClick={() => navigate('/flyers/new')}
+            className="adm-card adm-card-hover tablet-fade-up"
+            style={{
+              minHeight: 280, cursor: 'pointer', color: '#e2e8f0',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+            }}
+          >
+            <span style={{
+              width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 30, fontWeight: 300, color: '#f8fafc',
+            }}>+</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{t('new_flyer')}</span>
           </button>
-        </div>
 
-        {standaloneFlyers.length === 0 && !standaloneFlyersQuery.isLoading && (
-          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_flyers_yet')}</p>
-        )}
-
-        <div style={{ display: 'grid', gap: 10 }}>
-          {standaloneFlyers.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => navigate(`/flyers/${f.id}`)}
-              className="adm-card adm-card-hover"
-              style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', cursor: 'pointer', color: '#e2e8f0', flexWrap: 'wrap' }}
-            >
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>{f.slug}</p>
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{new Date(f.createdAt).toLocaleDateString()}</p>
-              </div>
-              {!f.isPublished && (
-                <span className="adm-badge" style={{ background: 'rgba(148,163,184,0.15)', color: 'rgba(226,232,240,0.7)', border: '1px solid rgba(148,163,184,0.3)' }}>Draft</span>
-              )}
-              <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
-            </button>
-          ))}
-        </div>
-      </main>
-    </div>
-  );
-};
-
-// ── /restaurants/:restaurantId  (events list) ─────────────────────────────
-
-export const ManagerRestaurantEventsPage = () => {
-  const { restaurantId = '' } = useParams();
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const role = useAuthStore((s) => s.role);
-  const { locale } = useAdminStore();
-  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<'ALL' | 'DRAFT' | 'CONFIRMED' | 'CANCELLED'>('ALL');
-
-  const restaurantsQuery = useQuery({
-    queryKey: ['manager-restaurants'],
-    queryFn: () => restaurantService.list(),
-    enabled: !!accessToken,
-  });
-
-  const eventsQuery = useQuery({
-    queryKey: ['manager-events', restaurantId],
-    queryFn: () => eventService.list({ restaurantId }),
-    enabled: !!accessToken && !!restaurantId,
-  });
-
-  const invitationsQuery = useQuery({
-    queryKey: ['manager-invitations', restaurantId],
-    queryFn: () => invitationService.listByRestaurant(restaurantId),
-    enabled: !!accessToken && !!restaurantId,
-  });
-
-  if (!accessToken) return <Navigate to="/login" replace />;
-  if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
-
-  const restaurant = restaurantsQuery.data?.find((r) => r.id === restaurantId);
-  const events = eventsQuery.data ?? [];
-  const invitations = invitationsQuery.data ?? [];
-  const eventHasInvitation = (eventId: string) => invitations.some((i) => i.eventId === eventId);
-
-  const filtered = status === 'ALL' ? events : events.filter((e) => e.status === status);
-
-  return (
-    <div className="adm-bg">
-      <ManagerNav pageTitle={t('restaurant_events')} currentRestaurantName={restaurant?.name ?? null} locale={locale} />
-      <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
-          <div>
-            <Link to="/" style={{ fontSize: 12, color: 'rgba(226,232,240,0.6)', textDecoration: 'none' }}>← {t('all_restaurants')}</Link>
-            <h1 className="adm-title" style={{ margin: '6px 0 0' }}>{restaurant?.name ?? t('my_restaurants')} — {t('events')}</h1>
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['ALL', 'DRAFT', 'CONFIRMED', 'CANCELLED'] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStatus(s)}
-                style={{
-                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                  border: '1px solid',
-                  borderColor: status === s ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
-                  background: status === s ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-                  color: status === s ? '#c9a42c' : 'rgba(226,232,240,0.65)',
-                  cursor: 'pointer',
-                }}
-              >{s}</button>
-            ))}
-          </div>
-        </div>
-
-        {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
-        {!eventsQuery.isLoading && filtered.length === 0 && (
-          <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('no_events')}</p>
-        )}
-
-        <div style={{ display: 'grid', gap: 10 }}>
-          {filtered.map((e) => {
-            const hasInv = eventHasInvitation(e.id as unknown as string);
+          {flyers.map((f) => {
+            const cover = flyerCoverUrl(f);
+            const coverSrc = cover ? (getPhotoUrl(cover) ?? cover) : null;
             return (
               <button
-                key={e.id}
+                key={f.id}
                 type="button"
-                onClick={() => navigate(`/restaurants/${restaurantId}/events/${e.id}/invitation`)}
-                className="adm-card adm-card-hover"
-                style={{
-                  padding: '14px 16px',
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  textAlign: 'left', cursor: 'pointer', color: '#e2e8f0',
-                  flexWrap: 'wrap',
-                }}
+                onClick={() => navigate(`/flyers/${f.id}`)}
+                className="adm-card adm-card-hover tablet-fade-up"
+                style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', color: '#e2e8f0', textAlign: 'left', display: 'flex', flexDirection: 'column' }}
               >
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>{e.customerName}</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
-                    {new Date(e.eventDate).toLocaleString()}
-                    {e.eventType ? ` · ${e.eventType}` : ''}
-                    {e.guestCount ? ` · ${e.guestCount} ${t('guests')}` : ''}
+                {/* Cover */}
+                <div style={{
+                  height: 210, position: 'relative', flexShrink: 0,
+                  background: coverSrc
+                    ? `url(${coverSrc}) top center / cover`
+                    : `linear-gradient(160deg, ${f.accentColor || '#c9a42c'}22 0%, rgba(15,23,42,0.9) 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {!coverSrc && (
+                    <span style={{ fontSize: 40, fontWeight: 700, color: f.accentColor || '#c9a42c', opacity: 0.8 }}>
+                      {f.slug.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  {!f.isPublished && (
+                    <span className="adm-badge" style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(15,23,42,0.85)', color: 'rgba(226,232,240,0.8)', border: '1px solid rgba(148,163,184,0.35)' }}>
+                      {t('unpublished')}
+                    </span>
+                  )}
+                </div>
+                {/* Name + link */}
+                <div style={{ padding: '10px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.slug}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: '#c9a42c', display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ opacity: 0.7 }}>{f.isPublished ? '★' : '☆'}</span>
+                    {linkText(f.slug)}
                   </p>
                 </div>
-                <span className="adm-badge" style={{
-                  background: e.status === 'CONFIRMED' ? 'rgba(34,197,94,0.15)' : e.status === 'CANCELLED' ? 'rgba(220,38,38,0.15)' : 'rgba(201,164,44,0.15)',
-                  color: e.status === 'CONFIRMED' ? '#4ade80' : e.status === 'CANCELLED' ? '#fca5a5' : '#c9a42c',
-                  border: `1px solid ${e.status === 'CONFIRMED' ? 'rgba(34,197,94,0.35)' : e.status === 'CANCELLED' ? 'rgba(220,38,38,0.35)' : 'rgba(201,164,44,0.3)'}`,
-                }}>
-                  {e.status}
-                </span>
-                {hasInv && (
-                  <span className="adm-badge" style={{ background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.3)' }}>
-                    Invitation ✓
-                  </span>
-                )}
-                <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
               </button>
             );
           })}
         </div>
+
+        {!flyersQuery.isLoading && flyers.length === 0 && (
+          <p style={{ color: 'rgba(226,232,240,0.5)', marginTop: 16 }}>{t('no_flyers_yet')}</p>
+        )}
       </main>
     </div>
   );

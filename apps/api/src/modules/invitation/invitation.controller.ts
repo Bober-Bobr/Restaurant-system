@@ -24,10 +24,10 @@ export class InvitationController {
     response.json(await repo.listByRestaurant(restaurantId));
   }
 
-  // Standalone flyers (no restaurant) created by the signed-in manager.
-  async listStandalone(request: Request, response: Response) {
+  // All flyer projects created by the signed-in manager.
+  async listMine(request: Request, response: Response) {
     const admin = request.admin!;
-    response.json(await repo.listStandaloneByCreator(admin.id));
+    response.json(await repo.listByCreator(admin.id));
   }
 
   async getByEvent(request: Request, response: Response) {
