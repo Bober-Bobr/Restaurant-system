@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool, BLOCK_DEFS } from './types';
+import { str, bool, BLOCK_DEFS, computeOverlay } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
 
@@ -50,7 +50,7 @@ const img = (u?: string | null) => (u ? (getPhotoUrl(u) ?? u) : null);
 const arr = <T,>(p: BlockProps, k: string): T[] => (Array.isArray(p[k]) ? (p[k] as T[]) : []);
 
 // ── One block → markup ───────────────────────────────────────────────────────
-export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+export function BlockView({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderCtx; overlayImageUrl?: string | null }) {
   // Skip unknown/removed block types (e.g. legacy "artist" blocks in old designs).
   if (!BLOCK_DEFS[block.type]) return null;
   // The section sets the inherited text color; sub-components use `inherit`.
@@ -59,13 +59,13 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   return (
     <ScaleCtx.Provider value={ctx.textScale ?? 1}>
       <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
-        <BlockBody block={block} ctx={ctx} />
+        <BlockBody block={block} ctx={ctx} overlayImageUrl={overlayImageUrl} />
       </AnimatedSection>
     </ScaleCtx.Provider>
   );
 }
 
-function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+function BlockBody({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderCtx; overlayImageUrl?: string | null }) {
   const { props: p } = block;
   const accent = ctx.accent;
   const fs = useFs();
@@ -104,7 +104,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
       // No explicit target → count down to the linked event's start time.
-      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} bgImage={img(str(p, 'bgImage'))} accent={accent} />;
+      // Overlay mode → use the photo from the image block above as the background.
+      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} bgImage={bool(p, 'overlay') ? img(overlayImageUrl) : null} accent={accent} />;
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
@@ -326,25 +327,40 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
 
 function GalleryCarousel({ items, accent }: { items: GalleryItem[]; accent: string }) {
   const [idx, setIdx] = useState(0);
+  const touchX = useRef<number | null>(null);
   if (items.length === 0) return <Placeholder label="Gallery" />;
-  const cur = items[Math.min(idx, items.length - 1)];
+  const clamped = Math.min(idx, items.length - 1);
+  const cur = items[clamped];
   const src = img(cur.photoUrl);
   const video = cur.videoUrl || null;
+  const atStart = clamped === 0;
+  const atEnd = clamped === items.length - 1;
+  const go = (dir: -1 | 1) => setIdx((i) => Math.max(0, Math.min(items.length - 1, i + dir)));
+  // Swipe: horizontal drag past a small threshold moves one photo (no wrap-around).
+  const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (dx <= -40) go(1);
+    else if (dx >= 40) go(-1);
+  };
   return (
     <div style={{ padding: '12px 16px' }}>
-      <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-        <div onClick={() => video && window.open(video, '_blank', 'noopener,noreferrer')} style={{ aspectRatio: '4/3', cursor: video ? 'pointer' : 'default' }}>
+      <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div onClick={() => video && window.open(video, '_blank', 'noopener,noreferrer')} style={{ aspectRatio: '3/4', cursor: video ? 'pointer' : 'default' }}>
           {src && <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
           {video && <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, border: '2px solid rgba(255,255,255,0.85)' }}>▶</span>}
         </div>
-        {items.length > 1 && (
-          <>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + items.length) % items.length); }} style={navBtn('left', accent)}>‹</button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % items.length); }} style={navBtn('right', accent)}>›</button>
-          </>
+        {/* Arrows appear only when there's somewhere to go in that direction. */}
+        {items.length > 1 && !atStart && (
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent)}>‹</button>
+        )}
+        {items.length > 1 && !atEnd && (
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent)}>›</button>
         )}
       </div>
-      {items.length > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? accent : '#ccc' }} />)}</div>}
+      {items.length > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === clamped ? accent : '#ccc' }} />)}</div>}
     </div>
   );
 }
@@ -644,11 +660,15 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
 }
 
 // Render an ordered block list (used by both the editor preview and public pages).
-// Hidden blocks are skipped entirely on the page.
+// Hidden blocks are skipped entirely on the page; an image absorbed by an overlay
+// countdown below it is skipped too (it renders as that timer's background).
 export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) {
+  const { overlayUrl, absorbed } = computeOverlay(blocks);
   return (
     <ScaleCtx.Provider value={ctx.textScale ?? 1}>
-      {blocks.filter((b) => !b.hidden).map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
+      {blocks.filter((b) => !b.hidden && !absorbed.has(b.id)).map((b) => (
+        <BlockView key={b.id} block={b} ctx={ctx} overlayImageUrl={overlayUrl[b.id] ?? null} />
+      ))}
     </ScaleCtx.Provider>
   );
 }

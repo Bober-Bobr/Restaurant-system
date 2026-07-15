@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Block, BlockType } from './types';
-import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
+import { BLOCK_DEFS, PALETTE_ORDER, createBlock, computeOverlay } from './types';
 import { BlockView, readableText, type RenderCtx } from './BlockRenderer';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
@@ -76,6 +76,8 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
   const preview = mode === 'preview';
+  // Overlay countdowns pull the photo from the image block above them.
+  const { overlayUrl, absorbed } = computeOverlay(blocks);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 12px 120px 56px' }}>
@@ -92,7 +94,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           )}
           {blocks.map((b, i) => (
             preview ? (
-              b.hidden ? null : <BlockView key={b.id} block={b} ctx={ctx} />
+              (b.hidden || absorbed.has(b.id)) ? null : <BlockView key={b.id} block={b} ctx={ctx} overlayImageUrl={overlayUrl[b.id] ?? null} />
             ) : (
               <EditableBlock
                 key={b.id}
@@ -108,7 +110,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
                 onDragStart={() => setDragIndex(i)}
                 onDropOn={() => { if (dragIndex !== null) move(dragIndex, i); setDragIndex(null); }}
               >
-                <BlockView block={b} ctx={ctx} />
+                <BlockView block={b} ctx={ctx} overlayImageUrl={overlayUrl[b.id] ?? null} />
               </EditableBlock>
             )
           ))}

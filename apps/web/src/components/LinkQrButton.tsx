@@ -2,8 +2,64 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import type { TranslationKey } from '../utils/translate';
+import logoUrl from '../assets/qr-logo.png';
 
 type T = (k: TranslationKey) => string;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Builds a scannable QR for `url` with the v-menu logo composited in the center.
+// Uses the highest error-correction level ('H', ~30% recovery) so the code still
+// scans reliably despite the logo covering the middle.
+async function buildQrWithLogo(url: string): Promise<string> {
+  const size = 512;
+  const qrDataUrl = await QRCode.toDataURL(url, {
+    width: size, margin: 2, errorCorrectionLevel: 'H',
+    color: { dark: '#0b1120', light: '#ffffff' },
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return qrDataUrl;
+  const qrImg = await loadImage(qrDataUrl);
+  ctx.drawImage(qrImg, 0, 0, size, size);
+  try {
+    const logo = await loadImage(logoUrl);
+    // Center plate: white rounded square so the logo sits on a clean background.
+    const box = Math.round(size * 0.24);
+    const pad = Math.round(box * 0.16);
+    const plate = box + pad * 2;
+    const px = (size - plate) / 2;
+    const py = (size - plate) / 2;
+    roundRect(ctx, px, py, plate, plate, Math.round(plate * 0.16));
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    // Contain the (wide) logo inside the box, preserving aspect ratio.
+    const ar = logo.width / logo.height;
+    let lw = box, lh = box;
+    if (ar >= 1) lh = box / ar; else lw = box * ar;
+    ctx.drawImage(logo, (size - lw) / 2, (size - lh) / 2, lw, lh);
+  } catch { /* logo optional — plain QR still returned */ }
+  return canvas.toDataURL('image/png');
+}
 
 // Top-bar button that reveals the finished project's public link together with a
 // scannable QR code. Both can be reopened at any time and downloaded/copied.
@@ -26,7 +82,8 @@ function LinkQrModal({ url, filename, t, onClose }: { url: string; filename: str
   useEffect(() => {
     let alive = true;
     if (!url) { setQr(null); return; }
-    QRCode.toDataURL(url, { width: 512, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0b1120ff', light: '#ffffffff' } })
+    setQr(null);
+    buildQrWithLogo(url)
       .then((data) => { if (alive) setQr(data); })
       .catch(() => { if (alive) setQr(null); });
     return () => { alive = false; };

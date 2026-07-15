@@ -135,9 +135,9 @@ function restaurantFlyer(): BuiltinTemplate {
       }, { type: 'fade', durationMs: 700, delayMs: 80 }),
       divider(),
 
-      // Gift promo + phone CTA + logo footer
+      // Gift section + phone CTA + logo footer (photo instead of a promo block)
       b('heading', { text: 'ПОЛУЧИТЕ ПОДАРОК', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
-      b('promo', { title: 'ОНЛАЙН ПРИГЛАСИТЕЛЬНОЕ', imageUrl: '', code: '#MBEK78', subtitle: '' }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
+      b('image', { url: '', rounded: true }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
       b('text', { text: '📞 Чтобы получить онлайн-пригласительное, позвоните по указанному номеру и назовите промокод: #MBEK78', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
       b('button', { label: 'ТЕЛЕФОН', action: { kind: 'phone', value: PHONE } }, { type: 'fade', durationMs: 600, delayMs: 0 }),
       // Restaurant logo is injected automatically from the restaurant settings.

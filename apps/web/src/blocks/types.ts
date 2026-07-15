@@ -125,12 +125,13 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   countdown: {
     type: 'countdown', icon: '⏱', labelKey: 'block_countdown',
-    defaultProps: { targetAt: null, label: '', bgImage: '' },
+    defaultProps: { targetAt: null, label: '', overlay: false },
     defaultAnim: { type: 'zoom', durationMs: 800, delayMs: 0 },
     fields: [
       { key: 'label', labelKey: 'bf_label', type: 'text' },
       { key: 'targetAt', labelKey: 'bf_datetime', type: 'datetime' },
-      { key: 'bgImage', labelKey: 'bf_bg_image', type: 'image' },
+      // Overlay: sit on top of the image block directly above, using its photo.
+      { key: 'overlay', labelKey: 'bf_overlay', type: 'boolean' },
     ],
   },
   timing: {
@@ -263,9 +264,10 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 };
 
 // All block types, in the order they appear in the Add-block palette.
-// `menu` is intentionally omitted — flyers use a static photo (image block) instead.
+// `menu` and `promo` are intentionally omitted — a static photo (image block) is
+// used instead. Both types are still rendered for back-compat with old designs.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'html', 'divider',
+  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'html', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {
@@ -276,3 +278,22 @@ export function createBlock(type: BlockType): Block {
 // Small typed prop readers used by the renderer/settings.
 export const str = (p: BlockProps, k: string, d = ''): string => (typeof p[k] === 'string' ? (p[k] as string) : d);
 export const bool = (p: BlockProps, k: string): boolean => p[k] === true;
+
+// A countdown with `overlay` enabled sits on top of the image block directly
+// above it, using that photo as its background. This resolves, for each such
+// countdown, the preceding image's URL, and lists the image ids it absorbs
+// (so the page doesn't render that image a second time on its own).
+export function computeOverlay(blocks: Block[]): { overlayUrl: Record<string, string>; absorbed: Set<string> } {
+  const overlayUrl: Record<string, string> = {};
+  const absorbed = new Set<string>();
+  for (let i = 1; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (b.type !== 'countdown' || b.props.overlay !== true) continue;
+    const prev = blocks[i - 1];
+    if (prev.type === 'image' && typeof prev.props.url === 'string' && prev.props.url) {
+      overlayUrl[b.id] = prev.props.url;
+      absorbed.add(prev.id);
+    }
+  }
+  return { overlayUrl, absorbed };
+}
