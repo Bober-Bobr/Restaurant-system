@@ -15,16 +15,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 // Builds a scannable QR for `url` with the v-menu logo composited in the center.
 // Uses the highest error-correction level ('H', ~30% recovery) so the code still
 // scans reliably despite the logo covering the middle.
@@ -43,20 +33,21 @@ async function buildQrWithLogo(url: string): Promise<string> {
   ctx.drawImage(qrImg, 0, 0, size, size);
   try {
     const logo = await loadImage(logoUrl);
-    // Center plate: white rounded square so the logo sits on a clean background.
-    const box = Math.round(size * 0.24);
-    const pad = Math.round(box * 0.16);
-    const plate = box + pad * 2;
-    const px = (size - plate) / 2;
-    const py = (size - plate) / 2;
-    roundRect(ctx, px, py, plate, plate, Math.round(plate * 0.16));
+    // The logo is a round black mark on a transparent background. Draw a white
+    // circle just larger than it as a quiet zone so it stays scannable, then the
+    // logo itself — no square plate, so it reads as the round logo dropped in.
+    const box = Math.round(size * 0.26);
+    const cx = size / 2;
+    const cy = size / 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, box / 2 + Math.round(box * 0.09), 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
-    // Contain the (wide) logo inside the box, preserving aspect ratio.
+    // Contain the logo inside the box, preserving aspect ratio.
     const ar = logo.width / logo.height;
     let lw = box, lh = box;
     if (ar >= 1) lh = box / ar; else lw = box * ar;
-    ctx.drawImage(logo, (size - lw) / 2, (size - lh) / 2, lw, lh);
+    ctx.drawImage(logo, cx - lw / 2, cy - lh / 2, lw, lh);
   } catch { /* logo optional — plain QR still returned */ }
   return canvas.toDataURL('image/png');
 }

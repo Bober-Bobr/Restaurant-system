@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool, BLOCK_DEFS, computeOverlay } from './types';
+import { str, bool, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
 
@@ -50,7 +50,7 @@ const img = (u?: string | null) => (u ? (getPhotoUrl(u) ?? u) : null);
 const arr = <T,>(p: BlockProps, k: string): T[] => (Array.isArray(p[k]) ? (p[k] as T[]) : []);
 
 // ── One block → markup ───────────────────────────────────────────────────────
-export function BlockView({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderCtx; overlayImageUrl?: string | null }) {
+export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   // Skip unknown/removed block types (e.g. legacy "artist" blocks in old designs).
   if (!BLOCK_DEFS[block.type]) return null;
   // The section sets the inherited text color; sub-components use `inherit`.
@@ -59,13 +59,13 @@ export function BlockView({ block, ctx, overlayImageUrl }: { block: Block; ctx: 
   return (
     <ScaleCtx.Provider value={ctx.textScale ?? 1}>
       <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
-        <BlockBody block={block} ctx={ctx} overlayImageUrl={overlayImageUrl} />
+        <BlockBody block={block} ctx={ctx} />
       </AnimatedSection>
     </ScaleCtx.Provider>
   );
 }
 
-function BlockBody({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderCtx; overlayImageUrl?: string | null }) {
+function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
   const accent = ctx.accent;
   const fs = useFs();
@@ -96,6 +96,19 @@ function BlockBody({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderC
       // Full-bleed: no padding so the photo meets the page edges. The "rounded"
       // toggle keeps a small inset so its corners aren't clipped at the edge.
       const rounded = bool(p, 'rounded');
+      // Optional countdown pinned to the bottom of the photo.
+      const showTimer = bool(p, 'timer');
+      const timerAt = (typeof p.timerAt === 'string' && p.timerAt ? p.timerAt : null) ?? ctx.eventDate ?? null;
+      if (showTimer) {
+        return (
+          <div style={{ position: 'relative', padding: rounded ? '12px 16px' : 0 }}>
+            <img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: rounded ? 16 : 0 }} />
+            <div style={{ position: 'absolute', left: rounded ? 16 : 0, right: rounded ? 16 : 0, bottom: rounded ? 12 : 0, paddingTop: 40, borderRadius: rounded ? '0 0 16px 16px' : 0, background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.28) 55%, rgba(0,0,0,0) 100%)' }}>
+              <CountdownView targetAt={timerAt} label={str(p, 'timerLabel')} accent={accent} light />
+            </div>
+          </div>
+        );
+      }
       return rounded
         ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
         : <img src={src} alt="" style={{ width: '100%', display: 'block' }} />;
@@ -104,12 +117,11 @@ function BlockBody({ block, ctx, overlayImageUrl }: { block: Block; ctx: RenderC
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
       // No explicit target → count down to the linked event's start time.
-      // Overlay mode → use the photo from the image block above as the background.
-      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} bgImage={bool(p, 'overlay') ? img(overlayImageUrl) : null} accent={accent} />;
+      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} accent={accent} />;
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
-      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} />;
+      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} autoSlide={bool(p, 'autoSlide')} />;
     case 'menu':
       return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
     case 'link':
@@ -265,7 +277,9 @@ function CdColon({ accent }: { accent: string }) {
   return <div style={{ height: CD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}><span style={dot} /><span style={dot} /></div>;
 }
 
-function CountdownView({ targetAt, label, bgImage, accent }: { targetAt: string | null; label: string; bgImage?: string | null; accent: string }) {
+// `light` = rendered over a photo (e.g. the image block's bottom timer): text is
+// forced white and padding tightened; otherwise it inherits the page text color.
+function CountdownView({ targetAt, label, accent, light }: { targetAt: string | null; label: string; accent: string; light?: boolean }) {
   const fs = useFs();
   const cd = useCountdown(targetAt);
   const groups = [
@@ -274,34 +288,27 @@ function CountdownView({ targetAt, label, bgImage, accent }: { targetAt: string 
     { v: cd?.minutes ?? 0, l: 'Минуты' },
     { v: cd?.seconds ?? 0, l: 'Секунды' },
   ];
-  // When a background image is set, the timer is overlaid on it (image acts as
-  // the section's own background), with a subtle scrim so the cards stay legible.
-  const sectionStyle: React.CSSProperties = bgImage
-    ? { padding: '40px 12px', textAlign: 'center', position: 'relative', background: `url(${bgImage}) center / cover`, borderRadius: 4, overflow: 'hidden' }
-    : { padding: '28px 12px', textAlign: 'center' };
+  const labelColor = light ? '#fff' : 'inherit';
   return (
-    <section style={sectionStyle}>
+    <section style={{ padding: light ? '8px 12px 12px' : '28px 12px', textAlign: 'center' }}>
       <style>{CD_KEYFRAMES}</style>
-      {bgImage && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)' }} />}
-      <div style={{ position: 'relative' }}>
-        {label && <h2 style={{ margin: '0 0 20px', fontSize: fs(22), letterSpacing: '0.08em', color: bgImage ? '#fff' : 'inherit' }}>{label}</h2>}
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          {groups.map((g, gi) => {
-            const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
-            return (
-              <div key={g.l} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <FlipDigit value={s[0]} />
-                    <FlipDigit value={s[1]} />
-                  </div>
-                  <span style={{ fontSize: fs(10), letterSpacing: '0.08em', textTransform: 'uppercase', color: bgImage ? '#fff' : 'inherit', opacity: 0.8, fontFamily: 'system-ui, sans-serif' }}>{g.l}</span>
+      {label && <h2 style={{ margin: light ? '0 0 12px' : '0 0 20px', fontSize: fs(light ? 18 : 22), letterSpacing: '0.08em', color: labelColor }}>{label}</h2>}
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        {groups.map((g, gi) => {
+          const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
+          return (
+            <div key={g.l} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <FlipDigit value={s[0]} />
+                  <FlipDigit value={s[1]} />
                 </div>
-                {gi < groups.length - 1 && <CdColon accent={accent} />}
+                <span style={{ fontSize: fs(10), letterSpacing: '0.08em', textTransform: 'uppercase', color: labelColor, opacity: 0.85, fontFamily: 'system-ui, sans-serif' }}>{g.l}</span>
               </div>
-            );
-          })}
-        </div>
+              {gi < groups.length - 1 && <CdColon accent={accent} />}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -325,18 +332,22 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
   );
 }
 
-function GalleryCarousel({ items, accent }: { items: GalleryItem[]; accent: string }) {
+function GalleryCarousel({ items, accent, autoSlide }: { items: GalleryItem[]; accent: string; autoSlide?: boolean }) {
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
-  if (items.length === 0) return <Placeholder label="Gallery" />;
-  const clamped = Math.min(idx, items.length - 1);
-  const cur = items[clamped];
-  const src = img(cur.photoUrl);
-  const video = cur.videoUrl || null;
+  const n = items.length;
+  const clamped = n ? Math.min(idx, n - 1) : 0;
   const atStart = clamped === 0;
-  const atEnd = clamped === items.length - 1;
-  const go = (dir: -1 | 1) => setIdx((i) => Math.max(0, Math.min(items.length - 1, i + dir)));
-  // Swipe: horizontal drag past a small threshold moves one photo (no wrap-around).
+  const atEnd = clamped === n - 1;
+  // Manual moves clamp at the ends; auto-slide wraps around continuously.
+  const go = (dir: -1 | 1) => setIdx((i) => Math.max(0, Math.min(n - 1, i + dir)));
+  // Auto-slide: cycle every 3.5s using the same sliding transition (wraps at end).
+  useEffect(() => {
+    if (!autoSlide || n < 2) return;
+    const id = window.setInterval(() => setIdx((i) => (i + 1) % n), 3500);
+    return () => window.clearInterval(id);
+  }, [autoSlide, n]);
+  if (n === 0) return <Placeholder label="Gallery" />;
   const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchX.current === null) return;
@@ -348,19 +359,29 @@ function GalleryCarousel({ items, accent }: { items: GalleryItem[]; accent: stri
   return (
     <div style={{ padding: '12px 16px' }}>
       <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div onClick={() => video && window.open(video, '_blank', 'noopener,noreferrer')} style={{ aspectRatio: '3/4', cursor: video ? 'pointer' : 'default' }}>
-          {src && <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-          {video && <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, border: '2px solid rgba(255,255,255,0.85)' }}>▶</span>}
+        {/* Sliding track: all photos in a row, shifted by translateX with a smooth transition. */}
+        <div style={{ display: 'flex', transform: `translateX(-${clamped * 100}%)`, transition: 'transform 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
+          {items.map((it, i) => {
+            const s = img(it.photoUrl);
+            const video = it.videoUrl || null;
+            return (
+              <div key={i} onClick={() => video && window.open(video, '_blank', 'noopener,noreferrer')}
+                style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '3/4', cursor: video ? 'pointer' : 'default' }}>
+                {s && <img src={s} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                {video && <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, border: '2px solid rgba(255,255,255,0.85)' }}>▶</span>}
+              </div>
+            );
+          })}
         </div>
         {/* Arrows appear only when there's somewhere to go in that direction. */}
-        {items.length > 1 && !atStart && (
+        {n > 1 && !atStart && (
           <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent)}>‹</button>
         )}
-        {items.length > 1 && !atEnd && (
+        {n > 1 && !atEnd && (
           <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent)}>›</button>
         )}
       </div>
-      {items.length > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === clamped ? accent : '#ccc' }} />)}</div>}
+      {n > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === clamped ? accent : '#ccc' }} />)}</div>}
     </div>
   );
 }
@@ -660,15 +681,11 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
 }
 
 // Render an ordered block list (used by both the editor preview and public pages).
-// Hidden blocks are skipped entirely on the page; an image absorbed by an overlay
-// countdown below it is skipped too (it renders as that timer's background).
+// Hidden blocks are skipped entirely on the page.
 export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) {
-  const { overlayUrl, absorbed } = computeOverlay(blocks);
   return (
     <ScaleCtx.Provider value={ctx.textScale ?? 1}>
-      {blocks.filter((b) => !b.hidden && !absorbed.has(b.id)).map((b) => (
-        <BlockView key={b.id} block={b} ctx={ctx} overlayImageUrl={overlayUrl[b.id] ?? null} />
-      ))}
+      {blocks.filter((b) => !b.hidden).map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
     </ScaleCtx.Provider>
   );
 }

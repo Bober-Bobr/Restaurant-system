@@ -106,12 +106,16 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   image: {
     type: 'image', icon: '🖼', labelKey: 'block_image',
-    defaultProps: { url: '', rounded: false, useLogo: false },
+    defaultProps: { url: '', rounded: false, useLogo: false, timer: false, timerAt: null, timerLabel: '' },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
     fields: [
       { key: 'url', labelKey: 'bf_image', type: 'image' },
       { key: 'rounded', labelKey: 'bf_rounded', type: 'boolean' },
       { key: 'useLogo', labelKey: 'bf_use_logo', type: 'boolean' },
+      // Timer overlaid on the bottom of the photo.
+      { key: 'timer', labelKey: 'bf_timer', type: 'boolean' },
+      { key: 'timerLabel', labelKey: 'bf_label', type: 'text' },
+      { key: 'timerAt', labelKey: 'bf_datetime', type: 'datetime' },
     ],
   },
   button: {
@@ -125,13 +129,11 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   countdown: {
     type: 'countdown', icon: '⏱', labelKey: 'block_countdown',
-    defaultProps: { targetAt: null, label: '', overlay: false },
+    defaultProps: { targetAt: null, label: '' },
     defaultAnim: { type: 'zoom', durationMs: 800, delayMs: 0 },
     fields: [
       { key: 'label', labelKey: 'bf_label', type: 'text' },
       { key: 'targetAt', labelKey: 'bf_datetime', type: 'datetime' },
-      // Overlay: sit on top of the image block directly above, using its photo.
-      { key: 'overlay', labelKey: 'bf_overlay', type: 'boolean' },
     ],
   },
   timing: {
@@ -145,9 +147,12 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   gallery: {
     type: 'gallery', icon: '📷', labelKey: 'block_gallery',
-    defaultProps: { items: [] },
+    defaultProps: { items: [], autoSlide: false },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
-    fields: [{ key: 'items', labelKey: 'bf_gallery', type: 'gallery' }],
+    fields: [
+      { key: 'items', labelKey: 'bf_gallery', type: 'gallery' },
+      { key: 'autoSlide', labelKey: 'bf_autoslide', type: 'boolean' },
+    ],
   },
   menu: {
     type: 'menu', icon: '🍽', labelKey: 'block_menu',
@@ -278,22 +283,3 @@ export function createBlock(type: BlockType): Block {
 // Small typed prop readers used by the renderer/settings.
 export const str = (p: BlockProps, k: string, d = ''): string => (typeof p[k] === 'string' ? (p[k] as string) : d);
 export const bool = (p: BlockProps, k: string): boolean => p[k] === true;
-
-// A countdown with `overlay` enabled sits on top of the image block directly
-// above it, using that photo as its background. This resolves, for each such
-// countdown, the preceding image's URL, and lists the image ids it absorbs
-// (so the page doesn't render that image a second time on its own).
-export function computeOverlay(blocks: Block[]): { overlayUrl: Record<string, string>; absorbed: Set<string> } {
-  const overlayUrl: Record<string, string> = {};
-  const absorbed = new Set<string>();
-  for (let i = 1; i < blocks.length; i++) {
-    const b = blocks[i];
-    if (b.type !== 'countdown' || b.props.overlay !== true) continue;
-    const prev = blocks[i - 1];
-    if (prev.type === 'image' && typeof prev.props.url === 'string' && prev.props.url) {
-      overlayUrl[b.id] = prev.props.url;
-      absorbed.add(prev.id);
-    }
-  }
-  return { overlayUrl, absorbed };
-}
