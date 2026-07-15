@@ -86,7 +86,7 @@ export const PublicInvitationPage = () => {
   const galleryItems = normalizeGalleryItems(invitation.galleryPhotos);
   const musicSrc = invitation.musicUrl ? (getPhotoUrl(invitation.musicUrl) ?? invitation.musicUrl) : null;
   const pageBackground = bgImage
-    ? `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${bgImage}) top left / auto repeat, ${bgColor}`
+    ? `url(${bgImage}) top left / auto repeat, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
 
   // New block-based layout takes over when present; legacy fixed layout otherwise.
