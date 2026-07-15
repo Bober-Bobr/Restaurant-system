@@ -12,6 +12,8 @@ export type DesignTheme = {
   trailColor?: string | null;
   // Page-wide text color. Applies to every block that doesn't set its own.
   textColor?: string | null;
+  // Page-wide text size multiplier (1 = default). Scales all block text.
+  textScale?: number | null;
 };
 
 export type DesignTemplate = {

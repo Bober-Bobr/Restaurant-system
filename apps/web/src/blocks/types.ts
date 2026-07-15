@@ -33,6 +33,8 @@ export type Block = {
   type: BlockType;
   props: BlockProps;
   anim?: SectionAnimation;
+  // Hidden blocks show dimmed in the builder but are not rendered on the page.
+  hidden?: boolean;
 };
 
 export type ButtonAction = { kind: 'link' | 'phone' | 'telegram' | 'map'; value: string };
@@ -123,11 +125,12 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   countdown: {
     type: 'countdown', icon: '⏱', labelKey: 'block_countdown',
-    defaultProps: { targetAt: null, label: '' },
+    defaultProps: { targetAt: null, label: '', bgImage: '' },
     defaultAnim: { type: 'zoom', durationMs: 800, delayMs: 0 },
     fields: [
       { key: 'label', labelKey: 'bf_label', type: 'text' },
       { key: 'targetAt', labelKey: 'bf_datetime', type: 'datetime' },
+      { key: 'bgImage', labelKey: 'bf_bg_image', type: 'image' },
     ],
   },
   timing: {

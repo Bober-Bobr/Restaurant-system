@@ -124,13 +124,13 @@ function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation 
 
   const bgImg = inv.backgroundImageUrl ? (getPhotoUrl(inv.backgroundImageUrl) ?? inv.backgroundImageUrl) : null;
   const pageBackground = bgImg
-    ? `${bgColor} url(${bgImg}) top center / auto repeat`
+    ? `${bgColor} url(${bgImg}) top center / contain repeat`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
   // New block-based layout takes over when present; otherwise fall back to the
   // legacy fixed wedding layout below.
   if (inv.blocks && inv.blocks.length > 0) {
-    const ctx: RenderCtx = { accent, text: inv.textColor || (bgImg ? '#f5f5f5' : readableText(bgColor)), submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
+    const ctx: RenderCtx = { accent, text: inv.textColor || (bgImg ? '#f5f5f5' : readableText(bgColor)), textScale: inv.textScale ?? 1, submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
         <FingerTrail accent={trailColor} template={inv.trailTemplate ?? 'sparkle'} />

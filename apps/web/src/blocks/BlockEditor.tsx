@@ -49,10 +49,10 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   const bgColor = theme.backgroundColor || '#fafaf7';
   const bgImage = theme.backgroundImageUrl ? (getPhotoUrl(theme.backgroundImageUrl) ?? theme.backgroundImageUrl) : null;
   const pageBackground = bgImage
-    ? `${bgColor} url(${bgImage}) top center / auto repeat`
+    ? `${bgColor} url(${bgImage}) top center / contain repeat`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
-  const ctx: RenderCtx = { accent, replayAnim: true, text: theme.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)), eventDate, logoUrl };
+  const ctx: RenderCtx = { accent, replayAnim: true, text: theme.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)), textScale: theme.textScale ?? 1, eventDate, logoUrl };
 
   const setBlock = (b: Block) => onBlocksChange(blocks.map((x) => (x.id === b.id ? b : x)));
   const addBlock = (type: BlockType) => {
@@ -72,6 +72,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
     if (to < 0 || to >= blocks.length || from === to) return;
     const next = [...blocks]; const [m] = next.splice(from, 1); next.splice(to, 0, m); onBlocksChange(next);
   };
+  const toggleHidden = (id: string) => onBlocksChange(blocks.map((b) => (b.id === id ? { ...b, hidden: !b.hidden } : b)));
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
   const preview = mode === 'preview';
@@ -91,7 +92,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           )}
           {blocks.map((b, i) => (
             preview ? (
-              <BlockView key={b.id} block={b} ctx={ctx} />
+              b.hidden ? null : <BlockView key={b.id} block={b} ctx={ctx} />
             ) : (
               <EditableBlock
                 key={b.id}
@@ -103,6 +104,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
                 onDown={() => move(i, i + 1)}
                 onDuplicate={() => duplicateBlock(b.id)}
                 onDelete={() => removeBlock(b.id)}
+                onToggleHidden={() => toggleHidden(b.id)}
                 onDragStart={() => setDragIndex(i)}
                 onDropOn={() => { if (dragIndex !== null) move(dragIndex, i); setDragIndex(null); }}
               >
@@ -158,11 +160,12 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   );
 }
 
-function EditableBlock({ block, index, count, selected, t, children, onSelect, onUp, onDown, onDuplicate, onDelete, onDragStart, onDropOn }: {
+function EditableBlock({ block, index, count, selected, t, children, onSelect, onUp, onDown, onDuplicate, onDelete, onToggleHidden, onDragStart, onDropOn }: {
   block: Block; index: number; count: number; selected: boolean; t: T; children: React.ReactNode;
   onSelect: () => void; onUp: () => void; onDown: () => void; onDuplicate: () => void; onDelete: () => void;
-  onDragStart: () => void; onDropOn: () => void;
+  onToggleHidden: () => void; onDragStart: () => void; onDropOn: () => void;
 }) {
+  const hidden = block.hidden === true;
   return (
     <div
       onClick={onSelect}
@@ -177,14 +180,19 @@ function EditableBlock({ block, index, count, selected, t, children, onSelect, o
         <Mini draggable onDragStart={onDragStart} title="⠿">⠿</Mini>
         <Mini disabled={index === 0} onClick={onUp} title={t('move_up')}>↑</Mini>
         <Mini disabled={index === count - 1} onClick={onDown} title={t('move_down')}>↓</Mini>
+        <Mini onClick={onToggleHidden} title={hidden ? t('show_block') : t('hide_block')}>{hidden ? '🙈' : '👁'}</Mini>
         <Mini onClick={onDuplicate} title={t('duplicate_block')}>⧉</Mini>
         <Mini onClick={onDelete} title={t('delete_block')} danger>×</Mini>
       </div>
+      {/* "Hidden" badge so it's obvious the block won't appear on the page */}
+      {hidden && (
+        <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 5, pointerEvents: 'none', padding: '3px 9px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.85)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif' }}>{t('hidden_badge')}</div>
+      )}
       {/* Left drag handle (always visible, like the reference) */}
       <div draggable onDragStart={onDragStart} onClick={(e) => e.stopPropagation()}
         title={block.type}
         style={{ position: 'absolute', left: -48, top: '50%', transform: 'translateY(-50%)', zIndex: 5, width: 30, height: 44, borderRadius: 8, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 15 }}>☰</div>
-      <div style={{ pointerEvents: 'none' }}>{children}</div>
+      <div style={{ pointerEvents: 'none', opacity: hidden ? 0.35 : 1, filter: hidden ? 'grayscale(0.4)' : 'none', transition: 'opacity 0.15s' }}>{children}</div>
     </div>
   );
 }
@@ -232,6 +240,7 @@ const TRAILS: { key: string; label: string }[] = [
 
 function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: DesignTheme; onChange: (t: DesignTheme) => void; t: T; restaurantId: string; showTrail?: boolean }) {
   const set = (k: keyof DesignTheme, v: string | null) => onChange({ ...theme, [k]: v });
+  const scale = theme.textScale ?? 1;
   const colorRow = (k: keyof DesignTheme, fallback: string) => (
     <div style={{ display: 'flex', gap: 8 }}>
       <input type="color" value={(theme[k] as string) || fallback} onChange={(e) => set(k, e.target.value)} style={{ width: 42, height: 36, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer' }} />
@@ -247,6 +256,16 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
         <span style={panelLabel}>{t('text_color')}</span>
         {colorRow('textColor', '#1a1a1a')}
         {theme.textColor && <button type="button" onClick={() => set('textColor', null)} style={{ justifySelf: 'start', marginTop: 2, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('reset_auto')}</button>}
+      </label>
+      {/* Page-wide text size: scales all block text at once. */}
+      <label style={{ display: 'grid', gap: 5 }}>
+        <span style={panelLabel}>{t('text_size')}: {Math.round(scale * 100)}%</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="range" min={0.7} max={1.6} step={0.05} value={scale}
+            onChange={(e) => onChange({ ...theme, textScale: Number(e.target.value) })}
+            style={{ flex: 1, accentColor: '#c9a42c' }} />
+          {scale !== 1 && <button type="button" onClick={() => onChange({ ...theme, textScale: 1 })} style={{ background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, whiteSpace: 'nowrap' }}>{t('reset_auto')}</button>}
+        </div>
       </label>
       <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (

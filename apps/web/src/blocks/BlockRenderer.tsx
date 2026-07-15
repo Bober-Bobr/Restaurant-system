@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { str, bool, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
@@ -17,9 +17,19 @@ export type RenderCtx = {
   eventDate?: string | null;
   // Restaurant logo: image blocks with "useLogo" render it automatically.
   logoUrl?: string | null;
+  // Page-wide text size multiplier (1 = default). Scales all block text.
+  textScale?: number | null;
 };
 
 const TEXT = '#1a1a1a';
+
+// Page-wide text scale, provided by BlockList and read by each text component
+// via `useFs`, which returns a helper that scales a base px size.
+const ScaleCtx = createContext<number>(1);
+function useFs(): (n: number) => number {
+  const s = useContext(ScaleCtx);
+  return (n: number) => Math.round(n * (s || 1) * 100) / 100;
+}
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
@@ -47,30 +57,33 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   // Per-block `textColor` overrides the page-wide color (ctx.text).
   const color = str(block.props, 'textColor') || ctx.text || TEXT;
   return (
-    <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
-      <BlockBody block={block} ctx={ctx} />
-    </AnimatedSection>
+    <ScaleCtx.Provider value={ctx.textScale ?? 1}>
+      <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
+        <BlockBody block={block} ctx={ctx} />
+      </AnimatedSection>
+    </ScaleCtx.Provider>
   );
 }
 
 function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
   const accent = ctx.accent;
+  const fs = useFs();
   switch (block.type) {
     case 'hero': {
       const src = img(str(p, 'imageUrl'));
       return (
         <section style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', position: 'relative', background: src ? `linear-gradient(rgba(255,255,255,0.05),rgba(255,255,255,0.05)), url(${src}) center / cover` : 'transparent' }}>
-          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
-          {str(p, 'subtitle') && <p style={{ position: 'absolute', bottom: 28, margin: 0, fontSize: 12, letterSpacing: '0.25em', color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>{str(p, 'subtitle')}</p>}
+          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: fs(40), lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
+          {str(p, 'subtitle') && <p style={{ position: 'absolute', bottom: 28, margin: 0, fontSize: fs(12), letterSpacing: '0.25em', color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>{str(p, 'subtitle')}</p>}
         </section>
       );
     }
     case 'heading':
       if (bool(p, 'marquee')) return <MarqueeHeading text={str(p, 'text')} />;
-      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: 26, letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
+      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: fs(26), letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
     case 'text':
-      return <p style={{ margin: 0, padding: '10px 24px', fontSize: 14, lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
+      return <p style={{ margin: 0, padding: '10px 24px', fontSize: fs(14), lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
     case 'image': {
       // "useLogo" → always show the restaurant's current logo instead of a fixed photo.
       if (bool(p, 'useLogo')) {
@@ -91,7 +104,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
       // No explicit target → count down to the linked event's start time.
-      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} accent={accent} />;
+      return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} bgImage={img(str(p, 'bgImage'))} accent={accent} />;
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
@@ -125,9 +138,27 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
 
 // Raw-HTML block: renders the manager's own markup verbatim. Authored by the
 // trusted manager for their own page, so the markup is injected as-is.
+// We set innerHTML via a ref (instead of dangerouslySetInnerHTML) so that any
+// <script> tags in the markup actually execute — React-injected scripts don't
+// run on their own — enabling JS-driven animations. `overflow: visible` keeps
+// CSS animations from being clipped at their start position.
 function HtmlBlock({ html }: { html: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    host.innerHTML = html || '';
+    // Re-create <script> nodes so the browser executes them.
+    host.querySelectorAll('script').forEach((old) => {
+      const s = document.createElement('script');
+      for (const a of Array.from(old.attributes)) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    });
+    return () => { host.innerHTML = ''; };
+  }, [html]);
   if (!html.trim()) return <Placeholder label="HTML" />;
-  return <div style={{ width: '100%', overflowX: 'auto' }} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div ref={ref} style={{ width: '100%', overflow: 'visible' }} />;
 }
 
 function Placeholder({ label }: { label: string }) {
@@ -139,6 +170,7 @@ function yandexMaps(address: string) {
 }
 
 function ActionButton({ label, action, accent }: { label: string; action?: ButtonAction; accent: string }) {
+  const fs = useFs();
   const onClick = () => {
     if (!action?.value) return;
     if (action.kind === 'phone') window.location.href = `tel:${action.value}`;
@@ -146,14 +178,15 @@ function ActionButton({ label, action, accent }: { label: string; action?: Butto
     else window.open(action.value, '_blank', 'noopener,noreferrer');
   };
   return (
-    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#000', color: accent, fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif' }}>{label}</button>
+    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#000', color: accent, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif' }}>{label}</button>
   );
 }
 
 function MapView({ label, address }: { label: string; address: string }) {
+  const fs = useFs();
   return (
     <div style={{ padding: '14px 24px', textAlign: 'center' }}>
-      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: '12px 40px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'system-ui, sans-serif' }}>{label}</button>
+      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: '12px 40px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'system-ui, sans-serif' }}>{label}</button>
     </div>
   );
 }
@@ -167,8 +200,8 @@ function useCountdown(target: string | null) {
 }
 
 // ── Flip-clock countdown ─────────────────────────────────────────────────────
-const CD_H = 66; // card height
-const CD_W = 48; // card width
+const CD_H = 52; // card height
+const CD_W = 34; // card width
 const CD_KEYFRAMES = `
 @keyframes cdFlipTop { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
 @keyframes cdFlipBottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }`;
@@ -178,7 +211,7 @@ const cdFaceBase: React.CSSProperties = {
   display: 'flex', justifyContent: 'center', background: '#f6f5f1', backfaceVisibility: 'hidden',
 };
 function cdDigit(): React.CSSProperties {
-  return { fontSize: 44, fontWeight: 800, lineHeight: `${CD_H}px`, height: CD_H, color: '#161616', fontFamily: 'system-ui, sans-serif' };
+  return { fontSize: 32, fontWeight: 800, lineHeight: `${CD_H}px`, height: CD_H, color: '#161616', fontFamily: 'system-ui, sans-serif' };
 }
 function CdFace({ d, part, flap, zIndex }: { d: string; part: 'top' | 'bottom'; flap?: boolean; zIndex?: number }) {
   const isTop = part === 'top';
@@ -231,7 +264,8 @@ function CdColon({ accent }: { accent: string }) {
   return <div style={{ height: CD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}><span style={dot} /><span style={dot} /></div>;
 }
 
-function CountdownView({ targetAt, label, accent }: { targetAt: string | null; label: string; accent: string }) {
+function CountdownView({ targetAt, label, bgImage, accent }: { targetAt: string | null; label: string; bgImage?: string | null; accent: string }) {
+  const fs = useFs();
   const cd = useCountdown(targetAt);
   const groups = [
     { v: cd?.days ?? 0, l: 'Дни' },
@@ -239,41 +273,50 @@ function CountdownView({ targetAt, label, accent }: { targetAt: string | null; l
     { v: cd?.minutes ?? 0, l: 'Минуты' },
     { v: cd?.seconds ?? 0, l: 'Секунды' },
   ];
+  // When a background image is set, the timer is overlaid on it (image acts as
+  // the section's own background), with a subtle scrim so the cards stay legible.
+  const sectionStyle: React.CSSProperties = bgImage
+    ? { padding: '40px 12px', textAlign: 'center', position: 'relative', background: `url(${bgImage}) center / cover`, borderRadius: 4, overflow: 'hidden' }
+    : { padding: '28px 12px', textAlign: 'center' };
   return (
-    <section style={{ padding: '32px 16px', textAlign: 'center' }}>
+    <section style={sectionStyle}>
       <style>{CD_KEYFRAMES}</style>
-      {label && <h2 style={{ margin: '0 0 22px', fontSize: 24, letterSpacing: '0.08em', color: 'inherit' }}>{label}</h2>}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'flex-start' }}>
-        {groups.map((g, gi) => {
-          const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
-          return (
-            <div key={g.l} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  <FlipDigit value={s[0]} />
-                  <FlipDigit value={s[1]} />
+      {bgImage && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)' }} />}
+      <div style={{ position: 'relative' }}>
+        {label && <h2 style={{ margin: '0 0 20px', fontSize: fs(22), letterSpacing: '0.08em', color: bgImage ? '#fff' : 'inherit' }}>{label}</h2>}
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          {groups.map((g, gi) => {
+            const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
+            return (
+              <div key={g.l} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <FlipDigit value={s[0]} />
+                    <FlipDigit value={s[1]} />
+                  </div>
+                  <span style={{ fontSize: fs(10), letterSpacing: '0.08em', textTransform: 'uppercase', color: bgImage ? '#fff' : 'inherit', opacity: 0.8, fontFamily: 'system-ui, sans-serif' }}>{g.l}</span>
                 </div>
-                <span style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'inherit', opacity: 0.75, fontFamily: 'system-ui, sans-serif' }}>{g.l}</span>
+                {gi < groups.length - 1 && <CdColon accent={accent} />}
               </div>
-              {gi < groups.length - 1 && <CdColon accent={accent} />}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 }
 
 function TimingView({ title, items, accent }: { title: string; items: TimingItem[]; accent: string }) {
+  const fs = useFs();
   if (items.length === 0) return <Placeholder label="Timing" />;
   return (
     <section style={{ padding: '36px 32px' }}>
-      {title && <h2 style={{ margin: '0 0 26px', fontSize: 38, textAlign: 'center', letterSpacing: '0.08em', color: 'inherit' }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 26px', fontSize: fs(38), textAlign: 'center', letterSpacing: '0.08em', color: 'inherit' }}>{title}</h2>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {items.map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 18 }}>
-            <span style={{ fontSize: 16, color: accent, fontFamily: 'system-ui, sans-serif', minWidth: 52 }}>{it.time}</span>
-            <span style={{ fontSize: 18, letterSpacing: '0.05em', color: 'inherit' }}>{it.label}</span>
+            <span style={{ fontSize: fs(16), color: accent, fontFamily: 'system-ui, sans-serif', minWidth: 52 }}>{it.time}</span>
+            <span style={{ fontSize: fs(18), letterSpacing: '0.05em', color: 'inherit' }}>{it.label}</span>
           </div>
         ))}
       </div>
@@ -310,10 +353,11 @@ function navBtn(side: 'left' | 'right', accent: string): React.CSSProperties {
 }
 
 function MenuShowcase({ title, items, accent }: { title: string; items: MenuShowcaseItem[]; accent: string }) {
+  const fs = useFs();
   if (items.length === 0) return <Placeholder label="Menu" />;
   return (
     <div>
-      {title && <div style={{ background: '#000', color: accent, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: 14, letterSpacing: '0.3em', fontFamily: 'system-ui, sans-serif' }}>{title}</div>}
+      {title && <div style={{ background: '#000', color: accent, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: fs(14), letterSpacing: '0.3em', fontFamily: 'system-ui, sans-serif' }}>{title}</div>}
       <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         {items.map((it, i) => {
           const left = i % 2 === 0;
@@ -324,7 +368,7 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: src ? `url(${src}) center / cover` : '#eaeaea', border: `3px solid ${accent}` }} />
                 <span style={{ position: 'absolute', top: -4, left: -4, width: 26, height: 26, borderRadius: '50%', background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, fontFamily: 'system-ui, sans-serif', border: '2px solid #fff' }}>{it.number}</span>
               </div>
-              <p style={{ margin: 0, fontSize: 22, fontStyle: 'italic', fontWeight: 700, color: 'inherit' }}>{it.name}</p>
+              <p style={{ margin: 0, fontSize: fs(22), fontStyle: 'italic', fontWeight: 700, color: 'inherit' }}>{it.name}</p>
             </div>
           );
         })}
@@ -334,14 +378,15 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
 }
 
 function SocialsView({ title, links, accent }: { title: string; links: SocialLink[]; accent: string }) {
+  const fs = useFs();
   return (
     <section style={{ padding: '24px 20px' }}>
-      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: 17, fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
+      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fs(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
           <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>
             <span style={{ width: 34, height: 34, borderRadius: 8, background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>@</span>
-            <span style={{ fontSize: 13 }}>{l.label}</span>
+            <span style={{ fontSize: fs(13) }}>{l.label}</span>
           </a>
         ))}
       </div>
@@ -350,10 +395,11 @@ function SocialsView({ title, links, accent }: { title: string; links: SocialLin
 }
 
 function ContactsView({ p }: { p: BlockProps; accent: string }) {
+  const fs = useFs();
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
   return (
     <section style={{ padding: '28px 20px', textAlign: 'center' }}>
-      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
+      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: fs(18), fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
         {tg && <IconLink href={tg}><SvgTelegram /></IconLink>}
         {phone && <IconLink href={`tel:${phone}`}><SvgPhone /></IconLink>}
@@ -376,6 +422,7 @@ function SvgInstagram() {
 }
 
 function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
+  const fs = useFs();
   const src = img(str(p, 'imageUrl'));
   return (
     <section style={{ padding: '16px' }}>
@@ -384,13 +431,14 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
           {src ? <img src={src} alt="" style={{ width: '100%', display: 'block' }} /> : <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>{str(p, 'title', 'Promo')}</div>}
           {str(p, 'code') && <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: accent, color: '#0f0f0f', padding: '6px 18px', borderRadius: 999, fontWeight: 800, fontSize: 14 }}>{str(p, 'code')}</div>}
         </div>
-        {str(p, 'subtitle') && <p style={{ margin: 0, padding: '12px 16px', fontSize: 12, textAlign: 'center', fontWeight: 600, color: str(p, 'textColor') || TEXT, fontFamily: 'system-ui, sans-serif' }}>{str(p, 'subtitle')}</p>}
+        {str(p, 'subtitle') && <p style={{ margin: 0, padding: '12px 16px', fontSize: fs(12), textAlign: 'center', fontWeight: 600, color: str(p, 'textColor') || 'inherit', fontFamily: 'system-ui, sans-serif' }}>{str(p, 'subtitle')}</p>}
       </div>
     </section>
   );
 }
 
 function RsvpForm({ title, accent, submit }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void> }) {
+  const fs = useFs();
   const [name, setName] = useState('');
   const [attending, setAttending] = useState<boolean | null>(null);
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
@@ -400,21 +448,21 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
     try { if (submit) await submit({ guestName: name.trim(), attending }); setState('done'); } catch { setState('error'); }
   };
   const radio = (val: boolean, label: string) => (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: 16, color: 'inherit', fontFamily: 'system-ui, sans-serif' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontSize: fs(16), color: 'inherit', fontFamily: 'system-ui, sans-serif' }}>
       <span style={{ width: 26, height: 26, borderRadius: '50%', border: `2px solid ${attending === val ? accent : 'currentColor'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{attending === val && <span style={{ width: 12, height: 12, borderRadius: '50%', background: accent }} />}</span>
       {label}
     </label>
   );
   return (
     <section style={{ padding: '40px 24px', textAlign: 'center' }}>
-      {title && <h2 style={{ margin: '0 0 22px', fontSize: 28, letterSpacing: '0.06em', color: 'inherit' }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 22px', fontSize: fs(28), letterSpacing: '0.06em', color: 'inherit' }}>{title}</h2>}
       {state === 'done' ? (
-        <p style={{ margin: 0, fontSize: 18, color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Ваш ответ получен.</p>
+        <p style={{ margin: 0, fontSize: fs(18), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Ваш ответ получен.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 360, margin: '0 auto' }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Напишите Имя" style={{ padding: '16px 18px', fontSize: 16, border: '1px solid currentColor', borderRadius: 2, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif' }} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Напишите Имя" style={{ padding: '16px 18px', fontSize: fs(16), border: '1px solid currentColor', borderRadius: 2, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-start' }}>{radio(true, 'смогу присутствовать')}{radio(false, 'не смогу присутствовать')}</div>
-          <button type="button" onClick={go} disabled={state === 'sending' || !name.trim() || attending === null} style={{ alignSelf: 'center', padding: '14px 44px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'system-ui, sans-serif', opacity: !name.trim() || attending === null ? 0.5 : 1 }}>{state === 'sending' ? '...' : 'ОТПРАВИТЬ'}</button>
+          <button type="button" onClick={go} disabled={state === 'sending' || !name.trim() || attending === null} style={{ alignSelf: 'center', padding: '14px 44px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'system-ui, sans-serif', opacity: !name.trim() || attending === null ? 0.5 : 1 }}>{state === 'sending' ? '...' : 'ОТПРАВИТЬ'}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}
         </div>
       )}
@@ -442,6 +490,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
   title: string; subtitle: string; buttonLabel: string; showMessage: boolean;
   accent: string; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
 }) {
+  const fs = useFs();
   const [name, setName] = useState('');
   const [country, setCountry] = useState(0);
   const [phone, setPhone] = useState('');
@@ -456,13 +505,13 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
       setState('done');
     } catch { setState('error'); }
   };
-  const field: React.CSSProperties = { padding: '16px 18px', fontSize: 15, border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box' };
+  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box' };
   return (
     <section style={{ padding: '36px 24px', textAlign: 'center' }}>
-      {title && <h2 style={{ margin: '0 0 8px', fontSize: 26, letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
-      {subtitle && <p style={{ margin: '0 0 22px', fontSize: 13, lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
+      {title && <h2 style={{ margin: '0 0 8px', fontSize: fs(26), letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
+      {subtitle && <p style={{ margin: '0 0 22px', fontSize: fs(13), lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
       {state === 'done' ? (
-        <p style={{ margin: 0, fontSize: 17, color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
+        <p style={{ margin: 0, fontSize: fs(17), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
@@ -471,16 +520,16 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
             <select
               value={country}
               onChange={(e) => setCountry(Number(e.target.value))}
-              style={{ border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: 15, fontFamily: 'system-ui, sans-serif', padding: '16px 6px 16px 14px', cursor: 'pointer', appearance: 'auto' }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: fs(15), fontFamily: 'system-ui, sans-serif', padding: '16px 6px 16px 14px', cursor: 'pointer', appearance: 'auto' }}
             >
               {DIAL_CODES.map((c, i) => <option key={c.name} value={i} style={{ color: '#111' }}>{c.flag} {c.code}</option>)}
             </select>
             <span style={{ alignSelf: 'center', width: 1, height: 26, background: 'currentColor', opacity: 0.3 }} />
             <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Телефон"
-              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: 15, fontFamily: 'system-ui, sans-serif', padding: '16px 18px 16px 12px' }} />
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: fs(15), fontFamily: 'system-ui, sans-serif', padding: '16px 18px 16px 12px' }} />
           </div>
           {showMessage && <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текстовое поле" rows={3} style={{ ...field, resize: 'vertical' }} />}
-          <button type="button" onClick={go} disabled={state === 'sending' || !canSend} style={{ alignSelf: 'stretch', padding: '15px 24px', borderRadius: 12, border: 'none', cursor: canSend ? 'pointer' : 'default', background: accent, color: readableText(accent), fontSize: 14, fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', opacity: canSend ? 1 : 0.5 }}>{state === 'sending' ? '...' : (buttonLabel || 'ОТПРАВИТЬ')}</button>
+          <button type="button" onClick={go} disabled={state === 'sending' || !canSend} style={{ alignSelf: 'stretch', padding: '15px 24px', borderRadius: 12, border: 'none', cursor: canSend ? 'pointer' : 'default', background: accent, color: readableText(accent), fontSize: fs(14), fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', opacity: canSend ? 1 : 0.5 }}>{state === 'sending' ? '...' : (buttonLabel || 'ОТПРАВИТЬ')}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}
         </div>
       )}
@@ -490,6 +539,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
 
 // "Save contact" button — builds a vCard on the fly and downloads it.
 function SaveContactButton({ label, name, phone, accent }: { label: string; name: string; phone: string; accent: string }) {
+  const fs = useFs();
   const save = () => {
     const vcard = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${name || phone}`, phone ? `TEL;TYPE=CELL:${phone}` : '', 'END:VCARD']
       .filter(Boolean).join('\r\n');
@@ -508,8 +558,8 @@ function SaveContactButton({ label, name, phone, accent }: { label: string; name
       <button type="button" onClick={save} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#0d0d0d', color: accent, fontFamily: 'system-ui, sans-serif' }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span style={{ textAlign: 'left' }}>
-          <span style={{ display: 'block', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em' }}>{label || 'СОХРАНИТЬ КОНТАКТЫ'}</span>
-          {(name || phone) && <span style={{ display: 'block', fontSize: 11, fontWeight: 400, opacity: 0.85 }}>{name || phone}</span>}
+          <span style={{ display: 'block', fontSize: fs(13), fontWeight: 700, letterSpacing: '0.1em' }}>{label || 'СОХРАНИТЬ КОНТАКТЫ'}</span>
+          {(name || phone) && <span style={{ display: 'block', fontSize: fs(11), fontWeight: 400, opacity: 0.85 }}>{name || phone}</span>}
         </span>
       </button>
     </div>
@@ -518,6 +568,7 @@ function SaveContactButton({ label, name, phone, accent }: { label: string; name
 
 // Section divider with a selectable shape.
 function Divider({ shape, text, accent }: { shape: string; text: string; accent: string }) {
+  const fs = useFs();
   if (shape === 'spacer') return <div style={{ height: 44 }} />;
   if (shape === 'icon') {
     return (
@@ -532,7 +583,7 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
     return (
       <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
-        <span style={{ fontSize: 12, letterSpacing: '0.15em', opacity: 0.7, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{text || 'или'}</span>
+        <span style={{ fontSize: fs(12), letterSpacing: '0.15em', opacity: 0.7, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{text || 'или'}</span>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
       </div>
     );
@@ -556,14 +607,15 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
 // Heading in "scrolling text" (ticker) mode: the text loops horizontally forever.
 // Content is duplicated so the -50% translate loops seamlessly.
 function MarqueeHeading({ text }: { text: string }) {
+  const fs = useFs();
   const content = Array(4).fill(text || '…').join('   •   ');
   const half: React.CSSProperties = { paddingRight: 36, flexShrink: 0 };
   return (
     <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '18px 0 8px' }}>
       <style>{'@keyframes blkMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }'}</style>
       <div style={{ display: 'inline-flex', animation: 'blkMarquee 16s linear infinite', willChange: 'transform' }}>
-        <h2 style={{ ...half, margin: 0, fontSize: 26, letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }}>{content}</h2>
-        <h2 style={{ ...half, margin: 0, fontSize: 26, letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
+        <h2 style={{ ...half, margin: 0, fontSize: fs(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }}>{content}</h2>
+        <h2 style={{ ...half, margin: 0, fontSize: fs(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
       </div>
     </div>
   );
@@ -571,6 +623,7 @@ function MarqueeHeading({ text }: { text: string }) {
 
 // Single wide link button with a label + sub-label and a custom background color.
 function LinkBar({ label, sublabel, action, color, accent }: { label: string; sublabel: string; action?: ButtonAction; color: string; accent: string }) {
+  const fs = useFs();
   const onClick = () => {
     if (!action?.value) return;
     if (action.kind === 'phone') window.location.href = `tel:${action.value}`;
@@ -582,8 +635,8 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
       <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: color || accent, color: '#fff', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
         <span style={{ fontSize: 22, lineHeight: 1 }}>☰</span>
         <span>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 800, letterSpacing: '0.1em' }}>{label}</span>
-          {sublabel && <span style={{ display: 'block', fontSize: 12, opacity: 0.9, marginTop: 2 }}>{sublabel}</span>}
+          <span style={{ display: 'block', fontSize: fs(14), fontWeight: 800, letterSpacing: '0.1em' }}>{label}</span>
+          {sublabel && <span style={{ display: 'block', fontSize: fs(12), opacity: 0.9, marginTop: 2 }}>{sublabel}</span>}
         </span>
       </button>
     </div>
@@ -591,6 +644,11 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
 }
 
 // Render an ordered block list (used by both the editor preview and public pages).
+// Hidden blocks are skipped entirely on the page.
 export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) {
-  return <>{blocks.map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}</>;
+  return (
+    <ScaleCtx.Provider value={ctx.textScale ?? 1}>
+      {blocks.filter((b) => !b.hidden).map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
+    </ScaleCtx.Provider>
+  );
 }
