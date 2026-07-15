@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Block, BlockType } from './types';
 import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
 import { BlockView, readableText, type RenderCtx } from './BlockRenderer';
+import { ParticleField, type ParticleKind } from './ParticleField';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
 import type { TranslationKey } from '../utils/translate';
@@ -86,7 +87,8 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
         border: '10px solid #0b1120', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', background: '#000',
         zoom: 0.8,
       }}>
-        <div style={{ background: pageBackground, minHeight: 600, fontFamily: '"Playfair Display", Georgia, serif' }}>
+        <div style={{ position: 'relative', background: pageBackground, minHeight: 600, fontFamily: '"Playfair Display", Georgia, serif' }}>
+          <ParticleField kind={theme.particles as ParticleKind | undefined} />
           {blocks.length === 0 && (
             <p style={{ padding: '80px 24px', textAlign: 'center', color: '#475569', fontSize: 14, fontFamily: 'system-ui, sans-serif' }}>{t('empty_design')}</p>
           )}
@@ -266,6 +268,16 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
             style={{ flex: 1, accentColor: '#c9a42c' }} />
           {scale !== 1 && <button type="button" onClick={() => onChange({ ...theme, textScale: 1 })} style={{ background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, whiteSpace: 'nowrap' }}>{t('reset_auto')}</button>}
         </div>
+      </label>
+      {/* Falling particle effect over the whole page. */}
+      <label style={{ display: 'grid', gap: 5 }}>
+        <span style={panelLabel}>{t('particles')}</span>
+        <select style={panelInput} value={theme.particles ?? 'none'} onChange={(e) => set('particles', e.target.value)}>
+          <option value="none">{t('particle_none')}</option>
+          <option value="confetti">{t('particle_confetti')}</option>
+          <option value="snow">{t('particle_snow')}</option>
+          <option value="candy">{t('particle_candy')}</option>
+        </select>
       </label>
       <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (

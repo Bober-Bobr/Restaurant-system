@@ -534,6 +534,8 @@ model Invitation {
   textColor           String?
   // Page-wide text size multiplier (1 = default).
   textScale           Float?  @default(1)
+  // Falling particle effect: none | confetti | snow | candy.
+  particles           String?
 
   // Optional looping background music played on the public invitation
   musicUrl            String?
@@ -583,6 +585,8 @@ model GuestInvitation {
   textColor          String?
   // Page-wide text size multiplier (1 = default).
   textScale          Float?  @default(1)
+  // Falling particle effect: none | confetti | snow | candy.
+  particles          String?
   musicUrl           String?
   trailTemplate      String  @default("sparkle") // sparkle | hearts | candy
   trailColor         String?

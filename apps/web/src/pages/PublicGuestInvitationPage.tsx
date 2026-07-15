@@ -13,6 +13,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { getInvitationSubdomainSlug } from '../utils/subdomain';
 import { useParams } from 'react-router-dom';
 import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { ParticleField } from '../blocks/ParticleField';
 
 const TEXT = '#1a1a1a';
 
@@ -133,6 +134,7 @@ function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation 
     const ctx: RenderCtx = { accent, text: inv.textColor || (bgImg ? '#f5f5f5' : readableText(bgColor)), textScale: inv.textScale ?? 1, submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        <ParticleField kind={inv.particles} />
         <FingerTrail accent={trailColor} template={inv.trailTemplate ?? 'sparkle'} />
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>

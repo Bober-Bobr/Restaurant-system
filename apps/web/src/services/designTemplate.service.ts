@@ -14,6 +14,8 @@ export type DesignTheme = {
   textColor?: string | null;
   // Page-wide text size multiplier (1 = default). Scales all block text.
   textScale?: number | null;
+  // Falling particle effect: 'none' | 'confetti' | 'snow' | 'candy'.
+  particles?: string | null;
 };
 
 export type DesignTemplate = {

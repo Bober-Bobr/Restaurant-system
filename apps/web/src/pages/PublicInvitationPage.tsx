@@ -8,6 +8,7 @@ import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { ParticleField } from '../blocks/ParticleField';
 
 const ACCENT = '#c9a42c';
 const PAGE_BG = `
@@ -101,6 +102,7 @@ export const PublicInvitationPage = () => {
     };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        <ParticleField kind={invitation.particles} />
         <FingerTrail accent={accent} />
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>

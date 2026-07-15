@@ -113,6 +113,7 @@ export const InvitationBuilderPage = () => {
         backgroundImageUrl: theme.backgroundImageUrl ?? null,
         textColor: theme.textColor ?? null,
         textScale: theme.textScale ?? 1,
+        particles: theme.particles ?? null,
         musicUrl: theme.musicUrl ?? null,
       };
       if (isEditing && existing) return invitationService.update(existing.id, payload);

@@ -23,6 +23,27 @@ export type RenderCtx = {
 
 const TEXT = '#1a1a1a';
 
+// Always-on "passive" animations shared by several blocks (shimmer sweep, a tiny
+// periodic twitch, a gentle bounce) + bold placeholders for the lead form.
+const PASSIVE_KEYFRAMES = `
+@keyframes blkShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes blkTwitch { 0%, 88%, 100% { transform: rotate(0deg); } 91% { transform: rotate(-2.2deg); } 94% { transform: rotate(2.2deg); } 97% { transform: rotate(-1deg); } }
+@keyframes blkBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.blk-form-field::placeholder { font-weight: 700; }
+`;
+
+// Moving light sweep laid over a (relative, overflow-hidden) element.
+function Sheen({ opacity = 0.35, seconds = 2.8 }: { opacity?: number; seconds?: number }) {
+  return <span aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 35%, rgba(255,255,255,${opacity}) 50%, transparent 65%)`, backgroundSize: '250% 100%', animation: `blkShimmer ${seconds}s linear infinite`, pointerEvents: 'none' }} />;
+}
+
+// Faint shimmer applied directly to a form field's transparent background.
+const fieldShimmer: React.CSSProperties = {
+  backgroundImage: 'linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+  backgroundSize: '250% 100%',
+  animation: 'blkShimmer 3.4s linear infinite',
+};
+
 // Page-wide text scale, provided by BlockList and read by each text component
 // via `useFs`, which returns a helper that scales a base px size.
 const ScaleCtx = createContext<number>(1);
@@ -121,7 +142,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
-      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} autoSlide={bool(p, 'autoSlide')} />;
+      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} autoSlide={bool(p, 'autoSlide')} intervalMs={Math.max(1, typeof p.slideInterval === 'number' ? p.slideInterval : 4) * 1000} />;
     case 'menu':
       return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
     case 'link':
@@ -332,7 +353,7 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
   );
 }
 
-function GalleryCarousel({ items, accent, autoSlide }: { items: GalleryItem[]; accent: string; autoSlide?: boolean }) {
+function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { items: GalleryItem[]; accent: string; autoSlide?: boolean; intervalMs?: number }) {
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
   const n = items.length;
@@ -341,12 +362,12 @@ function GalleryCarousel({ items, accent, autoSlide }: { items: GalleryItem[]; a
   const atEnd = clamped === n - 1;
   // Manual moves clamp at the ends; auto-slide wraps around continuously.
   const go = (dir: -1 | 1) => setIdx((i) => Math.max(0, Math.min(n - 1, i + dir)));
-  // Auto-slide: cycle every 3.5s using the same sliding transition (wraps at end).
+  // Auto-slide: cycle at the configured interval using the sliding transition.
   useEffect(() => {
     if (!autoSlide || n < 2) return;
-    const id = window.setInterval(() => setIdx((i) => (i + 1) % n), 3500);
+    const id = window.setInterval(() => setIdx((i) => (i + 1) % n), Math.max(1000, intervalMs));
     return () => window.clearInterval(id);
-  }, [autoSlide, n]);
+  }, [autoSlide, n, intervalMs]);
   if (n === 0) return <Placeholder label="Gallery" />;
   const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -418,10 +439,11 @@ function SocialsView({ title, links, accent }: { title: string; links: SocialLin
   const fs = useFs();
   return (
     <section style={{ padding: '24px 20px' }}>
+      <style>{PASSIVE_KEYFRAMES}</style>
       {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fs(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
-          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'system-ui, sans-serif' }}>
+          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'system-ui, sans-serif', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
             <span style={{ width: 34, height: 34, borderRadius: 8, background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>@</span>
             <span style={{ fontSize: fs(13) }}>{l.label}</span>
           </a>
@@ -436,17 +458,18 @@ function ContactsView({ p }: { p: BlockProps; accent: string }) {
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
   return (
     <section style={{ padding: '28px 20px', textAlign: 'center' }}>
+      <style>{PASSIVE_KEYFRAMES}</style>
       {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: fs(18), fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-        {tg && <IconLink href={tg}><SvgTelegram /></IconLink>}
-        {phone && <IconLink href={`tel:${phone}`}><SvgPhone /></IconLink>}
-        {ig && <IconLink href={ig}><SvgInstagram /></IconLink>}
+        {tg && <IconLink href={tg} delay={0}><SvgTelegram /></IconLink>}
+        {phone && <IconLink href={`tel:${phone}`} delay={0.35}><SvgPhone /></IconLink>}
+        {ig && <IconLink href={ig} delay={0.7}><SvgInstagram /></IconLink>}
       </div>
     </section>
   );
 }
-function IconLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <a href={href} target="_blank" rel="noreferrer" style={{ width: 52, height: 52, borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>{children}</a>;
+function IconLink({ href, children, delay = 0 }: { href: string; children: React.ReactNode; delay?: number }) {
+  return <a href={href} target="_blank" rel="noreferrer" style={{ width: 52, height: 52, borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', animation: `blkBounce 2.4s ease-in-out ${delay}s infinite` }}>{children}</a>;
 }
 function SvgTelegram() {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>;
@@ -542,18 +565,19 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
       setState('done');
     } catch { setState('error'); }
   };
-  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box' };
+  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box', ...fieldShimmer };
   return (
     <section style={{ padding: '36px 24px', textAlign: 'center' }}>
+      <style>{PASSIVE_KEYFRAMES}</style>
       {title && <h2 style={{ margin: '0 0 8px', fontSize: fs(26), letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
       {subtitle && <p style={{ margin: '0 0 22px', fontSize: fs(13), lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
       {state === 'done' ? (
         <p style={{ margin: 0, fontSize: fs(17), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
+          <input className="blk-form-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
           {/* Phone: country/dial-code picker + the number input side by side in one box */}
-          <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid currentColor', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid currentColor', borderRadius: 12, overflow: 'hidden', ...fieldShimmer }}>
             <select
               value={country}
               onChange={(e) => setCountry(Number(e.target.value))}
@@ -562,10 +586,10 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
               {DIAL_CODES.map((c, i) => <option key={c.name} value={i} style={{ color: '#111' }}>{c.flag} {c.code}</option>)}
             </select>
             <span style={{ alignSelf: 'center', width: 1, height: 26, background: 'currentColor', opacity: 0.3 }} />
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Телефон"
+            <input className="blk-form-field" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Телефон"
               style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'inherit', fontSize: fs(15), fontFamily: 'system-ui, sans-serif', padding: '16px 18px 16px 12px' }} />
           </div>
-          {showMessage && <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текстовое поле" rows={3} style={{ ...field, resize: 'vertical' }} />}
+          {showMessage && <textarea className="blk-form-field" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Текстовое поле" rows={3} style={{ ...field, resize: 'vertical' }} />}
           <button type="button" onClick={go} disabled={state === 'sending' || !canSend} style={{ alignSelf: 'stretch', padding: '15px 24px', borderRadius: 12, border: 'none', cursor: canSend ? 'pointer' : 'default', background: accent, color: readableText(accent), fontSize: fs(14), fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', opacity: canSend ? 1 : 0.5 }}>{state === 'sending' ? '...' : (buttonLabel || 'ОТПРАВИТЬ')}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}
         </div>
@@ -592,7 +616,9 @@ function SaveContactButton({ label, name, phone, accent }: { label: string; name
   };
   return (
     <div style={{ padding: '14px 20px' }}>
-      <button type="button" onClick={save} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#0d0d0d', color: accent, fontFamily: 'system-ui, sans-serif' }}>
+      <style>{PASSIVE_KEYFRAMES}</style>
+      <button type="button" onClick={save} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#0d0d0d', color: accent, fontFamily: 'system-ui, sans-serif' }}>
+        <Sheen opacity={0.28} />
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span style={{ textAlign: 'left' }}>
           <span style={{ display: 'block', fontSize: fs(13), fontWeight: 700, letterSpacing: '0.1em' }}>{label || 'СОХРАНИТЬ КОНТАКТЫ'}</span>

@@ -47,6 +47,7 @@ export type GuestInvitation = {
   backgroundImageUrl: string | null;
   textColor: string | null;
   textScale: number | null;
+  particles: string | null;
   musicUrl: string | null;
   trailTemplate: TrailTemplate;
   trailColor: string | null;

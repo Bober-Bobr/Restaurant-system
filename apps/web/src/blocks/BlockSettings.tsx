@@ -80,6 +80,8 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
       );
     case 'datetime':
       return <Labeled text={t(field.labelKey)}><input type="datetime-local" style={input} value={txt ? txt.slice(0, 16) : ''} onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : null)} /></Labeled>;
+    case 'number':
+      return <Labeled text={t(field.labelKey)}><input type="number" min={1} max={60} step={0.5} style={input} value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))} /></Labeled>;
     case 'boolean':
       return (
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>

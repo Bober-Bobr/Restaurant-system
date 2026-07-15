@@ -43,6 +43,7 @@ export function flyerTheme(inv: Partial<Invitation>): DesignTheme {
     backgroundImageUrl: inv.backgroundImageUrl ?? null,
     textColor: inv.textColor ?? null,
     textScale: inv.textScale ?? 1,
+    particles: inv.particles ?? null,
     musicUrl: inv.musicUrl ?? null,
   };
 }
@@ -77,6 +78,7 @@ export function invitationTheme(inv: Partial<GuestInvitation>): DesignTheme {
     backgroundImageUrl: inv.backgroundImageUrl ?? null,
     textColor: inv.textColor ?? null,
     textScale: inv.textScale ?? 1,
+    particles: inv.particles ?? null,
     musicUrl: inv.musicUrl ?? null,
     trailTemplate: inv.trailTemplate ?? 'hearts',
     trailColor: inv.trailColor ?? '#c2185b',

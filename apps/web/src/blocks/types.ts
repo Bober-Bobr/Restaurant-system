@@ -44,7 +44,7 @@ export type SocialLink = { label: string; url: string };
 
 export type TimingItem = { time: string; label: string };
 
-export type FieldType = 'text' | 'textarea' | 'html' | 'image' | 'color' | 'datetime' | 'boolean' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
+export type FieldType = 'text' | 'textarea' | 'html' | 'image' | 'color' | 'datetime' | 'boolean' | 'number' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
 
 export type BlockFieldDef = {
   key: string;
@@ -147,11 +147,12 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   gallery: {
     type: 'gallery', icon: '📷', labelKey: 'block_gallery',
-    defaultProps: { items: [], autoSlide: false },
+    defaultProps: { items: [], autoSlide: false, slideInterval: 4 },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
     fields: [
       { key: 'items', labelKey: 'bf_gallery', type: 'gallery' },
       { key: 'autoSlide', labelKey: 'bf_autoslide', type: 'boolean' },
+      { key: 'slideInterval', labelKey: 'bf_slide_interval', type: 'number' },
     ],
   },
   menu: {
