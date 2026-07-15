@@ -67,6 +67,8 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
       return <Labeled text={t(field.labelKey)}><input style={input} value={txt} onChange={(e) => onChange(e.target.value)} /></Labeled>;
     case 'textarea':
       return <Labeled text={t(field.labelKey)}><textarea style={{ ...input, minHeight: 90, resize: 'vertical' }} value={txt} onChange={(e) => onChange(e.target.value)} /></Labeled>;
+    case 'html':
+      return <Labeled text={t(field.labelKey)}><textarea spellCheck={false} placeholder="<div>…</div>" style={{ ...input, minHeight: 160, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, whiteSpace: 'pre' }} value={txt} onChange={(e) => onChange(e.target.value)} /></Labeled>;
     case 'color':
       return (
         <Labeled text={t(field.labelKey)}>

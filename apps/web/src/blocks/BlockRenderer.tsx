@@ -108,6 +108,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <MapView label={str(p, 'label', 'КАРТА')} address={str(p, 'address')} />;
     case 'promo':
       return <PromoCard p={p} accent={accent} />;
+    case 'html':
+      return <HtmlBlock html={str(p, 'html')} />;
     case 'rsvp':
       return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} />;
     case 'form':
@@ -119,6 +121,13 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     default:
       return null;
   }
+}
+
+// Raw-HTML block: renders the manager's own markup verbatim. Authored by the
+// trusted manager for their own page, so the markup is injected as-is.
+function HtmlBlock({ html }: { html: string }) {
+  if (!html.trim()) return <Placeholder label="HTML" />;
+  return <div style={{ width: '100%', overflowX: 'auto' }} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 function Placeholder({ label }: { label: string }) {
@@ -157,18 +166,99 @@ function useCountdown(target: string | null) {
   return { days: Math.floor(diff / 86400000), hours: Math.floor((diff / 3600000) % 24), minutes: Math.floor((diff / 60000) % 60), seconds: Math.floor((diff / 1000) % 60) };
 }
 
+// ── Flip-clock countdown ─────────────────────────────────────────────────────
+const CD_H = 66; // card height
+const CD_W = 48; // card width
+const CD_KEYFRAMES = `
+@keyframes cdFlipTop { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
+@keyframes cdFlipBottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }`;
+
+const cdFaceBase: React.CSSProperties = {
+  position: 'absolute', left: 0, right: 0, height: CD_H / 2, overflow: 'hidden',
+  display: 'flex', justifyContent: 'center', background: '#f6f5f1', backfaceVisibility: 'hidden',
+};
+function cdDigit(): React.CSSProperties {
+  return { fontSize: 44, fontWeight: 800, lineHeight: `${CD_H}px`, height: CD_H, color: '#161616', fontFamily: 'system-ui, sans-serif' };
+}
+function CdFace({ d, part, flap, zIndex }: { d: string; part: 'top' | 'bottom'; flap?: boolean; zIndex?: number }) {
+  const isTop = part === 'top';
+  const style: React.CSSProperties = {
+    ...cdFaceBase,
+    ...(isTop
+      ? { top: 0, alignItems: 'flex-start', borderRadius: '10px 10px 0 0', borderBottom: '1px solid rgba(0,0,0,0.10)' }
+      : { bottom: 0, alignItems: 'flex-end', borderRadius: '0 0 10px 10px' }),
+    ...(flap
+      ? isTop
+        ? { transformOrigin: 'bottom', animation: 'cdFlipTop 0.3s ease-in forwards', zIndex }
+        : { transformOrigin: 'top', transform: 'rotateX(90deg)', animation: 'cdFlipBottom 0.3s ease-out 0.3s forwards', zIndex }
+      : { zIndex }),
+  };
+  return <div style={style}><span style={cdDigit()}>{d}</span></div>;
+}
+
+// One split-flap digit card that flips smoothly whenever its value changes.
+function FlipDigit({ value }: { value: string }) {
+  const [display, setDisplay] = useState(value);
+  const [old, setOld] = useState(value);
+  const [flipKey, setFlipKey] = useState(0);
+  const [flipping, setFlipping] = useState(false);
+  useEffect(() => {
+    if (value !== display) {
+      setOld(display);
+      setDisplay(value);
+      setFlipKey((k) => k + 1);
+      setFlipping(true);
+      const t = setTimeout(() => setFlipping(false), 640);
+      return () => clearTimeout(t);
+    }
+  }, [value, display]);
+  return (
+    <div style={{ position: 'relative', width: CD_W, height: CD_H, perspective: 220, borderRadius: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.28)' }}>
+      <CdFace d={display} part="top" />
+      <CdFace d={flipping ? old : display} part="bottom" />
+      {flipping && (
+        <>
+          <CdFace key={`t${flipKey}`} d={old} part="top" flap zIndex={3} />
+          <CdFace key={`b${flipKey}`} d={display} part="bottom" flap zIndex={3} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function CdColon({ accent }: { accent: string }) {
+  const dot = { width: 7, height: 7, borderRadius: '50%', background: accent } as React.CSSProperties;
+  return <div style={{ height: CD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}><span style={dot} /><span style={dot} /></div>;
+}
+
 function CountdownView({ targetAt, label, accent }: { targetAt: string | null; label: string; accent: string }) {
   const cd = useCountdown(targetAt);
+  const groups = [
+    { v: cd?.days ?? 0, l: 'Дни' },
+    { v: cd?.hours ?? 0, l: 'Часы' },
+    { v: cd?.minutes ?? 0, l: 'Минуты' },
+    { v: cd?.seconds ?? 0, l: 'Секунды' },
+  ];
   return (
-    <section style={{ padding: '32px 24px', textAlign: 'center' }}>
-      {label && <h2 style={{ margin: '0 0 18px', fontSize: 24, letterSpacing: '0.08em', color: 'inherit' }}>{label}</h2>}
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
-        {[{ v: cd?.days ?? 0, l: 'Days' }, { v: cd?.hours ?? 0, l: 'Hrs' }, { v: cd?.minutes ?? 0, l: 'Min' }, { v: cd?.seconds ?? 0, l: 'Sec' }].map((s) => (
-          <div key={s.l} style={{ minWidth: 58 }}>
-            <p style={{ margin: 0, fontSize: 36, fontWeight: 600, color: 'inherit' }}>{String(s.v).padStart(2, '0')}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: hexToRgba(accent, 0.9) }}>{s.l}</p>
-          </div>
-        ))}
+    <section style={{ padding: '32px 16px', textAlign: 'center' }}>
+      <style>{CD_KEYFRAMES}</style>
+      {label && <h2 style={{ margin: '0 0 22px', fontSize: 24, letterSpacing: '0.08em', color: 'inherit' }}>{label}</h2>}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'flex-start' }}>
+        {groups.map((g, gi) => {
+          const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
+          return (
+            <div key={g.l} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  <FlipDigit value={s[0]} />
+                  <FlipDigit value={s[1]} />
+                </div>
+                <span style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'inherit', opacity: 0.75, fontFamily: 'system-ui, sans-serif' }}>{g.l}</span>
+              </div>
+              {gi < groups.length - 1 && <CdColon accent={accent} />}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

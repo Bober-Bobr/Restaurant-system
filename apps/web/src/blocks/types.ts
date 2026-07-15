@@ -23,6 +23,7 @@ export type BlockType =
   | 'savecontact'
   | 'map'
   | 'promo'
+  | 'html'
   | 'divider';
 
 export type BlockProps = Record<string, unknown>;
@@ -41,7 +42,7 @@ export type SocialLink = { label: string; url: string };
 
 export type TimingItem = { time: string; label: string };
 
-export type FieldType = 'text' | 'textarea' | 'image' | 'color' | 'datetime' | 'boolean' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
+export type FieldType = 'text' | 'textarea' | 'html' | 'image' | 'color' | 'datetime' | 'boolean' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
 
 export type BlockFieldDef = {
   key: string;
@@ -234,6 +235,15 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'label', labelKey: 'bf_button_label', type: 'text' },
     ],
   },
+  // Raw HTML: renders the manager's own markup verbatim.
+  html: {
+    type: 'html', icon: '</>', labelKey: 'block_html',
+    defaultProps: { html: '' },
+    defaultAnim: { type: 'fade', durationMs: 500, delayMs: 0 },
+    fields: [
+      { key: 'html', labelKey: 'bf_html', type: 'html' },
+    ],
+  },
   divider: {
     type: 'divider', icon: '—', labelKey: 'block_divider',
     defaultProps: { shape: 'line', text: '' },
@@ -252,7 +262,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 // All block types, in the order they appear in the Add-block palette.
 // `menu` is intentionally omitted — flyers use a static photo (image block) instead.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
+  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'html', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {

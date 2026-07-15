@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -23,6 +23,14 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').slice(0, 60) || 'flyer';
 }
 
+type SaveState = 'idle' | 'saving' | 'saved';
+
+// A stable signature of everything that gets persisted — used to detect changes
+// for auto-save and to avoid re-saving an unchanged flyer.
+function flyerSig(slug: string, isPublished: boolean, blocks: Block[], theme: DesignTheme): string {
+  return JSON.stringify({ slug: slugify(slug), isPublished, blocks, theme });
+}
+
 // ── Flyer project editor: /flyers/new and /flyers/:flyerId ──────────────────
 // Flyers are standalone projects (no restaurant/event linkage). The top bar
 // shows the full public link with a publish button, plus a dropdown to switch
@@ -45,7 +53,13 @@ export const InvitationBuilderPage = () => {
   const [isPublished, setIsPublished] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [chosen, setChosen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const { flash, error, setError, savedFlash } = useDesignSave();
+
+  // Signature of the last-persisted state; changes vs the current signature drive
+  // auto-save. `pendingSig` holds the signature of the in-flight save.
+  const savedSigRef = useRef<string>('');
+  const pendingSigRef = useRef<string>('');
 
   const existing = existingQuery.data;
   const isEditing = !!existing;
@@ -58,18 +72,24 @@ export const InvitationBuilderPage = () => {
 
   useEffect(() => {
     if (existing && !initialized) {
-      setBlocks(existing.blocks && existing.blocks.length ? existing.blocks : seedFlyerBlocks(existing));
-      setTheme(flyerTheme(existing));
+      const loadedBlocks = existing.blocks && existing.blocks.length ? existing.blocks : seedFlyerBlocks(existing);
+      const loadedTheme = flyerTheme(existing);
+      setBlocks(loadedBlocks);
+      setTheme(loadedTheme);
       setSlug(existing.slug);
       setIsPublished(existing.isPublished);
+      savedSigRef.current = flyerSig(existing.slug, existing.isPublished, loadedBlocks, loadedTheme);
       setInitialized(true);
       setChosen(true);
     } else if (!flyerId && !initialized) {
       // Brand-new project → a unique default slug the manager can edit.
+      const s = slugify(`flyer-${Math.random().toString(36).slice(2, 8)}`);
       setBlocks([]);
       setTheme(flyerTheme({}));
-      setSlug(slugify(`flyer-${Math.random().toString(36).slice(2, 8)}`));
+      setSlug(s);
       setIsPublished(false);
+      // Empty-flyer baseline: no auto-create until the manager actually edits.
+      savedSigRef.current = flyerSig(s, false, [], flyerTheme({}));
       setInitialized(true);
     }
   }, [existing, initialized, flyerId]);
@@ -81,11 +101,12 @@ export const InvitationBuilderPage = () => {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (overrides?: { isPublished?: boolean }) => {
+    mutationFn: async () => {
       const finalSlug = slugify(slug.trim() || 'flyer');
+      pendingSigRef.current = flyerSig(finalSlug, isPublished, blocks, theme);
       const payload: Partial<Invitation> = {
         slug: finalSlug,
-        isPublished: overrides?.isPublished ?? isPublished,
+        isPublished,
         blocks,
         accentColor: theme.accentColor ?? null,
         backgroundColor: theme.backgroundColor ?? null,
@@ -97,18 +118,30 @@ export const InvitationBuilderPage = () => {
       return invitationService.create({ ...payload, slug: finalSlug });
     },
     onSuccess: (inv) => {
-      setError(null); flash();
-      setSlug(inv.slug);
-      setIsPublished(inv.isPublished);
+      setError(null);
+      savedSigRef.current = pendingSigRef.current;
+      setSaveState('saved');
       queryClient.setQueryData(['flyer', inv.id], inv);
       queryClient.invalidateQueries({ queryKey: ['manager-my-flyers'] });
       if (!flyerId) navigate(`/flyers/${inv.id}`, { replace: true });
     },
     onError: (e) => {
+      setSaveState('idle');
       if (axios.isAxiosError(e)) setError((e.response?.data as { message?: string })?.message ?? e.message);
       else if (e instanceof Error) setError(e.message); else setError('Save failed');
     },
   });
+
+  // ── Auto-save: debounce changes and persist automatically ──────────────────
+  const currentSig = flyerSig(slug, isPublished, blocks, theme);
+  useEffect(() => {
+    if (!initialized || !chosen || !slug.trim()) return;
+    if (currentSig === savedSigRef.current) { setSaveState((s) => (s === 'saving' ? 'saved' : s)); return; }
+    setSaveState('saving');
+    const h = window.setTimeout(() => saveMutation.mutate(), 900);
+    return () => window.clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSig, initialized, chosen]);
 
   const saveTemplate = async () => {
     const name = window.prompt(t('template_name'));
@@ -141,9 +174,8 @@ export const InvitationBuilderPage = () => {
         t={t}
         slug={slug} onSlug={setSlug} publicUrl={publicUrl}
         isPublished={isPublished}
-        onPublishToggle={() => saveMutation.mutate({ isPublished: !isPublished })}
-        saving={saveMutation.isPending} isNew={!isEditing}
-        onSave={() => saveMutation.mutate(undefined)}
+        onPublishToggle={() => setIsPublished((v) => !v)}
+        saveState={saveState}
         onSaveTemplate={saveTemplate}
         onDelete={isEditing ? () => { if (confirm('Delete?')) deleteMutation.mutate(); } : undefined}
         flyers={myFlyersQuery.data ?? []}
@@ -161,12 +193,12 @@ export const InvitationBuilderPage = () => {
 };
 
 // ── Flyer top bar: full-size link + publish, project switcher on the right ──
-function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle, saving, isNew, onSave, onSaveTemplate, onDelete, flyers, currentId, onSwitch, extra }: {
+function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle, saveState, onSaveTemplate, onDelete, flyers, currentId, onSwitch, extra }: {
   t: TFn;
   slug: string; onSlug: (s: string) => void; publicUrl: string;
   isPublished: boolean; onPublishToggle: () => void;
-  saving: boolean; isNew: boolean;
-  onSave: () => void; onSaveTemplate: () => void; onDelete?: () => void;
+  saveState: SaveState;
+  onSaveTemplate: () => void; onDelete?: () => void;
   flyers: Invitation[]; currentId: string; onSwitch: (id: string) => void;
   extra?: React.ReactNode;
 }) {
@@ -191,12 +223,13 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
           </Link>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Auto-save status (replaces the old manual Save button) */}
+            <span style={{ fontSize: 12, color: saveState === 'saved' ? '#4ade80' : 'rgba(226,232,240,0.55)', whiteSpace: 'nowrap', minWidth: 92, textAlign: 'right' }}>
+              {saveState === 'saving' ? `⟳ ${t('saving')}` : saveState === 'saved' ? `✓ ${t('saved')}` : ''}
+            </span>
             {extra}
             <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={onSaveTemplate}>{t('save_as_template')}</button>
             {onDelete && <button type="button" className="adm-btn-danger" style={{ fontSize: 12 }} onClick={onDelete}>{t('delete_block')}</button>}
-            <button type="button" className="adm-btn-primary" style={{ fontSize: 13 }} disabled={saving} onClick={onSave}>
-              {saving ? '...' : isNew ? t('create_project') : t('save_changes')}
-            </button>
             {/* Project switcher */}
             <select
               value={currentId || '__current'}
@@ -240,7 +273,6 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
           </div>
           <button
             type="button"
-            disabled={saving}
             onClick={onPublishToggle}
             className={isPublished ? 'adm-btn-ghost' : 'adm-btn-primary'}
             style={{ fontSize: 13, ...(isPublished ? { color: '#4ade80', borderColor: 'rgba(34,197,94,0.4)' } : {}) }}

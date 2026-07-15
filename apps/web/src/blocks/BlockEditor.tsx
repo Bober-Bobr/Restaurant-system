@@ -49,7 +49,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   const bgColor = theme.backgroundColor || '#fafaf7';
   const bgImage = theme.backgroundImageUrl ? (getPhotoUrl(theme.backgroundImageUrl) ?? theme.backgroundImageUrl) : null;
   const pageBackground = bgImage
-    ? `url(${bgImage}) top left / auto repeat, ${bgColor}`
+    ? `${bgColor} url(${bgImage}) top center / auto repeat`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
   const ctx: RenderCtx = { accent, replayAnim: true, text: theme.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)), eventDate, logoUrl };

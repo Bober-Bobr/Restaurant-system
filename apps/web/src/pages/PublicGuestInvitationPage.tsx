@@ -124,7 +124,7 @@ function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation 
 
   const bgImg = inv.backgroundImageUrl ? (getPhotoUrl(inv.backgroundImageUrl) ?? inv.backgroundImageUrl) : null;
   const pageBackground = bgImg
-    ? `url(${bgImg}) top left / auto repeat, ${bgColor}`
+    ? `${bgColor} url(${bgImg}) top center / auto repeat`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
   // New block-based layout takes over when present; otherwise fall back to the
