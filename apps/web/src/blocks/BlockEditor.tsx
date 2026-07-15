@@ -52,7 +52,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
     ? `url(${bgImage}) top left / auto repeat, ${bgColor}`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.16)} 0%, transparent 42%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.12)} 0%, transparent 50%), ${bgColor}`;
 
-  const ctx: RenderCtx = { accent, replayAnim: true, text: bgImage ? '#f5f5f5' : readableText(bgColor), eventDate, logoUrl };
+  const ctx: RenderCtx = { accent, replayAnim: true, text: theme.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)), eventDate, logoUrl };
 
   const setBlock = (b: Block) => onBlocksChange(blocks.map((x) => (x.id === b.id ? b : x)));
   const addBlock = (type: BlockType) => {
@@ -242,6 +242,12 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('accent_color')}</span>{colorRow('accentColor', '#c9a42c')}</label>
       <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('background_color')}</span>{colorRow('backgroundColor', '#fafaf7')}</label>
+      {/* Page-wide text color: recolors all blocks at once (per-block overrides win). */}
+      <label style={{ display: 'grid', gap: 5 }}>
+        <span style={panelLabel}>{t('text_color')}</span>
+        {colorRow('textColor', '#1a1a1a')}
+        {theme.textColor && <button type="button" onClick={() => set('textColor', null)} style={{ justifySelf: 'start', marginTop: 2, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('reset_auto')}</button>}
+      </label>
       <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (
         <>

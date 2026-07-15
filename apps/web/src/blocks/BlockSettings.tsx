@@ -15,6 +15,12 @@ const label: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)
 
 const ANIMATION_TYPES: AnimationType[] = ['none', 'fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'zoom', 'blur', 'flip'];
 
+// Blocks whose text can be recolored per-block (a "Text color" picker is shown).
+// Empty value = inherit the page-wide text color from the theme.
+const TEXT_COLOR_BLOCKS = new Set<Block['type']>([
+  'hero', 'heading', 'text', 'countdown', 'timing', 'menu', 'socials', 'contacts', 'rsvp', 'form', 'savecontact', 'promo', 'divider',
+]);
+
 export function BlockSettings({ block, onChange, t, restaurantId }: {
   block: Block;
   onChange: (b: Block) => void;
@@ -30,6 +36,15 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
       {def.fields.map((f) => (
         <FieldEditor key={f.key} field={f} value={block.props[f.key]} onChange={(v) => setProp(f.key, v)} t={t} restaurantId={restaurantId} />
       ))}
+      {TEXT_COLOR_BLOCKS.has(block.type) && (
+        <FieldEditor
+          field={{ key: 'textColor', labelKey: 'bf_text_color', type: 'color' }}
+          value={block.props.textColor}
+          onChange={(v) => setProp('textColor', v)}
+          t={t}
+          restaurantId={restaurantId}
+        />
+      )}
       <AnimationControls value={block.anim} onChange={setAnim} t={t} />
     </div>
   );

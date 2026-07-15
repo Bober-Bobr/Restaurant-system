@@ -15,7 +15,6 @@ export type BlockType =
   | 'timing'
   | 'gallery'
   | 'menu'
-  | 'artist'
   | 'link'
   | 'socials'
   | 'contacts'
@@ -154,16 +153,6 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'items', labelKey: 'bf_menu', type: 'menu' },
     ],
   },
-  // Performing artist card: title + a photo carousel with the artist's name badge.
-  artist: {
-    type: 'artist', icon: '🎤', labelKey: 'block_artist',
-    defaultProps: { title: 'ЧТО СЕГОДНЯ ВАС ЖДЕТ ?', items: [] },
-    defaultAnim: { type: 'zoom', durationMs: 800, delayMs: 0 },
-    fields: [
-      { key: 'title', labelKey: 'bf_title', type: 'text' },
-      { key: 'items', labelKey: 'bf_artists', type: 'menu' },
-    ],
-  },
   // Single wide link button: label + sub-label + custom background color.
   link: {
     type: 'link', icon: '🔗', labelKey: 'block_link',
@@ -263,7 +252,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 // All block types, in the order they appear in the Add-block palette.
 // `menu` is intentionally omitted — flyers use a static photo (image block) instead.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'artist', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
+  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'promo', 'divider',
 ];
 
 export function createBlock(type: BlockType): Block {

@@ -79,6 +79,7 @@ export const GuestInvitationBuilderPage = () => {
         accentColor: theme.accentColor ?? null,
         backgroundColor: theme.backgroundColor ?? null,
         backgroundImageUrl: theme.backgroundImageUrl ?? null,
+        textColor: theme.textColor ?? null,
         musicUrl: theme.musicUrl ?? null,
         trailTemplate: (theme.trailTemplate as TrailTemplate) ?? 'sparkle',
         trailColor: theme.trailColor ?? null,

@@ -93,7 +93,7 @@ export const PublicInvitationPage = () => {
   if (invitation.blocks && invitation.blocks.length > 0) {
     const ctx: RenderCtx = {
       accent,
-      text: bgImage ? '#f5f5f5' : readableText(bgColor),
+      text: invitation.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)),
       submitLead: (p) => invitationService.submitRequest(slug, p),
       eventDate: invitation.event?.eventDate ?? null,
       logoUrl: invitation.restaurant?.logoUrl ?? invitation.restaurant?.company?.logoUrl ?? null,

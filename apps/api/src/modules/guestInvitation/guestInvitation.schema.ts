@@ -46,6 +46,7 @@ const baseShape = {
   accentColor: z.string().max(32).optional().nullable(),
   backgroundColor: z.string().max(32).optional().nullable(),
   backgroundImageUrl: z.string().max(500).optional().nullable(),
+  textColor: z.string().max(32).optional().nullable(),
   musicUrl: z.string().max(500).optional().nullable(),
   trailTemplate: trailTemplate.optional(),
   trailColor: z.string().max(32).optional().nullable(),

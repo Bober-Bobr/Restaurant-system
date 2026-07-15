@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool } from './types';
+import { str, bool, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
 
@@ -41,9 +41,13 @@ const arr = <T,>(p: BlockProps, k: string): T[] => (Array.isArray(p[k]) ? (p[k] 
 
 // ── One block → markup ───────────────────────────────────────────────────────
 export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
+  // Skip unknown/removed block types (e.g. legacy "artist" blocks in old designs).
+  if (!BLOCK_DEFS[block.type]) return null;
   // The section sets the inherited text color; sub-components use `inherit`.
+  // Per-block `textColor` overrides the page-wide color (ctx.text).
+  const color = str(block.props, 'textColor') || ctx.text || TEXT;
   return (
-    <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color: ctx.text ?? TEXT }}>
+    <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
       <BlockBody block={block} ctx={ctx} />
     </AnimatedSection>
   );
@@ -94,8 +98,6 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} />;
     case 'menu':
       return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
-    case 'artist':
-      return <ArtistShowcase title={str(p, 'title')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
     case 'link':
       return <LinkBar label={str(p, 'label', 'Link')} sublabel={str(p, 'sublabel')} action={p.action as ButtonAction | undefined} color={str(p, 'color')} accent={accent} />;
     case 'socials':
@@ -292,7 +294,7 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
           {src ? <img src={src} alt="" style={{ width: '100%', display: 'block' }} /> : <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>{str(p, 'title', 'Promo')}</div>}
           {str(p, 'code') && <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: accent, color: '#0f0f0f', padding: '6px 18px', borderRadius: 999, fontWeight: 800, fontSize: 14 }}>{str(p, 'code')}</div>}
         </div>
-        {str(p, 'subtitle') && <p style={{ margin: 0, padding: '12px 16px', fontSize: 12, textAlign: 'center', fontWeight: 600, color: TEXT, fontFamily: 'system-ui, sans-serif' }}>{str(p, 'subtitle')}</p>}
+        {str(p, 'subtitle') && <p style={{ margin: 0, padding: '12px 16px', fontSize: 12, textAlign: 'center', fontWeight: 600, color: str(p, 'textColor') || TEXT, fontFamily: 'system-ui, sans-serif' }}>{str(p, 'subtitle')}</p>}
       </div>
     </section>
   );
@@ -474,43 +476,6 @@ function MarqueeHeading({ text }: { text: string }) {
         <h2 style={{ ...half, margin: 0, fontSize: 26, letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
       </div>
     </div>
-  );
-}
-
-// Performing-artist card: photo carousel with a name badge and dots.
-function ArtistShowcase({ title, items, accent }: { title: string; items: MenuShowcaseItem[]; accent: string }) {
-  const [idx, setIdx] = useState(0);
-  return (
-    <section style={{ padding: '20px 0 10px' }}>
-      {title && <h2 style={{ margin: '0 0 14px', padding: '0 24px', fontSize: 24, letterSpacing: '0.08em', textAlign: 'center', color: 'inherit' }}>{title}</h2>}
-      {items.length === 0 ? <Placeholder label="Artist" /> : (() => {
-        const cur = items[Math.min(idx, items.length - 1)];
-        const src = img(cur.photoUrl);
-        return (
-          <div style={{ padding: '0 16px' }}>
-            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#111' }}>
-              <div style={{ aspectRatio: '4/5' }}>
-                {src && <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-              </div>
-              {cur.name && (
-                <div style={{ position: 'absolute', bottom: 14, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  {cur.name.split('\n').map((line, i) => (
-                    <span key={i} style={{ background: 'rgba(250,250,247,0.92)', color: '#111', padding: '5px 16px', borderRadius: 8, fontSize: 15, fontStyle: 'italic', fontWeight: 700, boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }}>{line}</span>
-                  ))}
-                </div>
-              )}
-              {items.length > 1 && (
-                <>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + items.length) % items.length); }} style={navBtn('left', accent)}>‹</button>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % items.length); }} style={navBtn('right', accent)}>›</button>
-                </>
-              )}
-            </div>
-            {items.length > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === idx ? accent : '#ccc' }} />)}</div>}
-          </div>
-        );
-      })()}
-    </section>
   );
 }
 

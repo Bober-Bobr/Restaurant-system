@@ -10,6 +10,8 @@ export type DesignTheme = {
   musicUrl?: string | null;
   trailTemplate?: string | null;
   trailColor?: string | null;
+  // Page-wide text color. Applies to every block that doesn't set its own.
+  textColor?: string | null;
 };
 
 export type DesignTemplate = {

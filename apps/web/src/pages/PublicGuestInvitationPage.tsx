@@ -130,7 +130,7 @@ function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation 
   // New block-based layout takes over when present; otherwise fall back to the
   // legacy fixed wedding layout below.
   if (inv.blocks && inv.blocks.length > 0) {
-    const ctx: RenderCtx = { accent, text: bgImg ? '#f5f5f5' : readableText(bgColor), submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
+    const ctx: RenderCtx = { accent, text: inv.textColor || (bgImg ? '#f5f5f5' : readableText(bgColor)), submitRsvp: (p) => guestInvitationService.submitRsvp(inv.slug, p) };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
         <FingerTrail accent={trailColor} template={inv.trailTemplate ?? 'sparkle'} />

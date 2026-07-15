@@ -107,9 +107,6 @@ function restaurantFlyer(): BuiltinTemplate {
       b('image', { url: '', rounded: false }, { type: 'fade', durationMs: 700, delayMs: 0 }),
       b('heading', { text: 'MEGA MENU НА ОДНОГО ЧЕЛОВЕКА 🔥', align: 'center', marquee: true }, { type: 'fade', durationMs: 700, delayMs: 0 }),
 
-      // Tonight's performing artist (after the menu photo)
-      b('artist', { title: 'ЧТО СЕГОДНЯ ВАС ЖДЕТ ?', items: [{ number: 1, name: 'ГРУППА\n«EUROSTARS»', photoUrl: null }] }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
-
       // Restaurant image carousel + call-back form
       b('heading', { text: 'НАШ РЕСТОРАН', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
       b('gallery', { items: [] }, { type: 'fade', durationMs: 700, delayMs: 0 }),

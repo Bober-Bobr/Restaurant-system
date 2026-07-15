@@ -54,6 +54,7 @@ export type Invitation = {
   accentColor: string | null;
   backgroundColor: string | null;
   backgroundImageUrl: string | null;
+  textColor: string | null;
   musicUrl: string | null;
 
   isPublished: boolean;

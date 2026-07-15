@@ -530,6 +530,8 @@ model Invitation {
   accentColor         String?
   backgroundColor     String?
   backgroundImageUrl  String?
+  // Page-wide text color (blocks may override per-block).
+  textColor           String?
 
   // Optional looping background music played on the public invitation
   musicUrl            String?
@@ -575,6 +577,8 @@ model GuestInvitation {
   accentColor        String?
   backgroundColor    String?
   backgroundImageUrl String?
+  // Page-wide text color (blocks may override per-block).
+  textColor          String?
   musicUrl           String?
   trailTemplate      String  @default("sparkle") // sparkle | hearts | candy
   trailColor         String?
