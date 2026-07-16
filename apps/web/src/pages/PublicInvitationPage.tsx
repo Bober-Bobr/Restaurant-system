@@ -99,6 +99,7 @@ export const PublicInvitationPage = () => {
       submitLead: (p) => invitationService.submitRequest(slug, p),
       eventDate: invitation.event?.eventDate ?? null,
       logoUrl: invitation.restaurant?.logoUrl ?? invitation.restaurant?.company?.logoUrl ?? null,
+      brandName: invitation.restaurant?.name ?? null,
     };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>

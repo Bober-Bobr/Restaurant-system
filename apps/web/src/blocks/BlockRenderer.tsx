@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { str, bool, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
@@ -19,6 +20,8 @@ export type RenderCtx = {
   logoUrl?: string | null;
   // Page-wide text size multiplier (1 = default). Scales all block text.
   textScale?: number | null;
+  // Restaurant/company name — shown in the lead-form success confirmation.
+  brandName?: string | null;
 };
 
 const TEXT = '#1a1a1a';
@@ -29,13 +32,40 @@ const PASSIVE_KEYFRAMES = `
 @keyframes blkShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 @keyframes blkTwitch { 0%, 88%, 100% { transform: rotate(0deg); } 91% { transform: rotate(-2.2deg); } 94% { transform: rotate(2.2deg); } 97% { transform: rotate(-1deg); } }
 @keyframes blkBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@keyframes blkGlow { 0%, 100% { box-shadow: 0 0 5px 0 var(--blk-glow-weak); border-color: var(--blk-glow-weak); } 50% { box-shadow: 0 0 16px 2px var(--blk-glow); border-color: var(--blk-glow); } }
-.blk-form-field::placeholder { font-weight: 700; }
+@keyframes blkGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } 50% { box-shadow: 0 0 15px 1px var(--blk-glow); } }
+@keyframes saPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes saCircle { to { stroke-dashoffset: 0; } }
+@keyframes saCheck { to { stroke-dashoffset: 0; } }
+.blk-form-field::placeholder { font-weight: 700; color: #9aa0a6; }
 `;
 
 // Moving light sweep laid over a (relative, overflow-hidden) element.
 function Sheen({ opacity = 0.35, seconds = 2.8 }: { opacity?: number; seconds?: number }) {
   return <span aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 35%, rgba(255,255,255,${opacity}) 50%, transparent 65%)`, backgroundSize: '250% 100%', animation: `blkShimmer ${seconds}s linear infinite`, pointerEvents: 'none' }} />;
+}
+
+// Success confirmation modal with a green check inside a soft pale-green disc.
+// Shown after a lead form is submitted; rendered through a portal over the page.
+function SuccessAlert({ title, subtitle }: { title: string; subtitle?: string }) {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return createPortal(
+    <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 2147483600, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <style>{PASSIVE_KEYFRAMES}</style>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, background: '#fff', borderRadius: 14, padding: '30px 26px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.35)', animation: 'saPop 0.35s cubic-bezier(0.22,1,0.36,1)', fontFamily: 'system-ui, sans-serif' }}>
+        {/* Green check inside a light-green ringed disc */}
+        <div style={{ width: 84, height: 84, margin: '0 auto 18px', borderRadius: '50%', background: '#eafaf0', border: '2px solid #c7ecd5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg viewBox="0 0 52 52" style={{ width: 46, height: 46, display: 'block' }}>
+            <path d="M14 27 l8 8 l16 -17" fill="none" stroke="#43b96a" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" style={{ strokeDasharray: 48, strokeDashoffset: 48, animation: 'saCheck 0.4s 0.15s ease forwards' }} />
+          </svg>
+        </div>
+        <h3 style={{ margin: '0 0 8px', fontSize: 17, color: '#2f3b34', fontWeight: 600 }}>{title}</h3>
+        {subtitle && <p style={{ margin: 0, fontSize: 14.5, color: '#6b7770', lineHeight: 1.5 }}>{subtitle}</p>}
+        <button type="button" onClick={() => setOpen(false)} style={{ marginTop: 22, padding: '10px 30px', borderRadius: 8, border: '1px solid #dcdcdc', background: '#f0f0f0', color: '#444', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', letterSpacing: '0.06em' }}>ЗАКРЫТЬ</button>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 // Page-wide text scale, provided by BlockList and read by each text component
@@ -154,7 +184,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'rsvp':
       return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} />;
     case 'form':
-      return <LeadForm title={str(p, 'title')} subtitle={str(p, 'subtitle')} buttonLabel={str(p, 'buttonLabel')} showMessage={bool(p, 'showMessage')} accent={accent} submit={ctx.submitLead} />;
+      return <LeadForm title={str(p, 'title')} subtitle={str(p, 'subtitle')} buttonLabel={str(p, 'buttonLabel')} showMessage={bool(p, 'showMessage')} accent={accent} brandName={ctx.brandName ?? null} submit={ctx.submitLead} />;
     case 'savecontact':
       return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} />;
     case 'divider':
@@ -540,9 +570,9 @@ const DIAL_CODES: { flag: string; code: string; name: string }[] = [
 
 // Lead-capture form (flyer). Collects name + phone (+ optional message) and
 // posts a call-back request the manager can review.
-function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }: {
+function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName, submit }: {
   title: string; subtitle: string; buttonLabel: string; showMessage: boolean;
-  accent: string; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
+  accent: string; brandName?: string | null; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
 }) {
   const fs = useFs();
   const [name, setName] = useState('');
@@ -559,23 +589,30 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
       setState('done');
     } catch { setState('error'); }
   };
-  // Fields: translucent highlighted fill + a soft accent glow pulsing on the border.
+  // Fields: solid white with a distinct border; a soft accent glow pulses as an
+  // outer halo but the crisp white fill + border stay legible on their own.
   const glowBase: React.CSSProperties = {
     ['--blk-glow' as string]: hexToRgba(accent, 0.85),
-    ['--blk-glow-weak' as string]: hexToRgba(accent, 0.2),
     animation: 'blkGlow 2.6s ease-in-out infinite',
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid transparent',
+    background: '#ffffff',
+    border: '1.5px solid rgba(0,0,0,0.25)',
     borderRadius: 12,
+    color: '#1a1a1a',
   };
-  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), outline: 'none', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box', ...glowBase };
+  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), outline: 'none', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box', ...glowBase };
   return (
     <section style={{ padding: '36px 24px', textAlign: 'center' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
       {title && <h2 style={{ margin: '0 0 8px', fontSize: fs(26), letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
       {subtitle && <p style={{ margin: '0 0 22px', fontSize: fs(13), lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
       {state === 'done' ? (
-        <p style={{ margin: 0, fontSize: fs(17), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
+        <>
+          <SuccessAlert
+            title="Заявка успешно отправлена!"
+            subtitle={brandName ? `Администратор ${brandName} скоро свяжется с вами.` : 'Администратор скоро свяжется с вами.'}
+          />
+          <p style={{ margin: 0, fontSize: fs(17), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Мы вам перезвоним.</p>
+        </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
           <input className="blk-form-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
