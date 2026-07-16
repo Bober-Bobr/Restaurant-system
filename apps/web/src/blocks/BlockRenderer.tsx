@@ -29,6 +29,7 @@ const PASSIVE_KEYFRAMES = `
 @keyframes blkShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 @keyframes blkTwitch { 0%, 88%, 100% { transform: rotate(0deg); } 91% { transform: rotate(-2.2deg); } 94% { transform: rotate(2.2deg); } 97% { transform: rotate(-1deg); } }
 @keyframes blkBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes blkGlow { 0%, 100% { box-shadow: 0 0 5px 0 var(--blk-glow-weak); border-color: var(--blk-glow-weak); } 50% { box-shadow: 0 0 16px 2px var(--blk-glow); border-color: var(--blk-glow); } }
 .blk-form-field::placeholder { font-weight: 700; }
 `;
 
@@ -36,13 +37,6 @@ const PASSIVE_KEYFRAMES = `
 function Sheen({ opacity = 0.35, seconds = 2.8 }: { opacity?: number; seconds?: number }) {
   return <span aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 35%, rgba(255,255,255,${opacity}) 50%, transparent 65%)`, backgroundSize: '250% 100%', animation: `blkShimmer ${seconds}s linear infinite`, pointerEvents: 'none' }} />;
 }
-
-// Faint shimmer applied directly to a form field's transparent background.
-const fieldShimmer: React.CSSProperties = {
-  backgroundImage: 'linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
-  backgroundSize: '250% 100%',
-  animation: 'blkShimmer 3.4s linear infinite',
-};
 
 // Page-wide text scale, provided by BlockList and read by each text component
 // via `useFs`, which returns a helper that scales a base px size.
@@ -565,7 +559,16 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
       setState('done');
     } catch { setState('error'); }
   };
-  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), border: '1px solid currentColor', borderRadius: 12, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box', ...fieldShimmer };
+  // Fields: translucent highlighted fill + a soft accent glow pulsing on the border.
+  const glowBase: React.CSSProperties = {
+    ['--blk-glow' as string]: hexToRgba(accent, 0.85),
+    ['--blk-glow-weak' as string]: hexToRgba(accent, 0.2),
+    animation: 'blkGlow 2.6s ease-in-out infinite',
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid transparent',
+    borderRadius: 12,
+  };
+  const field: React.CSSProperties = { padding: '16px 18px', fontSize: fs(15), outline: 'none', color: 'inherit', fontFamily: 'system-ui, sans-serif', width: '100%', boxSizing: 'border-box', ...glowBase };
   return (
     <section style={{ padding: '36px 24px', textAlign: 'center' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
@@ -577,7 +580,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, submit }:
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '0 auto' }}>
           <input className="blk-form-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" style={field} />
           {/* Phone: country/dial-code picker + the number input side by side in one box */}
-          <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid currentColor', borderRadius: 12, overflow: 'hidden', ...fieldShimmer }}>
+          <div style={{ display: 'flex', alignItems: 'stretch', overflow: 'hidden', ...glowBase }}>
             <select
               value={country}
               onChange={(e) => setCountry(Number(e.target.value))}

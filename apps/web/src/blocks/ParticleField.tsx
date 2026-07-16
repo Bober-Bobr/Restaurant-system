@@ -22,9 +22,11 @@ function shape(kind: ParticleKind, p: P): React.CSSProperties {
   return {}; // candy renders an emoji glyph instead of a colored shape
 }
 
-// Full-page falling particle overlay (confetti / snow / candy). Purely decorative:
-// absolutely fills its positioned parent, never intercepts pointer events.
-export function ParticleField({ kind, count = 26 }: { kind?: ParticleKind | string | null; count?: number }) {
+// Full-page falling particle overlay (confetti / snow / candy). Purely decorative,
+// never intercepts pointer events, and sits above everything else. `fixed` anchors
+// it to the viewport (public pages, so particles cover the whole scrolling page);
+// otherwise it fills its nearest positioned ancestor (the editor's phone frame).
+export function ParticleField({ kind, count = 80, fixed = false }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean }) {
   const k = (kind ?? 'none') as ParticleKind;
   const particles = useMemo<P[]>(() => {
     return Array.from({ length: count }, () => ({
@@ -42,7 +44,7 @@ export function ParticleField({ kind, count = 26 }: { kind?: ParticleKind | stri
   if (!k || k === 'none') return null;
 
   return (
-    <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 2 }}>
+    <div aria-hidden style={{ position: fixed ? 'fixed' : 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 2147483000 }}>
       <style>{KEYFRAMES}</style>
       {particles.map((p, i) => (
         <div key={i} style={{ position: 'absolute', top: 0, left: `${p.left}%`, animation: `pfFall ${p.dur}s linear ${p.delay}s infinite`, willChange: 'transform' }}>
