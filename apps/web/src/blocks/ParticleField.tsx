@@ -62,7 +62,7 @@ function SnowflakeSvg({ size, opacity }: { size: number; opacity: number }) {
 // body and a bright highlight so it reads as a real sweet rather than a flat dot.
 function CandySvg({ size, color }: { size: number; color: string }) {
   return (
-    <svg width={size * 1.5} height={size} viewBox="0 0 120 80" style={{ display: 'block', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))' }}>
+    <svg width={size * 1.5} height={size} viewBox="0 0 120 80" style={{ display: 'block', opacity: 0.7, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))' }}>
       <path d="M34 40 L6 18 Q1 40 6 62 Z" fill={color} opacity="0.92" />
       <path d="M86 40 L114 18 Q119 40 114 62 Z" fill={color} opacity="0.92" />
       <path d="M14 28 L20 40 L14 52" fill="none" stroke="rgba(0,0,0,0.28)" strokeWidth="2" />
@@ -78,7 +78,7 @@ function CandySvg({ size, color }: { size: number; color: string }) {
 // Solid black heart with a soft highlight (not an emoji).
 function HeartSvg({ size }: { size: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" style={{ display: 'block', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>
+    <svg width={size} height={size} viewBox="0 0 32 32" style={{ display: 'block', opacity: 0.7, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>
       <path d="M16 28.7C16 28.7 2.7 20.3 2.7 11.2 2.7 7.1 6 4 9.8 4 12.3 4 14.6 5.6 16 7.9 17.4 5.6 19.7 4 22.2 4 26 4 29.3 7.1 29.3 11.2 29.3 20.3 16 28.7 16 28.7Z" fill="#141414" />
       <ellipse cx="11" cy="11" rx="3.2" ry="2.1" fill="rgba(255,255,255,0.3)" />
     </svg>
@@ -106,9 +106,12 @@ function sizeFor(k: ParticleKind): number {
 // (public pages); otherwise it fills its nearest positioned ancestor (editor frame).
 export function ParticleField({ kind, count = 80, fixed = false }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean }) {
   const k = (kind ?? 'none') as ParticleKind;
+  // Candies and hearts are larger, detailed shapes — fewer of them read as
+  // scattered accents rather than a dense, cluttered overlay.
+  const n = (k === 'candy' || k === 'hearts') ? Math.round(count * 0.35) : count;
   const particles = useMemo<P[]>(() => {
     const palette = k === 'birthday' ? BIRTHDAY : k === 'candy' ? CANDY_COLORS : GOLD;
-    return Array.from({ length: count }, () => ({
+    return Array.from({ length: n }, () => ({
       left: Math.random() * 100,
       delay: -Math.random() * 14,
       fall: 6 + Math.random() * (k === 'snow' ? 12 : 7),
@@ -120,7 +123,7 @@ export function ParticleField({ kind, count = 80, fixed = false }: { kind?: Part
       color: pick(palette),
       round: Math.random() < 0.25,
     }));
-  }, [count, k]);
+  }, [n, k]);
 
   if (!k || k === 'none') return null;
 
