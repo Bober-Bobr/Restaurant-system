@@ -669,3 +669,73 @@ model DesignTemplate {
 
   @@index([ownerId])
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// v-invite.uz — standalone public invitation-builder product. Its users, sessions,
+// projects and templates are fully separate from the v-menu AdminUser world.
+// ══════════════════════════════════════════════════════════════════════════════
+
+model InviteUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  // Null for Google-only accounts.
+  passwordHash String?
+  // Google account subject (sub claim) when signed in / linked via Google.
+  googleId     String?  @unique
+  displayName  String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+
+  sessions  InviteSession[]
+  projects  InviteProject[]
+  templates InviteTemplate[]
+}
+
+// Per-device refresh session — powers the "Devices" tab.
+model InviteSession {
+  id               String   @id @default(cuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime @default(now())
+  lastUsedAt       DateTime @default(now())
+
+  user InviteUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// An invitation project built in the block designer; published (when a free slug
+// is claimed) at <slug>.v-invite.uz.
+model InviteProject {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  slug        String?  @unique
+  isPublished Boolean  @default(false)
+  blocks      Json     @default("[]")
+  theme       Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user InviteUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// A user-private reusable design snapshot for seeding new invitations.
+model InviteTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  blocks    Json     @default("[]")
+  theme     Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user InviteUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

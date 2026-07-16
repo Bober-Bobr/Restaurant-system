@@ -42,10 +42,22 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { VInviteApp } from '../vinvite/VInviteApp';
+import { PublicVInvitePage } from '../vinvite/PublicVInvitePage';
 
 export const App = () => {
   const handledRef = useRef(false);
+
+  // ── v-invite.uz: the standalone invitation-builder product ──
+  // <name>.v-invite.uz → a published invitation site; the root host → the app.
+  const inviteSiteSlug = getInviteSiteSlug();
+  if (inviteSiteSlug) {
+    return <PublicVInvitePage slug={inviteSiteSlug} />;
+  }
+  if (isInviteRootDomain()) {
+    return <VInviteApp />;
+  }
 
   if (!handledRef.current) {
     handledRef.current = true;

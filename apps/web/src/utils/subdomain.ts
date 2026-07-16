@@ -10,6 +10,33 @@ export function buildSubdomainBase(subdomain: string, path = '/'): string {
   return `https://${subdomain}.${ROOT_DOMAIN}${path}`;
 }
 
+// ── v-invite.uz — the standalone invitation-builder product ──────────────────
+const INVITE_DOMAIN: string = (import.meta.env.VITE_INVITE_DOMAIN as string | undefined) ?? 'v-invite.uz';
+
+// Root v-invite.uz host → the builder app (login / dashboard / editor).
+export function isInviteRootDomain(): boolean {
+  const host = window.location.hostname;
+  return host === INVITE_DOMAIN || host === `www.${INVITE_DOMAIN}` || host === 'v-invite.local';
+}
+
+// <name>.v-invite.uz → a published invitation site. Returns the slug or null.
+export function getInviteSiteSlug(): string | null {
+  const host = window.location.hostname;
+  const suffix = `.${INVITE_DOMAIN}`;
+  if (!host.endsWith(suffix)) return null;
+  const slug = host.slice(0, -suffix.length);
+  if (!slug || slug.includes('.') || slug === 'www') return null;
+  return slug;
+}
+
+export function buildInviteSiteUrl(slug: string): string {
+  return `https://${slug}.${INVITE_DOMAIN}/`;
+}
+
+export function inviteDomain(): string {
+  return INVITE_DOMAIN;
+}
+
 // Single-label subdomains reserved for platform roles — never treated as a restaurant slug.
 // `event` is the bare flyer host (event.v-menu.uz) for flyers with no restaurant.
 const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'rmanager', 'www', 'event']);

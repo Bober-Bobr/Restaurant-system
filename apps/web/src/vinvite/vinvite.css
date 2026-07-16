@@ -1,0 +1,159 @@
+/* ── v-invite.uz design system ─────────────────────────────────────────────────
+   A cream + blue, shadcn-inspired look: soft borders, rounded corners, gentle
+   shadows, springy micro-animations. Light/dark themes via [data-theme]. */
+
+.vi-root {
+  /* light (cream) */
+  --vi-bg: #faf6ee;
+  --vi-bg-soft: #f3ecdf;
+  --vi-card: #fffdf8;
+  --vi-text: #1f2937;
+  --vi-muted: #6b7280;
+  --vi-border: rgba(30, 58, 138, 0.14);
+  --vi-accent: #2563eb;
+  --vi-accent-strong: #1d4ed8;
+  --vi-accent-soft: rgba(37, 99, 235, 0.1);
+  --vi-ring: rgba(37, 99, 235, 0.35);
+  --vi-danger: #dc2626;
+  --vi-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);
+  --vi-shadow-lg: 0 18px 50px rgba(30, 58, 138, 0.14);
+
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(217, 168, 90, 0.14) 0%, transparent 55%),
+    var(--vi-bg);
+  color: var(--vi-text);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+.vi-root[data-theme='dark'] {
+  --vi-bg: #0e1420;
+  --vi-bg-soft: #131b2b;
+  --vi-card: #161f31;
+  --vi-text: #ede7da;
+  --vi-muted: #94a0b4;
+  --vi-border: rgba(147, 197, 253, 0.16);
+  --vi-accent: #60a5fa;
+  --vi-accent-strong: #3b82f6;
+  --vi-accent-soft: rgba(96, 165, 250, 0.14);
+  --vi-ring: rgba(96, 165, 250, 0.4);
+  --vi-danger: #f87171;
+  --vi-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --vi-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
+
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(59, 130, 246, 0.14) 0%, transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(217, 168, 90, 0.08) 0%, transparent 55%),
+    var(--vi-bg);
+}
+
+/* ── Animations ── */
+@keyframes viFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes viFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes viPop { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes viFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-18px) rotate(4deg); } }
+@keyframes viSpin { to { transform: rotate(360deg); } }
+@keyframes viSheen { from { transform: translateX(-160%) skewX(-18deg); } to { transform: translateX(260%) skewX(-18deg); } }
+
+.vi-fade-up { animation: viFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.vi-pop { animation: viPop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Cards ── */
+.vi-card {
+  background: var(--vi-card);
+  border: 1px solid var(--vi-border);
+  border-radius: 16px;
+  box-shadow: var(--vi-shadow);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.vi-card-hover { cursor: pointer; }
+.vi-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--vi-shadow-lg);
+  border-color: var(--vi-ring);
+}
+
+/* ── Buttons ── */
+.vi-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  border: 1px solid transparent; cursor: pointer; text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  position: relative; overflow: hidden; white-space: nowrap;
+  font-family: inherit;
+}
+.vi-btn:active { transform: scale(0.97); }
+.vi-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.vi-btn-primary { background: var(--vi-accent); color: #fff; box-shadow: 0 6px 18px var(--vi-accent-soft); }
+.vi-btn-primary:hover { background: var(--vi-accent-strong); box-shadow: 0 8px 22px var(--vi-ring); }
+.vi-btn-primary::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+}
+.vi-btn-primary:hover::after { animation: viSheen 0.8s ease; }
+
+.vi-btn-ghost { background: transparent; color: var(--vi-text); border-color: var(--vi-border); }
+.vi-btn-ghost:hover { background: var(--vi-accent-soft); border-color: var(--vi-ring); color: var(--vi-accent); }
+
+.vi-btn-danger { background: transparent; color: var(--vi-danger); border-color: currentColor; }
+.vi-btn-danger:hover { background: rgba(220, 38, 38, 0.1); }
+
+/* ── Inputs ── */
+.vi-input, .vi-select {
+  width: 100%; padding: 11px 14px; border-radius: 12px; font-size: 14px;
+  background: var(--vi-card); color: var(--vi-text);
+  border: 1px solid var(--vi-border); outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+.vi-input::placeholder { color: var(--vi-muted); }
+.vi-input:focus, .vi-select:focus { border-color: var(--vi-accent); box-shadow: 0 0 0 4px var(--vi-accent-soft); }
+
+.vi-label { display: block; font-size: 12px; font-weight: 600; color: var(--vi-muted); margin: 0 0 6px; letter-spacing: 0.02em; }
+
+/* ── Nav tabs ── */
+.vi-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 15px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
+  color: var(--vi-muted); text-decoration: none; border: 1px solid transparent;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.vi-tab:hover { color: var(--vi-accent); background: var(--vi-accent-soft); }
+.vi-tab.active { color: var(--vi-accent); background: var(--vi-accent-soft); border-color: var(--vi-ring); }
+
+/* ── Misc ── */
+.vi-spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 3px solid var(--vi-accent-soft); border-top-color: var(--vi-accent);
+  animation: viSpin 0.8s linear infinite;
+}
+
+.vi-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 4px 10px; border-radius: 999px;
+}
+.vi-badge-live { background: rgba(34, 197, 94, 0.14); color: #16a34a; }
+.vi-root[data-theme='dark'] .vi-badge-live { color: #4ade80; }
+.vi-badge-draft { background: var(--vi-accent-soft); color: var(--vi-muted); }
+
+/* Decorative floating blobs on the login page */
+.vi-blob {
+  position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.55;
+  animation: viFloat 9s ease-in-out infinite; pointer-events: none;
+}
+
+/* Theme-toggle icon spin */
+.vi-theme-toggle { transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.vi-theme-toggle:hover { transform: rotate(40deg) scale(1.08); }
+
+/* Modal overlay */
+.vi-overlay {
+  position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(8px); padding: 16px;
+  animation: viFadeIn 0.2s ease both;
+}

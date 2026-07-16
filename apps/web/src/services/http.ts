@@ -1,5 +1,6 @@
 import axios, { type AxiosError } from 'axios';
 import { useAuthStore } from '../store/auth.store';
+import { useVInviteStore } from '../vinvite/store';
 
 export const httpClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'
@@ -19,8 +20,13 @@ const notifyRefreshSubscribers = (token: string) => {
 
 httpClient.interceptors.request.use((config) => {
   const accessToken = useAuthStore.getState().accessToken;
+  const inviteToken = useVInviteStore.getState().accessToken;
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
+  } else if (inviteToken) {
+    // v-invite.uz users share upload infrastructure (photos/audio) — their own
+    // token authorizes those endpoints.
+    config.headers.Authorization = `Bearer ${inviteToken}`;
   } else {
     const legacyKey = import.meta.env.VITE_ADMIN_API_KEY as string | undefined;
     if (legacyKey) {
@@ -44,6 +50,26 @@ httpClient.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true;
         const refreshToken = useAuthStore.getState().refreshToken;
+
+        // v-invite user (no admin session) → refresh against the vinvite auth.
+        if (!refreshToken && useVInviteStore.getState().refreshToken) {
+          try {
+            const response = await axios.post(
+              `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'}/vinvite/auth/refresh`,
+              { refreshToken: useVInviteStore.getState().refreshToken }
+            );
+            const { accessToken, refreshToken: newRefreshToken } = response.data;
+            useVInviteStore.getState().setTokens(accessToken, newRefreshToken);
+            notifyRefreshSubscribers(accessToken);
+            isRefreshing = false;
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return httpClient(originalRequest);
+          } catch {
+            useVInviteStore.getState().logout();
+            isRefreshing = false;
+          }
+          return Promise.reject(error);
+        }
 
         if (refreshToken) {
           try {

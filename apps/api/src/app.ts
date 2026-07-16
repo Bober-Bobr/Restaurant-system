@@ -22,6 +22,8 @@ import { companyRouter } from './modules/company/company.routes.js';
 import { invitationRouter } from './modules/invitation/invitation.routes.js';
 import { guestInvitationRouter } from './modules/guestInvitation/guestInvitation.routes.js';
 import { designTemplateRouter } from './modules/designTemplate/designTemplate.routes.js';
+import { vinviteRouter } from './modules/vinvite/vinvite.routes.js';
+import { adminOrInviteAuthMiddleware } from './modules/vinvite/vinvite.middleware.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { expenseRouter } from './modules/expense/expense.routes.js';
 
@@ -69,7 +71,6 @@ protectedApi.use('/pricing', requireRestaurant, pricingRouter);
 protectedApi.use('/exports', requireRestaurant, exportRouter);
 protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
-protectedApi.use('/photos', photoRoutes);
 protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);
@@ -79,6 +80,12 @@ protectedApi.use('/companies', companyRouter);
 app.use('/api/invitations', invitationRouter);
 app.use('/api/guest-invitations', guestInvitationRouter);
 app.use('/api/design-templates', designTemplateRouter);
+// v-invite.uz — standalone invitation-builder product (own users/auth, mixed
+// public + authenticated routes handled inside the router).
+app.use('/api/vinvite', vinviteRouter);
+// Photo/audio uploads are shared infrastructure: both v-menu admins and
+// v-invite users may upload (the controller tolerates a missing admin context).
+app.use('/api/photos', adminOrInviteAuthMiddleware, photoRoutes);
 app.use('/api/reviews', reviewRouter);
 
 app.use('/api', protectedApi);
