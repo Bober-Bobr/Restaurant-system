@@ -12,12 +12,13 @@ const CANDIES = ['🍬', '🍭', '🍫'];
 type P = { left: number; delay: number; dur: number; sway: number; drift: number; size: number; glyph: string; hue: number };
 
 function shape(kind: ParticleKind, p: P): React.CSSProperties {
+  // display:block so width/height apply (an inline <span> would ignore them).
   if (kind === 'snow') {
-    return { width: p.size, height: p.size, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', boxShadow: '0 0 4px rgba(255,255,255,0.7)' };
+    return { display: 'block', width: p.size, height: p.size, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', boxShadow: '0 0 4px rgba(255,255,255,0.7)' };
   }
   if (kind === 'confetti') {
     // Yellow confetti — a spread of warm golden hues.
-    return { width: p.size, height: Math.round(p.size * 1.6), borderRadius: 2, background: `hsl(${p.hue}, 95%, 55%)` };
+    return { display: 'block', width: p.size, height: Math.round(p.size * 1.6), borderRadius: 2, background: `hsl(${p.hue}, 95%, 55%)` };
   }
   return {}; // candy renders an emoji glyph instead of a colored shape
 }
