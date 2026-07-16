@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'react-router-dom';
 import { vinviteService, type PublicInviteSite } from './api';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
@@ -13,8 +14,11 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-// ── Published invitation site: <slug>.v-invite.uz ─────────────────────────────
-export const PublicVInvitePage = ({ slug }: { slug: string }) => {
+// ── Published invitation site: v-invite.uz/<slug> ─────────────────────────────
+// (also usable via a host prop should wildcard subdomains become available)
+export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
+  const { slug: pathSlug = '' } = useParams();
+  const slug = slugProp || pathSlug;
   const { data: site, isLoading, isError } = useQuery<PublicInviteSite>({
     queryKey: ['vi-public', slug],
     queryFn: () => vinviteService.publicBySlug(slug),

@@ -173,14 +173,13 @@ export const ViEditorPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 260, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px' }}>
               <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)', whiteSpace: 'nowrap' }}>{t('my_link')}:</span>
-              <span style={{ fontSize: 13, color: '#60a5fa' }}>https://</span>
+              <span style={{ fontSize: 13, color: '#60a5fa', whiteSpace: 'nowrap' }}>https://{inviteDomain()}/</span>
               <input
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
                 placeholder="my-invite"
                 style={{ flex: '0 1 auto', width: Math.max(70, slug.length * 8 + 16), minWidth: 70, background: 'rgba(96,165,250,0.1)', border: `1px solid ${slugFree === false ? 'rgba(248,113,113,0.6)' : 'rgba(96,165,250,0.35)'}`, borderRadius: 6, color: '#93c5fd', padding: '3px 8px', fontSize: 13, fontWeight: 600, outline: 'none' }}
               />
-              <span style={{ fontSize: 13, color: '#60a5fa', whiteSpace: 'nowrap' }}>.{inviteDomain()}</span>
               {slugFree !== null && finalSlug && (
                 <span style={{ fontSize: 11.5, fontWeight: 700, color: slugFree ? '#4ade80' : '#f87171', whiteSpace: 'nowrap' }}>
                   {slugFree ? `✓ ${t('link_free')}` : `✕ ${t('link_taken')}`}

@@ -29,8 +29,10 @@ export function getInviteSiteSlug(): string | null {
   return slug;
 }
 
+// Published invitations use PATH-based links (v-invite.uz/<slug>) because the
+// .uz registrar does not allow wildcard subdomain DNS records.
 export function buildInviteSiteUrl(slug: string): string {
-  return `https://${slug}.${INVITE_DOMAIN}/`;
+  return `https://${INVITE_DOMAIN}/${slug}`;
 }
 
 export function inviteDomain(): string {

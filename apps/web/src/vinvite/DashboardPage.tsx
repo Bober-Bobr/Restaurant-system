@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { vinviteService, type InviteProjectSummary, type InviteTemplate } from './api';
 import { useViT } from './i18n';
-import { buildInviteSiteUrl } from '../utils/subdomain';
+import { buildInviteSiteUrl, inviteDomain } from '../utils/subdomain';
 import { builtinTemplates, type BuiltinTemplate } from '../blocks/builtinTemplates';
 import { invitationTheme } from '../blocks/seed';
 
@@ -93,7 +93,7 @@ function ProjectCard({ project, delayMs, onOpen, onRename, onDelete }: {
             onClick={(e) => e.stopPropagation()}
             style={{ fontSize: 12, color: 'var(--vi-accent)', textDecoration: 'none', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}
           >
-            {project.slug}.v-invite.uz ↗
+            {inviteDomain()}/{project.slug} ↗
           </a>
         )}
       </div>

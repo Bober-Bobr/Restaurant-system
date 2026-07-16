@@ -9,6 +9,7 @@ import { ViEditorPage, ViTemplateEditorPage } from './EditorPage';
 import { ViTemplatesPage } from './TemplatesPage';
 import { ViDevicesPage } from './DevicesPage';
 import { ViProfilePage } from './ProfilePage';
+import { PublicVInvitePage } from './PublicVInvitePage';
 import logoSrc from '../assets/qr-logo.png';
 import './vinvite.css';
 
@@ -23,6 +24,10 @@ export const VInviteApp = () => {
     <div className="vi-root" data-theme={uiTheme}>
       <Routes>
         <Route path="/login" element={accessToken ? <Navigate to="/" replace /> : <ViLoginPage />} />
+        {/* Published invitation: v-invite.uz/<slug> (path-based — no wildcard
+            DNS available on .uz). Static app routes above/below always win over
+            this dynamic segment. */}
+        <Route path="/:slug" element={<PublicVInvitePage />} />
         {accessToken ? (
           <>
             {/* The editor is full-bleed (its own top bar), outside the tabbed layout. */}

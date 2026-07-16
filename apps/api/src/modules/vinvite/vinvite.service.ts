@@ -7,8 +7,13 @@ import { prisma } from '../../db/prisma.js';
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';
 
-// Subdomain labels that can never be claimed as a published invitation slug.
-const RESERVED_SLUGS = new Set(['www', 'api', 'admin', 'app', 'login', 'mail', 'static', 'assets', 'help', 'support']);
+// Names that can never be claimed as a published invitation slug. Links are
+// path-based (v-invite.uz/<slug>), so every app route must be reserved too.
+const RESERVED_SLUGS = new Set([
+  'www', 'api', 'admin', 'app', 'login', 'register', 'logout', 'mail',
+  'static', 'assets', 'help', 'support', 'uploads',
+  'templates', 'devices', 'profile', 'projects', 'invitations', 'settings',
+]);
 
 export type InviteAuthResponse = {
   accessToken: string;
