@@ -275,6 +275,8 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
         <select style={panelInput} value={theme.particles ?? 'none'} onChange={(e) => set('particles', e.target.value)}>
           <option value="none">{t('particle_none')}</option>
           <option value="confetti">{t('particle_confetti')}</option>
+          <option value="birthday">{t('particle_birthday')}</option>
+          <option value="hearts">{t('particle_hearts')}</option>
           <option value="snow">{t('particle_snow')}</option>
           <option value="candy">{t('particle_candy')}</option>
         </select>
