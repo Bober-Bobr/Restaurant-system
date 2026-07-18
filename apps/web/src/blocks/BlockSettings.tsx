@@ -33,6 +33,11 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Hide this block from the published page (still editable here). */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', padding: '8px 10px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <input type="checkbox" checked={block.hidden === true} onChange={(e) => onChange({ ...block, hidden: e.target.checked })} />
+        {t('hide_block')}
+      </label>
       {def.fields.map((f) => (
         <FieldEditor key={f.key} field={f} value={block.props[f.key]} onChange={(v) => setProp(f.key, v)} t={t} restaurantId={restaurantId} />
       ))}

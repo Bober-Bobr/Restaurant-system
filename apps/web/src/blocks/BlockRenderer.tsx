@@ -4,6 +4,7 @@ import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, So
 import { str, bool, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
+import networkingLogoSrc from '../assets/networking-logo.png';
 
 export type RenderCtx = {
   accent: string;
@@ -753,5 +754,28 @@ export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) 
     <ScaleCtx.Provider value={ctx.textScale ?? 1}>
       {blocks.filter((b) => !b.hidden).map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
     </ScaleCtx.Provider>
+  );
+}
+
+// Mandatory attribution shown at the bottom of every flyer: "developed by
+// V-connect" + the V-connect logo. Not a block — always rendered, not removable.
+export function VConnectFooter({ label }: { label: string }) {
+  return (
+    <a
+      href="https://v-connect.uz"
+      target="_blank"
+      rel="noreferrer"
+      aria-label="V-connect"
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        padding: '26px 20px 30px', margin: '10px 0 0', textDecoration: 'none',
+        borderTop: '1px solid rgba(0,0,0,0.08)',
+      }}
+    >
+      <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'inherit', opacity: 0.6, fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+        {label}
+      </span>
+      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 30, width: 'auto', opacity: 0.9 }} />
+    </a>
   );
 }

@@ -140,8 +140,6 @@ function restaurantFlyer(): BuiltinTemplate {
       b('image', { url: '', rounded: true }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
       b('text', { text: '📞 Чтобы получить онлайн-пригласительное, позвоните по указанному номеру и назовите промокод: #MBEK78', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
       b('button', { label: 'ТЕЛЕФОН', action: { kind: 'phone', value: PHONE } }, { type: 'fade', durationMs: 600, delayMs: 0 }),
-      // Restaurant logo is injected automatically from the restaurant settings.
-      b('image', { url: '', rounded: false, useLogo: true }, { type: 'fade', durationMs: 700, delayMs: 0 }),
       b('text', { text: 'Добро пожаловать — вкус, тепло и гостеприимство ждут вас!\n★★★★★', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 80 }),
     ],
   };

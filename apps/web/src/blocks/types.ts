@@ -106,12 +106,11 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   image: {
     type: 'image', icon: '🖼', labelKey: 'block_image',
-    defaultProps: { url: '', rounded: false, useLogo: false, timer: false, timerAt: null, timerLabel: '' },
+    defaultProps: { url: '', rounded: false, timer: false, timerAt: null, timerLabel: '' },
     defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
     fields: [
       { key: 'url', labelKey: 'bf_image', type: 'image' },
       { key: 'rounded', labelKey: 'bf_rounded', type: 'boolean' },
-      { key: 'useLogo', labelKey: 'bf_use_logo', type: 'boolean' },
       // Timer overlaid on the bottom of the photo.
       { key: 'timer', labelKey: 'bf_timer', type: 'boolean' },
       { key: 'timerLabel', labelKey: 'bf_label', type: 'text' },

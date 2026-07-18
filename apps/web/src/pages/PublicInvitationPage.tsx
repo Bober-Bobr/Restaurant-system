@@ -7,8 +7,9 @@ import { getEventSubdomainSlug } from '../utils/subdomain';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
-import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { BlockList, VConnectFooter, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 import { ParticleField } from '../blocks/ParticleField';
+import { translate } from '../utils/translate';
 
 const ACCENT = '#c9a42c';
 const PAGE_BG = `
@@ -108,6 +109,7 @@ export const PublicInvitationPage = () => {
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
           <BlockList blocks={invitation.blocks} ctx={ctx} />
+          <VConnectFooter label={translate('developed_by_vconnect', 'ru')} />
         </div>
       </main>
     );
@@ -344,6 +346,8 @@ export const PublicInvitationPage = () => {
         <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: '#777', fontFamily: 'system-ui, sans-serif', padding: '12px 0' }}>
           {invitation.restaurant?.name ?? ''}
         </p>
+
+        <VConnectFooter label={translate('developed_by_vconnect', 'ru')} />
       </div>
     </main>
   );

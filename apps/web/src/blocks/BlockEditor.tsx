@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Block, BlockType } from './types';
 import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
-import { BlockView, readableText, type RenderCtx } from './BlockRenderer';
+import { BlockView, VConnectFooter, readableText, type RenderCtx } from './BlockRenderer';
 import { ParticleField, type ParticleKind } from './ParticleField';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
@@ -114,6 +114,8 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
               </EditableBlock>
             )
           ))}
+          {/* Every flyer ends with the mandatory V-connect attribution. */}
+          {kind === 'flyer' && <VConnectFooter label={t('developed_by_vconnect')} />}
         </div>
       </div>
 
