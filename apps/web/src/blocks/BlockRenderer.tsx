@@ -772,10 +772,10 @@ export function VConnectFooter({ label }: { label: string }) {
         borderTop: '1px solid rgba(0,0,0,0.08)',
       }}
     >
-      <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'inherit', opacity: 0.6, fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+      <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.04em', color: '#000', fontFamily: 'system-ui, sans-serif', textAlign: 'center', lineHeight: 1.35 }}>
         {label}
       </span>
-      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 30, width: 'auto', opacity: 0.9 }} />
+      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 56, width: 'auto' }} />
     </a>
   );
 }
