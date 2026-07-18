@@ -761,14 +761,11 @@ export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) 
 // V-connect" + the V-connect logo. Not a block — always rendered, not removable.
 export function VConnectFooter({ label }: { label: string }) {
   return (
-    <a
-      href="https://v-connect.uz"
-      target="_blank"
-      rel="noreferrer"
+    <div
       aria-label="V-connect"
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-        padding: '26px 20px 30px', margin: '10px 0 0', textDecoration: 'none',
+        padding: '26px 20px 30px', margin: '10px 0 0',
         borderTop: '1px solid rgba(0,0,0,0.08)',
       }}
     >
@@ -776,6 +773,6 @@ export function VConnectFooter({ label }: { label: string }) {
         {label}
       </span>
       <img src={networkingLogoSrc} alt="V-connect" style={{ height: 56, width: 'auto' }} />
-    </a>
+    </div>
   );
 }

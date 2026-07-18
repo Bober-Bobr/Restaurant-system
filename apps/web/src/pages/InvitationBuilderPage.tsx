@@ -163,7 +163,9 @@ export const InvitationBuilderPage = () => {
   if (!accessToken) return <Navigate to="/login" replace />;
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
-  const publicUrl = slug ? buildSubdomainBase(`${slugify(slug)}.event`, '/') : '';
+  // Path-based flyer link: event.v-menu.uz/<slug> (the .uz registrar has no
+  // wildcard DNS, matching the v-invite scheme).
+  const publicUrl = slug ? buildSubdomainBase('event', `/${slugify(slug)}`) : '';
 
   // New flyer → template chooser first.
   if (!flyerId && !chosen) {
@@ -212,7 +214,8 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
       setTimeout(() => setCopied(false), 1600);
     } catch { /* clipboard unavailable */ }
   };
-  const suffix = publicUrl ? `.${publicUrl.replace(/^https:\/\/[^.]*\./, '').replace(/\/$/, '')}` : '.event.v-menu.uz';
+  // Path-based link prefix: https://event.v-menu.uz/  (slug appended after it).
+  const linkPrefix = buildSubdomainBase('event', '/');
 
   return (
     <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -256,14 +259,13 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
             background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px',
           }}>
             <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)', whiteSpace: 'nowrap' }}>{t('my_link')}:</span>
-            <span style={{ fontSize: 13, color: '#c9a42c' }}>https://</span>
+            <span style={{ fontSize: 13, color: '#c9a42c', whiteSpace: 'nowrap' }}>{linkPrefix}</span>
             <input
               value={slug}
               onChange={(e) => onSlug(e.target.value)}
               placeholder="my-flyer"
               style={{ flex: '0 1 auto', width: Math.max(60, slug.length * 8 + 16), minWidth: 60, background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.3)', borderRadius: 6, color: '#c9a42c', padding: '3px 8px', fontSize: 13, fontWeight: 600, outline: 'none' }}
             />
-            <span style={{ fontSize: 13, color: '#c9a42c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suffix}</span>
             <span style={{ flex: 1 }} />
             <button type="button" className="adm-btn-ghost" style={{ fontSize: 11, padding: '5px 10px' }} onClick={copy} disabled={!publicUrl}>
               {copied ? `✓ ${t('copied')}` : t('copy_link')}

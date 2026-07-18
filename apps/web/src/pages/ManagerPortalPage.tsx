@@ -171,7 +171,8 @@ export const ManagerPortalPage = () => {
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
   const flyers = flyersQuery.data ?? [];
-  const linkText = (slug: string) => buildSubdomainBase(`${slug}.event`, '/').replace(/^https:\/\//, '').replace(/\/$/, '');
+  // Path-based flyer link: event.v-menu.uz/<slug>
+  const linkText = (slug: string) => buildSubdomainBase('event', `/${slug}`).replace(/^https:\/\//, '');
 
   return (
     <div className="adm-bg">
