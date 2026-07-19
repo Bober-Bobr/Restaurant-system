@@ -13,9 +13,14 @@ type InMsg =
   | { type: 'vinvite:height'; height: number };
 
 function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[]): string {
+  // The template runs on the opaque `about:srcdoc` origin, so it can't read the
+  // host origin itself. Inject it so templates can resolve their own bundled
+  // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const bootstrap = `<script>
     window.__CONFIG__ = ${JSON.stringify(config)};
     window.__LANGS__ = ${JSON.stringify(languages)};
+    window.__ORIGIN__ = ${JSON.stringify(origin)};
   </script>`;
   // Templates include the marker <!--__CONFIG__--> in <head>; fall back to
   // prepending into <head> if absent.

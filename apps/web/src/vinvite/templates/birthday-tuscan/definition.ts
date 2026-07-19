@@ -7,6 +7,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 // → program timeline → gifts + gift card → RSVP → contacts → starlit finale.
 
 const groups: TemplateFieldGroup[] = [
+  { key: 'hero', labelKey: 'tg_hero', icon: '🏛️' },
   { key: 'honoree', labelKey: 'tg_honoree', icon: '🎂' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓' },
@@ -19,6 +20,10 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
+  { key: 'mansionImage', path: 'hero.mansionImage', type: 'image', group: 'hero', labelKey: 'fld_mansion' },
+  { key: 'dayImage', path: 'hero.dayImage', type: 'image', group: 'hero', labelKey: 'fld_day_sky' },
+  { key: 'nightImage', path: 'hero.nightImage', type: 'image', group: 'hero', labelKey: 'fld_night_sky' },
+
   { key: 'name', path: 'honoree.name', type: 'localized-text', group: 'honoree', labelKey: 'fld_name' },
   { key: 'ageLabel', path: 'honoree.ageLabel', type: 'localized-text', group: 'honoree', labelKey: 'fld_age' },
 
@@ -55,6 +60,10 @@ const fields: TemplateField[] = [
 ];
 
 const defaultConfig = {
+  // Hero scene photos. Empty → the template uses its bundled defaults
+  // (/tuscan/day-sky.jpg, night-sky.jpg; mansion.png if present). The honoree
+  // can upload a transparent-PNG mansion and their own skies from the builder.
+  hero: { mansionImage: '', dayImage: '', nightImage: '' },
   honoree: {
     name: { ru: 'Мадина', uz: 'Madina', en: 'Madina' },
     ageLabel: { ru: '30 лет', uz: '30 yosh', en: 'Thirty Years' },

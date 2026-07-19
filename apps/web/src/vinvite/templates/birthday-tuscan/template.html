@@ -144,26 +144,21 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   height:100svh;min-height:600px;padding:0;display:flex;align-items:center;justify-content:center;
   text-align:center;color:var(--cream);position:relative;overflow:hidden;
 }
-.hero-sky{position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,#cfe0e8 0%,#e7d9c4 55%,#e9cbae 100%);}
-.hero-sky-day,.hero-sky-night{position:absolute;inset:0;transition:opacity .1s linear;}
-.hero-sky-day{background:linear-gradient(180deg,#bcd4e0 0%,#e3d6c1 50%,#efd3b2 100%);}
-.hero-sky-night{background:linear-gradient(180deg,#0f1826 0%,#1a2431 45%,#243019 100%);opacity:0;}
-.hero-orb{
-  position:absolute;top:16%;left:50%;transform:translateX(-50%);width:74px;height:74px;border-radius:50%;z-index:1;
-  background:radial-gradient(circle,#fff6e0,#f3d79b);box-shadow:0 0 60px 20px rgba(243,215,155,.55);
-  transition:transform .1s linear, background .3s;
+.hero-sky-day,.hero-sky-night{position:absolute;inset:0;z-index:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
+.hero-sky-day{background-image:linear-gradient(180deg,#bcd4e0,#efd3b2);}
+.hero-sky-night{opacity:0;background-image:linear-gradient(180deg,#0f1826,#243019);}
+.hero-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:radial-gradient(125% 80% at 50% 16%,transparent 42%,rgba(10,12,20,.30) 100%),
+             linear-gradient(180deg,rgba(10,14,22,.30) 0%,transparent 24%,transparent 54%,rgba(10,14,22,.52) 100%);}
+.hero-mansion{
+  position:absolute;left:50%;bottom:0;z-index:2;width:min(120%,780px);max-height:58%;
+  object-fit:contain;object-position:bottom center;
+  transform:translateX(-50%) translateY(48px);opacity:0;
+  filter:drop-shadow(0 26px 46px rgba(0,0,0,.5));
+  transition:transform 1.7s var(--ease),opacity 1.4s var(--ease),filter .35s linear;pointer-events:none;
 }
-.hero-stars{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .1s linear;}
-.hero-stars .star,.final-stars .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s ease-in-out infinite;}
-@keyframes twinkle{0%,100%{opacity:.25;}50%{opacity:1;}}
-.hero-villa{
-  position:absolute;left:0;right:0;bottom:-2px;z-index:2;width:100%;
-  transform:translateY(60px);opacity:0;transition:transform 1.6s var(--ease),opacity 1.4s var(--ease);
-}
-.hero-villa.up{transform:translateY(0);opacity:1;}
-.hero-villa svg{width:100%;height:auto;display:block;}
-.villa-window{fill:#7d6a3f;transition:fill .3s;}
-.hero.night .villa-window,.night-windows .villa-window{fill:#f4d98a;}
+.hero-mansion.up{transform:translateX(-50%) translateY(0);opacity:1;}
+.hero-mansion.empty{display:none;}
 .hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;}
 .hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) .3s;}
 .hero-name{
@@ -385,9 +380,10 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   min-height:100svh;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--cream);
   position:relative;overflow:hidden;background:linear-gradient(180deg,#0f1826 0%,#1a2431 45%,#243019 100%);
 }
-.final-stars{position:absolute;inset:0;z-index:0;}
-.final-villa{position:absolute;left:0;right:0;bottom:-2px;z-index:1;width:100%;opacity:.9;}
-.final-villa svg{width:100%;height:auto;}
+.final-sky{position:absolute;inset:0;z-index:0;background-position:center;background-size:cover;background-repeat:no-repeat;filter:brightness(.82);}
+.final-sky::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,24,38,.34),rgba(15,24,38,.12) 42%,rgba(20,28,16,.62));}
+.final-mansion{position:absolute;left:50%;bottom:0;z-index:1;width:min(120%,780px);max-height:52%;object-fit:contain;object-position:bottom center;transform:translateX(-50%);opacity:.95;filter:brightness(.7) drop-shadow(0 -4px 30px rgba(0,0,0,.5));pointer-events:none;}
+.final-mansion.empty{display:none;}
 .final-content{position:relative;z-index:3;padding:2rem;max-width:420px;}
 .final-content .msg{font-style:italic;font-size:1.5rem;color:var(--champagne);margin-bottom:1rem;white-space:pre-line;}
 .final-name{font-family:'Great Vibes',cursive;font-size:4.4rem;color:var(--gold-bright);line-height:1.1;padding:0 .15em .1em;}
@@ -439,7 +435,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}
   .reveal{opacity:1!important;transform:none!important;}
-  .hero-villa{opacity:1!important;transform:none!important;}
+  .hero-mansion{opacity:1!important;transform:translateX(-50%)!important;}
   .hero-name{background-position:0 0!important;color:var(--cream)!important;-webkit-text-fill-color:var(--cream);}
 }
 </style>
@@ -485,49 +481,10 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
 
   <!-- Hero -->
   <section id="hero" class="hero">
-    <div class="hero-sky"></div>
-    <div class="hero-sky-day"></div>
+    <div class="hero-sky-day" id="skyDay"></div>
     <div class="hero-sky-night" id="skyNight"></div>
-    <div class="hero-orb" id="orb" aria-hidden="true"></div>
-    <div class="hero-stars" id="heroStars" aria-hidden="true"></div>
-    <div class="hero-villa" id="heroVilla" aria-hidden="true">
-      <svg viewBox="0 0 390 220" preserveAspectRatio="xMidYMax meet">
-        <defs>
-          <linearGradient id="villaWall" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#efe0c6"/><stop offset="1" stop-color="#d9c39c"/>
-          </linearGradient>
-          <linearGradient id="roofg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#b98a63"/><stop offset="1" stop-color="#9a6b48"/>
-          </linearGradient>
-          <linearGradient id="treeg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#6f7c53"/><stop offset="1" stop-color="#3f4c30"/>
-          </linearGradient>
-        </defs>
-        <path d="M0,190 Q195,170 390,190 L390,220 L0,220 Z" fill="#5c6a41"/>
-        <g fill="url(#treeg)">
-          <path d="M40,190 Q30,120 48,120 Q66,120 56,190 Z"/>
-          <path d="M70,192 Q62,140 76,140 Q90,140 82,192 Z"/>
-          <path d="M320,192 Q310,130 328,130 Q346,130 336,192 Z"/>
-          <path d="M352,190 Q344,145 356,145 Q368,145 360,190 Z"/>
-        </g>
-        <rect x="120" y="96" width="150" height="96" fill="url(#villaWall)" stroke="#c2a97e" stroke-width="1"/>
-        <polygon points="112,96 278,96 258,72 132,72" fill="url(#roofg)"/>
-        <rect x="176" y="60" width="38" height="42" fill="url(#villaWall)" stroke="#c2a97e"/>
-        <polygon points="170,60 220,60 195,42" fill="url(#roofg)"/>
-        <g>
-          <rect class="villa-window" x="134" y="112" width="16" height="24" rx="2"/>
-          <rect class="villa-window" x="162" y="112" width="16" height="24" rx="2"/>
-          <rect class="villa-window" x="212" y="112" width="16" height="24" rx="2"/>
-          <rect class="villa-window" x="240" y="112" width="16" height="24" rx="2"/>
-          <rect class="villa-window" x="186" y="70" width="18" height="24" rx="2"/>
-          <rect class="villa-window" x="184" y="150" width="22" height="42" rx="3"/>
-        </g>
-        <g fill="#546239">
-          <ellipse cx="112" cy="190" rx="18" ry="10"/>
-          <ellipse cx="278" cy="190" rx="18" ry="10"/>
-        </g>
-      </svg>
-    </div>
+    <div class="hero-vignette" aria-hidden="true"></div>
+    <img class="hero-mansion empty" id="heroMansion" alt="" aria-hidden="true">
 
     <div class="hero-content">
       <div class="hero-sprig" aria-hidden="true">
@@ -756,26 +713,8 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
 
   <!-- Final scene -->
   <section id="final">
-    <div class="final-stars" id="finalStars" aria-hidden="true"></div>
-    <div class="final-villa night-windows" aria-hidden="true">
-      <svg viewBox="0 0 390 200" preserveAspectRatio="xMidYMax meet">
-        <path d="M0,180 Q195,165 390,180 L390,200 L0,200 Z" fill="#1c2415"/>
-        <g fill="#141a0e">
-          <path d="M40,180 Q30,110 48,110 Q66,110 56,180 Z"/>
-          <path d="M330,180 Q320,120 338,120 Q356,120 346,180 Z"/>
-          <path d="M360,180 Q352,135 364,135 Q376,135 368,180 Z"/>
-        </g>
-        <rect x="120" y="86" width="150" height="96" fill="#1a2211"/>
-        <polygon points="112,86 278,86 258,62 132,62" fill="#12180c"/>
-        <rect x="176" y="50" width="38" height="42" fill="#1a2211"/>
-        <polygon points="170,50 220,50 195,32" fill="#12180c"/>
-        <g class="villa-window">
-          <rect x="134" y="102" width="16" height="24" rx="2"/><rect x="162" y="102" width="16" height="24" rx="2"/>
-          <rect x="212" y="102" width="16" height="24" rx="2"/><rect x="240" y="102" width="16" height="24" rx="2"/>
-          <rect x="186" y="60" width="18" height="24" rx="2"/><rect x="184" y="140" width="22" height="42" rx="3"/>
-        </g>
-      </svg>
-    </div>
+    <div class="final-sky" id="finalSky" aria-hidden="true"></div>
+    <img class="final-mansion empty" id="finalMansion" alt="" aria-hidden="true">
     <div id="particles" aria-hidden="true"></div>
     <div class="final-content">
       <p class="msg reveal" data-bind="finalMsg"></p>
@@ -983,34 +922,42 @@ wrap.addEventListener('click', openEnvelope);
 wrap.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEnvelope(); } });
 skipBtn.addEventListener('click', function(){ opened = true; finishIntro(); });
 
-/* ── Hero + day→night scroll ── */
-var hero = $('#hero'), heroVilla = $('#heroVilla');
-function playHero(){ hero.classList.add('play'); heroVilla.classList.add('up'); }
-function makeStars(container, count){
-  var frag = document.createDocumentFragment();
-  for (var i = 0; i < count; i++) {
-    var s = document.createElement('span'); s.className = 'star';
-    var sz = Math.random()*2+1;
-    s.style.width = sz+'px'; s.style.height = sz+'px';
-    s.style.left = (Math.random()*100)+'%';
-    s.style.top = (Math.random()*70)+'%';
-    s.style.animationDelay = (Math.random()*3)+'s';
-    frag.appendChild(s);
-  }
-  container.appendChild(frag);
-}
-makeStars($('#heroStars'), 60);
-makeStars($('#finalStars'), 80);
+/* ── Hero + day→night scroll (photographic scene) ── */
+var hero = $('#hero'), heroMansion = $('#heroMansion');
+function playHero(){ hero.classList.add('play'); if (heroMansion) heroMansion.classList.add('up'); }
 
-var skyNight = $('#skyNight'), heroStars = $('#heroStars'), orb = $('#orb');
+/* Scene photos: mansion cut-out + day/night skies. Each can be overridden from
+   the builder (hero.mansionImage / hero.dayImage / hero.nightImage); otherwise
+   we fall back to the bundled defaults served from the host origin. A mansion
+   that fails to load (e.g. none provided) hides its layer gracefully. */
+var ASSET = (window.__ORIGIN__ || '') + '/tuscan/';
+var skyDay = $('#skyDay'), skyNight = $('#skyNight');
+var finalSky = $('#finalSky'), finalMansion = $('#finalMansion');
+function skyUrl(path, def){ var v = cfg(path, ''); return (typeof v === 'string' && v) ? v : (ASSET + def); }
+function setBg(el, url){ if (el) el.style.backgroundImage = 'url("' + url + '")'; }
+function setMansion(el){
+  if (!el) return;
+  var m = cfg('hero.mansionImage', '');
+  var src = (typeof m === 'string' && m) ? m : (ASSET + 'mansion.png');
+  if (el.getAttribute('src') === src) return; // unchanged — keep current load state
+  el.onerror = function(){ el.classList.add('empty'); };
+  el.onload  = function(){ el.classList.remove('empty'); };
+  el.setAttribute('src', src);
+}
+function renderScene(){
+  setBg(skyDay,   skyUrl('hero.dayImage',   'day-sky.jpg'));
+  setBg(skyNight, skyUrl('hero.nightImage', 'night-sky.jpg'));
+  setBg(finalSky, skyUrl('hero.nightImage', 'night-sky.jpg'));
+  setMansion(heroMansion);
+  setMansion(finalMansion);
+}
+
 function heroScroll(){
   var h = window.innerHeight;
   var p = Math.min(1, Math.max(0, window.scrollY / (h*0.9)));
-  skyNight.style.opacity = p;
-  heroStars.style.opacity = p;
-  orb.style.transform = 'translateX(-50%) translate(' + ((p-0.5)*120) + 'px, ' + (p*90) + 'px)';
-  orb.style.background = p > 0.5 ? 'radial-gradient(circle,#f2f4ff,#cfd6e8)' : 'radial-gradient(circle,#fff6e0,#f3d79b)';
-  orb.style.boxShadow = p > 0.5 ? '0 0 40px 12px rgba(207,214,232,.5)' : '0 0 60px 20px rgba(243,215,155,.55)';
+  if (skyNight) skyNight.style.opacity = p;
+  if (heroMansion) heroMansion.style.filter =
+    'drop-shadow(0 26px 46px rgba(0,0,0,.5)) brightness(' + (1 - p*0.5).toFixed(3) + ') saturate(' + (1 - p*0.2).toFixed(3) + ')';
   hero.classList.toggle('night', p > 0.55);
 }
 
@@ -1384,6 +1331,7 @@ window.addEventListener('scroll', function(){
 /* ── Full render (initial + on config/language change) ── */
 function renderAll(){
   bindTexts();
+  renderScene();
   renderVenue();
   renderGallery();
   renderTimeline();
