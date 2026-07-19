@@ -1,4 +1,5 @@
 import { birthdayTuscanTemplate } from './birthday-tuscan/definition';
+import { getPath } from './utils';
 import type { RichDesignData, TemplateCategory, TemplateDefinition } from './types';
 
 // Registry of first-party rich templates, grouped by category on the chooser.
@@ -24,4 +25,15 @@ export function readRichDesign(theme: unknown): RichDesignData | null {
     languages: Array.isArray(t.languages) && t.languages.length ? t.languages : ['ru'],
     config: (t.config && typeof t.config === 'object' ? t.config : {}) as Record<string, unknown>,
   };
+}
+
+// The event's ISO date for a rich design, read from its template's first
+// datetime field (convention: every template exposes the main date that way).
+// Used by the dashboard cards for the date line and the "days left" counter.
+export function richEventDateISO(design: RichDesignData): string | null {
+  const tpl = getTemplate(design.templateId);
+  const dateField = tpl?.fields.find((f) => f.type === 'datetime');
+  if (!dateField) return null;
+  const v = getPath(design.config, dateField.path);
+  return typeof v === 'string' && v ? v : null;
 }

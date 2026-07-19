@@ -81,7 +81,7 @@ export type InviteSessionInfo = {
   isCurrent: boolean;
 };
 
-export type InviteProjectSummary = {
+type InviteProjectBase = {
   id: string;
   name: string;
   slug: string | null;
@@ -90,7 +90,18 @@ export type InviteProjectSummary = {
   updatedAt: string;
 };
 
-export type InviteProject = InviteProjectSummary & {
+export type InviteProjectSummary = InviteProjectBase & {
+  // Enriched by the API for the dashboard cards. `theme` carries the rich
+  // design ({ templateId, languages, config }) so the card can show the event
+  // date, template name and cover without a second fetch.
+  theme?: DesignTheme & Record<string, unknown>;
+  views: number;
+  rsvpCount: number;
+  guestCount: number;
+  wishCount: number;
+};
+
+export type InviteProject = InviteProjectBase & {
   blocks: Block[];
   theme: DesignTheme;
 };

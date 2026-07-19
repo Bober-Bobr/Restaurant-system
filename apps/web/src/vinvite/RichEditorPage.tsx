@@ -31,15 +31,17 @@ function asLocalized(v: unknown): LocalizedText {
   return v && typeof v === 'object' ? (v as LocalizedText) : {};
 }
 
-export function RichDesignEditor({ design, onChange, projectId }: {
+export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   design: RichDesignData;
   onChange: (next: RichDesignData) => void;
   // Empty when editing a saved template (no project → no RSVP tab).
   projectId?: string;
+  // Deep-link the RSVP tab open (e.g. from the dashboard "Wishes"/"Guests").
+  initialTab?: 'design' | 'rsvp';
 }) {
   const t = useViT();
   const template = getTemplate(design.templateId);
-  const [tab, setTab] = useState<'design' | 'rsvp'>('design');
+  const [tab, setTab] = useState<'design' | 'rsvp'>(initialTab && projectId ? initialTab : 'design');
   const [openGroup, setOpenGroup] = useState<string | null>(template?.groups[0]?.key ?? null);
 
   const previewConfig = useMemo(

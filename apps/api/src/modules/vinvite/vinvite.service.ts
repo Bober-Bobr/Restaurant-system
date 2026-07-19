@@ -252,12 +252,38 @@ export class VInviteAuthService {
 // ── Projects & templates ──────────────────────────────────────────────────────
 
 export class VInviteProjectService {
-  listMine(userId: string) {
-    return prisma.inviteProject.findMany({
+  async listMine(userId: string) {
+    const projects = await prisma.inviteProject.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
-      select: { id: true, name: true, slug: true, isPublished: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true, name: true, slug: true, isPublished: true,
+        createdAt: true, updatedAt: true, views: true, theme: true,
+      },
     });
+    const ids = projects.map((p) => p.id);
+    if (ids.length === 0) {
+      return projects.map((p) => ({ ...p, rsvpCount: 0, guestCount: 0, wishCount: 0 }));
+    }
+    // One groupBy for totals + guest sum, one for the messages ("wishes") count.
+    const [totals, wishes] = await Promise.all([
+      prisma.inviteRsvp.groupBy({
+        by: ['projectId'], where: { projectId: { in: ids } },
+        _count: { _all: true }, _sum: { guests: true },
+      }),
+      prisma.inviteRsvp.groupBy({
+        by: ['projectId'], where: { projectId: { in: ids }, message: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+    const totalMap = new Map(totals.map((t) => [t.projectId, t]));
+    const wishMap = new Map(wishes.map((w) => [w.projectId, w._count._all]));
+    return projects.map((p) => ({
+      ...p,
+      rsvpCount: totalMap.get(p.id)?._count._all ?? 0,
+      guestCount: totalMap.get(p.id)?._sum.guests ?? 0,
+      wishCount: wishMap.get(p.id) ?? 0,
+    }));
   }
 
   async getMine(userId: string, id: string) {
@@ -323,6 +349,9 @@ export class VInviteProjectService {
       select: { name: true, slug: true, isPublished: true, blocks: true, theme: true, updatedAt: true },
     });
     if (!project || !project.isPublished) throw createHttpError(404, 'Invitation not found');
+    // Best-effort view counter — never block the page render on it. (Not
+    // deduped by visitor; adequate for the dashboard's rough "views" stat.)
+    void prisma.inviteProject.update({ where: { slug }, data: { views: { increment: 1 } } }).catch(() => undefined);
     return project;
   }
 
@@ -343,8 +372,8 @@ export class VInviteProjectService {
         guestName: data.name,
         attending: data.attending,
         guests: data.attending ? (data.guests ?? 1) : 0,
-        dietary: data.dietary ?? null,
-        message: data.message ?? null,
+        dietary: data.dietary?.trim() || null,
+        message: data.message?.trim() || null,
       },
       select: { id: true, createdAt: true },
     });

@@ -717,6 +717,7 @@ model InviteProject {
   isPublished Boolean  @default(false)
   blocks      Json     @default("[]")
   theme       Json     @default("{}")
+  views       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
