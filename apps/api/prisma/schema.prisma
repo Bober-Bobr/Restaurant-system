@@ -720,9 +720,30 @@ model InviteProject {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user InviteUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  InviteUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rsvps InviteRsvp[]
 
   @@index([userId])
+}
+
+// A guest's RSVP submitted from a published invitation (v-invite.uz/<slug>).
+// Reviewed by the invitation's owner in the editor's "Guest responses" tab.
+model InviteRsvp {
+  id        String   @id @default(cuid())
+  projectId String
+  guestName String
+  attending Boolean
+  // Party size including the guest; 0 when declining.
+  guests    Int      @default(1)
+  // Dietary restrictions / special requests.
+  dietary   String?
+  // A congratulation message for the honoree.
+  message   String?
+  createdAt DateTime @default(now())
+
+  project InviteProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // A user-private reusable design snapshot for seeding new invitations.

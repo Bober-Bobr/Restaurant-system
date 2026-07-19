@@ -316,7 +316,7 @@ export class VInviteProjectService {
     await prisma.inviteProject.delete({ where: { id } });
   }
 
-  // Public site payload for <slug>.v-invite.uz.
+  // Public site payload for v-invite.uz/<slug>.
   async getPublicBySlug(slug: string) {
     const project = await prisma.inviteProject.findUnique({
       where: { slug },
@@ -324,6 +324,44 @@ export class VInviteProjectService {
     });
     if (!project || !project.isPublished) throw createHttpError(404, 'Invitation not found');
     return project;
+  }
+
+  // Guest RSVP from a published invitation (no auth).
+  async submitRsvp(
+    slug: string,
+    data: { name: string; attending: boolean; guests?: number; dietary?: string; message?: string }
+  ) {
+    const project = await prisma.inviteProject.findUnique({
+      where: { slug },
+      select: { id: true, isPublished: true },
+    });
+    if (!project || !project.isPublished) throw createHttpError(404, 'Invitation not found');
+
+    return prisma.inviteRsvp.create({
+      data: {
+        projectId: project.id,
+        guestName: data.name,
+        attending: data.attending,
+        guests: data.attending ? (data.guests ?? 1) : 0,
+        dietary: data.dietary ?? null,
+        message: data.message ?? null,
+      },
+      select: { id: true, createdAt: true },
+    });
+  }
+
+  // The owner's response list for one of their projects.
+  async listRsvps(userId: string, projectId: string) {
+    await this.getMine(userId, projectId);
+    return prisma.inviteRsvp.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async removeRsvp(userId: string, projectId: string, rsvpId: string) {
+    await this.getMine(userId, projectId);
+    await prisma.inviteRsvp.deleteMany({ where: { id: rsvpId, projectId } });
   }
 }
 

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { vinviteService, type InviteProjectSummary, type InviteTemplate } from './api';
-import { useViT } from './i18n';
+import { useViT, type ViKey } from './i18n';
 import { buildInviteSiteUrl, inviteDomain } from '../utils/subdomain';
 import { builtinTemplates, type BuiltinTemplate } from '../blocks/builtinTemplates';
 import { invitationTheme } from '../blocks/seed';
+import { RICH_TEMPLATES, TEMPLATE_CATEGORIES } from './templates';
+import { LOCALES, type TemplateDefinition } from './templates/types';
 
 // ── Main menu: the user's invitation projects ─────────────────────────────────
 export const ViDashboardPage = () => {
@@ -134,6 +136,28 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // A rich (first-party animated) design: the project stores { templateId,
+  // languages, config } in theme and opens in the form-based editor.
+  const createRich = async (tpl: TemplateDefinition) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const project = await vinviteService.createProject({
+        name: name.trim() || t(tpl.nameKey as ViKey),
+        blocks: [],
+        theme: {
+          templateId: tpl.id,
+          languages: [...LOCALES],
+          config: structuredClone(tpl.defaultConfig),
+        } as unknown as Parameters<typeof vinviteService.createProject>[0]['theme'],
+      });
+      queryClient.invalidateQueries({ queryKey: ['vi-projects'] });
+      navigate(`/projects/${project.id}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="vi-overlay" onClick={onClose}>
       <div className="vi-card vi-pop" style={{ width: '100%', maxWidth: 480, maxHeight: '86vh', overflowY: 'auto', padding: 24 }} onClick={(e) => e.stopPropagation()}>
@@ -143,6 +167,32 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         <input className="vi-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('new_invitation')} autoFocus style={{ marginBottom: 18 }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Ready-made animated designs, grouped by category */}
+          {TEMPLATE_CATEGORIES.map((cat) => {
+            const designs = RICH_TEMPLATES.filter((tpl) => tpl.category === cat.key);
+            if (!designs.length) return null;
+            return (
+              <div key={cat.key} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--vi-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {cat.icon} {t('designs')} · {t(cat.labelKey as ViKey)}
+                </p>
+                {designs.map((tpl) => (
+                  <button
+                    key={tpl.id} type="button" disabled={busy} onClick={() => createRich(tpl)}
+                    className="vi-btn vi-btn-ghost"
+                    style={{
+                      justifyContent: 'flex-start', gap: 12, padding: '13px 16px',
+                      borderColor: `${tpl.accent}66`, background: `${tpl.accent}14`,
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{tpl.cover}</span>
+                    <span style={{ fontWeight: 700 }}>{t(tpl.nameKey as ViKey)}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+
           <button type="button" className="vi-btn vi-btn-primary" disabled={busy} onClick={() => create(null)} style={{ justifyContent: 'flex-start', padding: '13px 16px' }}>
             ✨ {t('start_blank')}
           </button>

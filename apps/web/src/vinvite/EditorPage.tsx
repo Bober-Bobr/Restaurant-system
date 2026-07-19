@@ -12,6 +12,8 @@ import { vinviteService } from './api';
 import { useVInviteStore } from './store';
 import { useViT } from './i18n';
 import { LinkQrButton } from '../components/LinkQrButton';
+import { readRichDesign } from './templates';
+import { RichDesignEditor } from './RichEditorPage';
 
 type TFn = (k: Parameters<typeof translate>[0], p?: Record<string, string | number>) => string;
 type SaveState = 'idle' | 'saving' | 'saved';
@@ -209,7 +211,17 @@ export const ViEditorPage = () => {
 
       {error && <div style={{ maxWidth: 1180, margin: '12px auto 0', padding: 12, borderRadius: 10, background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)', color: '#fca5a5', fontSize: 13 }}>{error}</div>}
 
-      <BlockEditor kind="invitation" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={bt} restaurantId="" showTrail />
+      {(() => {
+        // Rich (first-party template) designs store { templateId, languages,
+        // config } in `theme` and use the form editor; block designs use the
+        // shared WYSIWYG block editor.
+        const rich = readRichDesign(theme);
+        return rich ? (
+          <RichDesignEditor design={rich} projectId={id} onChange={(next) => setTheme(next as unknown as DesignTheme)} />
+        ) : (
+          <BlockEditor kind="invitation" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={bt} restaurantId="" showTrail />
+        );
+      })()}
     </div>
   );
 };
@@ -292,7 +304,14 @@ export const ViTemplateEditorPage = () => {
         </div>
       </nav>
 
-      <BlockEditor kind="invitation" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={bt} restaurantId="" showTrail />
+      {(() => {
+        const rich = readRichDesign(theme);
+        return rich ? (
+          <RichDesignEditor design={rich} onChange={(next) => setTheme(next as unknown as DesignTheme)} />
+        ) : (
+          <BlockEditor kind="invitation" blocks={blocks} theme={theme} onBlocksChange={setBlocks} onThemeChange={setTheme} t={bt} restaurantId="" showTrail />
+        );
+      })()}
     </div>
   );
 };

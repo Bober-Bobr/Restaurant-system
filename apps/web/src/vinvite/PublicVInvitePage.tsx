@@ -1,11 +1,15 @@
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { vinviteService, type PublicInviteSite } from './api';
+import { vinviteService, type PublicInviteSite, type RsvpSubmission } from './api';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 import { ParticleField } from '../blocks/ParticleField';
+import { getTemplate, readRichDesign } from './templates';
+import { RichRenderer } from './templates/RichRenderer';
+import { resolveAssetUrls } from './templates/utils';
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
@@ -24,6 +28,28 @@ export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
     queryFn: () => vinviteService.publicBySlug(slug),
     enabled: !!slug,
   });
+
+  const submitRsvp = useCallback(
+    (payload: RsvpSubmission) => vinviteService.publicRsvp(slug, payload),
+    [slug],
+  );
+
+  // Rich (first-party template) designs render full-viewport in the sandboxed
+  // iframe; guest RSVPs are bridged back here and stored on the server.
+  const rich = site ? readRichDesign(site.theme) : null;
+  const richTemplate = rich ? getTemplate(rich.templateId) : null;
+  if (rich && richTemplate) {
+    return (
+      <main style={{ position: 'fixed', inset: 0 }}>
+        <RichRenderer
+          html={richTemplate.html}
+          config={resolveAssetUrls(richTemplate, rich.config)}
+          languages={rich.languages}
+          onRsvp={submitRsvp}
+        />
+      </main>
+    );
+  }
 
   if (isLoading) {
     return <main style={{ minHeight: '100vh', background: '#faf6ee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>…</main>;

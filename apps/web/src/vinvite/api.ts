@@ -108,7 +108,28 @@ export type PublicInviteSite = {
   name: string;
   slug: string;
   blocks: Block[];
-  theme: DesignTheme;
+  // Block designs store DesignTheme here; rich designs store
+  // { templateId, languages, config } (see vinvite/templates).
+  theme: DesignTheme & Record<string, unknown>;
+};
+
+export type InviteRsvp = {
+  id: string;
+  projectId: string;
+  guestName: string;
+  attending: boolean;
+  guests: number;
+  dietary: string | null;
+  message: string | null;
+  createdAt: string;
+};
+
+export type RsvpSubmission = {
+  name: string;
+  attending: boolean;
+  guests?: number;
+  dietary?: string;
+  message?: string;
 };
 
 // ── Service ───────────────────────────────────────────────────────────────────
@@ -196,9 +217,21 @@ export const vinviteService = {
     await viHttp.delete(`/templates/${id}`);
   },
 
+  // RSVP responses (owner)
+  async listRsvps(projectId: string): Promise<InviteRsvp[]> {
+    const { data } = await viHttp.get<InviteRsvp[]>(`/projects/${projectId}/rsvps`);
+    return data;
+  },
+  async removeRsvp(projectId: string, rsvpId: string): Promise<void> {
+    await viHttp.delete(`/projects/${projectId}/rsvps/${rsvpId}`);
+  },
+
   // Public site (no auth)
   async publicBySlug(slug: string): Promise<PublicInviteSite> {
     const { data } = await axios.get<PublicInviteSite>(`${API_BASE}/vinvite/public/${encodeURIComponent(slug)}`);
     return data;
+  },
+  async publicRsvp(slug: string, payload: RsvpSubmission): Promise<void> {
+    await axios.post(`${API_BASE}/vinvite/public/${encodeURIComponent(slug)}/rsvp`, payload);
   },
 };

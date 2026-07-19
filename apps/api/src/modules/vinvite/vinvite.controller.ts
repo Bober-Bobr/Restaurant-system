@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import {
   createProjectSchema, createTemplateSchema, googleAuthSchema, loginSchema,
-  projectSlug, refreshSchema, registerSchema, updateProfileSchema,
+  projectSlug, refreshSchema, registerSchema, rsvpSchema, updateProfileSchema,
   updateProjectSchema, updateTemplateSchema,
 } from './vinvite.schema.js';
 import { VInviteAuthService, VInviteProjectService, VInviteTemplateService, type DeviceInfo } from './vinvite.service.js';
@@ -126,8 +126,23 @@ export class VInviteController {
     response.status(204).send();
   }
 
+  // ── RSVP ────────────────────────────────────────────────────────────────────
+  async listRsvps(request: Request, response: Response) {
+    response.json(await projectService.listRsvps(request.inviteUser!.id, String(request.params.id)));
+  }
+
+  async removeRsvp(request: Request, response: Response) {
+    await projectService.removeRsvp(request.inviteUser!.id, String(request.params.id), String(request.params.rsvpId));
+    response.status(204).send();
+  }
+
   // ── Public (no auth) ────────────────────────────────────────────────────────
   async publicBySlug(request: Request, response: Response) {
     response.json(await projectService.getPublicBySlug(String(request.params.slug).toLowerCase()));
+  }
+
+  async publicRsvp(request: Request, response: Response) {
+    const data = rsvpSchema.parse(request.body);
+    response.status(201).json(await projectService.submitRsvp(String(request.params.slug).toLowerCase(), data));
   }
 }

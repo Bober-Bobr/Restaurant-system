@@ -71,6 +71,15 @@ export const updateProjectSchema = z.object({
   theme: z.record(z.string(), z.any()).optional(),
 });
 
+// Guest RSVP from a published invitation (no auth — length-capped).
+export const rsvpSchema = z.object({
+  name: z.string().min(1).max(120),
+  attending: z.boolean(),
+  guests: z.number().int().min(0).max(20).optional(),
+  dietary: z.string().max(500).optional(),
+  message: z.string().max(2000).optional(),
+});
+
 export const createTemplateSchema = z.object({
   name: z.string().min(1).max(120),
   blocks: blockArray.optional(),
