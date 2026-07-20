@@ -7,7 +7,6 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 // → program timeline → gifts + gift card → RSVP → contacts → starlit finale.
 
 const groups: TemplateFieldGroup[] = [
-  { key: 'hero', labelKey: 'tg_hero', icon: '🏛️' },
   { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
   { key: 'honoree', labelKey: 'tg_honoree', icon: '🎂' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
@@ -21,10 +20,6 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'mansionImage', path: 'hero.mansionImage', type: 'image', group: 'hero', labelKey: 'fld_mansion' },
-  { key: 'dayImage', path: 'hero.dayImage', type: 'image', group: 'hero', labelKey: 'fld_day_sky' },
-  { key: 'nightImage', path: 'hero.nightImage', type: 'image', group: 'hero', labelKey: 'fld_night_sky' },
-
   // Show/hide switches — the value stored is the HIDDEN flag.
   { key: 'v_age', path: 'hidden.age', type: 'toggle', group: 'visibility', labelKey: 'sec_age' },
   { key: 'v_message', path: 'hidden.message', type: 'toggle', group: 'visibility', labelKey: 'sec_message' },
@@ -75,10 +70,8 @@ const fields: TemplateField[] = [
 ];
 
 const defaultConfig = {
-  // Hero scene photos. Empty → the template uses its bundled defaults
-  // (/tuscan/day-sky.jpg, night-sky.jpg; mansion.png if present). The honoree
-  // can upload a transparent-PNG mansion and their own skies from the builder.
-  hero: { mansionImage: '', dayImage: '', nightImage: '' },
+  // The cover scene (sky, sun, clouds, mansion) is bundled with the template
+  // and deliberately not editable — it is what the design is.
   // Blocks switched off by the honoree (key → true). Empty = everything shown.
   hidden: {} as Record<string, boolean>,
   honoree: {
@@ -87,9 +80,9 @@ const defaultConfig = {
   },
   invite: {
     kicker: {
-      ru: 'Приглашаем вас разделить с нами праздник',
-      uz: 'Sizni bayramimizga taklif qilamiz',
-      en: 'Please join us to celebrate',
+      ru: 'Приглашает вас разделить праздник',
+      uz: 'Sizni bayramni birga nishonlashga taklif qiladi',
+      en: 'Invites you to share the celebration',
     },
     sub: { ru: 'День рождения', uz: 'Tugilgan kun', en: 'A Birthday Celebration' },
     text: {

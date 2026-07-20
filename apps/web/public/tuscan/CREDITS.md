@@ -1,13 +1,23 @@
-# Tuscan Evening template — default imagery
+# Tuscan Evening template — cover imagery
 
-These default background photos ship with the "Tuscan Evening" birthday template.
-Honorees can override each of them (and the mansion) from the builder.
+These photos ship with the "Tuscan Evening" birthday template and make up its
+cover scene. They are **not editable** from the builder — the scene is part of
+the design.
 
-- **day-sky.jpg** — "A sunny sky over Mount Kuruma", via Wikimedia Commons.
-  License: CC BY-SA 4.0. (Resized/recompressed for web.)
+- **day-sky.jpg** — "Sky - cloudless 1, Elizabeth Castle, Jersey" by Gaius
+  Cornelius, via Wikimedia Commons. License: CC BY-SA 4.0. (Resized/recompressed
+  for web.) A clear gradient sky, because the sun and the clouds are separate
+  layers composited on top of it.
 - **night-sky.jpg** — "Glacier Bay Entrance Night Sky with Aurora and Moon"
   (U.S. National Park Service), via Wikimedia Commons. License: Public Domain.
-  (Resized/recompressed for web.)
-- **mansion.png** — not shipped. Drop a transparent-background PNG of the mansion
-  here (or upload one in the builder's "Mansion photo" field) to composite it over
-  the day/night skies. If absent, the hero simply shows the sky.
+  (Resized/recompressed, re-cropped so the moon is centred.)
+- **sun.png** — cut out of "Setting Sun Disc with Deep Orange Sky", via Wikimedia
+  Commons. License: CC BY 2.0. The disc's alpha comes from the photo's blue
+  channel; the lower limb (occluded by a hill in the original) was completed by
+  mirroring the upper half, and a soft halo was added.
+- **clouds.png** — cut out of "Blue Sky and beautiful white clouds" by Real
+  Ammar, via Wikimedia Commons. License: CC0. Alpha derived from the red channel
+  (blue sky is low-red, cloud is high-red), edges feathered so stacked layers
+  never seam. Stored as greyscale+alpha to keep it small.
+- **mansion.png** — supplied by the project owner; background removed and the
+  alpha rebuilt.

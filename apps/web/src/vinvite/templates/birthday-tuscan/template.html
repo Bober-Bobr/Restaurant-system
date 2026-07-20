@@ -203,18 +203,68 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .divider svg{width:20px;height:20px;}
 
 /* ── Hero: day→night ── */
+/* Layers, back to front: sky photo · night sky · sun · drifting clouds ·
+   mansion cut-out · darkening vignette · text. The sun and the clouds are real
+   photographic cut-outs, not CSS shapes. */
 #hero{
   height:100svh;min-height:600px;padding:0;display:flex;align-items:center;justify-content:center;
   text-align:center;color:var(--cream);position:relative;overflow:hidden;
 }
-.hero-sky-day,.hero-sky-night{position:absolute;inset:0;z-index:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
-.hero-sky-day{background-image:linear-gradient(180deg,#bcd4e0,#efd3b2);}
-.hero-sky-night{opacity:0;background-image:linear-gradient(180deg,#0f1826,#243019);}
-.hero-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
-  background:radial-gradient(125% 80% at 50% 16%,transparent 42%,rgba(10,12,20,.30) 100%),
-             linear-gradient(180deg,rgba(10,14,22,.30) 0%,transparent 24%,transparent 54%,rgba(10,14,22,.52) 100%);}
+.hero-sky-day,.hero-sky-night{position:absolute;inset:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
+.hero-sky-day{z-index:0;background-image:linear-gradient(180deg,#4d86bd,#bcd6e6);}
+.hero-sky-night{z-index:1;opacity:0;background-image:linear-gradient(180deg,#0f1826,#243019);}
+
+/* Sun — a photographed disc that breathes and sparkles continuously. */
+.hero-sun{
+  position:absolute;z-index:2;top:7%;right:9%;width:min(42vw,200px);aspect-ratio:1;
+  pointer-events:none;transition:opacity .2s linear;
+}
+.hero-sun .sun-disc{
+  position:absolute;inset:0;width:100%;height:100%;
+  animation:sunBreathe 6s ease-in-out infinite;
+}
+.hero-sun .sun-rays{
+  position:absolute;inset:-42%;border-radius:50%;opacity:.34;
+  background:conic-gradient(from 0deg,
+    rgba(255,231,178,.55) 0deg,transparent 9deg,transparent 36deg,rgba(255,231,178,.42) 45deg,
+    transparent 54deg,transparent 81deg,rgba(255,231,178,.5) 90deg,transparent 99deg,
+    transparent 126deg,rgba(255,231,178,.4) 135deg,transparent 144deg,transparent 171deg,
+    rgba(255,231,178,.55) 180deg,transparent 189deg,transparent 216deg,rgba(255,231,178,.42) 225deg,
+    transparent 234deg,transparent 261deg,rgba(255,231,178,.5) 270deg,transparent 279deg,
+    transparent 306deg,rgba(255,231,178,.4) 315deg,transparent 324deg,transparent 360deg);
+  -webkit-mask-image:radial-gradient(circle,rgba(0,0,0,.9) 26%,transparent 72%);
+  mask-image:radial-gradient(circle,rgba(0,0,0,.9) 26%,transparent 72%);
+  animation:sunSpin 44s linear infinite;
+}
+.hero-sun .sun-spark{
+  position:absolute;inset:-16%;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,244,214,.55) 0%,rgba(255,220,160,.22) 34%,transparent 66%);
+  animation:sunSparkle 3.4s ease-in-out infinite;
+}
+@keyframes sunBreathe{
+  0%,100%{transform:scale(1);filter:drop-shadow(0 0 22px rgba(255,214,140,.5));}
+  50%{transform:scale(1.045);filter:drop-shadow(0 0 46px rgba(255,226,168,.85));}
+}
+@keyframes sunSpin{to{transform:rotate(360deg);}}
+@keyframes sunSparkle{0%,100%{opacity:.35;transform:scale(.94);}50%{opacity:.85;transform:scale(1.06);}}
+
+/* Clouds — each layer drifts on its own, and scrolling pulls them across the
+   sky so the daylight is progressively smothered. */
+.hero-clouds{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;}
+.cloud-layer{position:absolute;inset:0;will-change:transform,opacity;transition:opacity .12s linear;}
+.cloud-layer img{position:absolute;max-width:none;height:auto;will-change:transform;}
+#cloudL1 img{top:-6%;left:-22%;width:150%;animation:driftA 46s ease-in-out infinite alternate;}
+#cloudL2 img{top:16%;left:-48%;width:200%;animation:driftB 62s ease-in-out infinite alternate;}
+#cloudL3 img{top:44%;left:-70%;width:250%;animation:driftC 78s ease-in-out infinite alternate;}
+@keyframes driftA{from{transform:translateX(-3%);}to{transform:translateX(7%);}}
+@keyframes driftB{from{transform:translateX(5%);}to{transform:translateX(-6%);}}
+@keyframes driftC{from{transform:translateX(-4%);}to{transform:translateX(5%);}}
+
+.hero-vignette{position:absolute;inset:0;z-index:5;pointer-events:none;
+  background:radial-gradient(125% 80% at 50% 16%,rgba(8,11,18,.10) 36%,rgba(8,11,18,.46) 100%),
+             linear-gradient(180deg,rgba(8,11,18,.34) 0%,rgba(8,11,18,.10) 26%,rgba(8,11,18,.16) 54%,rgba(8,11,18,.60) 100%);}
 .hero-mansion{
-  position:absolute;left:50%;bottom:0;z-index:2;width:min(120%,780px);max-height:58%;
+  position:absolute;left:50%;bottom:0;z-index:4;width:min(120%,780px);max-height:58%;
   object-fit:contain;object-position:bottom center;
   transform:translateX(-50%) translateY(48px);opacity:0;
   filter:drop-shadow(0 26px 46px rgba(0,0,0,.5));
@@ -241,10 +291,13 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   content:'';position:absolute;inset:-4% -16%;z-index:-1;pointer-events:none;
   background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.62) 0%,rgba(6,9,15,.40) 52%,rgba(6,9,15,0) 78%);
 }
-.hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) .3s;}
+.hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.2s;}
+.hero-invite{margin-top:.5rem;font-size:.66rem;letter-spacing:.34em;line-height:1.9;}
 .hero-name{
   font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.2;margin:.2rem 0;
-  text-shadow:0 4px 24px rgba(0,0,0,.35);
+  /* Warm halo around the lettering — it also lifts the name off the sky. */
+  text-shadow:0 0 16px rgba(255,240,205,.5),0 0 40px rgba(233,210,154,.34),0 5px 28px rgba(0,0,0,.5);
+  animation:nameGlow 5.5s ease-in-out infinite;
   background:linear-gradient(90deg,var(--cream) 50%,transparent 50%);
   background-size:220% 100%;background-position:100% 0;
   -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -254,15 +307,17 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
      tops/tails of letters are cut off. */
   padding:.34em .22em .34em;
 }
+@keyframes nameGlow{
+  0%,100%{text-shadow:0 0 14px rgba(255,240,205,.40),0 0 34px rgba(233,210,154,.26),0 5px 28px rgba(0,0,0,.5);}
+  50%{text-shadow:0 0 24px rgba(255,244,215,.72),0 0 58px rgba(233,210,154,.46),0 5px 28px rgba(0,0,0,.5);}
+}
 .hero.play .hero-name{background-position:0 0;}
-.hero-sub{font-style:italic;font-size:1.5rem;color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.4s;}
+.hero-sub{font-style:italic;font-size:1.5rem;color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.5s;}
 .hero-age{
   font-weight:600;letter-spacing:.34em;font-size:1.05rem;margin-top:.6rem;color:var(--gold-bright);text-transform:uppercase;
   opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.7s;
 }
-.hero-meta{margin-top:1.6rem;opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 2s;font-size:.95rem;letter-spacing:.05em;color:var(--cream);}
-.hero-meta .dot{margin:0 .5rem;color:var(--gold-bright);}
-.hero.play .overline,.hero.play .hero-sub,.hero.play .hero-age,.hero.play .hero-meta{opacity:1;transform:none;}
+.hero.play .overline,.hero.play .hero-sub,.hero.play .hero-age{opacity:1;transform:none;}
 .hero-sprig{width:56px;margin:0 auto .4rem;opacity:0;transform:scale(.6);transition:all 1s var(--ease) .1s;color:var(--gold-bright);}
 .hero.play .hero-sprig{opacity:1;transform:scale(1);}
 .scroll-ind{
@@ -563,8 +618,18 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   <section id="hero" class="hero">
     <div class="hero-sky-day" id="skyDay"></div>
     <div class="hero-sky-night" id="skyNight"></div>
-    <div class="hero-vignette" aria-hidden="true"></div>
+    <div class="hero-sun" id="heroSun" aria-hidden="true">
+      <div class="sun-rays"></div>
+      <img class="sun-disc" alt="">
+      <div class="sun-spark"></div>
+    </div>
+    <div class="hero-clouds" aria-hidden="true">
+      <div class="cloud-layer" id="cloudL1"><img alt=""></div>
+      <div class="cloud-layer" id="cloudL2"><img alt=""></div>
+      <div class="cloud-layer" id="cloudL3"><img alt=""></div>
+    </div>
     <img class="hero-mansion empty" id="heroMansion" alt="" aria-hidden="true">
+    <div class="hero-vignette" aria-hidden="true"></div>
 
     <div class="hero-content">
       <div class="hero-sprig" aria-hidden="true">
@@ -573,15 +638,10 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
           <path d="M30 20 q-8 -4 -12 -1"/><path d="M30 20 q8 -4 12 -1"/><circle cx="30" cy="5" r="2.4" fill="currentColor"/>
         </svg>
       </div>
-      <p class="overline" data-bind="heroKicker"></p>
       <h1 class="hero-name" data-bind="honoreeName"></h1>
+      <p class="overline hero-invite" data-bind="heroKicker"></p>
       <p class="hero-sub" data-bind="heroSub"></p>
       <p class="hero-age" data-opt="age" data-bind="ageLabel"></p>
-      <p class="hero-meta">
-        <span data-bind="dateLong"></span>
-        <span class="dot">·</span>
-        <span data-bind="city"></span>
-      </p>
     </div>
 
     <div class="scroll-ind" aria-hidden="true">
@@ -1053,31 +1113,31 @@ wrap.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key ===
 var hero = $('#hero'), heroMansion = $('#heroMansion');
 function playHero(){ hero.classList.add('play'); if (heroMansion) heroMansion.classList.add('up'); }
 
-/* Scene photos: mansion cut-out + day/night skies. Each can be overridden from
-   the builder (hero.mansionImage / hero.dayImage / hero.nightImage); otherwise
-   we fall back to the bundled defaults served from the host origin. A mansion
-   that fails to load (e.g. none provided) hides its layer gracefully. */
+/* Scene photos. All of them are bundled with the template and are NOT editable
+   — the cover art is part of the design. They live in the web app's public/
+   folder, so they are addressed against the host origin (the template runs in a
+   sandboxed, opaque-origin iframe and cannot use relative URLs). */
 var ORIGIN = (window.__ORIGIN__ || '');
 var ASSET = ORIGIN + '/tuscan/';
 var skyDay = $('#skyDay'), skyNight = $('#skyNight');
 var finalSky = $('#finalSky'), finalMansion = $('#finalMansion');
-function skyUrl(path, def){ var v = cfg(path, ''); return (typeof v === 'string' && v) ? v : (ASSET + def); }
+var heroSun = $('#heroSun'), sunDisc = heroSun ? heroSun.querySelector('img') : null;
+var cloudLayers = ['#cloudL1','#cloudL2','#cloudL3'].map($).filter(Boolean);
 function setBg(el, url){ if (el) el.style.backgroundImage = 'url("' + url + '")'; }
-function setMansion(el){
-  if (!el) return;
-  var m = cfg('hero.mansionImage', '');
-  var src = (typeof m === 'string' && m) ? m : (ASSET + 'mansion.png');
-  if (el.getAttribute('src') === src) return; // unchanged — keep current load state
+function setSrc(el, url){
+  if (!el || el.getAttribute('src') === url) return;
   el.onerror = function(){ el.classList.add('empty'); };
   el.onload  = function(){ el.classList.remove('empty'); };
-  el.setAttribute('src', src);
+  el.setAttribute('src', url);
 }
 function renderScene(){
-  setBg(skyDay,   skyUrl('hero.dayImage',   'day-sky.jpg'));
-  setBg(skyNight, skyUrl('hero.nightImage', 'night-sky.jpg'));
-  setBg(finalSky, skyUrl('hero.nightImage', 'night-sky.jpg'));
-  setMansion(heroMansion);
-  setMansion(finalMansion);
+  setBg(skyDay,   ASSET + 'day-sky.jpg');
+  setBg(skyNight, ASSET + 'night-sky.jpg');
+  setBg(finalSky, ASSET + 'night-sky.jpg');
+  setSrc(heroMansion,  ASSET + 'mansion.png');
+  setSrc(finalMansion, ASSET + 'mansion.png');
+  setSrc(sunDisc, ASSET + 'sun.png');
+  cloudLayers.forEach(function(l){ setSrc(l.querySelector('img'), ASSET + 'clouds.png'); });
   var logo = $('#vconnectLogo');
   if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/vconnect-logo.png');
 }
@@ -1095,10 +1155,22 @@ function applyVisibility(){
   });
 }
 
+/* Scrolling turns day into night: the night sky fades up, the sun sinks and
+   dims, and the cloud layers slide down and thicken until they blanket the sky. */
+var CLOUD_BASE = [0.30, 0.24, 0.18], CLOUD_DROP = [10, 17, 26];
 function heroScroll(){
   var h = window.innerHeight;
   var p = Math.min(1, Math.max(0, window.scrollY / (h*0.9)));
   if (skyNight) skyNight.style.opacity = p;
+  if (heroSun) {
+    heroSun.style.opacity = Math.max(0, 1 - p*1.5);
+    heroSun.style.transform = 'translate3d(0,' + (p*16).toFixed(1) + 'vh,0) scale(' + (1 - p*0.12).toFixed(3) + ')';
+  }
+  cloudLayers.forEach(function(l, i){
+    l.style.opacity = (CLOUD_BASE[i] + p*(0.92 - CLOUD_BASE[i])).toFixed(3);
+    l.style.transform = 'translate3d(0,' + (p*CLOUD_DROP[i]).toFixed(1) + 'vh,0) scale(' + (1 + p*0.12).toFixed(3) + ')';
+    l.style.filter = 'brightness(' + (1 - p*0.55).toFixed(3) + ') saturate(' + (1 - p*0.3).toFixed(3) + ')';
+  });
   if (heroMansion) heroMansion.style.filter =
     'drop-shadow(0 26px 46px rgba(0,0,0,.5)) brightness(' + (1 - p*0.5).toFixed(3) + ') saturate(' + (1 - p*0.2).toFixed(3) + ')';
   hero.classList.toggle('night', p > 0.55);
