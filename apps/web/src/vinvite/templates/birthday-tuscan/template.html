@@ -1122,7 +1122,9 @@ var ASSET = ORIGIN + '/tuscan/';
 var skyDay = $('#skyDay'), skyNight = $('#skyNight');
 var finalSky = $('#finalSky'), finalMansion = $('#finalMansion');
 var heroSun = $('#heroSun'), sunDisc = heroSun ? heroSun.querySelector('img') : null;
-var cloudLayers = ['#cloudL1','#cloudL2','#cloudL3'].map($).filter(Boolean);
+/* NB: not .map($) — $ takes a second "root" argument, and map would feed it the
+   array index. */
+var cloudLayers = ['#cloudL1','#cloudL2','#cloudL3'].map(function(sel){ return $(sel); }).filter(Boolean);
 function setBg(el, url){ if (el) el.style.backgroundImage = 'url("' + url + '")'; }
 function setSrc(el, url){
   if (!el || el.getAttribute('src') === url) return;
