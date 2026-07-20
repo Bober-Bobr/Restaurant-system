@@ -44,18 +44,33 @@ a{color:inherit;text-decoration:none;}
 .reveal-d4{transition-delay:.48s;}.reveal-d5{transition-delay:.6s;}.reveal-d6{transition-delay:.72s;}
 
 /* ── Envelope opening scene ── */
+/* Flow: idle bob (a hint that it is tappable) → wax seal breaks → flap opens →
+   the letter is drawn out of the pocket → it unfolds to fill the whole page and
+   dissolves into the hero. */
 #envelope-scene{
-  position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2rem;
   background:radial-gradient(circle at 50% 40%, #38442a 0%, #253019 55%, #171f10 100%);
-  overflow:hidden;transition:opacity 1.1s var(--ease),transform 1.1s var(--ease);
+  overflow:hidden;transition:opacity .9s var(--ease);
 }
-#envelope-scene.dismissed{opacity:0;transform:translateY(40px);pointer-events:none;}
+#envelope-scene.dismissed{opacity:0;pointer-events:none;}
 #envelope-scene::after{
   content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.envelope-wrap{position:relative;width:min(86vw,380px);aspect-ratio:7/5;transition:transform 1.3s var(--ease),opacity 1.1s var(--ease);}
-.envelope-wrap.slide-down{transform:translateY(60vh) scale(.9);opacity:0;}
+.envelope-wrap{
+  position:relative;width:min(84vw,368px);aspect-ratio:7/5;cursor:pointer;
+  animation:envBob 2.9s ease-in-out infinite;
+  transition:transform .9s var(--ease),opacity .7s var(--ease);
+}
+/* Idle nudge — reads as "tap me" without a call-to-action button. */
+@keyframes envBob{
+  0%,100%{transform:translateY(0) rotate(0deg);}
+  28%{transform:translateY(-12px) rotate(-.8deg);}
+  56%{transform:translateY(-3px) rotate(.6deg);}
+}
+.envelope-wrap.opening{animation:none;}
+.envelope-wrap.gone{opacity:0;transform:translateY(28px) scale(.95);}
 .env-body{
   position:absolute;inset:0;border-radius:8px;
   background:linear-gradient(160deg,#3f4c30,#2c3620 70%);
@@ -65,41 +80,83 @@ a{color:inherit;text-decoration:none;}
   content:"";position:absolute;inset:0;opacity:.12;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)'/%3E%3C/svg%3E");
 }
-.env-frame{position:absolute;inset:14px;border:1px solid rgba(217,189,130,.55);border-radius:4px;pointer-events:none;}
-.env-frame::before{content:"";position:absolute;inset:5px;border:1px solid rgba(217,189,130,.25);border-radius:2px;}
-.env-face{
-  position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:.6rem;color:var(--gold-bright);text-align:center;padding:1rem;transition:opacity .5s var(--ease);
+.env-frame{position:absolute;inset:14px;border:1px solid rgba(217,189,130,.5);border-radius:4px;pointer-events:none;}
+.env-frame::before{content:"";position:absolute;inset:5px;border:1px solid rgba(217,189,130,.22);border-radius:2px;}
+
+/* Front pocket — the letter slides out from behind it. */
+.env-front{
+  position:absolute;left:0;right:0;bottom:0;height:66%;z-index:5;
+  background:linear-gradient(168deg,#414e31,#2a3420 78%);
+  clip-path:polygon(0 0,50% 44%,100% 0,100% 100%,0 100%);
+  box-shadow:0 -10px 26px rgba(0,0,0,.35);
 }
-.env-monogram{
-  width:66px;height:66px;border-radius:50%;border:1px solid rgba(217,189,130,.6);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Great Vibes',cursive;font-size:2.2rem;color:var(--gold-bright);margin-bottom:.3rem;
+.env-front::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(160deg,rgba(217,189,130,.16),transparent 45%);
 }
-.env-face .overline{color:var(--gold-light);font-size:.6rem;letter-spacing:.4em;}
-.env-tap{
-  margin-top:.5rem;font-family:'Montserrat',sans-serif;font-size:.62rem;letter-spacing:.3em;
-  text-transform:uppercase;color:rgba(233,210,154,.85);animation:pulse 2.4s ease-in-out infinite;
-}
-@keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+.env-front .env-frame{inset:16px 14px 14px;border-color:rgba(217,189,130,.34);}
+.env-front .env-frame::before{display:none;}
+
 .env-flap{
   position:absolute;left:0;right:0;top:0;height:52%;transform-origin:top center;
   transform-style:preserve-3d;transition:transform 1s var(--ease);z-index:6;
 }
-.env-flap svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35));}
-.envelope-wrap.opening .env-flap{transform:rotateX(-172deg);z-index:1;}
-.envelope-wrap.opening .env-face{opacity:0;}
-.env-card{
-  position:absolute;left:8%;right:8%;bottom:6%;top:20%;
-  background:linear-gradient(175deg,var(--cream),var(--ivory-soft));border-radius:6px;z-index:4;
-  box-shadow:0 14px 40px rgba(0,0,0,.4);transform:translateY(0) scale(.96);opacity:0;
-  transition:transform 1.1s var(--ease),opacity .6s var(--ease);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;padding:1rem;overflow:hidden;
+.env-flap svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 12px rgba(0,0,0,.4));}
+.envelope-wrap.opening .env-flap{transform:rotateX(-168deg);z-index:2;}
+
+/* Wax seal carrying the honoree's initial — replaces the old "Invitation" label. */
+.env-seal{
+  position:absolute;left:50%;top:52%;z-index:7;width:76px;height:76px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 34% 30%,#e9d29a 0%,#c9a768 42%,#96762f 78%,#7a5d22 100%);
+  box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 -2px 6px rgba(90,68,20,.6),inset 0 2px 5px rgba(255,240,205,.5);
+  transition:transform .55s var(--ease),opacity .5s var(--ease),filter .5s;
 }
-.envelope-wrap.opening .env-card{opacity:1;transform:translateY(-46%) scale(1);}
-.env-card .calligraphy{font-size:2.6rem;color:var(--gold);}
-.env-card .overline{color:var(--text-soft);font-size:.58rem;}
+.env-seal::before{
+  content:"";position:absolute;inset:7px;border-radius:50%;
+  border:1px solid rgba(94,71,22,.45);box-shadow:inset 0 0 8px rgba(120,92,32,.45);
+}
+.env-seal span{
+  font-family:'Great Vibes',cursive;font-size:2.5rem;line-height:1;color:#4a3813;
+  padding:.18em .1em .22em;text-shadow:0 1px 0 rgba(255,244,214,.45);
+}
+/* The seal breaks and lifts away before the flap moves. */
+.envelope-wrap.opening .env-seal{transform:translate(-50%,-72%) scale(1.35) rotate(-14deg);opacity:0;filter:blur(2px);}
+
+/* The letter itself. It starts tucked inside, is drawn out, then unfolds. */
+.env-letter{
+  position:absolute;left:7%;right:7%;top:15%;bottom:9%;z-index:3;
+  background:linear-gradient(175deg,var(--cream),var(--ivory-soft));border-radius:5px;
+  box-shadow:0 14px 40px rgba(0,0,0,.42);
+  transform:translateY(0);opacity:0;
+  transition:transform 1.1s var(--ease),opacity .5s var(--ease);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.env-letter::after{
+  content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(90,74,40,.16),transparent);
+  transition:opacity .6s var(--ease);
+}
+.envelope-wrap.pulling .env-letter{opacity:1;transform:translateY(-62%);}
+.env-letter-inner{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
+  text-align:center;padding:1rem;transition:transform .9s var(--ease);
+}
+.env-letter .calligraphy{font-size:2.6rem;color:var(--gold);}
+.env-letter .overline{color:var(--text-soft);font-size:.58rem;}
 .env-card-rule{width:40px;height:1px;background:var(--gold);opacity:.6;}
+/* Unfolding: the sheet is re-parented to <body>, pinned to its current box and
+   then animated out to the full viewport, so it becomes the page. */
+.env-letter.unfolding{
+  position:fixed;margin:0;z-index:1002;transform:none;opacity:1;
+  transition:left .95s var(--ease),top .95s var(--ease),width .95s var(--ease),
+             height .95s var(--ease),border-radius .95s var(--ease),opacity .7s var(--ease);
+}
+.env-letter.unfolding::after{opacity:0;}
+.env-letter.unfolding .env-letter-inner{transform:scale(1.55);}
+.env-letter.fading{opacity:0;}
+
 .shimmer{
   position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;
   background:linear-gradient(115deg,transparent 30%,rgba(233,210,154,.55) 50%,transparent 70%);
@@ -107,14 +164,19 @@ a{color:inherit;text-decoration:none;}
 }
 .shimmer.go{animation:sweep 1.1s var(--ease) forwards;}
 @keyframes sweep{0%{opacity:0;transform:translateX(-120%);}20%{opacity:1;}100%{opacity:0;transform:translateX(120%);}}
-#skip-intro{
-  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:1001;
-  color:rgba(233,210,154,.8);font-family:'Montserrat',sans-serif;font-size:.64rem;letter-spacing:.28em;
-  text-transform:uppercase;padding:12px 20px;min-height:44px;border:1px solid rgba(217,189,130,.35);
-  border-radius:40px;transition:opacity .4s var(--ease),color .3s;background:rgba(20,26,14,.35);backdrop-filter:blur(4px);
+
+.env-tap{
+  font-family:'Montserrat',sans-serif;font-size:.62rem;letter-spacing:.3em;
+  text-transform:uppercase;color:rgba(233,210,154,.85);
+  animation:pulse 2.4s ease-in-out infinite;transition:opacity .4s var(--ease);
 }
-#skip-intro:hover{color:var(--gold-bright);border-color:var(--gold);}
-#skip-intro.gone{opacity:0;pointer-events:none;}
+@keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+.env-tap.gone{opacity:0;}
+
+@media (prefers-reduced-motion: reduce){
+  .envelope-wrap{animation:none;}
+  .env-tap{animation:none;opacity:.85;}
+}
 
 /* ── Language switcher ── */
 #langbar{
@@ -466,14 +528,16 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
 
 <!-- ── Envelope opening scene ── -->
 <div id="envelope-scene" role="dialog" aria-label="Invitation envelope">
-  <div class="envelope-wrap" id="envelopeWrap" role="button" tabindex="0">
-    <div class="env-body"><div class="env-frame"></div></div>
-    <div class="env-card">
-      <div class="overline" data-t="youAreInvited">Приглашение</div>
-      <div class="calligraphy" data-bind="honoreeName"></div>
-      <div class="env-card-rule"></div>
-      <div class="overline" data-opt="age" data-bind="ageLabel"></div>
+  <div class="envelope-wrap" id="envelopeWrap" role="button" tabindex="0" data-t-aria="tapToOpen">
+    <div class="env-body"></div>
+    <div class="env-letter" id="envLetter">
+      <div class="env-letter-inner">
+        <div class="calligraphy" data-bind="honoreeName"></div>
+        <div class="env-card-rule"></div>
+        <div class="overline" data-opt="age" data-bind="ageLabel"></div>
+      </div>
     </div>
+    <div class="env-front" aria-hidden="true"><div class="env-frame"></div></div>
     <div class="env-flap" aria-hidden="true">
       <svg viewBox="0 0 380 140" preserveAspectRatio="none">
         <defs>
@@ -482,19 +546,13 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
           </linearGradient>
         </defs>
         <polygon points="0,0 380,0 190,138" fill="url(#flapg)" stroke="rgba(217,189,130,.5)" stroke-width="1"/>
-        <circle cx="190" cy="30" r="16" fill="none" stroke="rgba(217,189,130,.6)"/>
-        <text id="flapMono" x="190" y="40" text-anchor="middle" font-family="Great Vibes, cursive" font-size="26" fill="#e9d29a"></text>
       </svg>
     </div>
-    <div class="env-face">
-      <div class="env-monogram" id="envMonogram"></div>
-      <div class="overline" data-t="youAreInvited">Приглашение</div>
-      <div class="env-tap" data-t="tapToOpen">Нажмите, чтобы открыть</div>
-    </div>
+    <div class="env-seal" id="envSeal" aria-hidden="true"><span id="envMonogram"></span></div>
     <div class="shimmer" id="shimmer" aria-hidden="true"></div>
   </div>
+  <div class="env-tap" id="envTap" data-t="tapToOpen">Нажмите, чтобы открыть</div>
 </div>
-<button id="skip-intro" data-t="skipIntro">Пропустить</button>
 
 <!-- ── Language switcher ── -->
 <div id="langbar" class="hidden"></div>
@@ -784,7 +842,7 @@ var lang = LANGS[0];
 /* Built-in UI strings (template chrome — not honoree-editable). */
 var UI = {
   ru: {
-    youAreInvited:'Приглашение', tapToOpen:'Нажмите, чтобы открыть', skipIntro:'Пропустить',
+    tapToOpen:'Нажмите, чтобы открыть',
     scroll:'Листайте', withWarmth:'С теплом и радостью',
     countingDays:'Считаем дни', untilWeCelebrate:'До праздника',
     days:'Дни', hours:'Часы', minutes:'Минуты', seconds:'Секунды', addToCalendar:'В календарь',
@@ -804,7 +862,7 @@ var UI = {
     withLove:'С любовью', developedBy:'Этот продукт разработан компанией V-connect', birthday:'День рождения', untilLate:'до позднего вечера'
   },
   uz: {
-    youAreInvited:'Taklifnoma', tapToOpen:'Ochish uchun bosing', skipIntro:'Otkazib yuborish',
+    tapToOpen:'Ochish uchun bosing',
     scroll:'Pastga suring', withWarmth:'Iliqlik va quvonch bilan',
     countingDays:'Kunlarni sanaymiz', untilWeCelebrate:'Bayramgacha',
     days:'Kun', hours:'Soat', minutes:'Daqiqa', seconds:'Soniya', addToCalendar:'Kalendarga qoshish',
@@ -824,7 +882,7 @@ var UI = {
     withLove:'Mehr bilan', developedBy:'Ushbu mahsulot V-connect tomonidan ishlab chiqilgan', birthday:'Tugilgan kun', untilLate:'kech tungacha'
   },
   en: {
-    youAreInvited:'You are invited', tapToOpen:'Tap to open', skipIntro:'Skip intro',
+    tapToOpen:'Tap to open',
     scroll:'Scroll', withWarmth:'With warmth & joy',
     countingDays:'Counting the days', untilWeCelebrate:'Until we celebrate',
     days:'Days', hours:'Hours', minutes:'Minutes', seconds:'Seconds', addToCalendar:'Add to calendar',
@@ -912,9 +970,8 @@ function bindTexts(){
     if (v != null) el.textContent = v;
   });
   $$('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
-  var mono = (honoree || 'V').trim().charAt(0).toUpperCase();
-  $('#envMonogram').textContent = mono;
-  $('#flapMono').textContent = mono;
+  $$('[data-t-aria]').forEach(function(el){ el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
+  $('#envMonogram').textContent = (honoree || 'V').trim().charAt(0).toUpperCase();
   document.title = honoree || 'Invitation';
   document.documentElement.lang = lang;
 }
@@ -928,27 +985,69 @@ function loadImg(el, src, alt){
 }
 
 /* ── Envelope ── */
-var scene = $('#envelope-scene'), wrap = $('#envelopeWrap'), shimmer = $('#shimmer'), skipBtn = $('#skip-intro');
+/* Seal breaks → flap opens → the letter is drawn out of the pocket → it unfolds
+   to the full viewport and dissolves, handing the screen over to the hero. */
+var scene = $('#envelope-scene'), wrap = $('#envelopeWrap');
+var shimmer = $('#shimmer'), letter = $('#envLetter'), tapHint = $('#envTap');
 var opened = false;
+
+function unfoldLetter(){
+  // Measure while the sheet is still inside the (transformed) envelope, then
+  // re-parent to <body> so position:fixed resolves against the viewport.
+  var r = letter.getBoundingClientRect();
+  letter.classList.add('unfolding');
+  letter.style.left = r.left + 'px';
+  letter.style.top = r.top + 'px';
+  letter.style.width = r.width + 'px';
+  letter.style.height = r.height + 'px';
+  document.body.appendChild(letter);
+  void letter.offsetWidth; // flush, so the next values animate
+  letter.style.left = '0px';
+  letter.style.top = '0px';
+  letter.style.width = '100%';
+  letter.style.height = '100%';
+  letter.style.borderRadius = '0';
+}
+
 function openEnvelope(){
   if (opened) return; opened = true;
   document.body.style.overflow = 'hidden';
+  tapHint.classList.add('gone');
   if (prefersReduced) { finishIntro(); return; }
-  wrap.classList.add('opening');
-  setTimeout(function(){ shimmer.classList.add('go'); }, 700);
-  setTimeout(function(){ wrap.classList.add('slide-down'); }, 1500);
-  setTimeout(finishIntro, 2400);
+  // Freeze the bob at its current offset before dropping the animation, then
+  // let the transition ease it back to rest — otherwise it snaps on click.
+  var pose = getComputedStyle(wrap).transform;
+  if (pose && pose !== 'none') wrap.style.transform = pose;
+  wrap.classList.add('opening');                                    // seal + flap
+  void wrap.offsetWidth;                                            // commit the frozen pose
+  requestAnimationFrame(function(){ wrap.style.transform = ''; });
+  setTimeout(function(){ shimmer.classList.add('go'); }, 500);
+  setTimeout(function(){ wrap.classList.add('pulling'); }, 780);    // draw the letter out
+  setTimeout(unfoldLetter, 1780);                                   // unfold to full page
+  setTimeout(function(){ wrap.classList.add('gone'); }, 1900);
+  setTimeout(function(){
+    scene.classList.add('dismissed');
+    playHero();
+    letter.classList.add('fading');
+  }, 2650);
+  setTimeout(cleanupIntro, 3500);
 }
+
 function finishIntro(){
   scene.classList.add('dismissed');
-  skipBtn.classList.add('gone');
-  document.body.style.overflow = '';
-  setTimeout(function(){ scene.style.display = 'none'; }, 1100);
+  letter.classList.add('fading');
   playHero();
+  setTimeout(cleanupIntro, 900);
 }
+
+function cleanupIntro(){
+  document.body.style.overflow = '';
+  scene.style.display = 'none';
+  if (letter.parentNode) letter.parentNode.removeChild(letter);
+}
+
 wrap.addEventListener('click', openEnvelope);
 wrap.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEnvelope(); } });
-skipBtn.addEventListener('click', function(){ opened = true; finishIntro(); });
 
 /* ── Hero + day→night scroll (photographic scene) ── */
 var hero = $('#hero'), heroMansion = $('#heroMansion');
