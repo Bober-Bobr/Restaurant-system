@@ -34,7 +34,8 @@ a{color:inherit;text-decoration:none;}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px;}
 
 .overline{font-family:'Montserrat',sans-serif;font-weight:400;letter-spacing:.42em;text-transform:uppercase;font-size:.68rem;}
-.calligraphy{font-family:'Great Vibes',cursive;font-weight:400;line-height:1;}
+/* Script face: needs room for swashes/descenders, or glyphs get clipped. */
+.calligraphy{font-family:'Great Vibes',cursive;font-weight:400;line-height:1.25;padding:.12em 0;}
 
 /* ── Reveal system ── */
 .reveal{opacity:0;transform:translateY(28px);transition:opacity 1s var(--ease),transform 1s var(--ease);}
@@ -141,7 +142,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 
 /* ── Hero: day→night ── */
 #hero{
-  height:100svh;min-height:600px;padding:0;display:flex;align-items:flex-end;justify-content:center;
+  height:100svh;min-height:600px;padding:0;display:flex;align-items:center;justify-content:center;
   text-align:center;color:var(--cream);position:relative;overflow:hidden;
 }
 .hero-sky-day,.hero-sky-night{position:absolute;inset:0;z-index:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
@@ -171,22 +172,25 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 }
 #vconnect img{width:64px;height:64px;display:block;opacity:.95;}
 #vconnect span{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-family:'Cormorant Garamond',Georgia,serif;}
-/* Anchored to the lower third so the name clears the bright sky and the
-   mansion roofline; a soft scrim keeps it readable over the facade. */
-.hero-content{position:relative;z-index:5;padding:1.4rem 1.4rem 13svh;max-width:440px;}
+/* Sits just below centre, with a soft scrim so the cover text stays readable
+   over the sky and the mansion. */
+.hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;margin-top:6svh;}
 .hero-content::before{
-  content:'';position:absolute;inset:-4% -16% 6%;z-index:-1;pointer-events:none;
-  background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.68) 0%,rgba(6,9,15,.44) 52%,rgba(6,9,15,0) 78%);
+  content:'';position:absolute;inset:-4% -16%;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.62) 0%,rgba(6,9,15,.40) 52%,rgba(6,9,15,0) 78%);
 }
 .hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) .3s;}
 .hero-name{
-  font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.05;margin:.4rem 0;
+  font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.2;margin:.2rem 0;
   text-shadow:0 4px 24px rgba(0,0,0,.35);
   background:linear-gradient(90deg,var(--cream) 50%,transparent 50%);
   background-size:220% 100%;background-position:100% 0;
   -webkit-background-clip:text;background-clip:text;color:transparent;
   transition:background-position 2.4s var(--ease) .6s;
-  padding:0 .2em .12em;
+  /* background-clip:text only paints inside the padding box — this script face
+     has tall swashes and deep descenders, so it needs real vertical room or the
+     tops/tails of letters are cut off. */
+  padding:.34em .22em .34em;
 }
 .hero.play .hero-name{background-position:0 0;}
 .hero-sub{font-style:italic;font-size:1.5rem;color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.4s;}
@@ -404,7 +408,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .final-mansion.empty{display:none;}
 .final-content{position:relative;z-index:3;padding:2rem;max-width:420px;}
 .final-content .msg{font-style:italic;font-size:1.5rem;color:var(--champagne);margin-bottom:1rem;white-space:pre-line;}
-.final-name{font-family:'Great Vibes',cursive;font-size:4.4rem;color:var(--gold-bright);line-height:1.1;padding:0 .15em .1em;}
+.final-name{font-family:'Great Vibes',cursive;font-size:4.4rem;color:var(--gold-bright);line-height:1.25;padding:.26em .16em .3em;}
 .final-date{font-family:'Montserrat',sans-serif;letter-spacing:.24em;font-size:.7rem;text-transform:uppercase;color:var(--sage-soft);margin:1rem 0;}
 .final-love{font-family:'Great Vibes',cursive;font-size:2rem;color:var(--cream);}
 #particles{position:absolute;inset:0;z-index:2;pointer-events:none;}
