@@ -159,7 +159,20 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 }
 .hero-mansion.up{transform:translateX(-50%) translateY(0);opacity:1;}
 .hero-mansion.empty{display:none;}
-.hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;}
+
+/* Blocks switched off in the builder (hidden.<key> === true). */
+.opt-off{display:none!important;}
+
+/* Mandatory V-connect attribution — shown on every invitation. */
+#vconnect{
+  position:relative;z-index:4;display:flex;flex-direction:column;align-items:center;gap:.7rem;
+  padding:2.2rem 1.2rem 2.6rem;background:#0b1018;color:var(--cream);text-align:center;
+  border-top:1px solid rgba(233,210,154,.14);
+}
+#vconnect img{width:64px;height:64px;display:block;opacity:.95;}
+#vconnect span{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-family:'Cormorant Garamond',Georgia,serif;}
+/* Sits a little below centre so the name clears the bright upper sky. */
+.hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;margin-top:9svh;}
 .hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) .3s;}
 .hero-name{
   font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.05;margin:.4rem 0;
@@ -450,7 +463,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <div class="overline" data-t="youAreInvited">Приглашение</div>
       <div class="calligraphy" data-bind="honoreeName"></div>
       <div class="env-card-rule"></div>
-      <div class="overline" data-bind="ageLabel"></div>
+      <div class="overline" data-opt="age" data-bind="ageLabel"></div>
     </div>
     <div class="env-flap" aria-hidden="true">
       <svg viewBox="0 0 380 140" preserveAspectRatio="none">
@@ -496,7 +509,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <p class="overline" data-bind="heroKicker"></p>
       <h1 class="hero-name" data-bind="honoreeName"></h1>
       <p class="hero-sub" data-bind="heroSub"></p>
-      <p class="hero-age" data-bind="ageLabel"></p>
+      <p class="hero-age" data-opt="age" data-bind="ageLabel"></p>
       <p class="hero-meta">
         <span data-bind="dateLong"></span>
         <span class="dot">·</span>
@@ -511,7 +524,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Invitation message -->
-  <section id="message">
+  <section id="message" data-opt="message">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="withWarmth">С теплом и радостью</p>
       <div class="msg-lines">
@@ -532,7 +545,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Countdown -->
-  <section id="countdown">
+  <section id="countdown" data-opt="countdown">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="countingDays">Считаем дни</p>
       <h2 class="section-title reveal reveal-d1" data-t="untilWeCelebrate">До праздника</h2>
@@ -552,7 +565,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Details -->
-  <section id="details">
+  <section id="details" data-opt="details">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="theParticulars">Детали</p>
       <h2 class="section-title reveal reveal-d1" data-t="eventDetails">О празднике</h2>
@@ -579,7 +592,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Venue -->
-  <section id="venue">
+  <section id="venue" data-opt="venue">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="whereWeGather">Где мы соберёмся</p>
       <h2 class="section-title reveal reveal-d1" data-bind="venueName"></h2>
@@ -598,7 +611,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Gallery -->
-  <section id="gallery">
+  <section id="gallery" data-opt="gallery">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="aGlimpse">Моменты</p>
       <h2 class="section-title reveal reveal-d1" data-t="galleryTitle">Галерея</h2>
@@ -617,7 +630,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Program -->
-  <section id="program">
+  <section id="program" data-opt="program">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="theEvening">Программа</p>
       <h2 class="section-title reveal reveal-d1" data-t="orderOfNight">Как пройдёт вечер</h2>
@@ -627,7 +640,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Gifts + gift card -->
-  <section id="gifts">
+  <section id="gifts" data-opt="gifts">
     <div class="wrap">
       <div class="gifts-illus reveal" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18M12 8v13M12 8c-2-4-6-4-6-1s4 1 6 1c2 0 6 2 6-1s-4-3-6 1z"/></svg>
@@ -651,7 +664,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- RSVP -->
-  <section id="rsvp">
+  <section id="rsvp" data-opt="rsvp">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="kindlyRespond">Пожалуйста, ответьте</p>
       <h2 class="section-title reveal reveal-d1">RSVP</h2>
@@ -702,7 +715,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Contacts -->
-  <section id="contacts">
+  <section id="contacts" data-opt="contacts">
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="questions">Остались вопросы?</p>
       <h2 class="section-title reveal reveal-d1" data-t="contactsTitle">Контакты</h2>
@@ -712,7 +725,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   </section>
 
   <!-- Final scene -->
-  <section id="final">
+  <section id="final" data-opt="final">
     <div class="final-sky" id="finalSky" aria-hidden="true"></div>
     <img class="final-mansion empty" id="finalMansion" alt="" aria-hidden="true">
     <div id="particles" aria-hidden="true"></div>
@@ -723,9 +736,15 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <p class="final-love reveal reveal-d3" data-t="withLove">С любовью</p>
     </div>
   </section>
+
+  <!-- Mandatory attribution (not hideable) -->
+  <footer id="vconnect">
+    <img id="vconnectLogo" alt="V-connect" width="64" height="64">
+    <span data-t="developedBy">Разработано V-connect</span>
+  </footer>
 </main>
 
-<button id="music-btn" class="hidden" aria-pressed="false">
+<button id="music-btn" class="hidden" data-opt="music" aria-pressed="false">
   <span class="ic-play" aria-hidden="true">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
   </span>
@@ -773,7 +792,7 @@ var UI = {
     savedYes:'Мы очень рады! Ваш ответ получен.', savedNo:'Спасибо, что сообщили. Нам будет вас не хватать.',
     questions:'Остались вопросы?', contactsTitle:'Контакты',
     phone:'Телефон', telegram:'Telegram', instagram:'Instagram',
-    withLove:'С любовью', birthday:'День рождения', untilLate:'до позднего вечера'
+    withLove:'С любовью', developedBy:'Этот продукт разработан компанией V-connect', birthday:'День рождения', untilLate:'до позднего вечера'
   },
   uz: {
     youAreInvited:'Taklifnoma', tapToOpen:'Ochish uchun bosing', skipIntro:'Otkazib yuborish',
@@ -793,7 +812,7 @@ var UI = {
     savedYes:'Juda xursandmiz! Javobingiz qabul qilindi.', savedNo:'Xabar berganingiz uchun rahmat. Sizni soginamiz.',
     questions:'Savollaringiz bormi?', contactsTitle:'Kontaktlar',
     phone:'Telefon', telegram:'Telegram', instagram:'Instagram',
-    withLove:'Mehr bilan', birthday:'Tugilgan kun', untilLate:'kech tungacha'
+    withLove:'Mehr bilan', developedBy:'Ushbu mahsulot V-connect tomonidan ishlab chiqilgan', birthday:'Tugilgan kun', untilLate:'kech tungacha'
   },
   en: {
     youAreInvited:'You are invited', tapToOpen:'Tap to open', skipIntro:'Skip intro',
@@ -813,7 +832,7 @@ var UI = {
     savedYes:'We are delighted! Your response has been saved.', savedNo:'Thank you for letting us know. You will be missed.',
     questions:'Any questions?', contactsTitle:'Contacts',
     phone:'Phone', telegram:'Telegram', instagram:'Instagram',
-    withLove:'With love', birthday:'Birthday', untilLate:'until late'
+    withLove:'With love', developedBy:'This product was developed by V-connect', birthday:'Birthday', untilLate:'until late'
   }
 };
 
@@ -930,7 +949,8 @@ function playHero(){ hero.classList.add('play'); if (heroMansion) heroMansion.cl
    the builder (hero.mansionImage / hero.dayImage / hero.nightImage); otherwise
    we fall back to the bundled defaults served from the host origin. A mansion
    that fails to load (e.g. none provided) hides its layer gracefully. */
-var ASSET = (window.__ORIGIN__ || '') + '/tuscan/';
+var ORIGIN = (window.__ORIGIN__ || '');
+var ASSET = ORIGIN + '/tuscan/';
 var skyDay = $('#skyDay'), skyNight = $('#skyNight');
 var finalSky = $('#finalSky'), finalMansion = $('#finalMansion');
 function skyUrl(path, def){ var v = cfg(path, ''); return (typeof v === 'string' && v) ? v : (ASSET + def); }
@@ -950,6 +970,21 @@ function renderScene(){
   setBg(finalSky, skyUrl('hero.nightImage', 'night-sky.jpg'));
   setMansion(heroMansion);
   setMansion(finalMansion);
+  var logo = $('#vconnectLogo');
+  if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/vconnect-logo.png');
+}
+
+/* Blocks switched off in the builder: config.hidden['<key>'] === true hides
+   every element tagged data-opt="<key>" (a whole section, or the age caption
+   wherever it appears) plus its dot in the side navigation. */
+function applyVisibility(){
+  var hid = cfg('hidden', {}) || {};
+  $$('[data-opt]').forEach(function(el){
+    el.classList.toggle('opt-off', hid[el.getAttribute('data-opt')] === true);
+  });
+  $$('#dotnav a').forEach(function(a){
+    a.classList.toggle('opt-off', hid[a.dataset.id] === true);
+  });
 }
 
 function heroScroll(){
@@ -1332,6 +1367,7 @@ window.addEventListener('scroll', function(){
 function renderAll(){
   bindTexts();
   renderScene();
+  applyVisibility();
   renderVenue();
   renderGallery();
   renderTimeline();

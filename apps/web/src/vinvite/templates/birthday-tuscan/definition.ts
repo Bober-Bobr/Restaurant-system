@@ -8,6 +8,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'hero', labelKey: 'tg_hero', icon: '🏛️' },
+  { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
   { key: 'honoree', labelKey: 'tg_honoree', icon: '🎂' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓' },
@@ -23,6 +24,20 @@ const fields: TemplateField[] = [
   { key: 'mansionImage', path: 'hero.mansionImage', type: 'image', group: 'hero', labelKey: 'fld_mansion' },
   { key: 'dayImage', path: 'hero.dayImage', type: 'image', group: 'hero', labelKey: 'fld_day_sky' },
   { key: 'nightImage', path: 'hero.nightImage', type: 'image', group: 'hero', labelKey: 'fld_night_sky' },
+
+  // Show/hide switches — the value stored is the HIDDEN flag.
+  { key: 'v_age', path: 'hidden.age', type: 'toggle', group: 'visibility', labelKey: 'sec_age' },
+  { key: 'v_message', path: 'hidden.message', type: 'toggle', group: 'visibility', labelKey: 'sec_message' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
+  { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
+  { key: 'v_venue', path: 'hidden.venue', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
+  { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
+  { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
+  { key: 'v_gifts', path: 'hidden.gifts', type: 'toggle', group: 'visibility', labelKey: 'sec_gifts' },
+  { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
+  { key: 'v_contacts', path: 'hidden.contacts', type: 'toggle', group: 'visibility', labelKey: 'sec_contacts' },
+  { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
+  { key: 'v_final', path: 'hidden.final', type: 'toggle', group: 'visibility', labelKey: 'sec_final' },
 
   { key: 'name', path: 'honoree.name', type: 'localized-text', group: 'honoree', labelKey: 'fld_name' },
   { key: 'ageLabel', path: 'honoree.ageLabel', type: 'localized-text', group: 'honoree', labelKey: 'fld_age' },
@@ -64,6 +79,8 @@ const defaultConfig = {
   // (/tuscan/day-sky.jpg, night-sky.jpg; mansion.png if present). The honoree
   // can upload a transparent-PNG mansion and their own skies from the builder.
   hero: { mansionImage: '', dayImage: '', nightImage: '' },
+  // Blocks switched off by the honoree (key → true). Empty = everything shown.
+  hidden: {} as Record<string, boolean>,
   honoree: {
     name: { ru: 'Мадина', uz: 'Madina', en: 'Madina' },
     ageLabel: { ru: '30 лет', uz: '30 yosh', en: 'Thirty Years' },

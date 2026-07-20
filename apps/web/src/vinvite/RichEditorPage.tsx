@@ -245,6 +245,24 @@ function FieldEditor({ field, design, setConfig }: {
           restaurantId=""
         />
       );
+    case 'toggle': {
+      // The stored value is the HIDDEN flag; the switch shows "visible".
+      const hidden = value === true;
+      return (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={!hidden}
+            onChange={(e) => setConfig(field.path, !e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: '#c9a42c', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: 13, color: hidden ? 'rgba(226,232,240,0.45)' : '#e2e8f0' }}>
+            {label}
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 15 }}>{hidden ? '🚫' : '👁'}</span>
+        </label>
+      );
+    }
     case 'gallery':
       return <GalleryEditor field={field} design={design} setConfig={setConfig} />;
     case 'schedule':
