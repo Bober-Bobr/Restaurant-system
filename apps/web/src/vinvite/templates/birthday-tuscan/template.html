@@ -141,7 +141,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 
 /* ── Hero: day→night ── */
 #hero{
-  height:100svh;min-height:600px;padding:0;display:flex;align-items:center;justify-content:center;
+  height:100svh;min-height:600px;padding:0;display:flex;align-items:flex-end;justify-content:center;
   text-align:center;color:var(--cream);position:relative;overflow:hidden;
 }
 .hero-sky-day,.hero-sky-night{position:absolute;inset:0;z-index:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
@@ -171,8 +171,13 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 }
 #vconnect img{width:64px;height:64px;display:block;opacity:.95;}
 #vconnect span{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-family:'Cormorant Garamond',Georgia,serif;}
-/* Sits a little below centre so the name clears the bright upper sky. */
-.hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;margin-top:9svh;}
+/* Anchored to the lower third so the name clears the bright sky and the
+   mansion roofline; a soft scrim keeps it readable over the facade. */
+.hero-content{position:relative;z-index:5;padding:1.4rem 1.4rem 13svh;max-width:440px;}
+.hero-content::before{
+  content:'';position:absolute;inset:-4% -16% 6%;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.68) 0%,rgba(6,9,15,.44) 52%,rgba(6,9,15,0) 78%);
+}
 .hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) .3s;}
 .hero-name{
   font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.05;margin:.4rem 0;
