@@ -1,9 +1,10 @@
 import { birthdayTuscanTemplate } from './birthday-tuscan/definition';
+import { weddingArabicTemplate } from './wedding-arabic/definition';
 import { getPath } from './utils';
 import type { RichDesignData, TemplateCategory, TemplateDefinition } from './types';
 
 // Registry of first-party rich templates, grouped by category on the chooser.
-export const RICH_TEMPLATES: TemplateDefinition[] = [birthdayTuscanTemplate];
+export const RICH_TEMPLATES: TemplateDefinition[] = [birthdayTuscanTemplate, weddingArabicTemplate];
 
 export const TEMPLATE_CATEGORIES: { key: TemplateCategory; labelKey: string; icon: string }[] = [
   { key: 'birthday', labelKey: 'cat_birthday', icon: '🎂' },

@@ -1681,7 +1681,7 @@ function renderMusic(){
   var url = cfg('music.url','');
   if (!url) { musicBtn.classList.add('hidden'); audio.removeAttribute('src'); return; }
   musicBtn.classList.remove('hidden');
-  if (audio.getAttribute('src') !== url) { audio.src = url; audio.preload = 'auto'; }
+  if (audio.getAttribute('src') !== url) { audio.setAttribute('src', url); audio.preload = 'auto'; }
   if (musicWired) return;
   musicWired = true;
   musicBtn.addEventListener('click', function(){
