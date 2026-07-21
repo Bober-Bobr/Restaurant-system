@@ -202,7 +202,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .wrap{max-width:var(--maxw);margin:0 auto;}
 .section-title{font-weight:500;font-size:clamp(2rem,9vw,2.9rem);line-height:1.05;color:var(--olive);text-align:center;letter-spacing:.01em;}
 .section-kicker{text-align:center;color:var(--gold);margin-bottom:.9rem;}
-.overline,.count-lbl,.tl-time,.final-date,.env-tap,.detail-text h3,.count-when{
+.overline,.count-lbl,.tl-time,.env-tap,.detail-text h3,.count-when{
   text-shadow:0 0 10px var(--halo),0 0 24px var(--halo-far);
 }
 #hero,#countdown,#gallery,#final,#envelope-scene,#message{
@@ -391,6 +391,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   font-family:'Montserrat',sans-serif;font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;transition:all .35s var(--ease);
 }
 .btn-gold{background:var(--gold);color:#251d0c;border:1px solid var(--gold);}
+.btn-lg{min-height:58px;padding:1.15rem 2.4rem;font-size:.8rem;letter-spacing:.26em;gap:.7rem;}
 .btn-gold:hover{background:var(--gold-bright);}
 .btn-ghost{border:1px solid var(--gold);color:var(--gold-bright);}
 .btn-ghost:hover{background:rgba(217,189,130,.12);}
@@ -424,30 +425,36 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .venue-btns .btn-gold{background:var(--olive);color:var(--gold-bright);border-color:var(--olive);}
 .venue-btns .btn-gold:hover{background:var(--olive-deep);}
 
-/* ── Gallery ── */
-#gallery{background:linear-gradient(160deg,var(--olive-deep),var(--olive-darkest));color:var(--cream);text-align:center;}
-#gallery .section-title{color:var(--cream);}
-#gallery .section-kicker{color:var(--gold-light);}
-.slider{
-  position:relative;margin-top:2rem;border-radius:8px;overflow:hidden;
-  box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid rgba(217,189,130,.3);
+/* Gallery: a stack of Polaroids, fanned so every photo is visible, cycling on
+   its own. Breaks out wider than the text column. */
+.pstack{
+  position:relative;margin:2.4rem auto 0;
+  width:min(94vw,620px);max-width:none;height:min(92vw,400px);
 }
-.slides{display:flex;transition:transform .7s var(--ease);}
-.slide{min-width:100%;position:relative;}
-.slide img{width:100%;height:340px;object-fit:cover;}
-.slide-cap{
-  position:absolute;left:0;right:0;bottom:0;padding:1.4rem 1rem .9rem;
-  background:linear-gradient(transparent,rgba(20,26,14,.85));
-  font-style:italic;font-size:1.05rem;color:var(--cream);text-align:left;
+.pstack-inner{position:absolute;inset:0;}
+.pcard{
+  position:absolute;left:50%;top:0;width:min(64%,290px);
+  background:linear-gradient(180deg,#fdfbf5,#f4eee0);
+  padding:13px 13px 58px;border-radius:2px;
+  box-shadow:0 20px 44px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.3);
+  transform-origin:50% 62%;cursor:zoom-in;
+  transition:transform 1.15s var(--ease),opacity 1.15s var(--ease),filter 1.15s var(--ease);
+  will-change:transform;
+}
+.pcard img{width:100%;height:min(58vw,258px);object-fit:cover;display:block;background:#ddd6c6;}
+.pcard .pcap{
+  position:absolute;left:13px;right:13px;bottom:16px;text-align:center;
+  font-family:'Great Vibes',cursive;font-size:1.4rem;line-height:1.25;padding:.08em 0 .14em;
+  color:#5c5340;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .slider-btn{
-  position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;border-radius:50%;
-  background:rgba(20,26,14,.5);color:var(--gold-bright);display:flex;align-items:center;justify-content:center;
+  position:absolute;top:50%;transform:translateY(-50%);z-index:40;width:46px;height:46px;border-radius:50%;
+  background:rgba(20,26,14,.55);color:var(--gold-bright);display:flex;align-items:center;justify-content:center;
   border:1px solid rgba(217,189,130,.4);transition:background .3s;
 }
-.slider-btn:hover{background:rgba(20,26,14,.8);}
-.slider-btn.prev{left:10px;}.slider-btn.next{right:10px;}
-.dots{display:flex;gap:8px;justify-content:center;margin-top:1.2rem;}
+.slider-btn:hover{background:rgba(20,26,14,.85);}
+.slider-btn.prev{left:-4px;}.slider-btn.next{right:-4px;}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:1.4rem;}
 .dot{width:9px;height:9px;border-radius:50%;background:rgba(217,189,130,.3);transition:all .3s;padding:0;}
 .dot.active{background:var(--gold-bright);transform:scale(1.3);}
 
@@ -467,8 +474,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 #gifts{background:linear-gradient(160deg,var(--dusty-rose-soft),var(--ivory));text-align:center;}
 .gifts-illus{display:flex;justify-content:center;gap:1.6rem;margin:1.8rem auto 1.2rem;color:var(--gold);}
 .gifts-illus svg{width:40px;height:40px;}
-.gifts-text{font-family:'Great Vibes',cursive;font-size:2.4rem;color:var(--olive);line-height:1.1;margin-bottom:.6rem;}
-.gifts-sub{font-size:1.2rem;color:var(--text-soft);font-style:italic;max-width:380px;margin:0 auto;white-space:pre-line;}
+.gifts-text{font-family:'Great Vibes',cursive;font-size:2.4rem;color:var(--olive);line-height:1.25;margin-top:1.8rem;padding:.1em 0 .18em;}
 .giftcard{
   position:relative;max-width:360px;margin:2rem auto 0;padding:1.6rem 1.4rem 1.3rem;border-radius:16px;
   background:linear-gradient(135deg,#3a462d 0%,#2b3420 55%,#1f2718 100%);
@@ -562,8 +568,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .final-content{position:relative;z-index:3;padding:2rem;max-width:420px;}
 .final-content .msg{font-style:italic;font-size:1.5rem;color:var(--champagne);margin-bottom:1rem;white-space:pre-line;}
 .final-name{font-family:'Great Vibes',cursive;font-size:4.4rem;color:var(--gold-bright);line-height:1.25;padding:.26em .16em .3em;}
-.final-date{font-family:'Montserrat',sans-serif;letter-spacing:.24em;font-size:.82rem;text-transform:uppercase;color:var(--sage-soft);margin:1rem 0;}
-.final-love{font-family:'Great Vibes',cursive;font-size:2rem;color:var(--cream);}
+.final-love{font-family:'Great Vibes',cursive;font-size:2rem;color:var(--cream);line-height:1.3;padding:.12em 0;margin-bottom:.2rem;}
 #particles{position:absolute;inset:0;z-index:2;pointer-events:none;}
 /* One-shot gold confetti, fired once the cover animation has settled. */
 #confetti{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden;}
@@ -751,8 +756,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   <!-- Details -->
   <section id="details" data-opt="details">
     <div class="wrap">
-      <p class="overline section-kicker reveal" data-t="theParticulars">Детали</p>
-      <h2 class="section-title reveal reveal-d1" data-t="eventDetails">О празднике</h2>
+      <h2 class="section-title reveal" data-t="eventDetails">Детали события</h2>
       <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="detail-grid">
         <div class="detail-item reveal">
@@ -786,8 +790,8 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       </div>
       <p class="venue-desc reveal reveal-d3" data-bind="venueDesc"></p>
       <div class="venue-btns reveal reveal-d4">
-        <a class="btn btn-gold" id="mapBtn" target="_blank" rel="noopener">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        <a class="btn btn-gold btn-lg" id="mapBtn" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
           <span data-t="openMap">Открыть карту</span>
         </a>
       </div>
@@ -800,8 +804,8 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <p class="overline section-kicker reveal" data-t="aGlimpse">Моменты</p>
       <h2 class="section-title reveal reveal-d1" data-t="galleryTitle">Галерея</h2>
       <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
-      <div class="slider reveal reveal-d2" id="slider" tabindex="0" aria-roledescription="carousel">
-        <div class="slides" id="slides"></div>
+      <div class="pstack reveal reveal-d2" id="slider" tabindex="0" aria-roledescription="carousel">
+        <div class="pstack-inner" id="slides"></div>
         <button class="slider-btn prev" id="slidePrev" aria-label="Previous">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
@@ -831,10 +835,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 3c2 3 4 4 4 7a4 4 0 01-8 0c0-3 2-4 4-7z"/><path d="M8 21h8"/><path d="M12 14v7"/></svg>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 2v3M9 8h6v5a3 3 0 01-6 0z"/><path d="M6 20h12M8 15v5M16 15v5"/></svg>
       </div>
-      <p class="gifts-text reveal reveal-d1" data-bind="giftsTitle"></p>
-      <p class="gifts-sub reveal reveal-d2" data-bind="giftsNote"></p>
-
-      <div class="giftcard reveal reveal-d3" id="giftcard">
+      <div class="giftcard reveal reveal-d1" id="giftcard">
         <span class="gc-chip" aria-hidden="true"></span>
         <div class="gc-label" data-t="giftCard">Карта для поздравлений</div>
         <div class="gc-number" id="gcNumber"></div>
@@ -844,6 +845,8 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
           <span id="gcCopyLabel" data-t="copyNumber">Скопировать номер</span>
         </button>
       </div>
+
+      <p class="gifts-text reveal reveal-d2" data-bind="giftsTitle"></p>
     </div>
   </section>
 
@@ -915,9 +918,8 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div id="particles" aria-hidden="true"></div>
     <div class="final-content">
       <p class="msg reveal" data-bind="finalMsg"></p>
-      <p class="final-name reveal reveal-d1" data-bind="honoreeName"></p>
-      <p class="final-date reveal reveal-d2" data-bind="finalDate"></p>
-      <p class="final-love reveal reveal-d3" data-t="withLove">С любовью</p>
+      <p class="final-love reveal reveal-d1" data-t="withLove">С любовью</p>
+      <p class="final-name reveal reveal-d2" data-bind="honoreeName"></p>
     </div>
   </section>
 
@@ -965,8 +967,8 @@ var UI = {
     scroll:'Листайте', withWarmth:'С теплом и радостью',
     countingDays:'Считаем дни', untilWeCelebrate:'До праздника',
     days:'Дни', hours:'Часы', minutes:'Минуты', seconds:'Секунды', addToCalendar:'В календарь',
-    theParticulars:'Детали', eventDetails:'О празднике', date:'Дата', time:'Время', venue:'Место', address:'Адрес',
-    whereWeGather:'Где мы соберёмся', openMap:'Открыть карту',
+    eventDetails:'Детали события', date:'Дата', time:'Время', venue:'Место', address:'Адрес',
+    whereWeGather:'Где мы соберёмся?', openMap:'Открыть карту',
     aGlimpse:'Моменты', galleryTitle:'Галерея',
     theEvening:'Программа', orderOfNight:'Как пройдёт вечер',
     giftCard:'Карта для поздравлений', copyNumber:'Скопировать номер', copied:'Скопировано!',
@@ -978,7 +980,7 @@ var UI = {
     savedYes:'Мы очень рады! Ваш ответ получен.', savedNo:'Спасибо, что сообщили. Нам будет вас не хватать.',
     questions:'Остались вопросы?', contactsTitle:'Контакты',
     phone:'Телефон', telegram:'Telegram', instagram:'Instagram',
-    withLove:'С любовью', developedBy:'Этот продукт разработан компанией V-connect', birthday:'День рождения', untilLate:'до позднего вечера'
+    withLove:'С любовью', developedBy:'Этот продукт разработан компанией V-connect', birthday:'День рождения', timeRange:'с {time} до позднего вечера'
   },
   uz: {
     tapToOpen:'Ochish uchun bosing',
@@ -986,8 +988,8 @@ var UI = {
     scroll:'Pastga suring', withWarmth:'Iliqlik va quvonch bilan',
     countingDays:'Kunlarni sanaymiz', untilWeCelebrate:'Bayramgacha',
     days:'Kun', hours:'Soat', minutes:'Daqiqa', seconds:'Soniya', addToCalendar:'Kalendarga qoshish',
-    theParticulars:'Tafsilotlar', eventDetails:'Bayram haqida', date:'Sana', time:'Vaqt', venue:'Manzilgoh', address:'Manzil',
-    whereWeGather:'Qayerda yigilamiz', openMap:'Xaritani ochish',
+    eventDetails:'Tadbir tafsilotlari', date:'Sana', time:'Vaqt', venue:'Manzilgoh', address:'Manzil',
+    whereWeGather:'Qayerda yigilamiz?', openMap:'Xaritani ochish',
     aGlimpse:'Lahzalar', galleryTitle:'Galereya',
     theEvening:'Dastur', orderOfNight:'Kecha qanday otadi',
     giftCard:'Tabrik uchun karta', copyNumber:'Raqamni nusxalash', copied:'Nusxalandi!',
@@ -999,7 +1001,7 @@ var UI = {
     savedYes:'Juda xursandmiz! Javobingiz qabul qilindi.', savedNo:'Xabar berganingiz uchun rahmat. Sizni soginamiz.',
     questions:'Savollaringiz bormi?', contactsTitle:'Kontaktlar',
     phone:'Telefon', telegram:'Telegram', instagram:'Instagram',
-    withLove:'Mehr bilan', developedBy:'Ushbu mahsulot V-connect tomonidan ishlab chiqilgan', birthday:'Tugilgan kun', untilLate:'kech tungacha'
+    withLove:'Mehr bilan', developedBy:'Ushbu mahsulot V-connect tomonidan ishlab chiqilgan', birthday:'Tugilgan kun', timeRange:'{time} dan kech tungacha'
   },
   en: {
     tapToOpen:'Tap to open',
@@ -1007,8 +1009,8 @@ var UI = {
     scroll:'Scroll', withWarmth:'With warmth & joy',
     countingDays:'Counting the days', untilWeCelebrate:'Until we celebrate',
     days:'Days', hours:'Hours', minutes:'Minutes', seconds:'Seconds', addToCalendar:'Add to calendar',
-    theParticulars:'The particulars', eventDetails:'Event details', date:'Date', time:'Time', venue:'Venue', address:'Address',
-    whereWeGather:'Where we gather', openMap:'Open map',
+    eventDetails:'Event Details', date:'Date', time:'Time', venue:'Venue', address:'Address',
+    whereWeGather:'Where we will gather?', openMap:'Open map',
     aGlimpse:'A glimpse', galleryTitle:'Gallery',
     theEvening:'The evening', orderOfNight:'Order of the night',
     giftCard:'Gift card', copyNumber:'Copy number', copied:'Copied!',
@@ -1020,7 +1022,7 @@ var UI = {
     savedYes:'We are delighted! Your response has been saved.', savedNo:'Thank you for letting us know. You will be missed.',
     questions:'Any questions?', contactsTitle:'Contacts',
     phone:'Phone', telegram:'Telegram', instagram:'Instagram',
-    withLove:'With love', developedBy:'This product was developed by V-connect', birthday:'Birthday', untilLate:'until late'
+    withLove:'With love', developedBy:'This product was developed by V-connect', birthday:'Birthday', timeRange:'from {time} until late'
   }
 };
 
@@ -1048,25 +1050,16 @@ function cfg(path, dflt){
 /* ── Derived date strings (Intl, per current language) ── */
 function eventDate(){ var d = new Date(cfg('event.dateISO','2026-01-01T18:00:00')); return isNaN(d.getTime()) ? new Date() : d; }
 function intlLocale(){ return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'en' ? 'en-GB' : 'ru-RU'); }
-/* Same as fmtDateLong but without the year — the countdown already implies it. */
-function fmtDateNoYear(){
-  try {
-    return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long' }).format(eventDate());
-  } catch (e) { return eventDate().toDateString(); }
-}
+/* The year is deliberately never shown to guests — an invitation is always for
+   the coming date. (The .ics export still carries the real full date.) */
 function fmtDateLong(){
   try {
-    return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(eventDate());
+    return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long' }).format(eventDate());
   } catch (e) { return eventDate().toDateString(); }
 }
 function fmtTimeShort(){
   var d = eventDate();
   return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
-}
-function fmtFinalDate(){
-  var d = eventDate();
-  var p = function(n){ return String(n).padStart(2,'0'); };
-  return p(d.getDate())+' · '+p(d.getMonth()+1)+' · '+d.getFullYear();
 }
 
 /* ── Text binding ── */
@@ -1081,15 +1074,13 @@ function bindTexts(){
     dateLong: fmtDateLong(),
     city: loc(cfg('event.city','')),
     inviteText: loc(cfg('invite.text','')),
-    countWhen: fmtDateNoYear() + ' · ' + fmtTimeShort(),
-    timeLine: timeNote || (fmtTimeShort() + ' ' + t('untilLate')),
+    countWhen: fmtDateLong() + ' · ' + fmtTimeShort(),
+    timeLine: timeNote || t('timeRange').replace('{time}', fmtTimeShort()),
     venueName: loc(cfg('venue.name','')),
     venueAddress: loc(cfg('venue.address','')),
     venueDesc: loc(cfg('venue.desc','')),
     giftsTitle: loc(cfg('gifts.title','')),
-    giftsNote: loc(cfg('gifts.note','')),
     finalMsg: loc(cfg('final.message','')),
-    finalDate: fmtFinalDate() + (loc(cfg('event.city','')) ? ' — ' + loc(cfg('event.city','')) : '')
   };
   $$('[data-bind]').forEach(function(el){
     var v = map[el.getAttribute('data-bind')];
@@ -1349,52 +1340,87 @@ vImgWrap.addEventListener('click', function(){
   if (cfg('venue.image','')) openLightbox(cfg('venue.image',''), loc(cfg('venue.name','')));
 });
 
-/* ── Gallery ── */
+/* ── Gallery: fanned Polaroid stack ── */
 var slidesEl = $('#slides'), dotsEl = $('#slideDots'), cur = 0;
+var pcards = [], autoTimer = null;
+var AUTO_MS = 4200;
+
 function galleryItems(){
   var items = cfg('gallery', []);
   return Array.isArray(items) ? items.filter(function(g){ return g && g.image; }) : [];
 }
-function renderGallery(){
-  var items = galleryItems();
-  slidesEl.innerHTML = ''; dotsEl.innerHTML = ''; cur = 0;
-  $('#gallery').style.display = items.length ? '' : 'none';
-  items.forEach(function(g, i){
-    var slide = document.createElement('div'); slide.className = 'slide';
-    var img = document.createElement('img');
-    loadImg(img, g.image, loc(g.caption));
-    img.style.cursor = 'zoom-in';
-    img.addEventListener('click', function(){ openLightbox(g.image, loc(g.caption)); });
-    slide.appendChild(img);
-    if (loc(g.caption)) {
-      var cap = document.createElement('div'); cap.className = 'slide-cap'; cap.textContent = loc(g.caption);
-      slide.appendChild(cap);
-    }
-    slidesEl.appendChild(slide);
-    var dot = document.createElement('button'); dot.className = 'dot' + (i === 0 ? ' active' : '');
-    dot.addEventListener('click', function(){ gotoSlide(i); });
-    dotsEl.appendChild(dot);
+
+/* Lay the cards out by their distance from the front of the stack: the front
+   one is upright and centred, the rest fan alternately left and right. */
+function layoutStack(){
+  var n = pcards.length;
+  pcards.forEach(function(card, i){
+    var k = (i - cur + n) % n;                 // 0 = front
+    var side = (k % 2) ? -1 : 1;
+    var x = k === 0 ? 0 : side * (13 + k * 5.5);
+    var rot = k === 0 ? -1.2 : side * (6 + k * 3.6);
+    card.style.transform = 'translateX(calc(-50% + ' + x.toFixed(1) + '%)) translateY(' + (k*13) + 'px) '
+      + 'rotate(' + rot.toFixed(1) + 'deg) scale(' + Math.max(0.72, 1 - k*0.05).toFixed(3) + ')';
+    card.style.zIndex = String(50 - k);
+    card.style.opacity = String(Math.max(0.4, 1 - k*0.13));
+    card.style.filter = k === 0 ? 'none' : 'brightness(' + (1 - k*0.07).toFixed(2) + ')';
   });
-  slidesEl.style.transform = 'translateX(0)';
-}
-function gotoSlide(i){
-  var n = galleryItems().length;
-  if (!n) return;
-  cur = (i+n) % n;
-  slidesEl.style.transform = 'translateX(-' + (cur*100) + '%)';
   $$('.dot', dotsEl).forEach(function(d, j){ d.classList.toggle('active', j === cur); });
 }
-$('#slidePrev').addEventListener('click', function(){ gotoSlide(cur-1); });
-$('#slideNext').addEventListener('click', function(){ gotoSlide(cur+1); });
+
+function gotoSlide(i){
+  var n = pcards.length;
+  if (!n) return;
+  cur = (i + n) % n;
+  layoutStack();
+}
+
+function startAuto(){
+  stopAuto();
+  if (prefersReduced || pcards.length < 2) return;
+  autoTimer = setInterval(function(){ gotoSlide(cur + 1); }, AUTO_MS);
+}
+function stopAuto(){ if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } }
+/* Any manual navigation restarts the clock so the stack does not jump away. */
+function nudge(i){ gotoSlide(i); startAuto(); }
+
+function renderGallery(){
+  var items = galleryItems();
+  slidesEl.innerHTML = ''; dotsEl.innerHTML = ''; cur = 0; pcards = [];
+  $('#gallery').style.display = items.length ? '' : 'none';
+  if (!items.length) { stopAuto(); return; }
+  items.forEach(function(g, i){
+    var card = document.createElement('div'); card.className = 'pcard';
+    var img = document.createElement('img');
+    loadImg(img, g.image, loc(g.caption));
+    card.appendChild(img);
+    var cap = document.createElement('div'); cap.className = 'pcap';
+    cap.textContent = loc(g.caption) || '';
+    card.appendChild(cap);
+    card.addEventListener('click', function(){
+      if (i === cur) openLightbox(g.image, loc(g.caption)); else nudge(i);
+    });
+    slidesEl.appendChild(card);
+    pcards.push(card);
+    var dot = document.createElement('button'); dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', function(){ nudge(i); });
+    dotsEl.appendChild(dot);
+  });
+  layoutStack();
+  startAuto();
+}
+
+$('#slidePrev').addEventListener('click', function(){ nudge(cur-1); });
+$('#slideNext').addEventListener('click', function(){ nudge(cur+1); });
 $('#slider').addEventListener('keydown', function(e){
-  if (e.key === 'ArrowLeft') gotoSlide(cur-1);
-  if (e.key === 'ArrowRight') gotoSlide(cur+1);
+  if (e.key === 'ArrowLeft') nudge(cur-1);
+  if (e.key === 'ArrowRight') nudge(cur+1);
 });
 var tx = 0, slider = $('#slider');
 slider.addEventListener('touchstart', function(e){ tx = e.touches[0].clientX; }, { passive: true });
 slider.addEventListener('touchend', function(e){
   var dx = e.changedTouches[0].clientX - tx;
-  if (Math.abs(dx) > 40) gotoSlide(dx < 0 ? cur+1 : cur-1);
+  if (Math.abs(dx) > 40) nudge(dx < 0 ? cur+1 : cur-1);
 });
 
 /* ── Program timeline ── */

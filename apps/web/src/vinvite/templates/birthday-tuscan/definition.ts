@@ -59,7 +59,6 @@ const fields: TemplateField[] = [
   { key: 'music', path: 'music.url', type: 'audio', group: 'music', labelKey: 'tg_music' },
 
   { key: 'giftsTitle', path: 'gifts.title', type: 'localized-text', group: 'gifts', labelKey: 'fld_gifts_title' },
-  { key: 'giftsNote', path: 'gifts.note', type: 'localized-textarea', group: 'gifts', labelKey: 'fld_gifts_note' },
   { key: 'cardNumber', path: 'gifts.cardNumber', type: 'text', group: 'gifts', labelKey: 'fld_card_number', placeholder: '8600 0000 0000 0000' },
   { key: 'cardHolder', path: 'gifts.cardHolder', type: 'text', group: 'gifts', labelKey: 'fld_card_holder', placeholder: 'MADINA KARIMOVA' },
 
@@ -130,11 +129,6 @@ const defaultConfig = {
       ru: 'Ваше присутствие — лучший подарок',
       uz: 'Sizning kelishingiz — eng yaxshi sovga',
       en: 'Your presence is the greatest gift',
-    },
-    note: {
-      ru: 'Если вы хотите поздравить нас особенно, будем благодарны за вклад в мечту.',
-      uz: 'Agar bizni alohida tabriklamoqchi bolsangiz, orzu sari hissangiz uchun minnatdormiz.',
-      en: 'Should you wish to mark the occasion, a contribution to a dream would be treasured.',
     },
     cardNumber: '',
     cardHolder: '',
