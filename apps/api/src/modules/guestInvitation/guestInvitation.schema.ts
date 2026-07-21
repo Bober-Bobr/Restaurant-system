@@ -35,6 +35,9 @@ const blockArray = z
       type: z.string().max(40),
       props: z.record(z.string(), z.any()).optional(),
       anim: z.any().optional(),
+      // Blocks the designer switched off. Zod strips unknown keys, so omitting
+      // this silently discarded the flag and hidden blocks came back on save.
+      hidden: z.boolean().optional(),
     })
   )
   .max(120);
