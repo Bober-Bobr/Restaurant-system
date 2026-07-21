@@ -263,6 +263,8 @@ function FieldEditor({ field, design, setConfig }: {
         </label>
       );
     }
+    case 'palette':
+      return <PaletteEditor field={field} design={design} setConfig={setConfig} />;
     case 'gallery':
       return <GalleryEditor field={field} design={design} setConfig={setConfig} />;
     case 'schedule':
@@ -276,6 +278,53 @@ const itemBox: React.CSSProperties = {
   display: 'grid', gap: 8, padding: 12, borderRadius: 12,
   background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(255,255,255,0.08)',
 };
+
+// Ordered list of colour swatches. Order matters — it is the order they appear
+// on the invitation.
+function PaletteEditor({ field, design, setConfig }: {
+  field: TemplateField; design: RichDesignData; setConfig: (path: string, value: unknown) => void;
+}) {
+  const t = useViT();
+  const raw = getPath(design.config, field.path);
+  const colors = Array.isArray(raw) ? (raw as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+  const update = (next: string[]) => setConfig(field.path, next);
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {colors.map((hex, i) => (
+          <div key={i} style={{ display: 'grid', justifyItems: 'center', gap: 4 }}>
+            <input
+              type="color"
+              value={/^#[0-9a-f]{6}$/i.test(hex) ? hex : '#b08d4f'}
+              onChange={(e) => update(colors.map((c, j) => (j === i ? e.target.value : c)))}
+              style={{
+                width: 46, height: 46, padding: 0, borderRadius: '50%', cursor: 'pointer',
+                border: '1px solid rgba(255,255,255,0.25)', background: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => update(colors.filter((_, j) => j !== i))}
+              className="adm-btn-ghost"
+              style={{ fontSize: 11, padding: '2px 8px', lineHeight: 1.2 }}
+              aria-label={t('delete')}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="adm-btn-ghost"
+        style={{ fontSize: 13, justifySelf: 'start' }}
+        onClick={() => update([...colors, '#b08d4f'])}
+      >
+        ＋ {t('add_item')}
+      </button>
+    </div>
+  );
+}
 
 function GalleryEditor({ field, design, setConfig }: {
   field: TemplateField; design: RichDesignData; setConfig: (path: string, value: unknown) => void;

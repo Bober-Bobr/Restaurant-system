@@ -32,6 +32,7 @@ export type FieldType =
   | 'audio'
   | 'gallery' // list of { image, caption (localized) }
   | 'schedule' // list of { time, label (localized) }
+  | 'palette' // ordered list of colour swatches (hex strings)
   // Show/hide switch for a block. The value at `path` is the HIDDEN flag
   // (true = hidden), so an unset config means everything is visible.
   | 'toggle';

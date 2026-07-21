@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
@@ -10,15 +11,32 @@ import { ViTemplatesPage } from './TemplatesPage';
 import { ViDevicesPage } from './DevicesPage';
 import { ViProfilePage } from './ProfilePage';
 import { PublicVInvitePage } from './PublicVInvitePage';
-import logoSrc from '../assets/qr-logo.png';
 import './vinvite.css';
 
 // ── v-invite.uz application shell ─────────────────────────────────────────────
 // A separate product from v-menu: its own users, cream/blue shadcn-style look,
 // light/dark theme, and the shared block designer for building invitations.
+// Served from public/ rather than imported, so the sandboxed template iframe can
+// load the same file by absolute URL (see RichRenderer's __ORIGIN__).
+export const VI_LOGO = '/v-invite-logo.png';
+export const VI_MARK = '/v-invite-mark.png';
+
 export const VInviteApp = () => {
   const uiTheme = useVInviteStore((s) => s.uiTheme);
   const accessToken = useVInviteStore((s) => s.accessToken);
+
+  // index.html is shared with v-menu, so brand this tab as v-invite.
+  useEffect(() => {
+    document.title = 'v-invite.uz';
+    const rels = ['icon', 'shortcut icon', 'apple-touch-icon'];
+    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach((l) => l.remove());
+    for (const rel of rels) {
+      const link = document.createElement('link');
+      link.rel = rel;
+      link.href = VI_MARK;
+      document.head.appendChild(link);
+    }
+  }, []);
 
   return (
     <div className="vi-root" data-theme={uiTheme}>
@@ -51,7 +69,7 @@ export const VInviteApp = () => {
 export function ViLogo({ size = 34 }: { size?: number }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-      <img src={logoSrc} alt="" style={{ width: size, height: size, borderRadius: '28%' }} />
+      <img src={VI_MARK} alt="" style={{ width: size, height: size, objectFit: 'contain' }} />
       <span style={{ fontSize: size * 0.52, fontWeight: 800, letterSpacing: '-0.02em' }}>
         v-invite<span style={{ color: 'var(--vi-accent)' }}>.uz</span>
       </span>

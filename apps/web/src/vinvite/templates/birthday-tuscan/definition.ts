@@ -15,6 +15,7 @@ const groups: TemplateFieldGroup[] = [
   { key: 'gallery', labelKey: 'tg_gallery', icon: '📷' },
   { key: 'schedule', labelKey: 'tg_schedule', icon: '🕐' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
+  { key: 'dress', labelKey: 'tg_dress', icon: '👗' },
   { key: 'gifts', labelKey: 'tg_gifts', icon: '🎁' },
   { key: 'contacts', labelKey: 'tg_contacts', icon: '☎️' },
 ];
@@ -28,6 +29,7 @@ const fields: TemplateField[] = [
   { key: 'v_venue', path: 'hidden.venue', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
   { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
+  { key: 'v_dress', path: 'hidden.dress', type: 'toggle', group: 'visibility', labelKey: 'sec_dress' },
   { key: 'v_gifts', path: 'hidden.gifts', type: 'toggle', group: 'visibility', labelKey: 'sec_gifts' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
   { key: 'v_contacts', path: 'hidden.contacts', type: 'toggle', group: 'visibility', labelKey: 'sec_contacts' },
@@ -57,6 +59,10 @@ const fields: TemplateField[] = [
   { key: 'schedule', path: 'schedule', type: 'schedule', group: 'schedule', labelKey: 'tg_schedule' },
 
   { key: 'music', path: 'music.url', type: 'audio', group: 'music', labelKey: 'tg_music' },
+
+  { key: 'dressTitle', path: 'dress.title', type: 'localized-text', group: 'dress', labelKey: 'fld_dress_title' },
+  { key: 'dressColors', path: 'dress.colors', type: 'palette', group: 'dress', labelKey: 'fld_dress_colors' },
+  { key: 'dressNote', path: 'dress.note', type: 'localized-textarea', group: 'dress', labelKey: 'fld_dress_note' },
 
   { key: 'giftsTitle', path: 'gifts.title', type: 'localized-text', group: 'gifts', labelKey: 'fld_gifts_title' },
   { key: 'cardNumber', path: 'gifts.cardNumber', type: 'text', group: 'gifts', labelKey: 'fld_card_number', placeholder: '8600 0000 0000 0000' },
@@ -124,6 +130,16 @@ const defaultConfig = {
     { time: '22:00', label: { ru: 'Праздничный торт', uz: 'Bayram torti', en: 'Birthday cake' } },
   ],
   music: { url: '' },
+  dress: {
+    title: { ru: 'Оттенки вечера', uz: 'Kecha ranglari', en: 'Shades of the evening' },
+    // Empty list → the section hides itself.
+    colors: ['#3a462d', '#a3ac97', '#e6d3b3', '#b08d4f', '#f6f0e4'],
+    note: {
+      ru: 'Будем рады видеть вас в оттенках вечернего сада — оливковый, шалфей, шампань и золото.',
+      uz: 'Sizni kechki bog ranglarida kutamiz — zaytun, shalfey, shampan va oltin.',
+      en: 'We would love to see you in the tones of an evening garden — olive, sage, champagne and gold.',
+    },
+  },
   gifts: {
     title: {
       ru: 'Ваше присутствие — лучший подарок',
