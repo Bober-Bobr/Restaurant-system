@@ -23,5 +23,6 @@ the design.
   Commons. License: CC BY-SA 4.0. The original is blue; luminance was remapped
   onto a champagne/ivory ramp so the fold structure survives but the colour
   matches the template. Backs the greeting section.
-- **mansion.png** — supplied by the project owner; background removed and the
-  alpha rebuilt.
+- **mansion.png / mansion.webp** — supplied by the project owner; background
+  removed and the alpha rebuilt. The template loads the WebP (241 KB vs 4.0 MB,
+  identical alpha); the PNG is kept as the source and for older cached clients.

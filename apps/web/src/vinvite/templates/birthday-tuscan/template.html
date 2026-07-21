@@ -226,14 +226,14 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   height:100svh;min-height:600px;padding:0;display:flex;align-items:center;justify-content:center;
   text-align:center;color:var(--cream);position:relative;overflow:hidden;
 }
-.hero-sky-day,.hero-sky-night{position:absolute;inset:0;background-position:center;background-size:cover;background-repeat:no-repeat;transition:opacity .1s linear;}
+.hero-sky-day,.hero-sky-night{position:absolute;inset:0;background-position:center;background-size:cover;background-repeat:no-repeat;}
 .hero-sky-day{z-index:0;background-image:linear-gradient(180deg,#4d86bd,#bcd6e6);}
 .hero-sky-night{z-index:1;opacity:0;background-image:linear-gradient(180deg,#0f1826,#243019);}
 
 /* Sun — a photographed disc that breathes and sparkles continuously. */
 .hero-sun{
   position:absolute;z-index:2;top:7%;right:9%;width:min(42vw,200px);aspect-ratio:1;
-  pointer-events:none;transition:opacity .2s linear;
+  pointer-events:none;
 }
 .hero-sun .sun-disc{
   position:absolute;inset:0;width:100%;height:100%;
@@ -267,8 +267,8 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 /* Clouds — each layer drifts on its own, and scrolling pulls them across the
    sky so the daylight is progressively smothered. */
 .hero-clouds{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;}
-.cloud-layer{position:absolute;inset:0;will-change:transform,opacity;transition:opacity .12s linear;}
-.cloud-layer img{position:absolute;max-width:none;height:auto;will-change:transform;}
+.cloud-layer{position:absolute;inset:0;will-change:transform,opacity;}
+.cloud-layer img{position:absolute;max-width:none;height:auto;}
 #cloudL1 img{top:-6%;left:-22%;width:150%;animation:driftA 46s ease-in-out infinite alternate;}
 #cloudL2 img{top:16%;left:-48%;width:200%;animation:driftB 62s ease-in-out infinite alternate;}
 #cloudL3 img{top:44%;left:-70%;width:250%;animation:driftC 78s ease-in-out infinite alternate;}
@@ -276,7 +276,12 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 @keyframes driftB{from{transform:translateX(5%);}to{transform:translateX(-6%);}}
 @keyframes driftC{from{transform:translateX(-4%);}to{transform:translateX(5%);}}
 
-.hero-vignette{position:absolute;inset:0;z-index:5;pointer-events:none;
+/* Night wash: replaces the old per-frame brightness()/saturate() filters. */
+.hero-nightwash{
+  position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
+  background:linear-gradient(180deg,rgba(8,12,20,.94) 0%,rgba(8,12,20,.78) 55%,rgba(8,12,20,.9) 100%);
+}
+.hero-vignette{position:absolute;inset:0;z-index:6;pointer-events:none;
   background:radial-gradient(125% 80% at 50% 16%,rgba(8,11,18,.10) 36%,rgba(8,11,18,.46) 100%),
              linear-gradient(180deg,rgba(8,11,18,.34) 0%,rgba(8,11,18,.10) 26%,rgba(8,11,18,.16) 54%,rgba(8,11,18,.60) 100%);}
 .hero-mansion{
@@ -311,7 +316,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 #vconnect span{font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-family:'Cormorant Garamond',Georgia,serif;}
 /* Sits just below centre, with a soft scrim so the cover text stays readable
    over the sky and the mansion. */
-.hero-content{position:relative;z-index:5;padding:1.4rem;max-width:440px;margin-top:6svh;}
+.hero-content{position:relative;z-index:7;padding:1.4rem;max-width:440px;margin-top:6svh;}
 .hero-content::before{
   content:'';position:absolute;inset:-4% -16%;z-index:-1;pointer-events:none;
   background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.62) 0%,rgba(6,9,15,.40) 52%,rgba(6,9,15,0) 78%);
@@ -362,7 +367,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 #message{
   text-align:center;background-color:var(--ivory);
   background-image:linear-gradient(rgba(246,240,228,.34),rgba(246,240,228,.34)),var(--silk-url);
-  background-size:cover;background-position:center;background-attachment:local;
+  background-size:cover;background-position:center;
 }
 /* A gold ribbon that loops twice around the greeting. The arcs above the line
    live in the back layer and the arcs below in the front layer, so the ribbon
@@ -721,6 +726,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <div class="cloud-layer" id="cloudL3"><img alt=""></div>
     </div>
     <img class="hero-mansion empty" id="heroMansion" alt="" aria-hidden="true">
+    <div class="hero-nightwash" aria-hidden="true"></div>
     <div class="hero-vignette" aria-hidden="true"></div>
 
     <div class="hero-content">
@@ -1280,8 +1286,10 @@ function renderScene(){
   setBg(skyDay,   ASSET + 'day-sky.jpg');
   setBg(skyNight, ASSET + 'night-sky.jpg');
   setBg(finalSky, ASSET + 'night-sky.jpg');
-  setSrc(heroMansion,  ASSET + 'mansion.png');
-  setSrc(finalMansion, ASSET + 'mansion.png');
+  // WebP: same cut-out, ~1/16th the bytes of the source PNG (which is kept
+  // alongside it so already-published invitations keep working).
+  setSrc(heroMansion,  ASSET + 'mansion.webp');
+  setSrc(finalMansion, ASSET + 'mansion.webp');
   setSrc(sunDisc, ASSET + 'sun.png');
   cloudLayers.forEach(function(l){ setSrc(l.querySelector('img'), ASSET + 'clouds.png'); });
   document.documentElement.style.setProperty('--silk-url', 'url("' + ASSET + 'silk.jpg")');
@@ -1305,10 +1313,15 @@ function applyVisibility(){
 /* Scrolling turns day into night: the night sky fades up, the sun sinks and
    dims, and the cloud layers slide down and thicken until they blanket the sky. */
 var CLOUD_BASE = [0.30, 0.24, 0.18], CLOUD_DROP = [10, 17, 26];
+var nightWash = $('.hero-nightwash'), lastP = -1;
 function heroScroll(){
   var h = window.innerHeight;
   var p = Math.min(1, Math.max(0, window.scrollY / (h*0.9)));
-  if (skyNight) skyNight.style.opacity = p;
+  // Once the hero is behind us p stays pinned at 1 — bail out so the rest of
+  // the page scrolls without touching any of these layers.
+  if (Math.abs(p - lastP) < 0.002) return;
+  lastP = p;
+  if (skyNight) skyNight.style.opacity = p.toFixed(3);
   if (heroSun) {
     heroSun.style.opacity = Math.max(0, 1 - p*1.5);
     heroSun.style.transform = 'translate3d(0,' + (p*16).toFixed(1) + 'vh,0) scale(' + (1 - p*0.12).toFixed(3) + ')';
@@ -1316,10 +1329,8 @@ function heroScroll(){
   cloudLayers.forEach(function(l, i){
     l.style.opacity = (CLOUD_BASE[i] + p*(0.92 - CLOUD_BASE[i])).toFixed(3);
     l.style.transform = 'translate3d(0,' + (p*CLOUD_DROP[i]).toFixed(1) + 'vh,0) scale(' + (1 + p*0.12).toFixed(3) + ')';
-    l.style.filter = 'brightness(' + (1 - p*0.55).toFixed(3) + ') saturate(' + (1 - p*0.3).toFixed(3) + ')';
   });
-  if (heroMansion) heroMansion.style.filter =
-    'drop-shadow(0 26px 46px rgba(0,0,0,.5)) brightness(' + (1 - p*0.5).toFixed(3) + ') saturate(' + (1 - p*0.2).toFixed(3) + ')';
+  if (nightWash) nightWash.style.opacity = (p*0.5).toFixed(3);
   hero.classList.toggle('night', p > 0.55);
 }
 

@@ -44,8 +44,17 @@ function smoke(name) {
   const trap = (fn) => { try { fn(); } catch (e) { errors.push(e); } };
 
   window.matchMedia = () => ({ matches: false, addEventListener() {}, addListener() {} });
-  window.requestAnimationFrame = (cb) => { trap(() => cb(0)); return 1; };
+  // Deferred, like a real browser. Running rAF callbacks synchronously inverts
+  // the order of "schedule then set flag" guards and can hide their bugs.
+  let frame = [];
+  window.requestAnimationFrame = (cb) => frame.push(cb);
   window.cancelAnimationFrame = () => {};
+  const flushFrames = () => {
+    for (let i = 0; i < 8 && frame.length; i++) {   // bounded: self-requeueing loops
+      const q = frame; frame = [];
+      for (const cb of q) trap(() => cb(0));
+    }
+  };
   window.getComputedStyle = () => ({ transform: 'none', getPropertyValue: () => '' });
   window.scrollTo = () => {};
   window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} };
@@ -70,9 +79,14 @@ function smoke(name) {
     trap(() => vm.runInContext(s.textContent, ctx, { filename: `${name}/template.html` }));
   }
 
+  flushFrames();
   const el = document.querySelector('#envelopeWrap');
   if (el) trap(() => el.dispatchEvent(new window.Event('click')));
-  for (const type of ['scroll', 'resize']) trap(() => window.dispatchEvent(new window.Event(type)));
+  flushFrames();
+  for (const type of ['scroll', 'resize']) {
+    trap(() => window.dispatchEvent(new window.Event(type)));
+    flushFrames();
+  }
 
   return { errors, document };
 }
