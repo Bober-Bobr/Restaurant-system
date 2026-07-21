@@ -624,14 +624,14 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 
 /* ── Music button / progress / dot-nav / lightbox ── */
 #music-btn{
-  position:fixed;bottom:24%;right:14px;z-index:900;width:54px;height:54px;border-radius:50%;
+  position:fixed;bottom:18px;right:14px;z-index:900;width:44px;height:44px;border-radius:50%;
   background:var(--olive);color:var(--gold-bright);display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 24px rgba(0,0,0,.35);border:1px solid rgba(217,189,130,.4);
   transition:transform .3s var(--ease),opacity .4s;
 }
 #music-btn:hover{transform:scale(1.08);}
 #music-btn.hidden{opacity:0;pointer-events:none;transform:scale(.6);}
-#music-btn .bars{display:flex;gap:2px;align-items:flex-end;height:18px;}
+#music-btn .bars{display:flex;gap:2px;align-items:flex-end;height:15px;}
 #music-btn .bars span{width:3px;background:currentColor;height:6px;border-radius:2px;}
 #music-btn.playing .bars span{animation:eq .9s ease-in-out infinite;}
 #music-btn.playing .bars span:nth-child(2){animation-delay:.15s;}
@@ -978,13 +978,13 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   <!-- Mandatory attribution (not hideable) -->
   <footer id="vconnect">
     <img id="vconnectLogo" alt="v-invite" width="56" height="66">
-    <span data-t="developedBy">Разработано V-connect</span>
+    <span data-t="developedBy">Разработано с любовью в V-invite</span>
   </footer>
 </main>
 
 <button id="music-btn" class="hidden" data-opt="music" aria-pressed="false">
   <span class="ic-play" aria-hidden="true">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
   </span>
   <span class="ic-eq bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
 </button>
@@ -1033,7 +1033,7 @@ var UI = {
     savedYes:'Мы очень рады! Ваш ответ получен.', savedNo:'Спасибо, что сообщили. Нам будет вас не хватать.',
     questions:'Остались вопросы?', contactsTitle:'Контакты',
     phone:'Телефон', telegram:'Telegram', instagram:'Instagram',
-    withLove:'С любовью', developedBy:'Этот продукт разработан компанией V-connect', birthday:'День рождения', timeRange:'с {time} до позднего вечера'
+    withLove:'С любовью', developedBy:'Разработано с любовью в V-invite', birthday:'День рождения', timeRange:'с {time} до позднего вечера'
   },
   uz: {
     tapToOpen:'Ochish uchun bosing',
@@ -1055,7 +1055,7 @@ var UI = {
     savedYes:'Juda xursandmiz! Javobingiz qabul qilindi.', savedNo:'Xabar berganingiz uchun rahmat. Sizni soginamiz.',
     questions:'Savollaringiz bormi?', contactsTitle:'Kontaktlar',
     phone:'Telefon', telegram:'Telegram', instagram:'Instagram',
-    withLove:'Mehr bilan', developedBy:'Ushbu mahsulot V-connect tomonidan ishlab chiqilgan', birthday:'Tugilgan kun', timeRange:'{time} dan kech tungacha'
+    withLove:'Mehr bilan', developedBy:'V-invite tomonidan mehr bilan yaratilgan', birthday:'Tugilgan kun', timeRange:'{time} dan kech tungacha'
   },
   en: {
     tapToOpen:'Tap to open',
@@ -1077,7 +1077,7 @@ var UI = {
     savedYes:'We are delighted! Your response has been saved.', savedNo:'Thank you for letting us know. You will be missed.',
     questions:'Any questions?', contactsTitle:'Contacts',
     phone:'Phone', telegram:'Telegram', instagram:'Instagram',
-    withLove:'With love', developedBy:'This product was developed by V-connect', birthday:'Birthday', timeRange:'from {time} until late'
+    withLove:'With love', developedBy:'Developed with love by V-invite', birthday:'Birthday', timeRange:'from {time} until late'
   }
 };
 

@@ -343,6 +343,43 @@ export class VInviteProjectService {
   }
 
   // Public site payload for v-invite.uz/<slug>.
+  /**
+   * Data for the Open Graph card that chat apps (Telegram, WhatsApp) render when
+   * an invitation link is shared. Their crawlers do not execute JavaScript, so
+   * the published SPA route cannot supply this — it has to come from the server.
+   */
+  async getShareCard(slug: string, origin: string) {
+    const project = await prisma.inviteProject.findUnique({
+      where: { slug },
+      select: { name: true, slug: true, isPublished: true, theme: true },
+    });
+    if (!project || !project.isPublished) throw createHttpError(404, 'Invitation not found');
+
+    const theme = (project.theme ?? {}) as Record<string, unknown>;
+    const config = (theme.config ?? {}) as Record<string, unknown>;
+    const abs = (url: unknown): string | null => {
+      if (typeof url !== 'string' || !url.trim()) return null;
+      if (/^https?:\/\//i.test(url)) return url;
+      return origin + (url.startsWith('/') ? url : '/' + url);
+    };
+
+    // Prefer something the host actually chose, in the order a guest would
+    // recognise it; otherwise fall back to the bundled card.
+    const gallery = Array.isArray(config.gallery) ? (config.gallery as Record<string, unknown>[]) : [];
+    const venue = (config.venue ?? {}) as Record<string, unknown>;
+    const image =
+      abs(gallery.find((g) => g && typeof g.image === 'string' && g.image)?.image) ??
+      abs(venue.image) ??
+      abs(theme.backgroundImageUrl) ??
+      origin + '/share-cover.jpg';
+
+    return {
+      title: project.name,
+      url: origin + '/' + project.slug,
+      image,
+    };
+  }
+
   async getPublicBySlug(slug: string) {
     const project = await prisma.inviteProject.findUnique({
       where: { slug },

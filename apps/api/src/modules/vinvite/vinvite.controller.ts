@@ -141,6 +141,49 @@ export class VInviteController {
     response.json(await projectService.getPublicBySlug(String(request.params.slug).toLowerCase()));
   }
 
+  /**
+   * HTML shell carrying Open Graph tags, used as the link target when an
+   * invitation is shared to a chat app. Crawlers read the tags; real browsers
+   * run the redirect and land on the invitation itself.
+   */
+  async shareCard(request: Request, response: Response) {
+    // The Host header is attacker-controllable, and it ends up in the OG tags
+    // and in the redirect below — so only accept something host-shaped.
+    const rawHost = request.header('x-forwarded-host') ?? request.header('host') ?? '';
+    const host = /^[a-z0-9.-]+(:\d{1,5})?$/i.test(rawHost) ? rawHost : 'v-invite.uz';
+    const proto = (request.header('x-forwarded-proto') ?? request.protocol ?? 'https').split(',')[0].trim();
+    const scheme = proto === 'http' ? 'http' : 'https';
+    const card = await projectService.getShareCard(String(request.params.slug).toLowerCase(), `${scheme}://${host}`);
+
+    const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const description = String(request.query.m ?? '').slice(0, 300);
+    response.set('Content-Type', 'text/html; charset=utf-8');
+    response.set('Cache-Control', 'public, max-age=300');
+    response.send(`<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>${esc(card.title)}</title>
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="v-invite.uz" />
+<meta property="og:title" content="${esc(card.title)}" />
+<meta property="og:description" content="${esc(description)}" />
+<meta property="og:url" content="${esc(card.url)}" />
+<meta property="og:image" content="${esc(card.image)}" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="${esc(card.title)}" />
+<meta name="twitter:image" content="${esc(card.image)}" />
+<link rel="canonical" href="${esc(card.url)}" />
+</head>
+<body>
+<script>location.replace(${JSON.stringify(card.url)});</script>
+<noscript><a href="${esc(card.url)}">${esc(card.title)}</a></noscript>
+</body>
+</html>`);
+  }
+
   async publicRsvp(request: Request, response: Response) {
     const data = rsvpSchema.parse(request.body);
     response.status(201).json(await projectService.submitRsvp(String(request.params.slug).toLowerCase(), data));

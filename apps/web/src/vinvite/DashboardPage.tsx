@@ -8,6 +8,33 @@ import { useViT, type ViKey } from './i18n';
 import { buildInviteSiteUrl, inviteDomain } from '../utils/subdomain';
 import { getTemplate, readRichDesign, richEventDateISO } from './templates';
 
+// The recipient-facing line that goes out with a shared link. It follows the
+// template's category, so a wedding never goes out worded as a birthday.
+const SHARE_MSG_KEY: Record<string, ViKey> = {
+  birthday: 'share_msg_birthday',
+  wedding: 'share_msg_wedding',
+  party: 'share_msg_party',
+  corporate: 'share_msg_corporate',
+};
+function shareMessage(project: InviteProjectSummary, t: (k: ViKey) => string): string {
+  const design = readRichDesign(project.theme);
+  const category = design ? getTemplate(design.templateId)?.category : undefined;
+  return t((category && SHARE_MSG_KEY[category]) || 'share_msg_default');
+}
+
+// Chat apps build their link preview by crawling the URL, and they do not run
+// JavaScript — so they cannot read anything from the published SPA. This API
+// route serves the Open Graph tags (cover image included) and bounces real
+// browsers on to the invitation itself.
+function shareLink(project: InviteProjectSummary, publicUrl: string, message: string): string {
+  try {
+    const u = new URL(publicUrl);
+    return `${u.origin}/api/vinvite/share/${project.slug}?m=${encodeURIComponent(message)}`;
+  } catch {
+    return publicUrl;
+  }
+}
+
 // ── Main menu: the user's invitation projects ─────────────────────────────────
 export const ViDashboardPage = () => {
   const t = useViT();
@@ -138,11 +165,18 @@ function ProjectCard({ project, delayMs, onDelete, onPublishToggle }: {
           <CopyShare url={publicUrl} disabled={!canShare} label={t('copy_link')} copiedLabel={t('copied')} />
           <ShareTile
             icon="✈️" label="Telegram" disabled={!canShare}
-            onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(publicUrl)}&text=${encodeURIComponent(project.name)}`, '_blank', 'noopener')}
+            onClick={() => {
+              const msg = shareMessage(project, t);
+              const link = shareLink(project, publicUrl, msg);
+              window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+            }}
           />
           <ShareTile
             icon="💬" label="WhatsApp" disabled={!canShare}
-            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${project.name} — ${publicUrl}`)}`, '_blank', 'noopener')}
+            onClick={() => {
+              const msg = shareMessage(project, t);
+              window.open(`https://wa.me/?text=${encodeURIComponent(`${msg} ${shareLink(project, publicUrl, msg)}`)}`, '_blank', 'noopener');
+            }}
           />
           <QrShare url={publicUrl} disabled={!canShare} label={t('qr_code')} title={project.name} scanLabel={t('scan_to_open')} />
         </div>
