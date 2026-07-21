@@ -66,6 +66,10 @@ export function RichRenderer({ html, config, languages, onRsvp, interactive }: R
       onLoad={() => { loadedRef.current = true; }}
       // allow-scripts only: no same-origin access to the parent page.
       sandbox="allow-scripts allow-popups allow-downloads"
+      // The frame is cross-origin (no allow-same-origin), so audio playback is
+      // blocked by Permissions Policy unless it is delegated explicitly — the
+      // template starts the music on the envelope tap.
+      allow="autoplay"
       srcDoc={buildSrcDoc(html, config, languages)}
       style={{
         display: 'block',

@@ -146,6 +146,7 @@ a{color:inherit;text-decoration:none;}
 .env-letter .calligraphy{font-size:2.6rem;color:var(--gold);}
 .env-letter .overline{color:var(--text-soft);font-size:.58rem;}
 .env-card-rule{width:40px;height:1px;background:var(--gold);opacity:.6;}
+.env-letter-line{font-style:italic;font-size:1.05rem;line-height:1.4;color:var(--text-soft);max-width:15em;}
 /* Unfolding: the sheet is re-parented to <body>, pinned to its current box and
    then animated out to the full viewport, so it becomes the page. */
 .env-letter.unfolding{
@@ -589,7 +590,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <div class="env-letter-inner">
         <div class="calligraphy" data-bind="honoreeName"></div>
         <div class="env-card-rule"></div>
-        <div class="overline" data-opt="age" data-bind="ageLabel"></div>
+        <div class="env-letter-line" data-t="celebratesBirthday"></div>
       </div>
     </div>
     <div class="env-front" aria-hidden="true"><div class="env-frame"></div></div>
@@ -903,6 +904,7 @@ var lang = LANGS[0];
 var UI = {
   ru: {
     tapToOpen:'Нажмите, чтобы открыть',
+    celebratesBirthday:'празднует свой день рождения',
     scroll:'Листайте', withWarmth:'С теплом и радостью',
     countingDays:'Считаем дни', untilWeCelebrate:'До праздника',
     days:'Дни', hours:'Часы', minutes:'Минуты', seconds:'Секунды', addToCalendar:'В календарь',
@@ -923,6 +925,7 @@ var UI = {
   },
   uz: {
     tapToOpen:'Ochish uchun bosing',
+    celebratesBirthday:'tugilgan kunini nishonlaydi',
     scroll:'Pastga suring', withWarmth:'Iliqlik va quvonch bilan',
     countingDays:'Kunlarni sanaymiz', untilWeCelebrate:'Bayramgacha',
     days:'Kun', hours:'Soat', minutes:'Daqiqa', seconds:'Soniya', addToCalendar:'Kalendarga qoshish',
@@ -943,6 +946,7 @@ var UI = {
   },
   en: {
     tapToOpen:'Tap to open',
+    celebratesBirthday:'is celebrating their birthday',
     scroll:'Scroll', withWarmth:'With warmth & joy',
     countingDays:'Counting the days', untilWeCelebrate:'Until we celebrate',
     days:'Days', hours:'Hours', minutes:'Minutes', seconds:'Seconds', addToCalendar:'Add to calendar',
@@ -1073,6 +1077,7 @@ function openEnvelope(){
   if (opened) return; opened = true;
   document.body.style.overflow = 'hidden';
   tapHint.classList.add('gone');
+  startMusic();                       // the tap is the gesture autoplay needs
   if (prefersReduced) { finishIntro(); return; }
   // Freeze the bob at its current offset before dropping the animation, then
   // let the transition ease it back to rest — otherwise it snaps on click.
@@ -1448,12 +1453,31 @@ form.addEventListener('submit', function(e){
 
 /* ── Music ── */
 var audio = $('#audio'), musicBtn = $('#music-btn');
-var musicWired = false;
+var musicWired = false, musicRetry = false;
+
+/* Autoplay. Browsers refuse audio until the visitor has interacted, so this is
+   called from the envelope tap — a genuine user gesture. If it is still refused
+   (some in-app browsers are stricter), retry once on the next interaction. */
+var RETRY_EVENTS = ['pointerdown','touchstart','keydown','scroll'];
+function startMusic(){
+  if (!audio || !audio.getAttribute('src') || !audio.paused) return;
+  var p = audio.play();
+  if (p && p.catch) p.catch(armMusicRetry);
+}
+function armMusicRetry(){
+  if (musicRetry) return; musicRetry = true;
+  var stop = function(){ RETRY_EVENTS.forEach(function(ev){ window.removeEventListener(ev, retry); }); };
+  var retry = function(){
+    var p = audio.play();
+    if (p && p.then) p.then(stop); else stop();
+  };
+  RETRY_EVENTS.forEach(function(ev){ window.addEventListener(ev, retry, { passive: true }); });
+}
 function renderMusic(){
   var url = cfg('music.url','');
   if (!url) { musicBtn.classList.add('hidden'); audio.removeAttribute('src'); return; }
   musicBtn.classList.remove('hidden');
-  if (audio.getAttribute('src') !== url) audio.src = url;
+  if (audio.getAttribute('src') !== url) { audio.src = url; audio.preload = 'auto'; }
   if (musicWired) return;
   musicWired = true;
   musicBtn.addEventListener('click', function(){
