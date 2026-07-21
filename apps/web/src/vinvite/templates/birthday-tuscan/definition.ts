@@ -40,7 +40,6 @@ const fields: TemplateField[] = [
   { key: 'kicker', path: 'invite.kicker', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
   { key: 'sub', path: 'invite.sub', type: 'localized-text', group: 'invite', labelKey: 'fld_sub' },
   { key: 'text', path: 'invite.text', type: 'localized-textarea', group: 'invite', labelKey: 'fld_text' },
-  { key: 'accent', path: 'invite.accent', type: 'localized-text', group: 'invite', labelKey: 'fld_accent' },
   { key: 'final', path: 'final.message', type: 'localized-textarea', group: 'invite', labelKey: 'fld_final' },
 
   { key: 'dateISO', path: 'event.dateISO', type: 'datetime', group: 'datetime', labelKey: 'fld_datetime' },
@@ -89,11 +88,6 @@ const defaultConfig = {
       ru: 'Год за годом жизнь дарит нам новые встречи.\nМы соберёмся под вечерним небом,\nчтобы отпраздновать прекрасную дату.',
       uz: 'Yildan yilga hayot bizga yangi uchrashuvlar beradi.\nGozal sanani nishonlash uchun\nkechki osmon ostida yigilamiz.',
       en: 'As the seasons turn once more,\nwe gather beneath the evening sky\nto celebrate a life beautifully lived.',
-    },
-    accent: {
-      ru: 'Тридцать лет — и всё впереди.',
-      uz: 'Ottiz yosh — hammasi hali oldinda.',
-      en: 'Thirty years, ever radiant.',
     },
   },
   final: {

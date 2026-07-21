@@ -19,6 +19,9 @@
   --gold:#b08d4f; --gold-light:#d9bd82; --gold-bright:#e9d29a;
   --text-dark:#33301f; --text-soft:#6a6552;
   --radius:14px; --maxw:520px; --ease:cubic-bezier(.22,.61,.36,1);
+  /* Diffuse backdrop behind small type. Zero-offset on purpose: it reads as the
+     type sitting above the surface, not as a drop shadow cast off it. */
+  --halo:rgba(104,86,46,.28); --halo-far:rgba(104,86,46,.16);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;overflow-x:hidden;}
@@ -33,15 +36,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 a{color:inherit;text-decoration:none;}
 :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px;}
 
-.overline{font-family:'Montserrat',sans-serif;font-weight:400;letter-spacing:.42em;text-transform:uppercase;font-size:.68rem;}
+.overline{font-family:'Montserrat',sans-serif;font-weight:400;letter-spacing:.38em;text-transform:uppercase;font-size:.8rem;}
 /* Script face: needs room for swashes/descenders, or glyphs get clipped. */
 .calligraphy{font-family:'Great Vibes',cursive;font-weight:400;line-height:1.25;padding:.12em 0;}
 
 /* ── Reveal system ── */
-.reveal{opacity:0;transform:translateY(28px);transition:opacity 1s var(--ease),transform 1s var(--ease);}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity 1.6s var(--ease),transform 1.6s var(--ease);}
 .reveal.in{opacity:1;transform:none;}
-.reveal-d1{transition-delay:.12s;}.reveal-d2{transition-delay:.24s;}.reveal-d3{transition-delay:.36s;}
-.reveal-d4{transition-delay:.48s;}.reveal-d5{transition-delay:.6s;}.reveal-d6{transition-delay:.72s;}
+.reveal-d1{transition-delay:.22s;}.reveal-d2{transition-delay:.44s;}.reveal-d3{transition-delay:.66s;}
+.reveal-d4{transition-delay:.88s;}.reveal-d5{transition-delay:1.1s;}.reveal-d6{transition-delay:1.32s;}
 
 /* ── Envelope opening scene ── */
 /* Flow: idle bob (a hint that it is tappable) → wax seal breaks → flap opens →
@@ -99,7 +102,7 @@ a{color:inherit;text-decoration:none;}
 
 .env-flap{
   position:absolute;left:0;right:0;top:0;height:52%;transform-origin:top center;
-  transform-style:preserve-3d;transition:transform 1s var(--ease);z-index:6;
+  transform-style:preserve-3d;transition:transform 1.5s var(--ease);z-index:6;
 }
 .env-flap svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 12px rgba(0,0,0,.4));}
 .envelope-wrap.opening .env-flap{transform:rotateX(-168deg);z-index:2;}
@@ -111,7 +114,7 @@ a{color:inherit;text-decoration:none;}
   display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 34% 30%,#e9d29a 0%,#c9a768 42%,#96762f 78%,#7a5d22 100%);
   box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 -2px 6px rgba(90,68,20,.6),inset 0 2px 5px rgba(255,240,205,.5);
-  transition:transform .55s var(--ease),opacity .5s var(--ease),filter .5s;
+  transition:transform .85s var(--ease),opacity .75s var(--ease),filter .75s;
 }
 .env-seal::before{
   content:"";position:absolute;inset:7px;border-radius:50%;
@@ -130,7 +133,7 @@ a{color:inherit;text-decoration:none;}
   background:linear-gradient(175deg,var(--cream),var(--ivory-soft));border-radius:5px;
   box-shadow:0 14px 40px rgba(0,0,0,.42);
   transform:translateY(0);opacity:0;
-  transition:transform 1.1s var(--ease),opacity .5s var(--ease);
+  transition:transform 1.6s var(--ease),opacity .8s var(--ease);
   display:flex;align-items:center;justify-content:center;overflow:hidden;
 }
 .env-letter::after{
@@ -141,18 +144,18 @@ a{color:inherit;text-decoration:none;}
 .envelope-wrap.pulling .env-letter{opacity:1;transform:translateY(-62%);}
 .env-letter-inner{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
-  text-align:center;padding:1rem;transition:transform .9s var(--ease);
+  text-align:center;padding:1rem;transition:transform 1.3s var(--ease);
 }
 .env-letter .calligraphy{font-size:2.6rem;color:var(--gold);}
-.env-letter .overline{color:var(--text-soft);font-size:.58rem;}
+.env-letter .overline{color:var(--text-soft);font-size:.7rem;}
 .env-card-rule{width:40px;height:1px;background:var(--gold);opacity:.6;}
 .env-letter-line{font-style:italic;font-size:1.05rem;line-height:1.4;color:var(--text-soft);max-width:15em;}
 /* Unfolding: the sheet is re-parented to <body>, pinned to its current box and
    then animated out to the full viewport, so it becomes the page. */
 .env-letter.unfolding{
   position:fixed;margin:0;z-index:1002;transform:none;opacity:1;
-  transition:left .95s var(--ease),top .95s var(--ease),width .95s var(--ease),
-             height .95s var(--ease),border-radius .95s var(--ease),opacity .7s var(--ease);
+  transition:left 1.35s var(--ease),top 1.35s var(--ease),width 1.35s var(--ease),
+             height 1.35s var(--ease),border-radius 1.35s var(--ease),opacity .9s var(--ease);
 }
 .env-letter.unfolding::after{opacity:0;}
 .env-letter.unfolding .env-letter-inner{transform:scale(1.55);}
@@ -163,12 +166,12 @@ a{color:inherit;text-decoration:none;}
   background:linear-gradient(115deg,transparent 30%,rgba(233,210,154,.55) 50%,transparent 70%);
   transform:translateX(-120%);
 }
-.shimmer.go{animation:sweep 1.1s var(--ease) forwards;}
+.shimmer.go{animation:sweep 1.6s var(--ease) forwards;}
 @keyframes sweep{0%{opacity:0;transform:translateX(-120%);}20%{opacity:1;}100%{opacity:0;transform:translateX(120%);}}
 
 .env-tap{
-  font-family:'Montserrat',sans-serif;font-size:.62rem;letter-spacing:.3em;
-  text-transform:uppercase;color:rgba(233,210,154,.85);
+  font-family:'Montserrat',sans-serif;font-size:.74rem;letter-spacing:.3em;
+  text-transform:uppercase;color:rgba(233,210,154,.9);
   animation:pulse 2.4s ease-in-out infinite;transition:opacity .4s var(--ease);
 }
 @keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
@@ -199,9 +202,21 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .wrap{max-width:var(--maxw);margin:0 auto;}
 .section-title{font-weight:500;font-size:clamp(2rem,9vw,2.9rem);line-height:1.05;color:var(--olive);text-align:center;letter-spacing:.01em;}
 .section-kicker{text-align:center;color:var(--gold);margin-bottom:.9rem;}
+.overline,.count-lbl,.tl-time,.final-date,.env-tap,.detail-text h3,.count-when{
+  text-shadow:0 0 10px var(--halo),0 0 24px var(--halo-far);
+}
+#hero,#countdown,#gallery,#final,#envelope-scene,#message{
+  --halo:rgba(10,14,9,.55); --halo-far:rgba(10,14,9,.34);
+}
 .divider{display:flex;align-items:center;justify-content:center;gap:12px;margin:1.4rem auto;color:var(--gold);}
 .divider::before,.divider::after{content:"";height:1px;width:52px;background:currentColor;opacity:.5;}
-.divider svg{width:20px;height:20px;}
+.divider-mono{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;flex:0 0 38px;border-radius:50%;
+  border:1px solid currentColor;box-shadow:inset 0 0 0 3px rgba(176,141,79,.14);
+  font-family:'Great Vibes',cursive;font-size:1.6rem;line-height:1;
+  padding-top:.12em;                     /* the script face sits high in its box */
+}
 
 /* ── Hero: day→night ── */
 /* Layers, back to front: sky photo · night sky · sun · drifting clouds ·
@@ -269,7 +284,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   object-fit:contain;object-position:bottom center;
   transform:translateX(-50%) translateY(48px);opacity:0;
   filter:drop-shadow(0 26px 46px rgba(0,0,0,.5));
-  transition:transform 1.7s var(--ease),opacity 1.4s var(--ease),filter .35s linear;pointer-events:none;
+  transition:transform 2.6s var(--ease),opacity 2.1s var(--ease),filter .35s linear;pointer-events:none;
 }
 .hero-mansion.up{transform:translateX(-50%) translateY(0);opacity:1;}
 .hero-mansion.empty{display:none;}
@@ -292,8 +307,8 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   content:'';position:absolute;inset:-4% -16%;z-index:-1;pointer-events:none;
   background:radial-gradient(60% 54% at 50% 50%,rgba(6,9,15,.62) 0%,rgba(6,9,15,.40) 52%,rgba(6,9,15,0) 78%);
 }
-.hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.2s;}
-.hero-invite{margin-top:.5rem;font-size:.66rem;letter-spacing:.34em;line-height:1.9;}
+.hero-content .overline{color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1.6s var(--ease) 1.9s;}
+.hero-invite{margin-top:.6rem;font-size:.78rem;letter-spacing:.3em;line-height:1.9;}
 .hero-name{
   font-family:'Great Vibes',cursive;font-size:clamp(3.4rem,20vw,7rem);line-height:1.2;margin:.2rem 0;
   /* Warm halo around the lettering — it also lifts the name off the sky. */
@@ -302,7 +317,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   background:linear-gradient(90deg,var(--cream) 50%,transparent 50%);
   background-size:220% 100%;background-position:100% 0;
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  transition:background-position 2.4s var(--ease) .6s;
+  transition:background-position 3.6s var(--ease) .9s;
   /* background-clip:text only paints inside the padding box — this script face
      has tall swashes and deep descenders, so it needs real vertical room or the
      tops/tails of letters are cut off. */
@@ -313,13 +328,13 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   50%{text-shadow:0 0 24px rgba(255,244,215,.72),0 0 58px rgba(233,210,154,.46),0 5px 28px rgba(0,0,0,.5);}
 }
 .hero.play .hero-name{background-position:0 0;}
-.hero-sub{font-style:italic;font-size:1.5rem;color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.5s;}
+.hero-sub{font-style:italic;font-size:1.5rem;color:var(--cream);opacity:0;transform:translateY(14px);transition:all 1.6s var(--ease) 2.6s;}
 .hero-age{
   font-weight:600;letter-spacing:.34em;font-size:1.05rem;margin-top:.6rem;color:var(--gold-bright);text-transform:uppercase;
-  opacity:0;transform:translateY(14px);transition:all 1s var(--ease) 1.7s;
+  opacity:0;transform:translateY(14px);transition:all 1.6s var(--ease) 3.2s;
 }
 .hero.play .overline,.hero.play .hero-sub,.hero.play .hero-age{opacity:1;transform:none;}
-.hero-sprig{width:56px;margin:0 auto .4rem;opacity:0;transform:scale(.6);transition:all 1s var(--ease) .1s;color:var(--gold-bright);}
+.hero-sprig{width:56px;margin:0 auto .4rem;opacity:0;transform:scale(.6);transition:all 1.4s var(--ease) .2s;color:var(--gold-bright);}
 .hero.play .hero-sprig{opacity:1;transform:scale(1);}
 .scroll-ind{
   position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:6;color:var(--cream);
@@ -334,12 +349,32 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 @keyframes scrolldot{0%{opacity:0;transform:translate(-50%,0);}40%{opacity:1;}100%{opacity:0;transform:translate(-50%,10px);}}
 
 /* ── Message ── */
-#message{background:var(--ivory);text-align:center;}
-.msg-lines p{font-size:1.35rem;color:var(--text-dark);margin:.6rem 0;font-weight:400;white-space:pre-line;}
-.msg-lines .accent{font-family:'Great Vibes',cursive;font-size:2.2rem;color:var(--gold);line-height:1.2;}
+/* Champagne silk backdrop, veiled slightly so the dark type stays readable. */
+#message{
+  text-align:center;background-color:var(--ivory);
+  background-image:linear-gradient(rgba(246,240,228,.34),rgba(246,240,228,.34)),var(--silk-url);
+  background-size:cover;background-position:center;background-attachment:local;
+}
+/* A gold ribbon that loops twice around the greeting. The arcs above the line
+   live in the back layer and the arcs below in the front layer, so the ribbon
+   reads as passing behind and then in front of the words. */
+.kicker-wrap{position:relative;display:inline-block;padding:1.1rem 2.2rem 1.3rem;margin-bottom:.9rem;}
+.kicker-wrap .section-kicker{position:relative;z-index:2;margin:0;}
+.ribbon{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+.ribbon-back{z-index:1;}
+.ribbon-front{z-index:3;}
+.ribbon path{
+  fill:none;stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;
+}
+.ribbon-back path{stroke:var(--gold);opacity:.85;}
+.ribbon-front path{stroke:var(--gold-light);}
+.kicker-wrap.in .ribbon path{animation:ribbonDraw 1.15s var(--ease) forwards;}
+@keyframes ribbonDraw{to{stroke-dashoffset:0;}}
+.msg-lines p{font-size:1.72rem;color:var(--text-dark);margin:.7rem 0;font-weight:400;white-space:pre-line;line-height:1.5;}
 .botanical{width:120px;margin:1.5rem auto 0;color:var(--sage);}
 .botanical path{stroke-dasharray:1;stroke-dashoffset:1;}
-.botanical.draw path{animation:draw 2.2s var(--ease) forwards;}
+.botanical.draw path{animation:draw 3.4s var(--ease) forwards;}
 @keyframes draw{to{stroke-dashoffset:0;}}
 
 /* ── Countdown ── */
@@ -349,8 +384,8 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .count-grid{display:flex;justify-content:center;gap:.6rem;margin:2rem auto;flex-wrap:wrap;}
 .count-box{min-width:74px;padding:1rem .6rem;border:1px solid rgba(217,189,130,.3);border-radius:10px;background:rgba(255,255,255,.02);}
 .count-num{font-size:2.4rem;font-weight:500;color:var(--gold-bright);line-height:1;font-variant-numeric:tabular-nums;}
-.count-lbl{font-family:'Montserrat',sans-serif;font-size:.56rem;letter-spacing:.24em;text-transform:uppercase;color:var(--sage-soft);margin-top:.5rem;}
-.count-when{font-style:italic;font-size:1.15rem;color:var(--champagne);margin-bottom:1.6rem;}
+.count-lbl{font-family:'Montserrat',sans-serif;font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--sage-soft);margin-top:.5rem;}
+.count-when{font-style:italic;font-size:1.62rem;line-height:1.35;color:var(--champagne);margin-bottom:1.6rem;}
 .btn{
   display:inline-flex;align-items:center;gap:.5rem;min-height:44px;padding:.85rem 1.6rem;border-radius:40px;
   font-family:'Montserrat',sans-serif;font-size:.66rem;letter-spacing:.24em;text-transform:uppercase;transition:all .35s var(--ease);
@@ -370,7 +405,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   border-radius:50%;display:flex;align-items:center;justify-content:center;
 }
 .detail-icon svg{width:24px;height:24px;}
-.detail-text h3{font-family:'Montserrat',sans-serif;font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--text-soft);margin-bottom:.25rem;}
+.detail-text h3{font-family:'Montserrat',sans-serif;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--text-soft);margin-bottom:.25rem;}
 .detail-text p{font-size:1.3rem;color:var(--text-dark);line-height:1.3;}
 
 /* ── Venue ── */
@@ -425,7 +460,7 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
   content:"";position:absolute;left:-2.2rem;top:4px;width:16px;height:16px;border-radius:50%;
   background:var(--cream);border:2px solid var(--gold);box-shadow:0 0 0 4px rgba(176,141,79,.12);
 }
-.tl-time{font-family:'Montserrat',sans-serif;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:.15rem;}
+.tl-time{font-family:'Montserrat',sans-serif;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:.15rem;}
 .tl-title{font-size:1.5rem;color:var(--olive);}
 
 /* ── Gifts + gift card ── */
@@ -527,9 +562,19 @@ section{position:relative;padding:5.5rem 1.4rem;overflow:hidden;}
 .final-content{position:relative;z-index:3;padding:2rem;max-width:420px;}
 .final-content .msg{font-style:italic;font-size:1.5rem;color:var(--champagne);margin-bottom:1rem;white-space:pre-line;}
 .final-name{font-family:'Great Vibes',cursive;font-size:4.4rem;color:var(--gold-bright);line-height:1.25;padding:.26em .16em .3em;}
-.final-date{font-family:'Montserrat',sans-serif;letter-spacing:.24em;font-size:.7rem;text-transform:uppercase;color:var(--sage-soft);margin:1rem 0;}
+.final-date{font-family:'Montserrat',sans-serif;letter-spacing:.24em;font-size:.82rem;text-transform:uppercase;color:var(--sage-soft);margin:1rem 0;}
 .final-love{font-family:'Great Vibes',cursive;font-size:2rem;color:var(--cream);}
 #particles{position:absolute;inset:0;z-index:2;pointer-events:none;}
+/* One-shot gold confetti, fired once the cover animation has settled. */
+#confetti{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden;}
+#confetti i{position:absolute;top:0;display:block;border-radius:1px;opacity:0;
+  animation:confettiFall cubic-bezier(.25,.6,.5,1) forwards;}
+@keyframes confettiFall{
+  0%{opacity:0;transform:translate3d(0,-12vh,0) rotate(0deg);}
+  10%{opacity:1;}
+  72%{opacity:1;}
+  100%{opacity:0;transform:translate3d(var(--dx),106vh,0) rotate(var(--rot));}
+}
 
 /* ── Music button / progress / dot-nav / lightbox ── */
 #music-btn{
@@ -654,10 +699,21 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   <!-- Invitation message -->
   <section id="message" data-opt="message">
     <div class="wrap">
-      <p class="overline section-kicker reveal" data-t="withWarmth">С теплом и радостью</p>
+      <div class="kicker-wrap reveal" id="kickerWrap">
+        <svg class="ribbon ribbon-back" viewBox="0 0 400 96" aria-hidden="true">
+          <path pathLength="100" style="animation-delay:.15s" d="M8,66 C22,50 42,44 66,45"/>
+          <path pathLength="100" style="animation-delay:.7s"  d="M66,45 C66,-2 214,-2 214,45"/>
+          <path pathLength="100" style="animation-delay:2.1s" d="M186,45 C186,-2 334,-2 334,45"/>
+          <path pathLength="100" style="animation-delay:3.3s" d="M334,45 C358,44 378,50 392,66"/>
+        </svg>
+        <p class="overline section-kicker" data-t="withWarmth">С теплом и радостью</p>
+        <svg class="ribbon ribbon-front" viewBox="0 0 400 96" aria-hidden="true">
+          <path pathLength="100" style="animation-delay:1.4s" d="M214,45 C214,93 66,93 66,45"/>
+          <path pathLength="100" style="animation-delay:2.8s" d="M334,45 C334,93 186,93 186,45"/>
+        </svg>
+      </div>
       <div class="msg-lines">
         <p class="reveal reveal-d1" data-bind="inviteText"></p>
-        <p class="accent reveal reveal-d3" data-bind="inviteAccent"></p>
       </div>
       <div class="botanical" aria-hidden="true">
         <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="1.3">
@@ -677,7 +733,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="countingDays">Считаем дни</p>
       <h2 class="section-title reveal reveal-d1" data-t="untilWeCelebrate">До праздника</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="count-grid reveal reveal-d2" aria-live="polite">
         <div class="count-box"><div class="count-num" id="cd-days">00</div><div class="count-lbl" data-t="days">Дни</div></div>
         <div class="count-box"><div class="count-num" id="cd-hours">00</div><div class="count-lbl" data-t="hours">Часы</div></div>
@@ -697,7 +753,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="theParticulars">Детали</p>
       <h2 class="section-title reveal reveal-d1" data-t="eventDetails">О празднике</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="detail-grid">
         <div class="detail-item reveal">
           <div class="detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
@@ -724,7 +780,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="whereWeGather">Где мы соберёмся</p>
       <h2 class="section-title reveal reveal-d1" data-bind="venueName"></h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="venue-frame reveal reveal-d2" id="venueFrame">
         <div class="venue-imgwrap" id="venueImgWrap"><img id="venueImg" alt="" /></div>
       </div>
@@ -743,7 +799,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="aGlimpse">Моменты</p>
       <h2 class="section-title reveal reveal-d1" data-t="galleryTitle">Галерея</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="slider reveal reveal-d2" id="slider" tabindex="0" aria-roledescription="carousel">
         <div class="slides" id="slides"></div>
         <button class="slider-btn prev" id="slidePrev" aria-label="Previous">
@@ -762,7 +818,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="theEvening">Программа</p>
       <h2 class="section-title reveal reveal-d1" data-t="orderOfNight">Как пройдёт вечер</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="timeline" id="timeline"></div>
     </div>
   </section>
@@ -796,7 +852,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="kindlyRespond">Пожалуйста, ответьте</p>
       <h2 class="section-title reveal reveal-d1">RSVP</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="rsvp-card reveal reveal-d2">
         <form id="rsvpForm" novalidate>
           <div class="field">
@@ -847,7 +903,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <div class="wrap">
       <p class="overline section-kicker reveal" data-t="questions">Остались вопросы?</p>
       <h2 class="section-title reveal reveal-d1" data-t="contactsTitle">Контакты</h2>
-      <div class="divider reveal reveal-d1" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="currentColor"/></svg></div>
+      <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="contact-row reveal reveal-d2" id="contactRow"></div>
     </div>
   </section>
@@ -888,6 +944,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
   <p class="lb-cap" id="lbCap"></p>
 </div>
 
+<div id="confetti" aria-hidden="true"></div>
 <audio id="audio" loop preload="none"></audio>
 
 <script>
@@ -991,6 +1048,12 @@ function cfg(path, dflt){
 /* ── Derived date strings (Intl, per current language) ── */
 function eventDate(){ var d = new Date(cfg('event.dateISO','2026-01-01T18:00:00')); return isNaN(d.getTime()) ? new Date() : d; }
 function intlLocale(){ return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'en' ? 'en-GB' : 'ru-RU'); }
+/* Same as fmtDateLong but without the year — the countdown already implies it. */
+function fmtDateNoYear(){
+  try {
+    return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long' }).format(eventDate());
+  } catch (e) { return eventDate().toDateString(); }
+}
 function fmtDateLong(){
   try {
     return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }).format(eventDate());
@@ -1018,8 +1081,7 @@ function bindTexts(){
     dateLong: fmtDateLong(),
     city: loc(cfg('event.city','')),
     inviteText: loc(cfg('invite.text','')),
-    inviteAccent: loc(cfg('invite.accent','')),
-    countWhen: fmtDateLong() + ' · ' + fmtTimeShort(),
+    countWhen: fmtDateNoYear() + ' · ' + fmtTimeShort(),
     timeLine: timeNote || (fmtTimeShort() + ' ' + t('untilLate')),
     venueName: loc(cfg('venue.name','')),
     venueAddress: loc(cfg('venue.address','')),
@@ -1035,7 +1097,9 @@ function bindTexts(){
   });
   $$('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
   $$('[data-t-aria]').forEach(function(el){ el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
-  $('#envMonogram').textContent = (honoree || 'V').trim().charAt(0).toUpperCase();
+  var mono = (honoree || 'V').trim().charAt(0).toUpperCase();
+  $('#envMonogram').textContent = mono;
+  $$('[data-mono]').forEach(function(el){ el.textContent = mono; });
   document.title = honoree || 'Invitation';
   document.documentElement.lang = lang;
 }
@@ -1086,16 +1150,16 @@ function openEnvelope(){
   wrap.classList.add('opening');                                    // seal + flap
   void wrap.offsetWidth;                                            // commit the frozen pose
   requestAnimationFrame(function(){ wrap.style.transform = ''; });
-  setTimeout(function(){ shimmer.classList.add('go'); }, 500);
-  setTimeout(function(){ wrap.classList.add('pulling'); }, 780);    // draw the letter out
-  setTimeout(unfoldLetter, 1780);                                   // unfold to full page
-  setTimeout(function(){ wrap.classList.add('gone'); }, 1900);
+  setTimeout(function(){ shimmer.classList.add('go'); }, 700);
+  setTimeout(function(){ wrap.classList.add('pulling'); }, 1150);    // draw the letter out
+  setTimeout(unfoldLetter, 2550);                                   // unfold to full page
+  setTimeout(function(){ wrap.classList.add('gone'); }, 2750);
   setTimeout(function(){
     scene.classList.add('dismissed');
     playHero();
     letter.classList.add('fading');
-  }, 2650);
-  setTimeout(cleanupIntro, 3500);
+  }, 3900);
+  setTimeout(cleanupIntro, 5000);
 }
 
 function finishIntro(){
@@ -1116,7 +1180,34 @@ wrap.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key ===
 
 /* ── Hero + day→night scroll (photographic scene) ── */
 var hero = $('#hero'), heroMansion = $('#heroMansion');
-function playHero(){ hero.classList.add('play'); if (heroMansion) heroMansion.classList.add('up'); }
+function playHero(){
+  hero.classList.add('play');
+  if (heroMansion) heroMansion.classList.add('up');
+  // Fire the confetti once the cover's staged text reveal has finished.
+  setTimeout(burstConfetti, 4600);
+}
+
+/* ── One-shot confetti burst ── */
+var CONFETTI_GOLD = ['#e9d29a','#d9bd82','#b08d4f','#f2e3bd'];
+function burstConfetti(){
+  var wrap = $('#confetti');
+  if (prefersReduced || !wrap || wrap.getAttribute('data-fired')) return;
+  wrap.setAttribute('data-fired','1');
+  for (var i = 0; i < 80; i++) {
+    var el = document.createElement('i');
+    el.style.cssText =
+      'left:' + (Math.random()*100).toFixed(2) + 'vw;' +
+      'width:' + (4 + Math.random()*4).toFixed(1) + 'px;' +
+      'height:' + (6 + Math.random()*7).toFixed(1) + 'px;' +
+      'background:' + CONFETTI_GOLD[i % CONFETTI_GOLD.length] + ';' +
+      '--dx:' + ((Math.random()*2-1)*18).toFixed(1) + 'vw;' +
+      '--rot:' + Math.round(360 + Math.random()*720) + 'deg;' +
+      'animation-duration:' + (3.6 + Math.random()*2.4).toFixed(2) + 's;' +
+      'animation-delay:' + (Math.random()*0.9).toFixed(2) + 's;';
+    wrap.appendChild(el);
+  }
+  setTimeout(function(){ wrap.innerHTML = ''; }, 7500);   // let it disappear cleanly
+}
 
 /* Scene photos. All of them are bundled with the template and are NOT editable
    — the cover art is part of the design. They live in the web app's public/
@@ -1145,6 +1236,7 @@ function renderScene(){
   setSrc(finalMansion, ASSET + 'mansion.png');
   setSrc(sunDisc, ASSET + 'sun.png');
   cloudLayers.forEach(function(l){ setSrc(l.querySelector('img'), ASSET + 'clouds.png'); });
+  document.documentElement.style.setProperty('--silk-url', 'url("' + ASSET + 'silk.jpg")');
   var logo = $('#vconnectLogo');
   if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/vconnect-logo.png');
 }

@@ -19,5 +19,9 @@ the design.
   Ammar, via Wikimedia Commons. License: CC0. Alpha derived from the red channel
   (blue sky is low-red, cloud is high-red), edges feathered so stacked layers
   never seam. Stored as greyscale+alpha to keep it small.
+- **silk.jpg** — retinted crop of "Charmeuse" (silk satin), via Wikimedia
+  Commons. License: CC BY-SA 4.0. The original is blue; luminance was remapped
+  onto a champagne/ivory ramp so the fold structure survives but the colour
+  matches the template. Backs the greeting section.
 - **mansion.png** — supplied by the project owner; background removed and the
   alpha rebuilt.
