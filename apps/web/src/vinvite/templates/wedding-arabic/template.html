@@ -206,15 +206,15 @@ a{color:inherit;text-decoration:none;}
 
 /* The card drawn out of the pocket, which then unfolds into the page. */
 .env-card{
-  position:absolute;left:6%;bottom:8%;width:88%;z-index:3;
-  padding:clamp(1.5rem,5vw,2.2rem) 1.6rem;text-align:center;
+  position:absolute;left:8%;bottom:12%;width:84%;z-index:3;
+  padding:clamp(1rem,4vw,1.6rem) 1.2rem;text-align:center;
   background:linear-gradient(165deg,var(--ivory),var(--cream));
   border:1px solid var(--champagne);border-radius:8px;
   box-shadow:0 2px 6px rgba(74,56,38,.14);
   overflow:hidden;                 /* keeps the light sweep inside the paper */
   transform-origin:50% 100%;
   /* Tucked low enough to sit fully behind the pocket before the pull. */
-  transform:translateY(26%) scale(.97);
+  transform:translateY(6%) scale(.97);
   opacity:0;
   transition:
     transform 1.3s var(--ease-pull),
@@ -247,15 +247,15 @@ a{color:inherit;text-decoration:none;}
     box-shadow 1s var(--ease);
 }
 .env-stage.lifted .env-card::after{opacity:0;transition:opacity .5s var(--ease-io);}
-.env-card .ec-arabic{font-family:var(--font-arabic);direction:rtl;font-size:1.25rem;color:var(--bronze);margin-bottom:.4rem;}
+.env-card .ec-arabic{font-family:var(--font-arabic);direction:rtl;font-size:1.05rem;color:var(--bronze);margin-bottom:.25rem;}
 .env-card .ec-names{
-  font-family:var(--font-display);font-weight:400;font-size:clamp(1.6rem,6vw,2.3rem);
-  color:var(--brown-deep);line-height:1.16;padding:.06em 0 .1em;
+  font-family:var(--font-display);font-weight:400;font-size:clamp(1.2rem,5vw,1.8rem);
+  color:var(--brown-deep);line-height:1.16;padding:.04em 0 .08em;
 }
 .env-card .ec-amp{font-style:italic;color:var(--gold);display:block;font-size:.8em;margin:.04em 0;}
 .env-card .ec-sub{
-  font-family:var(--font-body);font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;
-  color:var(--bronze);margin-top:.8rem;
+  font-family:var(--font-body);font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--bronze);margin-top:.5rem;
 }
 /* Re-parented to <body> and animated out to the full viewport (FLIP). */
 .env-card.unfolding{
