@@ -3,7 +3,7 @@
 // visit (nothing is cached yet); once a flyer has been opened online, its app
 // shell, assets, images and data are cached and it reopens offline.
 
-const CACHE = 'vmenu-v2';
+const CACHE = 'vmenu-v3';
 // The SPA shell we always want available offline for navigations.
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
