@@ -23,6 +23,7 @@ import { invitationRouter } from './modules/invitation/invitation.routes.js';
 import { guestInvitationRouter } from './modules/guestInvitation/guestInvitation.routes.js';
 import { designTemplateRouter } from './modules/designTemplate/designTemplate.routes.js';
 import { vinviteRouter } from './modules/vinvite/vinvite.routes.js';
+import { telegramRouter } from './modules/telegram/telegram.routes.js';
 import { adminOrInviteAuthMiddleware } from './modules/vinvite/vinvite.middleware.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { expenseRouter } from './modules/expense/expense.routes.js';
@@ -83,6 +84,8 @@ app.use('/api/design-templates', designTemplateRouter);
 // v-invite.uz — standalone invitation-builder product (own users/auth, mixed
 // public + authenticated routes handled inside the router).
 app.use('/api/vinvite', vinviteRouter);
+// Telegram bot: public webhook + manager-facing per-flyer connection endpoints.
+app.use('/api/telegram', telegramRouter);
 // Photo/audio uploads are shared infrastructure: both v-menu admins and
 // v-invite users may upload (the controller tolerates a missing admin context).
 app.use('/api/photos', adminOrInviteAuthMiddleware, photoRoutes);

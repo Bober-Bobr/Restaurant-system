@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import { InvitationRepository } from './invitation.repository.js';
 import { createInvitationSchema, updateInvitationSchema, invitationRequestSchema } from './invitation.schema.js';
+import { forwardSubmission } from '../telegram/telegram.service.js';
 
 const repo = new InvitationRepository();
 
@@ -126,6 +127,9 @@ export class InvitationController {
     }
     const data = invitationRequestSchema.parse(request.body);
     const created = await repo.addRequest(invitation.id, data);
+    // Forward to any Telegram chats subscribed to this flyer — best-effort, never
+    // block or fail the guest's submission on it.
+    void forwardSubmission(invitation.id, data).catch(() => undefined);
     response.status(201).json({ ok: true, id: created.id });
   }
 }

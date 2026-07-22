@@ -540,16 +540,40 @@ model Invitation {
   // Optional looping background music played on the public invitation
   musicUrl            String?
 
+  // Telegram forwarding: unguessable code a user sends to the bot to subscribe
+  // this flyer's form submissions to their chat. Null until first generated.
+  telegramCode    String?  @unique
+
   isPublished     Boolean   @default(true)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  event       Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  restaurant  Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  requests    InvitationRequest[]
+  event         Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  requests      InvitationRequest[]
+  telegramLinks FlyerTelegramLink[]
 
   @@index([restaurantId])
   @@index([eventId])
+}
+
+// ── Telegram chat subscribed to a flyer's form submissions ────────────────────
+// Created when someone sends the flyer's code to the bot; each new
+// InvitationRequest is forwarded to every linked chat. Multiple chats per flyer
+// are allowed (e.g. manager + assistant).
+model FlyerTelegramLink {
+  id           String   @id @default(cuid())
+  invitationId String
+  // Telegram chat id (stored as text — ids exceed 32-bit and can be negative).
+  chatId       String
+  username     String?
+  firstName    String?
+  createdAt    DateTime @default(now())
+
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, chatId])
+  @@index([invitationId])
 }
 
 // ── Lead captured from a flyer's public "form" block ──────────────────────────

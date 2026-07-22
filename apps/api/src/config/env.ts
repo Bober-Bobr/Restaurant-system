@@ -7,7 +7,17 @@ const envSchema = z.object({
   ADMIN_API_KEY: z.string().min(8).optional(),
   // OAuth client ID for "Sign in with Google" on v-invite.uz (optional — the
   // Google button is hidden / rejected when unset).
-  GOOGLE_CLIENT_ID: z.string().optional()
+  GOOGLE_CLIENT_ID: z.string().optional(),
+
+  // Telegram bot for forwarding flyer form submissions. The whole feature is
+  // dormant unless TELEGRAM_BOT_TOKEN is set. WEBHOOK_SECRET guards the public
+  // webhook path; BOT_USERNAME is used to build t.me deep links (auto-fetched
+  // via getMe if omitted). PUBLIC_URL is where Telegram should POST updates
+  // (e.g. https://event.v-menu.uz) — setWebhook runs on boot when both are set.
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  TELEGRAM_BOT_USERNAME: z.string().optional(),
+  TELEGRAM_PUBLIC_URL: z.string().url().optional()
 });
 
 export const env = envSchema.parse(process.env);

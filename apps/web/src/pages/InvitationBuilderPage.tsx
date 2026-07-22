@@ -5,7 +5,8 @@ import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { invitationService, type Invitation, type InvitationRequest } from '../services/invitation.service';
+import { invitationService, type Invitation, type InvitationRequest, type TelegramStatus } from '../services/invitation.service';
+import QRCode from 'qrcode';
 import { type DesignTheme, designTemplateService } from '../services/designTemplate.service';
 import { buildSubdomainBase } from '../utils/subdomain';
 import { BlockEditor } from '../blocks/BlockEditor';
@@ -185,7 +186,12 @@ export const InvitationBuilderPage = () => {
         flyers={myFlyersQuery.data ?? []}
         currentId={flyerId}
         onSwitch={(id) => navigate(id === '__new' ? '/flyers/new' : `/flyers/${id}`)}
-        extra={isEditing && existing ? <RequestsButton invitationId={existing.id} t={t} /> : undefined}
+        extra={isEditing && existing ? (
+          <>
+            <RequestsButton invitationId={existing.id} t={t} />
+            {blocks.some((b) => b.type === 'form') && <TelegramButton invitationId={existing.id} t={t} />}
+          </>
+        ) : undefined}
       />
 
       {error && <div style={{ maxWidth: 1180, margin: '12px auto 0', padding: 12, borderRadius: 10, background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)', color: '#fca5a5', fontSize: 13 }}>{error}</div>}
@@ -286,6 +292,104 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
         </div>
       </div>
     </nav>
+  );
+}
+
+// Top-bar button: connect this flyer's form submissions to a Telegram chat.
+// Shown only for flyers that contain a form block.
+function TelegramButton({ invitationId, t }: { invitationId: string; t: (k: Parameters<typeof translate>[0]) => string }) {
+  const [open, setOpen] = useState(false);
+  const [qr, setQr] = useState<string>('');
+  const qc = useQueryClient();
+  const statusQuery = useQuery({
+    queryKey: ['flyer-telegram', invitationId],
+    queryFn: () => invitationService.telegramStatus(invitationId),
+    enabled: open,
+  });
+  const status: TelegramStatus | undefined = statusQuery.data;
+
+  useEffect(() => {
+    if (status?.link) QRCode.toDataURL(status.link, { margin: 1, width: 220 }).then(setQr).catch(() => setQr(''));
+    else setQr('');
+  }, [status?.link]);
+
+  const rotateMutation = useMutation({
+    mutationFn: () => invitationService.telegramRotate(invitationId),
+    onSuccess: (data) => qc.setQueryData(['flyer-telegram', invitationId], data),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (linkId: string) => invitationService.telegramRemoveLink(invitationId, linkId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['flyer-telegram', invitationId] }),
+  });
+
+  const panel: React.CSSProperties = { padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)' };
+  return (
+    <>
+      <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(true)}>
+        ✈ {t('tg_connect')}
+      </button>
+      {open && (
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 16 }}>✈ {t('tg_connect')}</h3>
+              <button type="button" onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
+            </div>
+
+            {statusQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.6)', fontSize: 13 }}>…</p>}
+            {status && status.enabled === false && (
+              <p style={{ margin: 0, color: 'rgba(226,232,240,0.7)', fontSize: 13, lineHeight: 1.6 }}>{t('tg_disabled')}</p>
+            )}
+            {status && status.enabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ margin: 0, color: 'rgba(226,232,240,0.7)', fontSize: 13, lineHeight: 1.6 }}>{t('tg_howto')}</p>
+
+                <div style={{ ...panel, textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.5)', marginBottom: 8 }}>{t('tg_your_code')}</div>
+                  <div
+                    onClick={() => status.code && navigator.clipboard?.writeText(status.code)}
+                    title={t('copy_link')}
+                    style={{ fontSize: 30, fontWeight: 800, letterSpacing: '0.3em', color: '#c9a42c', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
+                  >{status.code}</div>
+                  {qr && (
+                    <img src={qr} alt="" style={{ width: 180, height: 180, margin: '12px auto 0', borderRadius: 10, background: '#fff', padding: 6 }} />
+                  )}
+                  {status.link && (
+                    <div style={{ marginTop: 10 }}>
+                      <a href={status.link} target="_blank" rel="noopener noreferrer" className="adm-btn-primary" style={{ display: 'inline-block', fontSize: 13, textDecoration: 'none' }}>{t('tg_open_bot')}</a>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.5)', marginBottom: 8 }}>{t('tg_connected')} · {status.links?.length ?? 0}</div>
+                  {(status.links?.length ?? 0) === 0 ? (
+                    <p style={{ margin: 0, color: 'rgba(226,232,240,0.5)', fontSize: 13 }}>{t('tg_none')}</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {status.links!.map((l) => (
+                        <div key={l.id} style={{ ...panel, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ color: '#f8fafc', fontSize: 13 }}>{l.firstName || (l.username ? '@' + l.username : l.chatId)}{l.username && l.firstName ? ' · @' + l.username : ''}</span>
+                          <button type="button" onClick={() => removeMutation.mutate(l.id)} className="adm-btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>{t('delete')}</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { if (confirm(t('tg_rotate_confirm'))) rotateMutation.mutate(); }}
+                  className="adm-btn-ghost"
+                  style={{ fontSize: 12, alignSelf: 'flex-start' }}
+                  disabled={rotateMutation.isPending}
+                >↻ {t('tg_rotate')}</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

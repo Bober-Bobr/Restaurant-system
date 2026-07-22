@@ -135,4 +135,32 @@ export const invitationService = {
   async submitRequest(slug: string, payload: { name: string; phone: string; message?: string | null }): Promise<void> {
     await axios.post(`${apiRoot()}/public/invitations/${slug}/requests`, payload);
   },
+
+  // ── Telegram forwarding ──
+  async telegramStatus(id: string): Promise<TelegramStatus> {
+    const { data } = await httpClient.get<TelegramStatus>(`/telegram/flyers/${id}/status`);
+    return data;
+  },
+  async telegramRotate(id: string): Promise<TelegramStatus> {
+    const { data } = await httpClient.post<Omit<TelegramStatus, 'enabled'>>(`/telegram/flyers/${id}/rotate`);
+    return { ...data, enabled: true };
+  },
+  async telegramRemoveLink(id: string, linkId: string): Promise<void> {
+    await httpClient.delete(`/telegram/flyers/${id}/links/${linkId}`);
+  },
+};
+
+export type TelegramLink = {
+  id: string;
+  chatId: string;
+  username: string | null;
+  firstName: string | null;
+  createdAt: string;
+};
+// `enabled:false` means the server has no bot token configured.
+export type TelegramStatus = {
+  enabled: boolean;
+  code?: string;
+  link?: string | null;
+  links?: TelegramLink[];
 };
