@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { invitationService, type Invitation, type InvitationRequest, type TelegramStatus } from '../services/invitation.service';
+import { invitationService, type Invitation, type TelegramStatus } from '../services/invitation.service';
 import QRCode from 'qrcode';
 import { type DesignTheme, designTemplateService } from '../services/designTemplate.service';
 import { buildSubdomainBase } from '../utils/subdomain';
@@ -328,9 +329,9 @@ function TelegramButton({ invitationId, t }: { invitationId: string; t: (k: Para
       <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(true)}>
         ✈ {t('tg_connect')}
       </button>
-      {open && (
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '84vh', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
+      {open && createPortal(
+        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 16 }}>✈ {t('tg_connect')}</h3>
               <button type="button" onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
@@ -387,51 +388,18 @@ function TelegramButton({ invitationId, t }: { invitationId: string; t: (k: Para
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
 }
 
-// Top-bar button that opens the call-back leads captured from this flyer's form block.
+// Top-bar link to the flyer's requests page (table of all form submissions).
 function RequestsButton({ invitationId, t }: { invitationId: string; t: (k: Parameters<typeof translate>[0]) => string }) {
-  const [open, setOpen] = useState(false);
-  const { data: requests = [] } = useQuery({
-    queryKey: ['invitation-requests', invitationId],
-    queryFn: () => invitationService.listRequests(invitationId),
-    enabled: open,
-  });
   return (
-    <>
-      <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(true)}>
-        {t('flyer_requests')}
-      </button>
-      {open && (
-        <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 16 }}>{t('flyer_requests')} · {requests.length}</h3>
-              <button type="button" onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
-            </div>
-            {requests.length === 0 ? (
-              <p style={{ margin: 0, color: 'rgba(226,232,240,0.6)', fontSize: 13 }}>{t('no_requests')}</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {requests.map((r: InvitationRequest) => (
-                  <div key={r.id} style={{ padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                      <span style={{ color: '#f8fafc', fontWeight: 600, fontSize: 14 }}>{r.name}</span>
-                      <a href={`tel:${r.phone}`} style={{ color: '#c9a42c', fontSize: 13, textDecoration: 'none' }}>{r.phone}</a>
-                    </div>
-                    {r.message && <p style={{ margin: '6px 0 0', color: 'rgba(226,232,240,0.75)', fontSize: 13 }}>{r.message}</p>}
-                    <p style={{ margin: '6px 0 0', color: 'rgba(226,232,240,0.4)', fontSize: 11 }}>{new Date(r.createdAt).toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+    <Link to={`/flyers/${invitationId}/requests`} className="adm-btn-ghost" style={{ fontSize: 12, textDecoration: 'none' }}>
+      {t('flyer_requests')}
+    </Link>
   );
 }
