@@ -3,7 +3,7 @@
 // visit (nothing is cached yet); once a flyer has been opened online, its app
 // shell, assets, images and data are cached and it reopens offline.
 
-const CACHE = 'vmenu-v3';
+const CACHE = 'vmenu-v4';
 // The SPA shell we always want available offline for navigations.
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
@@ -29,11 +29,27 @@ function put(request, response) {
   return response;
 }
 
-// Cache-first with background refresh (stale-while-revalidate).
+// Cache-first with background refresh (stale-while-revalidate). Good for
+// immutable, content-hashed build assets.
 async function staleWhileRevalidate(request) {
   const cached = await caches.match(request);
   const network = fetch(request).then((res) => (res && res.ok ? put(request, res) : res)).catch(() => null);
   return cached || (await network) || fetch(request);
+}
+
+// Network-first with a cache fallback. Used for mutable flyer data so edits show
+// immediately when online, while a previously-opened flyer still loads offline.
+async function networkFirst(request) {
+  try {
+    const res = await fetch(request);
+    if (res && res.ok) return put(request, res);
+    // Non-OK (e.g. 404) — prefer a good cached copy if we have one.
+    return (await caches.match(request)) || res;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    throw new Error('offline and not cached');
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -52,14 +68,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isAsset = url.origin === self.location.origin;
+  const isAsset = url.origin === self.location.origin && !url.pathname.startsWith('/api/');
   const isApi = url.pathname.includes('/api/public/');
   const isUpload = url.pathname.includes('/uploads/');
 
-  // Same-origin build assets, the public (no-auth) flyer API, and uploaded
-  // images are cached so a previously-opened flyer renders offline. Everything
-  // else (authenticated API calls, etc.) falls through to the default fetch.
-  if (isAsset || isApi || isUpload) {
+  // Flyer data must be fresh on every online visit (edits appear immediately),
+  // falling back to cache only when offline.
+  if (isApi) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+  // Immutable build assets and uploaded images are content-addressed, so serving
+  // the cached copy first (with a background refresh) is safe and fast; a
+  // previously-opened flyer still renders offline.
+  if (isAsset || isUpload) {
     event.respondWith(staleWhileRevalidate(request));
   }
 });
