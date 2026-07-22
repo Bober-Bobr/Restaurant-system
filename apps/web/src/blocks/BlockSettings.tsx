@@ -1,5 +1,6 @@
 import type { Block, BlockFieldDef, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { BLOCK_DEFS } from './types';
+import { FONT_OPTIONS, fontStack } from './fonts';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
 import { PhotoUploadField } from '../components/PhotoUploadField';
@@ -58,6 +59,13 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
         onBody={(v) => setProp('bodyScale', v)}
         t={t}
       />
+      <FontControls
+        heading={typeof block.props.headingFont === 'string' ? block.props.headingFont : ''}
+        body={typeof block.props.bodyFont === 'string' ? block.props.bodyFont : ''}
+        onHeading={(v) => setProp('headingFont', v)}
+        onBody={(v) => setProp('bodyFont', v)}
+        t={t}
+      />
       <AnimationControls value={block.anim} onChange={setAnim} t={t} />
     </div>
   );
@@ -65,6 +73,34 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
 
 function Labeled({ text, children }: { text: string; children: React.ReactNode }) {
   return <label style={{ display: 'grid', gap: 5 }}><span style={label}>{text}</span>{children}</label>;
+}
+
+// Two dropdowns (headings + body) choosing a font family per block. Each option
+// previews in its own font; the empty key keeps the design's default font.
+function FontControls({ heading, body, onHeading, onBody, t }: {
+  heading: string; body: string; onHeading: (v: string) => void; onBody: (v: string) => void; t: T;
+}) {
+  const select = (val: string, on: (v: string) => void, lbl: string) => (
+    <div style={{ display: 'grid', gap: 4 }}>
+      <span style={label}>{lbl}</span>
+      <select
+        value={val}
+        onChange={(e) => on(e.target.value)}
+        style={{ ...input, fontFamily: fontStack(val) || 'inherit', cursor: 'pointer' }}
+      >
+        {FONT_OPTIONS.map((f) => (
+          <option key={f.key} value={f.key} style={{ fontFamily: f.stack || 'inherit', color: '#111' }}>{f.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+  return (
+    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_fonts')}</span>
+      {select(heading, onHeading, t('bf_heading_size'))}
+      {select(body, onBody, t('bf_body_size'))}
+    </div>
+  );
 }
 
 // Two sliders (headings + body) that write a font-size multiplier onto the
