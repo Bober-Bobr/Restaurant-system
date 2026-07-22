@@ -7,7 +7,7 @@ import { getEventSubdomainSlug } from '../utils/subdomain';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
-import { BlockList, VConnectFooter, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { BlockList, VConnectFooter, VConnectContact, findVcContact, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 import { ParticleField } from '../blocks/ParticleField';
 import { translate } from '../utils/translate';
 
@@ -109,7 +109,18 @@ export const PublicInvitationPage = () => {
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
           <BlockList blocks={invitation.blocks} ctx={ctx} />
-          <VConnectFooter label={translate('developed_by_vconnect', 'ru')} />
+          <VConnectFooter label={translate('website_developed_by', 'ru')} />
+          {(() => {
+            const vc = findVcContact(invitation.blocks);
+            return vc ? (
+              <VConnectContact
+                phone={vc.phone} telegram={vc.telegram}
+                title={translate('vc_contact_title', 'ru')}
+                callLabel={translate('vc_call', 'ru')}
+                telegramLabel={translate('vc_telegram', 'ru')}
+              />
+            ) : null;
+          })()}
         </div>
       </main>
     );
@@ -347,7 +358,7 @@ export const PublicInvitationPage = () => {
           {invitation.restaurant?.name ?? ''}
         </p>
 
-        <VConnectFooter label={translate('developed_by_vconnect', 'ru')} />
+        <VConnectFooter label={translate('website_developed_by', 'ru')} />
       </div>
     </main>
   );

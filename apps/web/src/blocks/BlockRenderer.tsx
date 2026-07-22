@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool, BLOCK_DEFS } from './types';
+import { str, bool, fontScale, BLOCK_DEFS } from './types';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { translate } from '../utils/translate';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 export type RenderCtx = {
@@ -70,11 +71,20 @@ function SuccessAlert({ title, subtitle }: { title: string; subtitle?: string })
 }
 
 // Page-wide text scale, provided by BlockList and read by each text component
-// via `useFs`, which returns a helper that scales a base px size.
-const ScaleCtx = createContext<number>(1);
+// via `useFs` (body) and `useFsH` (headings). Each scale is the page-wide
+// textScale multiplied by the block's own heading/body multiplier, so a block
+// can size its title and its body text independently.
+const ScaleCtx = createContext<{ h: number; b: number }>({ h: 1, b: 1 });
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
 function useFs(): (n: number) => number {
   const s = useContext(ScaleCtx);
-  return (n: number) => Math.round(n * (s || 1) * 100) / 100;
+  return (n: number) => round2(n * (s.b || 1));
+}
+function useFsH(): (n: number) => number {
+  const s = useContext(ScaleCtx);
+  return (n: number) => round2(n * (s.h || 1));
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -102,8 +112,10 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   // The section sets the inherited text color; sub-components use `inherit`.
   // Per-block `textColor` overrides the page-wide color (ctx.text).
   const color = str(block.props, 'textColor') || ctx.text || TEXT;
+  const base = ctx.textScale ?? 1;
+  const scales = { h: base * fontScale(block.props, 'headingScale'), b: base * fontScale(block.props, 'bodyScale') };
   return (
-    <ScaleCtx.Provider value={ctx.textScale ?? 1}>
+    <ScaleCtx.Provider value={scales}>
       <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color }}>
         <BlockBody block={block} ctx={ctx} />
       </AnimatedSection>
@@ -115,19 +127,20 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
   const accent = ctx.accent;
   const fs = useFs();
+  const fsH = useFsH();
   switch (block.type) {
     case 'hero': {
       const src = img(str(p, 'imageUrl'));
       return (
         <section style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', position: 'relative', background: src ? `linear-gradient(rgba(255,255,255,0.05),rgba(255,255,255,0.05)), url(${src}) center / cover` : 'transparent' }}>
-          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: fs(40), lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
+          {str(p, 'title') && <h1 style={{ margin: 0, fontSize: fsH(40), lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
           {str(p, 'subtitle') && <p style={{ position: 'absolute', bottom: 28, margin: 0, fontSize: fs(12), letterSpacing: '0.25em', color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>{str(p, 'subtitle')}</p>}
         </section>
       );
     }
     case 'heading':
       if (bool(p, 'marquee')) return <MarqueeHeading text={str(p, 'text')} />;
-      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: fs(26), letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
+      return <h2 style={{ margin: 0, padding: '22px 24px 6px', fontSize: fsH(26), letterSpacing: '0.08em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit' }}>{str(p, 'text')}</h2>;
     case 'text':
       return <p style={{ margin: 0, padding: '10px 24px', fontSize: fs(14), lineHeight: 1.7, letterSpacing: '0.03em', textAlign: (str(p, 'align', 'center') as 'left'), color: 'inherit', opacity: 0.85, fontFamily: 'system-ui, sans-serif', whiteSpace: 'pre-line' }}>{str(p, 'text')}</p>;
     case 'image': {
@@ -190,6 +203,15 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} />;
     case 'divider':
       return <Divider shape={str(p, 'shape', 'line')} text={str(p, 'text')} accent={accent} />;
+    case 'vccontact':
+      return (
+        <VConnectContact
+          phone={str(p, 'phone')} telegram={str(p, 'telegram')}
+          title={translate('vc_contact_title', 'ru')}
+          callLabel={translate('vc_call', 'ru')}
+          telegramLabel={translate('vc_telegram', 'ru')}
+        />
+      );
     default:
       return null;
   }
@@ -327,6 +349,7 @@ function CdColon({ accent }: { accent: string }) {
 // forced white and padding tightened; otherwise it inherits the page text color.
 function CountdownView({ targetAt, label, accent, light }: { targetAt: string | null; label: string; accent: string; light?: boolean }) {
   const fs = useFs();
+  const fsH = useFsH();
   const cd = useCountdown(targetAt);
   const groups = [
     { v: cd?.days ?? 0, l: 'Дни' },
@@ -338,7 +361,7 @@ function CountdownView({ targetAt, label, accent, light }: { targetAt: string | 
   return (
     <section style={{ padding: light ? '8px 12px 12px' : '28px 12px', textAlign: 'center' }}>
       <style>{CD_KEYFRAMES}</style>
-      {label && <h2 style={{ margin: light ? '0 0 12px' : '0 0 20px', fontSize: fs(light ? 18 : 22), letterSpacing: '0.08em', color: labelColor }}>{label}</h2>}
+      {label && <h2 style={{ margin: light ? '0 0 12px' : '0 0 20px', fontSize: fsH(light ? 18 : 22), letterSpacing: '0.08em', color: labelColor }}>{label}</h2>}
       <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {groups.map((g, gi) => {
           const s = String(Math.min(99, Math.max(0, g.v))).padStart(2, '0');
@@ -362,10 +385,11 @@ function CountdownView({ targetAt, label, accent, light }: { targetAt: string | 
 
 function TimingView({ title, items, accent }: { title: string; items: TimingItem[]; accent: string }) {
   const fs = useFs();
+  const fsH = useFsH();
   if (items.length === 0) return <Placeholder label="Timing" />;
   return (
     <section style={{ padding: '36px 32px' }}>
-      {title && <h2 style={{ margin: '0 0 26px', fontSize: fs(38), textAlign: 'center', letterSpacing: '0.08em', color: 'inherit' }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 26px', fontSize: fsH(38), textAlign: 'center', letterSpacing: '0.08em', color: 'inherit' }}>{title}</h2>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {items.map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 18 }}>
@@ -462,10 +486,11 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
 
 function SocialsView({ title, links, accent }: { title: string; links: SocialLink[]; accent: string }) {
   const fs = useFs();
+  const fsH = useFsH();
   return (
     <section style={{ padding: '24px 20px' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
-      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fs(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
+      {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fsH(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
           <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'system-ui, sans-serif', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
@@ -480,11 +505,12 @@ function SocialsView({ title, links, accent }: { title: string; links: SocialLin
 
 function ContactsView({ p }: { p: BlockProps; accent: string }) {
   const fs = useFs();
+  const fsH = useFsH();
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
   return (
     <section style={{ padding: '28px 20px', textAlign: 'center' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
-      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: fs(18), fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
+      {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: fsH(18), fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{str(p, 'title')}</h3>}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
         {tg && <IconLink href={tg} delay={0}><SvgTelegram /></IconLink>}
         {phone && <IconLink href={`tel:${phone}`} delay={0.35}><SvgPhone /></IconLink>}
@@ -524,6 +550,7 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
 
 function RsvpForm({ title, accent, submit }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void> }) {
   const fs = useFs();
+  const fsH = useFsH();
   const [name, setName] = useState('');
   const [attending, setAttending] = useState<boolean | null>(null);
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
@@ -540,7 +567,7 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
   );
   return (
     <section style={{ padding: '40px 24px', textAlign: 'center' }}>
-      {title && <h2 style={{ margin: '0 0 22px', fontSize: fs(28), letterSpacing: '0.06em', color: 'inherit' }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 22px', fontSize: fsH(28), letterSpacing: '0.06em', color: 'inherit' }}>{title}</h2>}
       {state === 'done' ? (
         <p style={{ margin: 0, fontSize: fs(18), color: accent, fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>Спасибо! Ваш ответ получен.</p>
       ) : (
@@ -576,6 +603,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName
   accent: string; brandName?: string | null; submit?: (p: { name: string; phone: string; message?: string }) => Promise<void>;
 }) {
   const fs = useFs();
+  const fsH = useFsH();
   const [name, setName] = useState('');
   const [country, setCountry] = useState(0);
   const [phone, setPhone] = useState('');
@@ -604,7 +632,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName
   return (
     <section style={{ padding: '36px 24px', textAlign: 'center' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
-      {title && <h2 style={{ margin: '0 0 8px', fontSize: fs(26), letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
+      {title && <h2 style={{ margin: '0 0 8px', fontSize: fsH(26), letterSpacing: '0.04em', color: 'inherit' }}>{title}</h2>}
       {subtitle && <p style={{ margin: '0 0 22px', fontSize: fs(13), lineHeight: 1.5, opacity: 0.85, fontFamily: 'system-ui, sans-serif', color: 'inherit' }}>{subtitle}</p>}
       {state === 'done' ? (
         <>
@@ -712,14 +740,15 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
 // Content is duplicated so the -50% translate loops seamlessly.
 function MarqueeHeading({ text }: { text: string }) {
   const fs = useFs();
+  const fsH = useFsH();
   const content = Array(4).fill(text || '…').join('   •   ');
   const half: React.CSSProperties = { paddingRight: 36, flexShrink: 0 };
   return (
     <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', padding: '18px 0 8px' }}>
       <style>{'@keyframes blkMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }'}</style>
       <div style={{ display: 'inline-flex', animation: 'blkMarquee 16s linear infinite', willChange: 'transform' }}>
-        <h2 style={{ ...half, margin: 0, fontSize: fs(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }}>{content}</h2>
-        <h2 style={{ ...half, margin: 0, fontSize: fs(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
+        <h2 style={{ ...half, margin: 0, fontSize: fsH(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }}>{content}</h2>
+        <h2 style={{ ...half, margin: 0, fontSize: fsH(26), letterSpacing: '0.08em', color: 'inherit', fontWeight: 600 }} aria-hidden>{content}</h2>
       </div>
     </div>
   );
@@ -750,29 +779,71 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
 // Render an ordered block list (used by both the editor preview and public pages).
 // Hidden blocks are skipped entirely on the page.
 export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) {
+  // Each BlockView provides its own (heading/body) scale context, so no outer
+  // provider is needed here. `vccontact` is pulled out and rendered below the
+  // footer by the flyer page, so it never shows in the normal flow.
   return (
-    <ScaleCtx.Provider value={ctx.textScale ?? 1}>
-      {blocks.filter((b) => !b.hidden).map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
-    </ScaleCtx.Provider>
+    <>
+      {blocks.filter((b) => !b.hidden && b.type !== 'vccontact').map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
+    </>
   );
 }
 
-// Mandatory attribution shown at the bottom of every flyer: "developed by
-// V-connect" + the V-connect logo. Not a block — always rendered, not removable.
+// The V-connect contact info a flyer carries (in its single `vccontact` block),
+// used to render the contact card beneath the attribution footer.
+export function findVcContact(blocks: Block[]): { phone: string; telegram: string } | null {
+  const b = blocks.find((x) => x.type === 'vccontact' && !x.hidden);
+  if (!b) return null;
+  return { phone: str(b.props, 'phone'), telegram: str(b.props, 'telegram') };
+}
+
+// Mandatory attribution shown at the bottom of every flyer: "Website developed
+// by" → the V-connect logo → "V-connect" in bold. Not a block — always
+// rendered, not removable. `label` is the leading "Website developed by" line.
 export function VConnectFooter({ label }: { label: string }) {
   return (
     <div
       aria-label="V-connect"
       style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
         padding: '26px 20px 30px', margin: '10px 0 0',
         borderTop: '1px solid rgba(0,0,0,0.08)',
       }}
     >
-      <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.04em', color: '#000', fontFamily: 'system-ui, sans-serif', textAlign: 'center', lineHeight: 1.35 }}>
+      <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: '#000', fontFamily: 'system-ui, sans-serif', textAlign: 'center', textTransform: 'uppercase', opacity: 0.75 }}>
         {label}
       </span>
-      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 56, width: 'auto' }} />
+      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 60, width: 'auto' }} />
+      <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.03em', color: '#000', fontFamily: 'system-ui, sans-serif' }}>
+        V-connect
+      </span>
+    </div>
+  );
+}
+
+// "Contact us" section for reaching V-connect, rendered just below the footer
+// ad. Phone and Telegram are set per flyer in the builder (the `vccontact`
+// block). Renders nothing until at least one is filled in.
+export function VConnectContact({ phone, telegram, title, callLabel, telegramLabel }: {
+  phone?: string | null; telegram?: string | null;
+  title: string; callLabel: string; telegramLabel: string;
+}) {
+  const tel = (phone || '').trim();
+  const tg = (telegram || '').trim();
+  if (!tel && !tg) return null;
+  const tgHref = tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/^@/, '')}`;
+  const chip: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 999,
+    fontSize: 14, fontWeight: 700, letterSpacing: '0.04em', fontFamily: 'system-ui, sans-serif',
+    textDecoration: 'none', border: '1px solid rgba(0,0,0,0.15)',
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '4px 20px 34px' }}>
+      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#000', opacity: 0.7, fontFamily: 'system-ui, sans-serif' }}>{title}</span>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: '#000', color: '#fff' }}>{callLabel} {tel}</a>}
+        {tg && <a href={tgHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: '#fff', color: '#000' }}>{telegramLabel}</a>}
+      </div>
     </div>
   );
 }

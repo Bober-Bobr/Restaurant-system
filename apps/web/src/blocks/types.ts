@@ -24,7 +24,8 @@ export type BlockType =
   | 'map'
   | 'promo'
   | 'html'
-  | 'divider';
+  | 'divider'
+  | 'vccontact';
 
 export type BlockProps = Record<string, unknown>;
 
@@ -195,6 +196,17 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'instagramUrl', labelKey: 'bf_instagram', type: 'text' },
     ],
   },
+  // Contact card for reaching V-connect. Rendered below the flyer's mandatory
+  // attribution footer, not in the normal block flow.
+  vccontact: {
+    type: 'vccontact', icon: '🛠', labelKey: 'bl_vccontact',
+    defaultProps: { phone: '', telegram: '' },
+    defaultAnim: { type: 'none', durationMs: 0, delayMs: 0 },
+    fields: [
+      { key: 'phone', labelKey: 'bf_vc_phone', type: 'text' },
+      { key: 'telegram', labelKey: 'bf_vc_telegram', type: 'text' },
+    ],
+  },
   rsvp: {
     type: 'rsvp', icon: '✅', labelKey: 'block_rsvp',
     defaultProps: { title: 'ПОДТВЕРДИТЕ ПРИСУТСТВИЕ' },
@@ -272,7 +284,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 // `menu` and `promo` are intentionally omitted — a static photo (image block) is
 // used instead. Both types are still rendered for back-compat with old designs.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'html', 'divider',
+  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'html', 'divider', 'vccontact',
 ];
 
 export function createBlock(type: BlockType): Block {
@@ -283,3 +295,13 @@ export function createBlock(type: BlockType): Block {
 // Small typed prop readers used by the renderer/settings.
 export const str = (p: BlockProps, k: string, d = ''): string => (typeof p[k] === 'string' ? (p[k] as string) : d);
 export const bool = (p: BlockProps, k: string): boolean => p[k] === true;
+export const num = (p: BlockProps, k: string, d = 0): number => (typeof p[k] === 'number' && Number.isFinite(p[k]) ? (p[k] as number) : d);
+
+// Per-block font-size multipliers (headings and body), clamped to a safe range
+// so a stray value can never blow up or collapse a layout.
+export const FONT_SCALE_MIN = 0.6;
+export const FONT_SCALE_MAX = 2;
+export function fontScale(p: BlockProps, key: 'headingScale' | 'bodyScale'): number {
+  const v = num(p, key, 1);
+  return Math.max(FONT_SCALE_MIN, Math.min(FONT_SCALE_MAX, v));
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Block, BlockType } from './types';
 import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
-import { BlockView, VConnectFooter, readableText, type RenderCtx } from './BlockRenderer';
+import { BlockView, VConnectFooter, VConnectContact, findVcContact, readableText, type RenderCtx } from './BlockRenderer';
 import { ParticleField, type ParticleKind } from './ParticleField';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
@@ -94,7 +94,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           )}
           {blocks.map((b, i) => (
             preview ? (
-              b.hidden ? null : <BlockView key={b.id} block={b} ctx={ctx} />
+              (b.hidden || b.type === 'vccontact') ? null : <BlockView key={b.id} block={b} ctx={ctx} />
             ) : (
               <EditableBlock
                 key={b.id}
@@ -114,8 +114,18 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
               </EditableBlock>
             )
           ))}
-          {/* Every flyer ends with the mandatory V-connect attribution. */}
-          {kind === 'flyer' && <VConnectFooter label={t('developed_by_vconnect')} />}
+          {/* Every flyer ends with the mandatory V-connect attribution, then the
+              contact card (in preview; in edit mode it shows as its own block). */}
+          {kind === 'flyer' && <VConnectFooter label={t('website_developed_by')} />}
+          {kind === 'flyer' && preview && (() => {
+            const vc = findVcContact(blocks);
+            return vc ? (
+              <VConnectContact
+                phone={vc.phone} telegram={vc.telegram}
+                title={t('vc_contact_title')} callLabel={t('vc_call')} telegramLabel={t('vc_telegram')}
+              />
+            ) : null;
+          })()}
         </div>
       </div>
 
@@ -132,7 +142,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
       {paletteOpen && (
         <Modal onClose={() => setPaletteOpen(false)} title={t('choose_block')}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
-            {PALETTE_ORDER.map((type) => (
+            {PALETTE_ORDER.filter((type) => kind === 'flyer' || type !== 'vccontact').map((type) => (
               <button key={type} type="button" onClick={() => addBlock(type)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 8px', borderRadius: 12, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>
                 <span style={{ fontSize: 24 }}>{BLOCK_DEFS[type].icon}</span>

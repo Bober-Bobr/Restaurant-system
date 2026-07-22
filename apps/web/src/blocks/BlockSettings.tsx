@@ -50,6 +50,14 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
           restaurantId={restaurantId}
         />
       )}
+      {/* Per-block font size — headings and body text, available on every block. */}
+      <FontSizeControls
+        heading={typeof block.props.headingScale === 'number' ? block.props.headingScale : 1}
+        body={typeof block.props.bodyScale === 'number' ? block.props.bodyScale : 1}
+        onHeading={(v) => setProp('headingScale', v)}
+        onBody={(v) => setProp('bodyScale', v)}
+        t={t}
+      />
       <AnimationControls value={block.anim} onChange={setAnim} t={t} />
     </div>
   );
@@ -57,6 +65,33 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
 
 function Labeled({ text, children }: { text: string; children: React.ReactNode }) {
   return <label style={{ display: 'grid', gap: 5 }}><span style={label}>{text}</span>{children}</label>;
+}
+
+// Two sliders (headings + body) that write a font-size multiplier onto the
+// block. 1 = the design's default size; the renderer clamps to [0.6, 2].
+function FontSizeControls({ heading, body, onHeading, onBody, t }: {
+  heading: number; body: number; onHeading: (v: number) => void; onBody: (v: number) => void; t: T;
+}) {
+  const row = (val: number, on: (v: number) => void, lbl: string) => (
+    <div style={{ display: 'grid', gap: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={label}>{lbl}</span>
+        <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.85)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(val * 100)}%</span>
+      </div>
+      <input
+        type="range" min={0.6} max={2} step={0.05} value={val}
+        onChange={(e) => on(Number(e.target.value))}
+        style={{ width: '100%', accentColor: '#c9a42c', cursor: 'pointer' }}
+      />
+    </div>
+  );
+  return (
+    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_font_sizes')}</span>
+      {row(heading, onHeading, t('bf_heading_size'))}
+      {row(body, onBody, t('bf_body_size'))}
+    </div>
+  );
 }
 
 function FieldEditor({ field, value, onChange, t, restaurantId }: {

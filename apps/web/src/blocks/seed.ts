@@ -33,6 +33,9 @@ export function seedFlyerBlocks(inv: Partial<Invitation>): Block[] {
   if (inv.menuItems && inv.menuItems.length) out.push(block('menu', { title: 'МЕНЮ · MENU', items: inv.menuItems }));
   if (inv.galleryPhotos && inv.galleryPhotos.length) out.push(block('gallery', { items: normalizeGalleryItems(inv.galleryPhotos) }));
   out.push(block('contacts', { title: inv.contactsTitle ?? 'НАШИ КОНТАКТЫ', phone: inv.phone ?? '', instagramUrl: inv.instagramUrl ?? '', telegramUrl: inv.telegramUrl ?? '' }));
+  // Contact card for reaching V-connect — always present (rendered after the
+  // mandatory attribution footer). Empty by default; the manager fills it in.
+  out.push(block('vccontact', {}));
   return out;
 }
 
