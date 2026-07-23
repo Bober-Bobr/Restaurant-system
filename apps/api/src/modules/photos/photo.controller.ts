@@ -66,6 +66,28 @@ export class PhotoController {
     }
   }
 
+  async uploadVideo(req: Request, res: Response) {
+    try {
+      const files = (req.files as any)?.files || [];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+
+      const role = req.admin?.role;
+      const bodyRestaurantId = typeof req.body.restaurantId === 'string' ? req.body.restaurantId.trim() : '';
+      const restaurantId = canScopeToAnyRestaurant(role) && bodyRestaurantId
+        ? bodyRestaurantId
+        : req.admin?.restaurantId ?? null;
+      // Stored under the restaurant's `invitation` folder alongside other assets.
+      const urls = await this.photoService.uploadPhotos('invitation', files, restaurantId);
+      res.json({ urls });
+    } catch (error) {
+      console.error('Video upload error:', error);
+      res.status(500).json({ error: 'Failed to upload video' });
+    }
+  }
+
   async listPhotos(req: Request, res: Response) {
     try {
       const category = (req.params.category || '') as string;

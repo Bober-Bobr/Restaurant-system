@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import type { Locale } from '../utils/translate';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
+import { VideoUploadField } from '../components/VideoUploadField';
 import { vinviteService, type InviteRsvp, type TelegramStatus } from './api';
 import { useViT, type ViKey } from './i18n';
 import { useVInviteStore } from './store';
@@ -12,7 +13,7 @@ import { RichRenderer } from './templates/RichRenderer';
 import { getPath, resolveAssetUrls, setPath } from './templates/utils';
 import {
   LOCALES,
-  type AdminElement, type AdminLayer, type AdminSectionStyle,
+  type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle,
   type GalleryItem, type LocalizedText, type RichDesignData, type ScheduleItem,
   type TemplateDefinition, type TemplateField,
 } from './templates/types';
@@ -56,6 +57,9 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   // preview" config until the 👁 button is pressed. Only the Design+ overlay
   // layer stays live, so dragging elements gives instant feedback.
   const [pinnedConfig, setPinnedConfig] = useState(design.config);
+  // Design+ motion paths are paused in the editor (so elements stay under the
+  // cursor while dragging) unless this is toggled on.
+  const [adminPlay, setAdminPlay] = useState(false);
   useEffect(() => { setPinnedConfig(design.config); /* re-pin on template swap */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [design.templateId]);
@@ -191,6 +195,22 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
               👁 {t('refresh_preview')}
               {previewStale && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9a42c', boxShadow: '0 0 8px rgba(201,164,44,0.8)' }} />}
             </button>
+            {isSystemAdmin && (
+              <button
+                type="button"
+                onClick={() => setAdminPlay((v) => !v)}
+                title={t('adm_play')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999,
+                  border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  borderColor: adminPlay ? 'rgba(167,139,250,0.6)' : 'rgba(255,255,255,0.14)',
+                  background: adminPlay ? 'rgba(124,58,237,0.18)' : 'rgba(15,23,42,0.5)',
+                  color: adminPlay ? '#a78bfa' : '#94a3b8',
+                }}
+              >
+                {adminPlay ? '⏸' : '▶'} {t('adm_play')}
+              </button>
+            )}
             <div style={{
               width: '100%', maxWidth: 420, height: 'min(74vh, 820px)', borderRadius: 28, overflow: 'hidden',
               border: '10px solid #0b1120', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', background: '#000',
@@ -201,11 +221,19 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 languages={design.languages}
                 interactive
                 adminEdit={isSystemAdmin}
-                onAdminMove={(id, x, y) => {
+                adminPlay={adminPlay}
+                onAdminMove={(id, x, y, kf) => {
                   const layer = (design.config.adminLayer as AdminLayer) ?? {};
                   setConfig('adminLayer', {
                     ...layer,
-                    elements: (layer.elements ?? []).map((e) => (e.id === id ? { ...e, x, y } : e)),
+                    elements: (layer.elements ?? []).map((e) => {
+                      if (e.id !== id) return e;
+                      // kf set → a motion-path marker was dragged, not the element.
+                      if (kf != null && e.path?.[kf]) {
+                        return { ...e, path: e.path.map((p, i) => (i === kf ? { ...p, x, y } : p)) };
+                      }
+                      return { ...e, x, y };
+                    }),
                   });
                 }}
               />
@@ -570,7 +598,12 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
                   {el.type === 'photo' ? (
                     <PhotoUploadField label="" value={el.src || null} onChange={(url) => setElement(el.id, { src: url ?? '' })} restaurantId="" height={90} />
                   ) : (
-                    <input style={panelInput} placeholder={t('adm_video_url')} value={el.src} onChange={(e) => setElement(el.id, { src: e.target.value })} />
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <VideoUploadField value={el.src || null} onChange={(url) => setElement(el.id, { src: url ?? '' })} restaurantId="" />
+                      {!el.src && (
+                        <input style={panelInput} placeholder={t('adm_video_url')} value={el.src} onChange={(e) => setElement(el.id, { src: e.target.value })} />
+                      )}
+                    </div>
                   )}
 
                   {!el.cover && (
@@ -604,6 +637,8 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
                       <input type="number" min={-1} max={99} value={num(el.z, el.cover ? 0 : 5)} onChange={(e) => setElement(el.id, { z: Number(e.target.value) })} style={{ ...panelInput, width: 56, padding: '4px 6px', marginLeft: 4 }} />
                     </label>
                   </div>
+
+                  {!el.cover && <PathEditor el={el} setElement={setElement} />}
                 </div>
               ))}
             </div>
@@ -647,8 +682,145 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
               </select>
             )}
           </div>
+
+          {/* ── Falling particles ── */}
+          <ParticlesEditor
+            particles={layer.particles}
+            onChange={(particles) => save({ ...layer, particles })}
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Motion path: numbered keyframes the element travels through ──────────────
+// Positions are dragged in the preview (numbered markers); here each stop only
+// exposes its optional pose overrides (rotate / scale / opacity) plus the
+// path's duration, easing and repeat mode.
+function PathEditor({ el, setElement }: {
+  el: AdminElement;
+  setElement: (id: string, patch: Partial<AdminElement>) => void;
+}) {
+  const t = useViT();
+  const path = el.path ?? [];
+  const setKf = (i: number, patch: Partial<AdminKeyframe>) =>
+    setElement(el.id, { path: path.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  const addKf = () => {
+    const last = path[path.length - 1] ?? { x: el.x ?? 50, y: el.y ?? 50 };
+    setElement(el.id, {
+      path: [...path, { x: Math.min(100, (last.x ?? 50) + 12), y: Math.min(100, (last.y ?? 50) + 12) }],
+    });
+  };
+  const removeKf = (i: number) => {
+    const next = path.filter((_, j) => j !== i);
+    setElement(el.id, { path: next.length ? next : undefined });
+  };
+  const kfNum = (v: number | undefined, d: number) => (v == null ? d : v);
+
+  return (
+    <div style={{ display: 'grid', gap: 8, padding: 10, borderRadius: 10, background: 'rgba(124,58,237,0.08)', border: '1px dashed rgba(167,139,250,0.3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', letterSpacing: '0.04em', textTransform: 'uppercase' }}>🎞 {t('adm_path')}</span>
+        <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '3px 10px', marginLeft: 'auto' }} onClick={addKf}>＋ {t('adm_add_kf')}</button>
+      </div>
+
+      {path.length > 0 && (
+        <>
+          <p style={{ margin: 0, fontSize: 11, color: '#a78bfa' }}>↔ {t('adm_kf_hint')}</p>
+          {path.map((p, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{
+                width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                border: '2px dashed rgba(167,139,250,0.95)', background: 'rgba(124,58,237,0.35)',
+                color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>{i + 2}</span>
+              <label style={{ fontSize: 11, color: '#94a3b8' }}>°
+                <input type="number" min={-360} max={360} value={kfNum(p.rotate, el.rotate ?? 0)} onChange={(e) => setKf(i, { rotate: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+              </label>
+              <label style={{ fontSize: 11, color: '#94a3b8' }}>×
+                <input type="number" min={0.1} max={5} step={0.1} value={kfNum(p.scale, 1)} onChange={(e) => setKf(i, { scale: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+              </label>
+              <label style={{ fontSize: 11, color: '#94a3b8' }}>α
+                <input type="number" min={0} max={1} step={0.05} value={kfNum(p.opacity, 1)} onChange={(e) => setKf(i, { opacity: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+              </label>
+              <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '3px 9px', marginLeft: 'auto' }} onClick={() => removeKf(i)}>✕</button>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 11, color: '#94a3b8' }}>{t('adm_dur')}:
+              <input type="number" min={0.5} max={60} step={0.5} value={kfNum(el.pathDur, 6)} onChange={(e) => setElement(el.id, { pathDur: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+            </label>
+            <select value={el.pathEase ?? 'ease-in-out'} onChange={(e) => setElement(el.id, { pathEase: e.target.value as AdminElement['pathEase'] })} style={{ ...panelInput, width: 'auto', padding: '5px 8px', fontSize: 12 }}>
+              <option value="ease-in-out">ease-in-out</option>
+              <option value="ease">ease</option>
+              <option value="linear">linear</option>
+            </select>
+            <select value={el.pathMode ?? 'loop'} onChange={(e) => setElement(el.id, { pathMode: e.target.value as AdminElement['pathMode'] })} style={{ ...panelInput, width: 'auto', padding: '5px 8px', fontSize: 12 }}>
+              <option value="loop">{t('adm_loop')}</option>
+              <option value="alternate">{t('adm_alt')}</option>
+              <option value="once">{t('adm_once')}</option>
+            </select>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Falling particles: preset shapes or a custom uploaded image ──────────────
+const PARTICLE_PRESETS: AdminParticles['preset'][] = ['none', 'confetti', 'snow', 'hearts', 'sparkles', 'petals', 'custom'];
+
+function ParticlesEditor({ particles, onChange }: {
+  particles: AdminParticles | undefined;
+  onChange: (next: AdminParticles | undefined) => void;
+}) {
+  const t = useViT();
+  const p: AdminParticles = particles ?? { preset: 'none' };
+  const set = (patch: Partial<AdminParticles>) => {
+    const next = { ...p, ...patch };
+    onChange(next.preset === 'none' ? undefined : next);
+  };
+  const pnum = (v: number | undefined, d: number) => (v == null ? d : v);
+
+  return (
+    <div>
+      <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_particles')}</div>
+      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 15 }}>❄</span>
+          <select value={p.preset} onChange={(e) => set({ preset: e.target.value as AdminParticles['preset'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
+            {PARTICLE_PRESETS.map((key) => <option key={key} value={key}>{t(`prt_${key}` as ViKey)}</option>)}
+          </select>
+          {p.preset !== 'none' && (
+            <select value={p.mode ?? 'always'} onChange={(e) => set({ mode: e.target.value as AdminParticles['mode'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12, marginLeft: 'auto' }}>
+              <option value="always">{t('adm_mode_always')}</option>
+              <option value="scroll">{t('adm_mode_scroll')}</option>
+            </select>
+          )}
+        </div>
+
+        {p.preset === 'custom' && (
+          <PhotoUploadField label={t('adm_particle_img')} value={p.src || null} onChange={(url) => set({ src: url ?? '' })} restaurantId="" height={90} />
+        )}
+
+        {p.preset !== 'none' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
+            <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+              {t('adm_count')}: {pnum(p.count, 40)}
+              <input type="range" min={5} max={120} value={pnum(p.count, 40)} onChange={(e) => set({ count: Number(e.target.value) })} />
+            </label>
+            <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+              {t('adm_size')}: {pnum(p.size, 14)}
+              <input type="range" min={6} max={48} value={pnum(p.size, 14)} onChange={(e) => set({ size: Number(e.target.value) })} />
+            </label>
+            <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+              {t('adm_speed')}: {pnum(p.speed, 1)}
+              <input type="range" min={0.2} max={3} step={0.1} value={pnum(p.speed, 1)} onChange={(e) => set({ speed: Number(e.target.value) })} />
+            </label>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

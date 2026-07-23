@@ -26,6 +26,14 @@ export class PhotoService {
     return response.data.urls;
   }
 
+  async uploadVideo(files: File[], restaurantId?: string): Promise<string[]> {
+    const formData = new FormData();
+    if (restaurantId) formData.append('restaurantId', restaurantId);
+    files.forEach(file => formData.append('files', file));
+    const response = await httpClient.post<{ urls: string[] }>(`/photos/upload-video`, formData);
+    return response.data.urls;
+  }
+
   async listPhotos(category: PhotoCategory, dishCategory?: string): Promise<string[]> {
     const params = dishCategory ? `?dishCategory=${encodeURIComponent(dishCategory)}` : '';
     const response = await httpClient.get<{ photos: string[] }>(`/photos/${category}${params}`);

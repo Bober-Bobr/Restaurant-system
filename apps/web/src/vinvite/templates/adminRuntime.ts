@@ -1,47 +1,58 @@
 // ── Design+ runtime ──────────────────────────────────────────────────────────
 // A template-agnostic script appended by RichRenderer to EVERY rich template's
 // srcdoc. It renders the system-admin overlay layer (config.adminLayer):
-//   • elements — photos/videos anchored into a section (or fixed), positioned
-//     in %, rotated, animated; `cover` fills the whole section (video covers)
-//   • styles   — per-section background / text color / CSS-variable overrides
+//   • elements  — photos/videos anchored into a section (or fixed), positioned
+//     in %, rotated, animated; `cover` fills the whole section (video covers).
+//     An element with a motion `path` travels base → kf2 → kf3 … via a
+//     generated CSS keyframe animation (loop / alternate / once).
+//   • styles    — per-section background / text color / CSS-variable overrides
 //     (the editor writes the template's accent variables here)
+//   • particles — full-page falling particles on a fixed canvas: preset shapes
+//     or a custom uploaded image; `scroll` mode only falls while scrolling.
 // It keeps its own copy of the layer and re-renders on vinvite:config pushes,
 // so live editing works without reloading the iframe. Plain ES5, no deps.
+//
+// Edit mode (window.__ADMIN_EDIT__): elements are draggable; motion-path stops
+// render as numbered draggable markers (the element itself is stop №1) and the
+// path animation is paused unless the host toggles play (adminPlay).
 
 export const ADMIN_RUNTIME = `(function(){
   var LAYER = (window.__CONFIG__ && window.__CONFIG__.adminLayer) || {};
   var EDIT = window.__ADMIN_EDIT__ === true;
+  var PLAY = window.__ADMIN_PLAY__ === true;
 
-  /* Design+ editing: drag an overlay element to reposition it; the new percent
+  /* Design+ editing: drag a node to reposition it (the element itself, or one
+     of its numbered motion-path markers when kf is set); the new percent
      position is applied live and reported to the host editor on release. */
-  function makeDraggable(wrap, el){
+  function makeDraggable(wrap, el, kf){
     wrap.style.pointerEvents = 'auto';
     wrap.style.cursor = 'move';
     wrap.style.touchAction = 'none';
-    wrap.style.outline = '1px dashed rgba(124,58,237,0.75)';
-    wrap.style.outlineOffset = '2px';
     wrap.addEventListener('pointerdown', function(down){
       down.preventDefault();
       down.stopPropagation();
+      var target = kf == null ? el : el.path[kf];
       var fixed = el.anchor === 'fixed' || !el.anchor;
       var anchor = fixed ? null : document.getElementById(el.anchor);
       var r = fixed
         ? { width: window.innerWidth, height: window.innerHeight }
         : anchor.getBoundingClientRect();
       var startX = down.clientX, startY = down.clientY;
-      var origX = el.x != null ? el.x : 50, origY = el.y != null ? el.y : 50;
+      var origX = target.x != null ? target.x : 50, origY = target.y != null ? target.y : 50;
       function clamp(v){ return Math.max(0, Math.min(100, Math.round(v * 10) / 10)); }
       function apply(mv){
-        el.x = clamp(origX + (mv.clientX - startX) / r.width * 100);
-        el.y = clamp(origY + (mv.clientY - startY) / r.height * 100);
-        wrap.style.left = el.x + '%';
-        wrap.style.top = el.y + '%';
+        target.x = clamp(origX + (mv.clientX - startX) / r.width * 100);
+        target.y = clamp(origY + (mv.clientY - startY) / r.height * 100);
+        wrap.style.left = target.x + '%';
+        wrap.style.top = target.y + '%';
       }
       function onMove(mv){ apply(mv); }
       function onUp(mv){
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
-        window.parent.postMessage({ type: 'vinvite:admin-move', id: el.id, x: el.x, y: el.y }, '*');
+        var msg = { type: 'vinvite:admin-move', id: el.id, x: target.x, y: target.y };
+        if (kf != null) msg.kf = kf;
+        window.parent.postMessage(msg, '*');
       }
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
@@ -56,6 +67,25 @@ export const ADMIN_RUNTIME = `(function(){
     '@keyframes vaSlideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}' +
     '@keyframes vaZoom{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}';
 
+  /* Motion path: one @keyframes per element, animating the wrapper's left/top
+     (and rotate/scale/opacity per stop). Stop 0 is the element's base pose. */
+  function pathCss(el){
+    var pts = el.path;
+    if (!pts || !pts.length) return '';
+    var stops = [{ x: el.x != null ? el.x : 50, y: el.y != null ? el.y : 50 }].concat(pts);
+    var css = '@keyframes vaPath_' + el.id + '{';
+    for (var i = 0; i < stops.length; i++) {
+      var p = stops[i];
+      var pct = Math.round(i / (stops.length - 1) * 1000) / 10;
+      var rot = p.rotate != null ? p.rotate : (el.rotate || 0);
+      var sc = p.scale != null ? p.scale : 1;
+      css += pct + '%{left:' + (p.x != null ? p.x : 50) + '%;top:' + (p.y != null ? p.y : 50) + '%;'
+        + 'transform:translate(-50%,-50%) rotate(' + rot + 'deg) scale(' + sc + ')'
+        + (p.opacity != null ? ';opacity:' + p.opacity : '') + '}';
+    }
+    return css + '}';
+  }
+
   function styleEl(){
     var el = document.getElementById('__vaStyles');
     if (!el) { el = document.createElement('style'); el.id = '__vaStyles'; document.head.appendChild(el); }
@@ -64,6 +94,8 @@ export const ADMIN_RUNTIME = `(function(){
 
   function renderStyles(){
     var css = KEYFRAMES;
+    var els = LAYER.elements || [];
+    for (var e = 0; e < els.length; e++) { if (els[e]) css += pathCss(els[e]); }
     var styles = LAYER.styles || [];
     for (var i = 0; i < styles.length; i++) {
       var s = styles[i];
@@ -76,6 +108,27 @@ export const ADMIN_RUNTIME = `(function(){
       if (rules.length) css += sel + '{' + rules.join(';') + '}';
     }
     styleEl().textContent = css;
+  }
+
+  /* Numbered draggable marker for one motion-path stop (edit mode only). */
+  function kfMarker(anchor, el, i, fixed){
+    var g = document.createElement('div');
+    g.setAttribute('data-va-el', '');
+    var gs = g.style;
+    gs.position = fixed ? 'fixed' : 'absolute';
+    gs.left = (el.path[i].x != null ? el.path[i].x : 50) + '%';
+    gs.top = (el.path[i].y != null ? el.path[i].y : 50) + '%';
+    gs.transform = 'translate(-50%,-50%)';
+    gs.width = '26px'; gs.height = '26px'; gs.borderRadius = '50%';
+    gs.border = '2px dashed rgba(167,139,250,0.95)';
+    gs.background = 'rgba(124,58,237,0.35)';
+    gs.color = '#fff'; gs.fontSize = '12px'; gs.fontWeight = '700';
+    gs.display = 'flex'; gs.alignItems = 'center'; gs.justifyContent = 'center';
+    gs.zIndex = '9999'; gs.userSelect = 'none';
+    gs.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+    g.textContent = String(i + 2);
+    makeDraggable(g, el, i);
+    anchor.appendChild(g);
   }
 
   function renderElements(){
@@ -108,6 +161,13 @@ export const ADMIN_RUNTIME = `(function(){
         ws.width = (el.w != null ? el.w : 30) + '%';
         ws.transform = 'translate(-50%,-50%) rotate(' + (el.rotate || 0) + 'deg)';
         ws.zIndex = el.z != null ? String(el.z) : '5';
+        /* motion path plays for guests; in edit mode only when toggled */
+        if (el.path && el.path.length && (!EDIT || PLAY)) {
+          var mode = el.pathMode || 'loop';
+          ws.animation = 'vaPath_' + el.id + ' ' + (el.pathDur != null ? el.pathDur : 6) + 's '
+            + (el.pathEase || 'ease-in-out') + ' '
+            + (mode === 'once' ? '1 forwards' : mode === 'alternate' ? 'infinite alternate' : 'infinite');
+        }
       }
 
       var node;
@@ -148,16 +208,175 @@ export const ADMIN_RUNTIME = `(function(){
 
       wrap.appendChild(node);
       anchor.appendChild(wrap);
-      if (EDIT && !el.cover) makeDraggable(wrap, el);
+      if (EDIT && !el.cover) {
+        wrap.style.outline = '1px dashed rgba(124,58,237,0.75)';
+        wrap.style.outlineOffset = '2px';
+        makeDraggable(wrap, el);
+        if (el.path) for (var k = 0; k < el.path.length; k++) kfMarker(anchor, el, k, fixed);
+      }
     }
   }
 
-  function render(){ renderStyles(); renderElements(); }
+  /* ── Falling particles ──────────────────────────────────────────────────── */
+  var PT = { key: '', canvas: null, ctx: null, items: [], img: null, raf: 0, cfg: null, boost: 0 };
+
+  var PALETTES = {
+    confetti: ['#f43f5e','#f59e0b','#10b981','#3b82f6','#a855f7','#facc15'],
+    snow: ['rgba(255,255,255,0.9)','rgba(255,255,255,0.7)','rgba(230,240,255,0.8)'],
+    hearts: ['#fb7185','#f43f5e','#fda4af'],
+    sparkles: ['#e8c76a','#f5e2a8','#d4af37'],
+    petals: ['#fbcfe8','#f9a8d4','#fda4af']
+  };
+
+  function onScrollBoost(){ PT.boost = 1; }
+  window.addEventListener('scroll', onScrollBoost, true);
+  window.addEventListener('wheel', onScrollBoost, { passive: true });
+  window.addEventListener('touchmove', onScrollBoost, { passive: true });
+
+  function stopParticles(){
+    if (PT.raf) { cancelAnimationFrame(PT.raf); PT.raf = 0; }
+    if (PT.canvas && PT.canvas.parentNode) PT.canvas.parentNode.removeChild(PT.canvas);
+    PT.canvas = null; PT.ctx = null; PT.items = []; PT.cfg = null; PT.img = null;
+  }
+
+  function resizeCanvas(){
+    if (!PT.canvas) return;
+    PT.canvas.width = window.innerWidth;
+    PT.canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function spawn(cfg, w, h, top){
+    var size = (cfg.size != null ? cfg.size : 14) * (0.6 + Math.random() * 0.8);
+    return {
+      x: Math.random() * w,
+      y: top ? -size - Math.random() * h * 0.3 : Math.random() * h,
+      s: size,
+      vy: (26 + Math.random() * 30) * (cfg.speed != null ? cfg.speed : 1),
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 2.2,
+      ph: Math.random() * Math.PI * 2,
+      sway: 8 + Math.random() * 16,
+      c: Math.floor(Math.random() * 6)
+    };
+  }
+
+  function heartPath(ctx, s){
+    ctx.beginPath();
+    ctx.moveTo(0, s * 0.3);
+    ctx.bezierCurveTo(s * 0.5, -s * 0.3, s * 1.1, s * 0.3, 0, s);
+    ctx.bezierCurveTo(-s * 1.1, s * 0.3, -s * 0.5, -s * 0.3, 0, s * 0.3);
+    ctx.closePath();
+  }
+  function starPath(ctx, s){
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.quadraticCurveTo(s * 0.14, -s * 0.14, s, 0);
+    ctx.quadraticCurveTo(s * 0.14, s * 0.14, 0, s);
+    ctx.quadraticCurveTo(-s * 0.14, s * 0.14, -s, 0);
+    ctx.quadraticCurveTo(-s * 0.14, -s * 0.14, 0, -s);
+    ctx.closePath();
+  }
+
+  function drawParticle(ctx, cfg, it){
+    var pal = PALETTES[cfg.preset] || PALETTES.confetti;
+    var color = pal[it.c % pal.length];
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    if (cfg.preset === 'custom') {
+      if (PT.img && PT.img.complete && PT.img.naturalWidth) {
+        ctx.rotate(it.rot);
+        var ratio = PT.img.naturalHeight / PT.img.naturalWidth || 1;
+        ctx.drawImage(PT.img, -it.s / 2, -it.s * ratio / 2, it.s, it.s * ratio);
+      }
+    } else if (cfg.preset === 'snow') {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, 0, it.s * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (cfg.preset === 'hearts') {
+      ctx.rotate(Math.sin(it.ph) * 0.4);
+      ctx.fillStyle = color;
+      heartPath(ctx, it.s * 0.5);
+      ctx.fill();
+    } else if (cfg.preset === 'sparkles') {
+      ctx.rotate(it.rot);
+      ctx.globalAlpha = 0.55 + Math.sin(it.ph * 3) * 0.45;
+      ctx.fillStyle = color;
+      starPath(ctx, it.s * 0.55);
+      ctx.fill();
+    } else if (cfg.preset === 'petals') {
+      ctx.rotate(it.rot);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      if (ctx.ellipse) ctx.ellipse(0, 0, it.s * 0.5, it.s * 0.28, 0, 0, Math.PI * 2);
+      else ctx.arc(0, 0, it.s * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else { /* confetti */
+      ctx.rotate(it.rot);
+      ctx.fillStyle = color;
+      ctx.fillRect(-it.s * 0.32, -it.s * 0.22, it.s * 0.64, it.s * 0.44);
+    }
+    ctx.restore();
+  }
+
+  var lastT = 0;
+  function tick(now){
+    PT.raf = requestAnimationFrame(tick);
+    if (!PT.ctx || !PT.cfg) return;
+    var dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0.016;
+    lastT = now;
+    var cfg = PT.cfg;
+    var w = PT.canvas.width, h = PT.canvas.height;
+    PT.ctx.clearRect(0, 0, w, h);
+    /* scroll mode: fall only while the guest scrolls (velocity eases out) */
+    var vel = cfg.mode === 'scroll' ? PT.boost : 1;
+    PT.boost *= 0.95;
+    for (var i = 0; i < PT.items.length; i++) {
+      var it = PT.items[i];
+      it.y += it.vy * vel * dt;
+      it.ph += dt * 1.6;
+      it.x += Math.sin(it.ph) * it.sway * dt;
+      it.rot += it.vr * dt;
+      if (it.y > h + it.s) PT.items[i] = spawn(cfg, w, h, true);
+      else if (it.x < -it.s * 2) it.x = w + it.s;
+      else if (it.x > w + it.s * 2) it.x = -it.s;
+      drawParticle(PT.ctx, cfg, it);
+    }
+  }
+
+  function initParticles(){
+    var p = LAYER.particles;
+    var cfg = p && p.preset && p.preset !== 'none' ? p : null;
+    var key = cfg ? JSON.stringify(cfg) : '';
+    if (key === PT.key) return;
+    PT.key = key;
+    stopParticles();
+    if (!cfg) return;
+    var c = document.createElement('canvas');
+    c.setAttribute('data-va-particles', '');
+    c.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9990;';
+    if (typeof c.getContext !== 'function' || typeof requestAnimationFrame !== 'function') return;
+    document.body.appendChild(c);
+    PT.canvas = c;
+    PT.ctx = c.getContext('2d');
+    PT.cfg = cfg;
+    if (cfg.preset === 'custom' && cfg.src) { PT.img = new Image(); PT.img.src = cfg.src; }
+    resizeCanvas();
+    PT.items = [];
+    var n = Math.max(5, Math.min(120, cfg.count != null ? cfg.count : 40));
+    for (var i = 0; i < n; i++) PT.items.push(spawn(cfg, c.width, c.height, cfg.mode === 'scroll'));
+    lastT = 0;
+    PT.raf = requestAnimationFrame(tick);
+  }
+
+  function render(){ renderStyles(); renderElements(); initParticles(); }
 
   window.addEventListener('message', function(e){
     var d = e.data;
     if (d && typeof d === 'object' && d.type === 'vinvite:config' && d.config) {
       LAYER = d.config.adminLayer || {};
+      if (d.adminPlay != null) PLAY = d.adminPlay === true;
       render();
     }
   });

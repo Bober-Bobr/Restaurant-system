@@ -36,9 +36,24 @@ const audioUpload = multer({
   }
 });
 
+// Video uploads (Design+ overlay/cover videos). Larger limit, video-only.
+const videoUpload = multer({
+  limits: {
+    fileSize: 60 * 1024 * 1024, // 60MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed'));
+    }
+  }
+});
+
 // Routes
 router.post('/upload', upload.fields([{ name: 'files', maxCount: 10 }]), (req, res) => photoController.uploadPhotos(req, res));
 router.post('/upload-audio', audioUpload.fields([{ name: 'files', maxCount: 1 }]), (req, res) => photoController.uploadAudio(req, res));
+router.post('/upload-video', videoUpload.fields([{ name: 'files', maxCount: 1 }]), (req, res) => photoController.uploadVideo(req, res));
 router.get('/:category', (req, res) => photoController.listPhotos(req, res));
 router.delete('/:category/:filename', (req, res) => photoController.deletePhoto(req, res));
 

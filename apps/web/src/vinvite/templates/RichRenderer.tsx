@@ -15,9 +15,9 @@ import { ADMIN_RUNTIME } from './adminRuntime';
 type InMsg =
   | { type: 'vinvite:rsvp'; payload: RsvpPayload }
   | { type: 'vinvite:height'; height: number }
-  | { type: 'vinvite:admin-move'; id: string; x: number; y: number };
+  | { type: 'vinvite:admin-move'; id: string; x: number; y: number; kf?: number };
 
-function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean): string {
+function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean): string {
   // The template runs on the opaque `about:srcdoc` origin, so it can't read the
   // host origin itself. Inject it so templates can resolve their own bundled
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
@@ -27,6 +27,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     window.__LANGS__ = ${JSON.stringify(languages)};
     window.__ORIGIN__ = ${JSON.stringify(origin)};
     window.__ADMIN_EDIT__ = ${adminEdit ? 'true' : 'false'};
+    window.__ADMIN_PLAY__ = ${adminPlay ? 'true' : 'false'};
   </script>`;
   // The Design+ overlay runtime (system-admin custom elements / palettes)
   // rides along in every template, after the template's own script.
@@ -41,19 +42,19 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     : withBootstrap + adminScript;
 }
 
-export function RichRenderer({ html, config, languages, onRsvp, onAdminMove, adminEdit, interactive }: RichRendererProps) {
+export function RichRenderer({ html, config, languages, onRsvp, onAdminMove, adminEdit, adminPlay, interactive }: RichRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedRef = useRef(false);
 
   // Built once per mounted template — later prop changes go via postMessage.
-  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit));
+  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit, adminPlay));
   const htmlRef = useRef(html);
   useEffect(() => {
     if (htmlRef.current === html) return;
     // A different template was swapped in — a real reload is required.
     htmlRef.current = html;
     loadedRef.current = false;
-    setDoc(buildSrcDoc(html, config, languages, adminEdit));
+    setDoc(buildSrcDoc(html, config, languages, adminEdit, adminPlay));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html]);
 
@@ -70,7 +71,7 @@ export function RichRenderer({ html, config, languages, onRsvp, onAdminMove, adm
         );
       }
       if (data.type === 'vinvite:admin-move' && onAdminMove) {
-        onAdminMove(data.id, data.x, data.y);
+        onAdminMove(data.id, data.x, data.y, data.kf);
       }
     };
     window.addEventListener('message', onMessage);
@@ -82,10 +83,10 @@ export function RichRenderer({ html, config, languages, onRsvp, onAdminMove, adm
   useEffect(() => {
     if (!loadedRef.current) return;
     iframeRef.current?.contentWindow?.postMessage(
-      { type: 'vinvite:config', config, languages },
+      { type: 'vinvite:config', config, languages, ...(adminEdit ? { adminPlay: !!adminPlay } : {}) },
       '*',
     );
-  }, [config, languages]);
+  }, [config, languages, adminEdit, adminPlay]);
 
   return (
     <iframe
