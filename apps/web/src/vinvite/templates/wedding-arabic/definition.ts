@@ -2,10 +2,10 @@ import html from './template.html?raw';
 import { RichRenderer } from '../RichRenderer';
 import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../types';
 
-// ── "Golden Arch" Arabic-style wedding template ──────────────────────────────
-// Envelope opening → arch hero with both names → invitation card → venue/date/
-// time + map → photo gallery → countdown → RSVP → V-invite attribution.
-// Warm palette only (ivory, sand, champagne, gold, bronze).
+// ── "Golden Hour Envelope" Arabic luxury wedding template ────────────────────
+// Envelope gate (wax seal → flap → letter slides out & unfolds) → golden-hour
+// hero → invitation card → venue/date/time + map → photo gallery → countdown →
+// RSVP → V-invite attribution. Warm ivory · champagne gold · deep coffee.
 
 const groups: TemplateFieldGroup[] = [
   { key: 'couple', labelKey: 'tg_couple', icon: '💍' },
@@ -14,6 +14,7 @@ const groups: TemplateFieldGroup[] = [
   { key: 'venue', labelKey: 'tg_venue', icon: '📍' },
   { key: 'gallery', labelKey: 'tg_gallery', icon: '📷' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
+  { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
 ];
 
 const fields: TemplateField[] = [
@@ -34,6 +35,14 @@ const fields: TemplateField[] = [
   { key: 'gallery', path: 'gallery', type: 'gallery', group: 'gallery', labelKey: 'tg_gallery' },
 
   { key: 'music', path: 'music.url', type: 'audio', group: 'music', labelKey: 'tg_music' },
+
+  // Block visibility: hidden.<key> === true switches the section off.
+  { key: 'v_message', path: 'hidden.message', type: 'toggle', group: 'visibility', labelKey: 'sec_message' },
+  { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
+  { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
+  { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
+  { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
 ];
 
 const defaultConfig = {
@@ -63,6 +72,8 @@ const defaultConfig = {
   // Photos the couple uploads; an empty list hides the gallery section.
   gallery: [] as { image: string; caption: Record<string, string> }[],
   music: { url: '' },
+  // Sections switched off in the builder (all visible by default).
+  hidden: {} as Record<string, boolean>,
 };
 
 export const weddingArabicTemplate: TemplateDefinition = {
