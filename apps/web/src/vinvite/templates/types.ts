@@ -104,4 +104,52 @@ export type TemplateDefinition = {
   // The renderer component (all templates share RichRenderer; kept for future
   // per-template overrides).
   Renderer: ComponentType<RichRendererProps>;
+  // Section element ids a system admin can anchor overlay elements to / restyle
+  // (see AdminLayer). Order = page order.
+  sectionIds?: string[];
+  // CSS custom properties that carry the template's accent color — the Design+
+  // "accent" picker overrides all of them, scoped to the chosen section.
+  accentVars?: string[];
+};
+
+// ── Design+ (system-admin) overlay layer ─────────────────────────────────────
+// Stored inside the project's rich config as `config.adminLayer`; rendered by
+// the shared admin runtime injected into every template's iframe. Regular
+// users never see the editing UI, but the layer renders for every visitor.
+
+export type AdminElementAnim = 'none' | 'float' | 'pulse' | 'spin' | 'fade-in' | 'slide-up' | 'zoom';
+
+export type AdminElement = {
+  id: string;
+  type: 'photo' | 'video';
+  src: string;
+  // Section element id to anchor into, or 'fixed' for viewport-fixed.
+  anchor: string;
+  // Percent-based placement (center point) and width; ignored when `cover`.
+  x?: number;
+  y?: number;
+  w?: number;
+  rotate?: number;
+  opacity?: number;
+  radius?: number;
+  z?: number;
+  // Fill the whole anchored section (e.g. a video cover behind the hero).
+  cover?: boolean;
+  anim?: AdminElementAnim;
+  animDur?: number;
+  animDelay?: number;
+};
+
+export type AdminSectionStyle = {
+  section: string;
+  background?: string;
+  text?: string;
+  // Explicit CSS custom-property overrides (the editor writes the template's
+  // accentVars here so the runtime stays template-agnostic).
+  vars?: Record<string, string>;
+};
+
+export type AdminLayer = {
+  elements?: AdminElement[];
+  styles?: AdminSectionStyle[];
 };

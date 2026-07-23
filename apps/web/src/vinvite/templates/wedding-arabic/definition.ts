@@ -87,4 +87,6 @@ export const weddingArabicTemplate: TemplateDefinition = {
   fields,
   groups,
   Renderer: RichRenderer,
+  sectionIds: ['hero', 'invitation', 'details', 'gallery', 'countdown', 'rsvp'],
+  accentVars: ['--gold', '--gold-deep', '--gold-soft', '--bronze'],
 };

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { RichRendererProps, RsvpPayload } from './types';
+import { ADMIN_RUNTIME } from './adminRuntime';
 
 // Hosts a rich template inside a sandboxed iframe. The template's HTML/CSS/JS is
 // injected via `srcdoc` together with a `window.__CONFIG__` object. The iframe
@@ -22,10 +23,17 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     window.__LANGS__ = ${JSON.stringify(languages)};
     window.__ORIGIN__ = ${JSON.stringify(origin)};
   </script>`;
+  // The Design+ overlay runtime (system-admin custom elements / palettes)
+  // rides along in every template, after the template's own script.
+  const adminScript = `<script>${ADMIN_RUNTIME}</script>`;
   // Templates include the marker <!--__CONFIG__--> in <head>; fall back to
   // prepending into <head> if absent.
-  if (html.includes('<!--__CONFIG__-->')) return html.replace('<!--__CONFIG__-->', bootstrap);
-  return html.replace('<head>', `<head>${bootstrap}`);
+  const withBootstrap = html.includes('<!--__CONFIG__-->')
+    ? html.replace('<!--__CONFIG__-->', bootstrap)
+    : html.replace('<head>', `<head>${bootstrap}`);
+  return withBootstrap.includes('</body>')
+    ? withBootstrap.replace('</body>', `${adminScript}</body>`)
+    : withBootstrap + adminScript;
 }
 
 export function RichRenderer({ html, config, languages, onRsvp, interactive }: RichRendererProps) {

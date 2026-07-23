@@ -709,6 +709,9 @@ model InviteUser {
   googleId     String?  @unique
   displayName  String?
   avatarUrl    String?
+  // "USER" (default) or "SYSTEM_ADMIN" — system admins get the Design+ panel
+  // in the rich editor (custom overlay elements, palettes, video covers).
+  role         String   @default("USER")
   createdAt    DateTime @default(now())
 
   sessions  InviteSession[]

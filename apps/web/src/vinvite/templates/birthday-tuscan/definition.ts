@@ -163,4 +163,6 @@ export const birthdayTuscanTemplate: TemplateDefinition = {
   fields,
   groups,
   Renderer: RichRenderer,
+  sectionIds: ['hero', 'message', 'countdown', 'details', 'venue', 'gallery', 'program', 'dress', 'gifts', 'rsvp', 'contacts', 'final'],
+  accentVars: ['--gold', '--gold-light', '--gold-bright'],
 };

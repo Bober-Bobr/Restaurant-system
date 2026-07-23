@@ -6,10 +6,16 @@ import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
 import { vinviteService, type InviteRsvp, type TelegramStatus } from './api';
 import { useViT, type ViKey } from './i18n';
+import { useVInviteStore } from './store';
 import { getTemplate } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
 import { getPath, resolveAssetUrls, setPath } from './templates/utils';
-import { LOCALES, type GalleryItem, type LocalizedText, type RichDesignData, type ScheduleItem, type TemplateField } from './templates/types';
+import {
+  LOCALES,
+  type AdminElement, type AdminLayer, type AdminSectionStyle,
+  type GalleryItem, type LocalizedText, type RichDesignData, type ScheduleItem,
+  type TemplateDefinition, type TemplateField,
+} from './templates/types';
 
 // ── Form-based editor for rich (first-party) templates ───────────────────────
 // Left: grouped fields driven by the template's field schema, with one input
@@ -44,6 +50,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   const template = getTemplate(design.templateId);
   const [tab, setTab] = useState<'design' | 'rsvp'>(initialTab && projectId ? initialTab : 'design');
   const [openGroup, setOpenGroup] = useState<string | null>(template?.groups[0]?.key ?? null);
+  const isSystemAdmin = useVInviteStore((s) => s.user?.role === 'SYSTEM_ADMIN');
 
   const previewConfig = useMemo(
     () => (template ? resolveAssetUrls(template, design.config) : design.config),
@@ -145,6 +152,17 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 </div>
               );
             })}
+
+            {/* Design+ — system administrators only */}
+            {isSystemAdmin && (
+              <AdminDesignPanel
+                template={template}
+                design={design}
+                setConfig={setConfig}
+                open={openGroup === '__admin'}
+                onToggle={() => setOpenGroup(openGroup === '__admin' ? null : '__admin')}
+              />
+            )}
           </div>
 
           {/* ── Live preview (phone frame) ── */}
@@ -411,6 +429,190 @@ function ScheduleEditor({ field, design, setConfig }: {
       <button type="button" className="adm-btn-ghost" style={{ fontSize: 13 }} onClick={() => update([...items, { time: '19:00', label: {} }])}>
         ＋ {t('add_item')}
       </button>
+    </div>
+  );
+}
+
+// ── Design+ (system administrators) ──────────────────────────────────────────
+// Edits config.adminLayer: free overlay elements (photos/videos with position,
+// size, rotation and animation — a video can cover a whole section, e.g. the
+// hero after the intro) and per-section style overrides (background / text /
+// accent). Rendered inside the iframe by the shared admin runtime.
+
+const ANIMS: { key: AdminElement['anim']; label: string }[] = [
+  { key: 'none', label: '—' },
+  { key: 'fade-in', label: 'Fade in' },
+  { key: 'slide-up', label: 'Slide up' },
+  { key: 'zoom', label: 'Zoom' },
+  { key: 'float', label: 'Float' },
+  { key: 'pulse', label: 'Pulse' },
+  { key: 'spin', label: 'Spin' },
+];
+
+function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
+  template: TemplateDefinition;
+  design: RichDesignData;
+  setConfig: (path: string, value: unknown) => void;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const t = useViT();
+  const layer: AdminLayer = (design.config.adminLayer as AdminLayer) ?? {};
+  const elements = layer.elements ?? [];
+  const styles = layer.styles ?? [];
+  const sections = template.sectionIds ?? [];
+
+  const save = (next: AdminLayer) => setConfig('adminLayer', next);
+  const setElement = (id: string, patch: Partial<AdminElement>) =>
+    save({ ...layer, elements: elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
+  const addElement = (type: AdminElement['type']) =>
+    save({
+      ...layer,
+      elements: [...elements, {
+        id: Math.random().toString(36).slice(2, 9),
+        type, src: '', anchor: sections[0] ?? 'fixed',
+        x: 50, y: 50, w: 30, rotate: 0, anim: 'none',
+      }],
+    });
+  const removeElement = (id: string) => save({ ...layer, elements: elements.filter((e) => e.id !== id) });
+
+  const setStyle = (section: string, patch: Partial<AdminSectionStyle>) => {
+    const existing = styles.find((s) => s.section === section);
+    const next = existing
+      ? styles.map((s) => (s.section === section ? { ...s, ...patch } : s))
+      : [...styles, { section, ...patch }];
+    save({ ...layer, styles: next });
+  };
+  const setAccent = (section: string, color: string | undefined) =>
+    setStyle(section, { vars: color ? Object.fromEntries((template.accentVars ?? []).map((v) => [v, color])) : undefined });
+  const removeStyle = (section: string) => save({ ...layer, styles: styles.filter((s) => s.section !== section) });
+  const styledSections = styles.map((s) => s.section);
+  const unstyled = sections.filter((s) => !styledSections.includes(s));
+
+  const num = (v: number | undefined, d: number) => (v == null ? d : v);
+  const slider = (el: AdminElement, key: 'x' | 'y' | 'w' | 'rotate' | 'radius', label: string, min: number, max: number, d: number) => (
+    <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+      {label}: {num(el[key], d)}
+      <input type="range" min={min} max={max} value={num(el[key], d)} onChange={(e) => setElement(el.id, { [key]: Number(e.target.value) })} />
+    </label>
+  );
+
+  return (
+    <div style={{ marginBottom: 10, borderRadius: 14, background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(167,139,250,0.35)', overflow: 'hidden' }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 15px', cursor: 'pointer', color: '#e9d5ff', fontSize: 14, fontWeight: 700, textAlign: 'left', background: 'none', border: 'none' }}
+      >
+        <span style={{ fontSize: 17 }}>🛠</span>
+        {t('adm_design')}
+        <span style={{ marginLeft: 'auto', color: '#a78bfa', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '4px 15px 16px', display: 'grid', gap: 16 }}>
+          {/* ── Overlay elements ── */}
+          <div>
+            <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_elements')}</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {elements.map((el) => (
+                <div key={el.id} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15 }}>{el.type === 'video' ? '🎬' : '🖼'}</span>
+                    <select value={el.anchor} onChange={(e) => setElement(el.id, { anchor: e.target.value })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
+                      {sections.map((s) => <option key={s} value={s}>#{s}</option>)}
+                      <option value="fixed">{t('adm_fixed')}</option>
+                    </select>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#cbd5f5', marginLeft: 'auto' }}>
+                      <input type="checkbox" checked={!!el.cover} onChange={(e) => setElement(el.id, { cover: e.target.checked || undefined })} />
+                      {t('adm_cover')}
+                    </label>
+                    <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => removeElement(el.id)}>{t('delete')}</button>
+                  </div>
+
+                  {el.type === 'photo' ? (
+                    <PhotoUploadField label="" value={el.src || null} onChange={(url) => setElement(el.id, { src: url ?? '' })} restaurantId="" height={90} />
+                  ) : (
+                    <input style={panelInput} placeholder={t('adm_video_url')} value={el.src} onChange={(e) => setElement(el.id, { src: e.target.value })} />
+                  )}
+
+                  {!el.cover && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                      {slider(el, 'x', 'X %', 0, 100, 50)}
+                      {slider(el, 'y', 'Y %', 0, 100, 50)}
+                      {slider(el, 'w', 'W %', 4, 100, 30)}
+                      {slider(el, 'rotate', '°', -180, 180, 0)}
+                      {slider(el, 'radius', 'R px', 0, 200, 0)}
+                      <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+                        Opacity: {num(el.opacity, 1)}
+                        <input type="range" min={0.1} max={1} step={0.05} value={num(el.opacity, 1)} onChange={(e) => setElement(el.id, { opacity: Number(e.target.value) })} />
+                      </label>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <select value={el.anim ?? 'none'} onChange={(e) => setElement(el.id, { anim: e.target.value as AdminElement['anim'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
+                      {ANIMS.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+                    </select>
+                    {el.anim && !['none', 'float', 'pulse', 'spin'].includes(el.anim) && (
+                      <>
+                        <label style={{ fontSize: 11, color: '#94a3b8' }}>s:
+                          <input type="number" min={0.2} max={10} step={0.2} value={num(el.animDur, 1.6)} onChange={(e) => setElement(el.id, { animDur: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+                        </label>
+                        <label style={{ fontSize: 11, color: '#94a3b8' }}>+s:
+                          <input type="number" min={0} max={10} step={0.2} value={num(el.animDelay, 0)} onChange={(e) => setElement(el.id, { animDelay: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+                        </label>
+                      </>
+                    )}
+                    <label style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>z:
+                      <input type="number" min={-1} max={99} value={num(el.z, el.cover ? 0 : 5)} onChange={(e) => setElement(el.id, { z: Number(e.target.value) })} style={{ ...panelInput, width: 56, padding: '4px 6px', marginLeft: 4 }} />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 12 }} onClick={() => addElement('photo')}>＋ {t('adm_add_photo')}</button>
+              <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 12 }} onClick={() => addElement('video')}>＋ {t('adm_add_video')}</button>
+            </div>
+          </div>
+
+          {/* ── Per-section styles ── */}
+          <div>
+            <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_styles')}</div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {styles.map((s) => (
+                <div key={s.section} style={{ padding: 10, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <strong style={{ fontSize: 12.5, color: '#e2e8f0' }}>#{s.section}</strong>
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {t('adm_bg')}
+                    <input type="color" value={s.background ?? '#f6efe3'} onChange={(e) => setStyle(s.section, { background: e.target.value })} />
+                  </label>
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {t('adm_text')}
+                    <input type="color" value={s.text ?? '#3d2e21'} onChange={(e) => setStyle(s.section, { text: e.target.value })} />
+                  </label>
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {t('adm_accent')}
+                    <input type="color" value={Object.values(s.vars ?? {})[0] ?? '#c6a35c'} onChange={(e) => setAccent(s.section, e.target.value)} />
+                  </label>
+                  <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '4px 10px', marginLeft: 'auto' }} onClick={() => removeStyle(s.section)}>{t('delete')}</button>
+                </div>
+              ))}
+            </div>
+            {unstyled.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) setStyle(e.target.value, {}); }}
+                style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12, marginTop: 8 }}
+              >
+                <option value="">＋ {t('adm_add_style')}</option>
+                {unstyled.map((s) => <option key={s} value={s}>#{s}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

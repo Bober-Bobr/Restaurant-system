@@ -29,6 +29,8 @@ export type PublicUser = {
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  // "USER" | "SYSTEM_ADMIN" — gates the Design+ tools in the rich editor.
+  role: string;
   hasPassword: boolean;
   googleLinked: boolean;
   createdAt: Date;
@@ -38,13 +40,15 @@ export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null 
 
 type DbUser = {
   id: string; email: string; username: string; passwordHash: string | null;
-  googleId: string | null; displayName: string | null; avatarUrl: string | null; createdAt: Date;
+  googleId: string | null; displayName: string | null; avatarUrl: string | null;
+  role: string; createdAt: Date;
 };
 
 function toPublicUser(u: DbUser): PublicUser {
   return {
     id: u.id, email: u.email, username: u.username,
     displayName: u.displayName, avatarUrl: u.avatarUrl,
+    role: u.role,
     hasPassword: !!u.passwordHash, googleLinked: !!u.googleId,
     createdAt: u.createdAt,
   };

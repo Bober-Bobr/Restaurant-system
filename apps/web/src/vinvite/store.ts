@@ -8,6 +8,9 @@ export type InviteUser = {
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  // "USER" | "SYSTEM_ADMIN" — system admins get the Design+ panel in the
+  // rich editor (custom overlay elements, palettes, video covers).
+  role?: string;
   hasPassword: boolean;
   googleLinked: boolean;
   createdAt: string;
