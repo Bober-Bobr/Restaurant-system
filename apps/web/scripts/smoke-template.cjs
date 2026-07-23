@@ -73,6 +73,10 @@ function smoke(name) {
     });
   }
 
+  // Capture bridge messages the way RichRenderer would receive them.
+  const posted = [];
+  window.parent = { postMessage: (msg) => posted.push(msg) };
+
   const ctx = vm.createContext(window);
   for (const s of document.querySelectorAll('script')) {
     if (!s.textContent.trim()) continue;
@@ -86,6 +90,26 @@ function smoke(name) {
   for (const type of ['scroll', 'resize']) {
     trap(() => window.dispatchEvent(new window.Event(type)));
     flushFrames();
+  }
+
+  // Drive the RSVP form: fill the name and submit, then require the bridge
+  // message. linkedom lacks HTMLFormElement named access (form.attend), so shim
+  // the standard browser behaviour before dispatching.
+  const form = document.querySelector('#rsvpForm');
+  if (form) {
+    Object.defineProperty(form, 'attend', {
+      get() {
+        const checked = form.querySelector('input[name="attend"]:checked') || form.querySelector('input[name="attend"]');
+        return { value: checked ? checked.value : '' };
+      },
+    });
+    const nameInput = document.querySelector('#rsvpName');
+    if (nameInput) nameInput.value = 'Smoke Guest';
+    trap(() => form.dispatchEvent(new window.Event('submit')));
+    flushFrames();
+    if (!posted.some((m) => m && m.type === 'vinvite:rsvp')) {
+      errors.push(new Error('RSVP submit did not post a vinvite:rsvp message'));
+    }
   }
 
   return { errors, document };

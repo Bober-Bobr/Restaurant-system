@@ -76,6 +76,9 @@ export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
     accent,
     text: theme.textColor || (bgImage ? '#f5f5f5' : readableText(bgColor)),
     textScale: theme.textScale ?? 1,
+    // The block RSVP form submits { guestName, attending }; map it onto the
+    // v-invite RSVP endpoint so responses are actually stored (and forwarded).
+    submitRsvp: (p) => submitRsvp({ name: p.guestName, attending: p.attending }),
   };
 
   return (
