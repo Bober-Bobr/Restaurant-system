@@ -17,7 +17,15 @@ const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(),
-  TELEGRAM_PUBLIC_URL: z.string().url().optional()
+  TELEGRAM_PUBLIC_URL: z.string().url().optional(),
+
+  // Optional second bot dedicated to guest-invitation RSVPs. When set, the
+  // main bot handles only flyers and this one only invitations; when unset,
+  // the main bot serves both. The webhook secret falls back to
+  // TELEGRAM_WEBHOOK_SECRET when omitted.
+  TELEGRAM_INVITE_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_INVITE_WEBHOOK_SECRET: z.string().optional(),
+  TELEGRAM_INVITE_BOT_USERNAME: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);

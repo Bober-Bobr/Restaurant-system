@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { httpClient } from './http';
+import type { TelegramStatus } from './invitation.service';
 
 export type TrailTemplate = 'sparkle' | 'hearts' | 'candy';
 
@@ -124,6 +125,19 @@ export const guestInvitationService = {
   async listRsvps(id: string): Promise<GuestInvitationRsvp[]> {
     const { data } = await httpClient.get<GuestInvitationRsvp[]>(`/guest-invitations/${id}/rsvps`);
     return data;
+  },
+
+  // ── Telegram RSVP forwarding (mirrors the flyer endpoints) ────────────────
+  async telegramStatus(id: string): Promise<TelegramStatus> {
+    const { data } = await httpClient.get<TelegramStatus>(`/telegram/invitations/${id}/status`);
+    return data;
+  },
+  async telegramRotate(id: string): Promise<TelegramStatus> {
+    const { data } = await httpClient.post<Omit<TelegramStatus, 'enabled'>>(`/telegram/invitations/${id}/rotate`);
+    return { ...data, enabled: true };
+  },
+  async telegramRemoveLink(id: string, linkId: string): Promise<void> {
+    await httpClient.delete(`/telegram/invitations/${id}/links/${linkId}`);
   },
 
   // Public (no auth)

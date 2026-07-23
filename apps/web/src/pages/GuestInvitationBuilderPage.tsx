@@ -15,6 +15,7 @@ import type { PickedDesign } from '../blocks/builtinTemplates';
 import { seedInvitationBlocks, invitationTheme } from '../blocks/seed';
 import { TemplateChooser, useDesignSave } from './designerShared';
 import { LinkQrButton } from '../components/LinkQrButton';
+import { TelegramConnectButton } from '../components/TelegramConnectButton';
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60) || 'invitation';
@@ -131,7 +132,22 @@ export const GuestInvitationBuilderPage = () => {
         saving={saveMutation.isPending} isNew={isNew}
         onSave={() => saveMutation.mutate()} onSaveTemplate={saveTemplate}
         onDelete={!isNew ? () => { if (confirm('Delete?')) deleteMutation.mutate(); } : undefined}
-        extra={!isNew ? <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowResponses(true)}>{t('responses')} ({rsvpsQuery.data?.length ?? 0})</button> : undefined}
+        extra={!isNew && id ? (
+          <>
+            <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowResponses(true)}>{t('responses')} ({rsvpsQuery.data?.length ?? 0})</button>
+            <TelegramConnectButton
+              id={id}
+              t={t}
+              queryKey="invitation-telegram"
+              howtoKey="tg_howto_invite"
+              api={{
+                status: guestInvitationService.telegramStatus,
+                rotate: guestInvitationService.telegramRotate,
+                removeLink: guestInvitationService.telegramRemoveLink,
+              }}
+            />
+          </>
+        ) : undefined}
         backLink="/invitations"
       />
 

@@ -651,6 +651,10 @@ model GuestInvitation {
   rsvpTitle   String?
   rsvpEnabled Boolean @default(true)
 
+  // Telegram forwarding: unguessable code a user sends to the bot to subscribe
+  // this invitation's RSVPs to their chat. Null until first generated.
+  telegramCode String? @unique
+
   // Per-section animations: { sectionKey: { type, durationMs, delayMs } }
   sectionAnimations Json @default("{}")
 
@@ -658,10 +662,29 @@ model GuestInvitation {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy AdminUser?              @relation("ManagerGuestInvitations", fields: [createdById], references: [id], onDelete: SetNull)
-  rsvps     GuestInvitationRsvp[]
+  createdBy     AdminUser?                    @relation("ManagerGuestInvitations", fields: [createdById], references: [id], onDelete: SetNull)
+  rsvps         GuestInvitationRsvp[]
+  telegramLinks GuestInvitationTelegramLink[]
 
   @@index([createdById])
+}
+
+// ── Telegram chat subscribed to a guest invitation's RSVPs ────────────────────
+// Mirror of FlyerTelegramLink for guest invitations: created when someone sends
+// the invitation's code to the bot; each new RSVP is forwarded to every linked
+// chat.
+model GuestInvitationTelegramLink {
+  id           String   @id @default(cuid())
+  invitationId String
+  chatId       String
+  username     String?
+  firstName    String?
+  createdAt    DateTime @default(now())
+
+  invitation   GuestInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, chatId])
+  @@index([invitationId])
 }
 
 model GuestInvitationRsvp {
