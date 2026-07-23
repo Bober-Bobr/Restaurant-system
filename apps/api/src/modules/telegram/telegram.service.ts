@@ -278,6 +278,9 @@ export async function handleUpdate(bot: TgBot, update: TgUpdate): Promise<void> 
       + 'New RSVP responses from this invitation will arrive here. Use /stop to unsubscribe.');
 }
 
+// Horizontal rule used in the forwarded-message layout.
+const RULE = '━━━━━━━━━━━━━━━━━━';
+
 // ── Outbound: forward a new submission to every linked chat ───────────────────
 export async function forwardSubmission(
   invitationId: string,
@@ -291,11 +294,15 @@ export async function forwardSubmission(
   if (links.length === 0) return;
 
   const lines = [
-    '📩 <b>New flyer submission</b>',
-    flyer?.slug ? `Flyer: ${htmlEscape(flyer.slug)}` : null,
-    `Name: ${htmlEscape(lead.name)}`,
-    `Phone: ${htmlEscape(lead.phone)}`,
-    lead.message ? `Message: ${htmlEscape(lead.message)}` : null,
+    flyer?.slug
+      ? `🚀 <b>Новая заявка с сайта ${htmlEscape(flyer.slug)}</b>`
+      : '🚀 <b>Новая заявка с сайта</b>',
+    RULE,
+    `👤 Имя гостя: ${htmlEscape(lead.name)}`,
+    `📱 Контакт: ${htmlEscape(lead.phone)}`,
+    lead.message ? `💬 Комментарий: ${htmlEscape(lead.message)}` : null,
+    RULE,
+    '✨ Заявка успешно получена',
   ].filter(Boolean);
   const text = lines.join('\n');
 
@@ -316,13 +323,17 @@ export async function forwardRsvp(
 
   const label = project?.slug || project?.name;
   const lines = [
-    '💌 <b>New RSVP</b>',
-    label ? `Invitation: ${htmlEscape(label)}` : null,
-    `Guest: ${htmlEscape(rsvp.guestName)}`,
-    rsvp.attending ? 'Answer: ✅ attending' : 'Answer: ❌ not attending',
-    rsvp.attending && rsvp.guests ? `Guests: ${rsvp.guests}` : null,
-    rsvp.dietary ? `Dietary: ${htmlEscape(rsvp.dietary)}` : null,
-    rsvp.message ? `Message: ${htmlEscape(rsvp.message)}` : null,
+    label
+      ? `💌 <b>Новый ответ на приглашение ${htmlEscape(label)}</b>`
+      : '💌 <b>Новый ответ на приглашение</b>',
+    RULE,
+    `👤 Имя гостя: ${htmlEscape(rsvp.guestName)}`,
+    rsvp.attending ? '✅ Ответ: придёт' : '❌ Ответ: не придёт',
+    rsvp.attending && rsvp.guests ? `👥 Количество гостей: ${rsvp.guests}` : null,
+    rsvp.dietary ? `🥗 Особые пожелания: ${htmlEscape(rsvp.dietary)}` : null,
+    rsvp.message ? `💬 Пожелание: ${htmlEscape(rsvp.message)}` : null,
+    RULE,
+    '✨ Ответ успешно получен',
   ].filter(Boolean);
   const text = lines.join('\n');
 
