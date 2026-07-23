@@ -61,6 +61,9 @@ export const ViProfilePage = () => {
           <p style={{ margin: '5px 0 0', fontSize: 12, color: 'var(--vi-muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <span>{t('member_since')}: {new Date(user.createdAt).toLocaleDateString()}</span>
             {user.googleLinked && <span className="vi-badge vi-badge-live">G · {t('google_linked')}</span>}
+            {user.role === 'SYSTEM_ADMIN' && (
+              <span className="vi-badge" style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.4)' }}>🛠 {t('adm_badge')}</span>
+            )}
           </p>
         </div>
       </div>
