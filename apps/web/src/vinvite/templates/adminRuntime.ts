@@ -9,6 +9,8 @@
 //     (the editor writes the template's accent variables here)
 //   • particles — full-page falling particles on a fixed canvas: preset shapes
 //     or a custom uploaded image; `scroll` mode only falls while scrolling.
+//   • trail     — particles emitted under the guest's cursor/finger as it
+//     moves: the same preset shapes or a custom image, fading out quickly.
 // It keeps its own copy of the layer and re-renders on vinvite:config pushes,
 // so live editing works without reloading the iframe. Plain ES5, no deps.
 //
@@ -219,6 +221,8 @@ export const ADMIN_RUNTIME = `(function(){
 
   /* ── Falling particles ──────────────────────────────────────────────────── */
   var PT = { key: '', canvas: null, ctx: null, items: [], img: null, raf: 0, cfg: null, boost: 0 };
+  /* ── Cursor/finger trail ────────────────────────────────────────────────── */
+  var TR = { key: '', canvas: null, ctx: null, items: [], img: null, raf: 0, cfg: null };
 
   var PALETTES = {
     confetti: ['#f43f5e','#f59e0b','#10b981','#3b82f6','#a855f7','#facc15'],
@@ -240,9 +244,8 @@ export const ADMIN_RUNTIME = `(function(){
   }
 
   function resizeCanvas(){
-    if (!PT.canvas) return;
-    PT.canvas.width = window.innerWidth;
-    PT.canvas.height = window.innerHeight;
+    if (PT.canvas) { PT.canvas.width = window.innerWidth; PT.canvas.height = window.innerHeight; }
+    if (TR.canvas) { TR.canvas.width = window.innerWidth; TR.canvas.height = window.innerHeight; }
   }
   window.addEventListener('resize', resizeCanvas);
 
@@ -278,34 +281,37 @@ export const ADMIN_RUNTIME = `(function(){
     ctx.closePath();
   }
 
-  function drawParticle(ctx, cfg, it){
-    var pal = PALETTES[cfg.preset] || PALETTES.confetti;
+  /* Shared shape painter for both engines. alpha scales the whole particle
+     (the trail fades items out with their remaining life). */
+  function drawShape(ctx, preset, img, it, alpha){
+    var pal = PALETTES[preset] || PALETTES.confetti;
     var color = pal[it.c % pal.length];
     ctx.save();
     ctx.translate(it.x, it.y);
-    if (cfg.preset === 'custom') {
-      if (PT.img && PT.img.complete && PT.img.naturalWidth) {
+    ctx.globalAlpha = alpha != null ? alpha : 1;
+    if (preset === 'custom') {
+      if (img && img.complete && img.naturalWidth) {
         ctx.rotate(it.rot);
-        var ratio = PT.img.naturalHeight / PT.img.naturalWidth || 1;
-        ctx.drawImage(PT.img, -it.s / 2, -it.s * ratio / 2, it.s, it.s * ratio);
+        var ratio = img.naturalHeight / img.naturalWidth || 1;
+        ctx.drawImage(img, -it.s / 2, -it.s * ratio / 2, it.s, it.s * ratio);
       }
-    } else if (cfg.preset === 'snow') {
+    } else if (preset === 'snow') {
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(0, 0, it.s * 0.32, 0, Math.PI * 2);
       ctx.fill();
-    } else if (cfg.preset === 'hearts') {
+    } else if (preset === 'hearts') {
       ctx.rotate(Math.sin(it.ph) * 0.4);
       ctx.fillStyle = color;
       heartPath(ctx, it.s * 0.5);
       ctx.fill();
-    } else if (cfg.preset === 'sparkles') {
+    } else if (preset === 'sparkles') {
       ctx.rotate(it.rot);
-      ctx.globalAlpha = 0.55 + Math.sin(it.ph * 3) * 0.45;
+      ctx.globalAlpha = (alpha != null ? alpha : 1) * (0.55 + Math.sin(it.ph * 3) * 0.45);
       ctx.fillStyle = color;
       starPath(ctx, it.s * 0.55);
       ctx.fill();
-    } else if (cfg.preset === 'petals') {
+    } else if (preset === 'petals') {
       ctx.rotate(it.rot);
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -341,7 +347,7 @@ export const ADMIN_RUNTIME = `(function(){
       if (it.y > h + it.s) PT.items[i] = spawn(cfg, w, h, true);
       else if (it.x < -it.s * 2) it.x = w + it.s;
       else if (it.x > w + it.s * 2) it.x = -it.s;
-      drawParticle(PT.ctx, cfg, it);
+      drawShape(PT.ctx, cfg.preset, PT.img, it, 1);
     }
   }
 
@@ -370,7 +376,84 @@ export const ADMIN_RUNTIME = `(function(){
     PT.raf = requestAnimationFrame(tick);
   }
 
-  function render(){ renderStyles(); renderElements(); initParticles(); }
+  /* ── Trail engine: emit on pointer/touch move, items fade out fast ──────── */
+  function emitTrail(x, y){
+    if (!TR.cfg) return;
+    var cfg = TR.cfg;
+    var n = Math.max(1, Math.min(6, cfg.density != null ? cfg.density : 2));
+    for (var i = 0; i < n; i++) {
+      TR.items.push({
+        x: x + (Math.random() - 0.5) * 14,
+        y: y + (Math.random() - 0.5) * 14,
+        s: (cfg.size != null ? cfg.size : 14) * (0.5 + Math.random() * 0.7),
+        vx: (Math.random() - 0.5) * 60,
+        vy: -14 + Math.random() * 44,
+        life: 1,
+        decay: 1.1 + Math.random() * 0.9,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 6,
+        ph: Math.random() * Math.PI * 2,
+        c: Math.floor(Math.random() * 6)
+      });
+    }
+    if (TR.items.length > 300) TR.items.splice(0, TR.items.length - 300);
+  }
+  window.addEventListener('pointermove', function(e){ emitTrail(e.clientX, e.clientY); }, { passive: true });
+  window.addEventListener('touchmove', function(e){
+    var t = e.touches && e.touches[0];
+    if (t) emitTrail(t.clientX, t.clientY);
+  }, { passive: true });
+
+  var trailT = 0;
+  function tickTrail(now){
+    TR.raf = requestAnimationFrame(tickTrail);
+    if (!TR.ctx || !TR.cfg) return;
+    var dt = trailT ? Math.min((now - trailT) / 1000, 0.05) : 0.016;
+    trailT = now;
+    TR.ctx.clearRect(0, 0, TR.canvas.width, TR.canvas.height);
+    for (var i = TR.items.length - 1; i >= 0; i--) {
+      var it = TR.items[i];
+      it.life -= it.decay * dt;
+      if (it.life <= 0) { TR.items.splice(i, 1); continue; }
+      it.x += it.vx * dt;
+      it.y += it.vy * dt;
+      it.vy += 70 * dt; /* gentle gravity */
+      it.rot += it.vr * dt;
+      it.ph += dt * 2;
+      drawShape(TR.ctx, TR.cfg.preset, TR.img, it, Math.min(1, it.life));
+    }
+  }
+
+  function stopTrail(){
+    if (TR.raf) { cancelAnimationFrame(TR.raf); TR.raf = 0; }
+    if (TR.canvas && TR.canvas.parentNode) TR.canvas.parentNode.removeChild(TR.canvas);
+    TR.canvas = null; TR.ctx = null; TR.items = []; TR.cfg = null; TR.img = null;
+  }
+
+  function initTrail(){
+    var tr = LAYER.trail;
+    var cfg = tr && tr.preset && tr.preset !== 'none' ? tr : null;
+    var key = cfg ? JSON.stringify(cfg) : '';
+    if (key === TR.key) return;
+    TR.key = key;
+    stopTrail();
+    if (!cfg) return;
+    var c = document.createElement('canvas');
+    c.setAttribute('data-va-trail', '');
+    c.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9991;';
+    if (typeof c.getContext !== 'function' || typeof requestAnimationFrame !== 'function') return;
+    document.body.appendChild(c);
+    TR.canvas = c;
+    TR.ctx = c.getContext('2d');
+    TR.cfg = cfg;
+    if (cfg.preset === 'custom' && cfg.src) { TR.img = new Image(); TR.img.src = cfg.src; }
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    trailT = 0;
+    TR.raf = requestAnimationFrame(tickTrail);
+  }
+
+  function render(){ renderStyles(); renderElements(); initParticles(); initTrail(); }
 
   window.addEventListener('message', function(e){
     var d = e.data;

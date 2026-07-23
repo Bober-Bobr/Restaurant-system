@@ -13,7 +13,7 @@ import { RichRenderer } from './templates/RichRenderer';
 import { getPath, resolveAssetUrls, setPath } from './templates/utils';
 import {
   LOCALES,
-  type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle,
+  type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle, type AdminTrail,
   type GalleryItem, type LocalizedText, type RichDesignData, type ScheduleItem,
   type TemplateDefinition, type TemplateField,
 } from './templates/types';
@@ -688,6 +688,12 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
             particles={layer.particles}
             onChange={(particles) => save({ ...layer, particles })}
           />
+
+          {/* ── Cursor/finger trail ── */}
+          <TrailEditor
+            trail={layer.trail}
+            onChange={(trail) => save({ ...layer, trail })}
+          />
         </div>
       )}
     </div>
@@ -817,6 +823,51 @@ function ParticlesEditor({ particles, onChange }: {
             <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
               {t('adm_speed')}: {pnum(p.speed, 1)}
               <input type="range" min={0.2} max={3} step={0.1} value={pnum(p.speed, 1)} onChange={(e) => set({ speed: Number(e.target.value) })} />
+            </label>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Cursor/finger trail: same presets as the falling particles ───────────────
+function TrailEditor({ trail, onChange }: {
+  trail: AdminTrail | undefined;
+  onChange: (next: AdminTrail | undefined) => void;
+}) {
+  const t = useViT();
+  const p: AdminTrail = trail ?? { preset: 'none' };
+  const set = (patch: Partial<AdminTrail>) => {
+    const next = { ...p, ...patch };
+    onChange(next.preset === 'none' ? undefined : next);
+  };
+  const pnum = (v: number | undefined, d: number) => (v == null ? d : v);
+
+  return (
+    <div>
+      <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_trail')}</div>
+      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 15 }}>✨</span>
+          <select value={p.preset} onChange={(e) => set({ preset: e.target.value as AdminTrail['preset'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
+            {PARTICLE_PRESETS.map((key) => <option key={key} value={key}>{t(`prt_${key}` as ViKey)}</option>)}
+          </select>
+        </div>
+
+        {p.preset === 'custom' && (
+          <PhotoUploadField label={t('adm_particle_img')} value={p.src || null} onChange={(url) => set({ src: url ?? '' })} restaurantId="" height={90} />
+        )}
+
+        {p.preset !== 'none' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+            <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+              {t('adm_size')}: {pnum(p.size, 14)}
+              <input type="range" min={6} max={48} value={pnum(p.size, 14)} onChange={(e) => set({ size: Number(e.target.value) })} />
+            </label>
+            <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>
+              {t('adm_density')}: {pnum(p.density, 2)}
+              <input type="range" min={1} max={6} value={pnum(p.density, 2)} onChange={(e) => set({ density: Number(e.target.value) })} />
             </label>
           </div>
         )}

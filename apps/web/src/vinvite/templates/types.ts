@@ -187,8 +187,18 @@ export type AdminParticles = {
   mode?: 'always' | 'scroll';
 };
 
+// Trail following the guest's cursor/finger: preset shapes (same set as the
+// falling particles) or a custom uploaded image.
+export type AdminTrail = {
+  preset: AdminParticlePreset;
+  src?: string; // trail image (preset === 'custom')
+  size?: number; // base size px, default 14
+  density?: number; // particles emitted per move, 1..6, default 2
+};
+
 export type AdminLayer = {
   elements?: AdminElement[];
   styles?: AdminSectionStyle[];
   particles?: AdminParticles;
+  trail?: AdminTrail;
 };
