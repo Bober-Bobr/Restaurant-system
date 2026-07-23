@@ -19,8 +19,6 @@ import { ManagerPortalPage } from '../pages/ManagerPortalPage';
 import { ManagerRestaurantsPage } from '../pages/ManagerRestaurantsPage';
 import { InvitationBuilderPage } from '../pages/InvitationBuilderPage';
 import { FlyerRequestsPage } from '../pages/FlyerRequestsPage';
-import { GuestInvitationsPage } from '../pages/GuestInvitationsPage';
-import { GuestInvitationBuilderPage } from '../pages/GuestInvitationBuilderPage';
 import { TemplateEditorPage } from '../pages/TemplateEditorPage';
 import { InvitationSubdomainDispatcher } from '../pages/PublicGuestInvitationPage';
 import { PublicInvitationPage } from '../pages/PublicInvitationPage';
@@ -127,9 +125,6 @@ export const App = () => {
         <Route path="/flyers/:flyerId" element={<InvitationBuilderPage />} />
         <Route path="/flyers/:flyerId/requests" element={<FlyerRequestsPage />} />
         <Route path="/templates/:templateId" element={<TemplateEditorPage />} />
-        <Route path="/invitations" element={<GuestInvitationsPage />} />
-        <Route path="/invitations/new" element={<GuestInvitationBuilderPage />} />
-        <Route path="/invitations/:id" element={<GuestInvitationBuilderPage />} />
         <Route path="/info" element={<ManagerRestaurantsPage />} />
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

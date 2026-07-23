@@ -3,6 +3,7 @@ import createHttpError from 'http-errors';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { prisma } from '../../db/prisma.js';
+import { forwardRsvp } from '../telegram/telegram.service.js';
 
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '30d';
@@ -403,7 +404,7 @@ export class VInviteProjectService {
     });
     if (!project || !project.isPublished) throw createHttpError(404, 'Invitation not found');
 
-    return prisma.inviteRsvp.create({
+    const created = await prisma.inviteRsvp.create({
       data: {
         projectId: project.id,
         guestName: data.name,
@@ -414,6 +415,15 @@ export class VInviteProjectService {
       },
       select: { id: true, createdAt: true },
     });
+    // Fire-and-forget: Telegram delivery must never fail the RSVP.
+    void forwardRsvp(project.id, {
+      guestName: data.name,
+      attending: data.attending,
+      guests: data.attending ? (data.guests ?? 1) : 0,
+      dietary: data.dietary?.trim() || null,
+      message: data.message?.trim() || null,
+    }).catch(() => undefined);
+    return created;
   }
 
   // The owner's response list for one of their projects.

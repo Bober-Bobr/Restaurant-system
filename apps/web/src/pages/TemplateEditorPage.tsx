@@ -62,7 +62,8 @@ export const TemplateEditorPage = () => {
   if (!accessToken) return <Navigate to="/login" replace />;
   if (role !== 'MANAGER' && role !== 'CHIEF_ADMIN') return <Navigate to="/login" replace />;
 
-  const backLink = tpl?.kind === 'invitation' ? '/invitations' : '/';
+  // The manager portal no longer has an invitations section — always back to /.
+  const backLink = '/';
 
   return (
     <div className="adm-bg">

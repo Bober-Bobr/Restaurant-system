@@ -6,7 +6,6 @@ import {
   updateGuestInvitationSchema,
   rsvpSchema,
 } from './guestInvitation.schema.js';
-import { forwardRsvp } from '../telegram/telegram.service.js';
 
 const repo = new GuestInvitationRepository();
 
@@ -95,8 +94,6 @@ export class GuestInvitationController {
     if (!invitation.rsvpEnabled) throw createHttpError(400, 'RSVP is closed');
     const data = rsvpSchema.parse(request.body);
     const created = await repo.addRsvp(invitation.id, data);
-    // Fire-and-forget: Telegram delivery must never fail the RSVP.
-    void forwardRsvp(invitation.id, data).catch(() => undefined);
     response.status(201).json({ ok: true, id: created.id });
   }
 }

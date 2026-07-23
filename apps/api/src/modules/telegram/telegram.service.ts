@@ -2,12 +2,12 @@ import { randomInt } from 'node:crypto';
 import { prisma } from '../../db/prisma.js';
 import { env } from '../../config/env.js';
 
-// ── Telegram forwarding for flyer submissions & invitation RSVPs ─────────────
+// ── Telegram forwarding for flyer submissions & v-invite RSVPs ───────────────
 // Dependency-free Bot API client + the bind/unbind/forward logic. Two bots can
 // be configured: the main bot (TELEGRAM_BOT_TOKEN) and an optional dedicated
 // invitation bot (TELEGRAM_INVITE_BOT_TOKEN). When the invitation bot is set,
-// the main bot handles only flyer codes and the invitation bot only guest
-// invitation codes; when unset, the main bot serves both. Everything stays
+// the main bot handles only flyer codes and the invitation bot only v-invite
+// project codes; when unset, the main bot serves both. Everything stays
 // dormant while no token is set (botConfigured()).
 
 const API = 'https://api.telegram.org';
@@ -28,7 +28,7 @@ function botToken(bot: TgBot): string | undefined {
 
 /** Which bot serves a given page kind. */
 function botFor(kind: TgKind): TgBot {
-  return kind === 'guest' && inviteBotSplit() ? 'invite' : 'main';
+  return kind === 'vinvite' && inviteBotSplit() ? 'invite' : 'main';
 }
 
 export function botConfigured(kind: TgKind = 'flyer'): boolean {
@@ -85,9 +85,11 @@ export async function deepLink(kind: TgKind, code: string): Promise<string | nul
 
 // ── Subscription targets ─────────────────────────────────────────────────────
 // The same code/link machinery serves two kinds of pages, each with its own
-// code column and link table: flyers (form submissions) and guest invitations
-// (RSVPs). A small delegate per kind keeps the shared logic below generic.
-export type TgKind = 'flyer' | 'guest';
+// code column and link table: flyers (form submissions) and v-invite.uz
+// projects (RSVPs). A small delegate per kind keeps the shared logic generic;
+// the delegate's `invitationId` parameter maps to InviteProject.id for
+// 'vinvite'.
+export type TgKind = 'flyer' | 'vinvite';
 
 type LinkWhere = { invitationId?: string; chatId?: string; id?: string };
 
@@ -117,24 +119,36 @@ const targets: Record<TgKind, {
     }),
     deleteLinks: (where) => prisma.flyerTelegramLink.deleteMany({ where }),
   },
-  guest: {
+  vinvite: {
     noun: 'invitation',
-    getCode: (id) => prisma.guestInvitation.findUnique({ where: { id }, select: { telegramCode: true } }),
-    setCode: (id, code) => prisma.guestInvitation.update({ where: { id }, data: { telegramCode: code } }),
-    findByCode: (code) => prisma.guestInvitation.findUnique({ where: { telegramCode: code }, select: { id: true, slug: true } }),
-    upsertLink: (invitationId, chatId, username, firstName) => prisma.guestInvitationTelegramLink.upsert({
-      where: { invitationId_chatId: { invitationId, chatId } },
-      create: { invitationId, chatId, username, firstName },
+    getCode: (id) => prisma.inviteProject.findUnique({ where: { id }, select: { telegramCode: true } }),
+    setCode: (id, code) => prisma.inviteProject.update({ where: { id }, data: { telegramCode: code } }),
+    // Projects may have no slug yet — fall back to the project name for replies.
+    findByCode: (code) => prisma.inviteProject
+      .findUnique({ where: { telegramCode: code }, select: { id: true, slug: true, name: true } })
+      .then((p) => (p ? { id: p.id, slug: p.slug || p.name } : null)),
+    upsertLink: (projectId, chatId, username, firstName) => prisma.inviteTelegramLink.upsert({
+      where: { projectId_chatId: { projectId, chatId } },
+      create: { projectId, chatId, username, firstName },
       update: {},
     }),
-    listLinks: (invitationId) => prisma.guestInvitationTelegramLink.findMany({
-      where: { invitationId },
+    listLinks: (projectId) => prisma.inviteTelegramLink.findMany({
+      where: { projectId },
       orderBy: { createdAt: 'asc' },
       select: { id: true, chatId: true, username: true, firstName: true, createdAt: true },
     }),
-    deleteLinks: (where) => prisma.guestInvitationTelegramLink.deleteMany({ where }),
+    deleteLinks: ({ invitationId, ...rest }) => prisma.inviteTelegramLink.deleteMany({
+      where: { ...rest, ...(invitationId ? { projectId: invitationId } : {}) },
+    }),
   },
 };
+
+/** Ownership guard for the v-invite endpoints: does this project belong to the
+ *  authenticated invite user? */
+export async function vinviteProjectOwned(projectId: string, userId: string): Promise<boolean> {
+  const project = await prisma.inviteProject.findUnique({ where: { id: projectId }, select: { userId: true } });
+  return project?.userId === userId;
+}
 
 // ── Activation code ──────────────────────────────────────────────────────────
 // Unambiguous uppercase alphabet (no 0/O/1/I) so codes are easy to relay.
@@ -198,11 +212,11 @@ type TgUpdate = {
   };
 };
 
-/** Which page kinds a bot serves: the invitation bot only guest invitations;
- *  the main bot everything, unless the invitation bot took the guest half. */
+/** Which page kinds a bot serves: the invitation bot only v-invite projects;
+ *  the main bot everything, unless the invitation bot took the invite half. */
 function botKinds(bot: TgBot): TgKind[] {
-  if (bot === 'invite') return ['guest'];
-  return inviteBotSplit() ? ['flyer'] : ['flyer', 'guest'];
+  if (bot === 'invite') return ['vinvite'];
+  return inviteBotSplit() ? ['flyer'] : ['flyer', 'vinvite'];
 }
 
 // What the bot's help/stop texts call the things it serves.
@@ -288,27 +302,31 @@ export async function forwardSubmission(
   await Promise.all(links.map((l) => sendMessage('main', l.chatId, text)));
 }
 
-// ── Outbound: forward a new RSVP to every chat linked to the invitation ───────
+// ── Outbound: forward a new RSVP to every chat linked to a v-invite project ───
 export async function forwardRsvp(
-  invitationId: string,
-  rsvp: { guestName: string; attending: boolean },
+  projectId: string,
+  rsvp: { guestName: string; attending: boolean; guests?: number; dietary?: string | null; message?: string | null },
 ): Promise<void> {
-  if (!botConfigured('guest')) return;
-  const [invitation, links] = await Promise.all([
-    prisma.guestInvitation.findUnique({ where: { id: invitationId }, select: { slug: true } }),
-    prisma.guestInvitationTelegramLink.findMany({ where: { invitationId }, select: { chatId: true } }),
+  if (!botConfigured('vinvite')) return;
+  const [project, links] = await Promise.all([
+    prisma.inviteProject.findUnique({ where: { id: projectId }, select: { slug: true, name: true } }),
+    prisma.inviteTelegramLink.findMany({ where: { projectId }, select: { chatId: true } }),
   ]);
   if (links.length === 0) return;
 
+  const label = project?.slug || project?.name;
   const lines = [
     '💌 <b>New RSVP</b>',
-    invitation?.slug ? `Invitation: ${htmlEscape(invitation.slug)}` : null,
+    label ? `Invitation: ${htmlEscape(label)}` : null,
     `Guest: ${htmlEscape(rsvp.guestName)}`,
     rsvp.attending ? 'Answer: ✅ attending' : 'Answer: ❌ not attending',
+    rsvp.attending && rsvp.guests ? `Guests: ${rsvp.guests}` : null,
+    rsvp.dietary ? `Dietary: ${htmlEscape(rsvp.dietary)}` : null,
+    rsvp.message ? `Message: ${htmlEscape(rsvp.message)}` : null,
   ].filter(Boolean);
   const text = lines.join('\n');
 
-  await Promise.all(links.map((l) => sendMessage(botFor('guest'), l.chatId, text)));
+  await Promise.all(links.map((l) => sendMessage(botFor('vinvite'), l.chatId, text)));
 }
 
 // ── Webhook registration (called once on boot) ───────────────────────────────

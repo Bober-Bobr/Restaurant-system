@@ -1,6 +1,7 @@
 import { AdminRole } from '@prisma/client';
 import { Router } from 'express';
 import { adminAuthMiddleware, requireRole } from '../../middleware/auth.middleware.js';
+import { inviteAuthMiddleware } from '../vinvite/vinvite.middleware.js';
 import { TelegramController } from './telegram.controller.js';
 
 const router = Router();
@@ -16,9 +17,10 @@ router.get('/flyers/:invitationId/status', adminAuthMiddleware, managerOrChief, 
 router.post('/flyers/:invitationId/rotate', adminAuthMiddleware, managerOrChief, controller.rotate('flyer'));
 router.delete('/flyers/:invitationId/links/:linkId', adminAuthMiddleware, managerOrChief, controller.removeLink('flyer'));
 
-// Manager-facing: same for guest invitations (RSVP forwarding).
-router.get('/invitations/:invitationId/status', adminAuthMiddleware, managerOrChief, controller.status('guest'));
-router.post('/invitations/:invitationId/rotate', adminAuthMiddleware, managerOrChief, controller.rotate('guest'));
-router.delete('/invitations/:invitationId/links/:linkId', adminAuthMiddleware, managerOrChief, controller.removeLink('guest'));
+// v-invite.uz owner-facing: same trio for a project's RSVP forwarding. Invite
+// auth (not admin) + per-project ownership check inside the controller.
+router.get('/vinvite/:invitationId/status', inviteAuthMiddleware, controller.status('vinvite'));
+router.post('/vinvite/:invitationId/rotate', inviteAuthMiddleware, controller.rotate('vinvite'));
+router.delete('/vinvite/:invitationId/links/:linkId', inviteAuthMiddleware, controller.removeLink('vinvite'));
 
 export { router as telegramRouter };

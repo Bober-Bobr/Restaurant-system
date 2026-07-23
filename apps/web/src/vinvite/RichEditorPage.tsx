@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import QRCode from 'qrcode';
 import type { Locale } from '../utils/translate';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
-import { vinviteService, type InviteRsvp } from './api';
+import { vinviteService, type InviteRsvp, type TelegramStatus } from './api';
 import { useViT, type ViKey } from './i18n';
 import { getTemplate } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
@@ -441,6 +442,9 @@ function RsvpResponsesPanel({ projectId }: { projectId: string }) {
         <Stat label={t('guests_lbl')} value={String(totalGuests)} color="#c9a42c" />
       </div>
 
+      {/* Telegram forwarding */}
+      <TelegramPanel projectId={projectId} />
+
       {rsvps.length === 0 ? (
         <div style={{ padding: '52px 20px', textAlign: 'center', color: '#64748b', borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: 38, marginBottom: 10 }}>💌</div>
@@ -449,6 +453,104 @@ function RsvpResponsesPanel({ projectId }: { projectId: string }) {
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
           {rsvps.map((r) => <RsvpCard key={r.id} rsvp={r} onDelete={() => removeMutation.mutate(r.id)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Telegram RSVP forwarding: code / QR / deep link + connected chats ────────
+// Collapsed to a single row until opened; the status query runs only then
+// (opening for the first time also generates the project's code).
+function TelegramPanel({ projectId }: { projectId: string }) {
+  const t = useViT();
+  const [open, setOpen] = useState(false);
+  const [qr, setQr] = useState('');
+  const queryClient = useQueryClient();
+  const statusQuery = useQuery({
+    queryKey: ['vi-telegram', projectId],
+    queryFn: () => vinviteService.telegramStatus(projectId),
+    enabled: open,
+  });
+  const status: TelegramStatus | undefined = statusQuery.data;
+
+  useEffect(() => {
+    if (status?.link) QRCode.toDataURL(status.link, { margin: 1, width: 220 }).then(setQr).catch(() => setQr(''));
+    else setQr('');
+  }, [status?.link]);
+
+  const rotateMutation = useMutation({
+    mutationFn: () => vinviteService.telegramRotate(projectId),
+    onSuccess: (data) => queryClient.setQueryData(['vi-telegram', projectId], data),
+  });
+  const removeMutation = useMutation({
+    mutationFn: (linkId: string) => vinviteService.telegramRemoveLink(projectId, linkId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vi-telegram', projectId] }),
+  });
+
+  const card: React.CSSProperties = { padding: 14, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' };
+  return (
+    <div style={{ ...card, marginBottom: 16 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#e2e8f0' }}
+      >
+        <span style={{ fontSize: 18 }}>✈</span>
+        <strong style={{ fontSize: 14 }}>{t('tg_connect')}</strong>
+        <span style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: 13 }}>{open ? '▴' : '▾'}</span>
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          {statusQuery.isLoading && <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><span className="vi-spinner" /></div>}
+          {status && status.enabled === false && (
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>{t('tg_disabled')}</p>
+          )}
+          {status && status.enabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>{t('tg_howto')}</p>
+
+              <div style={{ ...card, textAlign: 'center', background: 'rgba(15,23,42,0.6)' }}>
+                <div style={{ ...panelLabel, marginBottom: 8 }}>{t('tg_your_code')}</div>
+                <div
+                  onClick={() => status.code && navigator.clipboard?.writeText(status.code)}
+                  title={t('copy_link')}
+                  style={{ fontSize: 28, fontWeight: 800, letterSpacing: '0.3em', color: '#c9a42c', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
+                >{status.code}</div>
+                {qr && <img src={qr} alt="" style={{ width: 170, height: 170, margin: '12px auto 0', borderRadius: 10, background: '#fff', padding: 6 }} />}
+                {status.link && (
+                  <div style={{ marginTop: 10 }}>
+                    <a href={status.link} target="_blank" rel="noopener noreferrer" className="vi-btn vi-btn-primary" style={{ display: 'inline-block', fontSize: 13, textDecoration: 'none' }}>{t('tg_open_bot')}</a>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ ...panelLabel, marginBottom: 8 }}>{t('tg_connected')} · {status.links?.length ?? 0}</div>
+                {(status.links?.length ?? 0) === 0 ? (
+                  <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>{t('tg_none')}</p>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {status.links!.map((l) => (
+                      <div key={l.id} style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 14px' }}>
+                        <span style={{ color: '#f1f5f9', fontSize: 13 }}>{l.firstName || (l.username ? '@' + l.username : l.chatId)}{l.username && l.firstName ? ' · @' + l.username : ''}</span>
+                        <button type="button" onClick={() => removeMutation.mutate(l.id)} className="vi-btn vi-btn-ghost" style={{ fontSize: 12, padding: '5px 12px' }}>{t('delete')}</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { if (confirm(t('tg_rotate_confirm'))) rotateMutation.mutate(); }}
+                className="vi-btn vi-btn-ghost"
+                style={{ fontSize: 12, justifySelf: 'start', alignSelf: 'flex-start' }}
+                disabled={rotateMutation.isPending}
+              >↻ {t('tg_rotate')}</button>
+            </div>
+          )}
         </div>
       )}
     </div>

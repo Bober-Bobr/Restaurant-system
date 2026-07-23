@@ -135,6 +135,21 @@ export type InviteRsvp = {
   createdAt: string;
 };
 
+export type TelegramLink = {
+  id: string;
+  chatId: string;
+  username: string | null;
+  firstName: string | null;
+  createdAt: string;
+};
+
+export type TelegramStatus = {
+  enabled: boolean;
+  code?: string;
+  link?: string | null;
+  links?: TelegramLink[];
+};
+
 export type RsvpSubmission = {
   name: string;
   attending: boolean;
@@ -235,6 +250,20 @@ export const vinviteService = {
   },
   async removeRsvp(projectId: string, rsvpId: string): Promise<void> {
     await viHttp.delete(`/projects/${projectId}/rsvps/${rsvpId}`);
+  },
+
+  // Telegram RSVP forwarding. These live outside the /vinvite prefix, so pass
+  // absolute URLs (viHttp still attaches the invite token + refresh handling).
+  async telegramStatus(projectId: string): Promise<TelegramStatus> {
+    const { data } = await viHttp.get<TelegramStatus>(`${API_BASE}/telegram/vinvite/${projectId}/status`);
+    return data;
+  },
+  async telegramRotate(projectId: string): Promise<TelegramStatus> {
+    const { data } = await viHttp.post<Omit<TelegramStatus, 'enabled'>>(`${API_BASE}/telegram/vinvite/${projectId}/rotate`);
+    return { ...data, enabled: true };
+  },
+  async telegramRemoveLink(projectId: string, linkId: string): Promise<void> {
+    await viHttp.delete(`${API_BASE}/telegram/vinvite/${projectId}/links/${linkId}`);
   },
 
   // Public site (no auth)

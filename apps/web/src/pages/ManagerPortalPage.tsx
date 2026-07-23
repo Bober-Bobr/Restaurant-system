@@ -120,36 +120,6 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
   );
 }
 
-// Top-level switch between the two designer sections: Flyers and Invitations.
-export function ManagerTabs({ active, locale }: { active: 'flyers' | 'invitations'; locale: Locale }) {
-  const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
-  const navigate = useNavigate();
-  const tab = (key: 'flyers' | 'invitations', label: string, to: string) => {
-    const on = active === key;
-    return (
-      <button
-        type="button"
-        onClick={() => navigate(to)}
-        style={{
-          padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-          cursor: 'pointer', border: '1px solid',
-          borderColor: on ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
-          background: on ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-          color: on ? '#c9a42c' : 'rgba(226,232,240,0.65)',
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-      {tab('flyers', t('flyers'), '/')}
-      {tab('invitations', t('invitations'), '/invitations')}
-    </div>
-  );
-}
-
 // ── /  (flyer project gallery, Taplink-style) ─────────────────────────────
 // Flyers are standalone projects: each card shows the cover image, the project
 // name (slug) and its public link. Restaurants are no longer part of this flow.
@@ -178,7 +148,6 @@ export const ManagerPortalPage = () => {
     <div className="adm-bg">
       <ManagerNav locale={locale} />
       <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-        <ManagerTabs active="flyers" locale={locale} />
         <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('my_flyers')}</h1>
 
         {flyersQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
