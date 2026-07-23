@@ -150,6 +150,13 @@ export type TelegramStatus = {
   links?: TelegramLink[];
 };
 
+// System-admin design override for a built-in rich template.
+export type TemplateOverride = {
+  templateId: string;
+  config: Record<string, unknown>;
+  updatedAt?: string;
+};
+
 export type RsvpSubmission = {
   name: string;
   attending: boolean;
@@ -241,6 +248,16 @@ export const vinviteService = {
   },
   async removeTemplate(id: string): Promise<void> {
     await viHttp.delete(`/templates/${id}`);
+  },
+
+  // Built-in template design overrides (Design+ template editing).
+  async listTemplateOverrides(): Promise<TemplateOverride[]> {
+    const { data } = await viHttp.get<TemplateOverride[]>('/template-overrides');
+    return data;
+  },
+  async saveTemplateOverride(templateId: string, config: Record<string, unknown>): Promise<TemplateOverride> {
+    const { data } = await viHttp.put<TemplateOverride>(`/template-overrides/${templateId}`, { config });
+    return data;
   },
 
   // RSVP responses (owner)

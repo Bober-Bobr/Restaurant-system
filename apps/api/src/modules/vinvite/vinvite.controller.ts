@@ -1,14 +1,18 @@
 import type { Request, Response } from 'express';
 import {
   createProjectSchema, createTemplateSchema, googleAuthSchema, loginSchema,
-  projectSlug, refreshSchema, registerSchema, rsvpSchema, updateProfileSchema,
-  updateProjectSchema, updateTemplateSchema,
+  projectSlug, refreshSchema, registerSchema, rsvpSchema, templateOverrideSchema,
+  updateProfileSchema, updateProjectSchema, updateTemplateSchema,
 } from './vinvite.schema.js';
-import { VInviteAuthService, VInviteProjectService, VInviteTemplateService, type DeviceInfo } from './vinvite.service.js';
+import {
+  VInviteAuthService, VInviteProjectService, VInviteTemplateService,
+  VInviteTemplateOverrideService, type DeviceInfo,
+} from './vinvite.service.js';
 
 const authService = new VInviteAuthService();
 const projectService = new VInviteProjectService();
 const templateService = new VInviteTemplateService();
+const overrideService = new VInviteTemplateOverrideService();
 
 function deviceInfo(request: Request): DeviceInfo {
   return {
@@ -182,6 +186,20 @@ export class VInviteController {
 <noscript><a href="${esc(card.url)}">${esc(card.title)}</a></noscript>
 </body>
 </html>`);
+  }
+
+  // ── Built-in template overrides (Design+ template editing) ─────────────────
+  async listTemplateOverrides(request: Request, response: Response) {
+    response.json(await overrideService.list());
+  }
+
+  async saveTemplateOverride(request: Request, response: Response) {
+    const config = templateOverrideSchema.parse(request.body).config;
+    response.json(await overrideService.save(
+      request.inviteUser!.id,
+      String(request.params.templateId),
+      config,
+    ));
   }
 
   async publicRsvp(request: Request, response: Response) {

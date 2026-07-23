@@ -1,13 +1,30 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { vinviteService } from './api';
 import { useViT, type ViKey } from './i18n';
+import { useVInviteStore } from './store';
 import { RICH_TEMPLATES, TEMPLATE_CATEGORIES } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
 import { LOCALES, type TemplateDefinition } from './templates/types';
+
+// Admin-saved design override for a template, falling back to its shipped
+// default. All cards/previews/new invitations use the effective config.
+export function useTemplateOverrides() {
+  const query = useQuery({
+    queryKey: ['vi-tpl-overrides'],
+    queryFn: () => vinviteService.listTemplateOverrides(),
+    staleTime: 60_000,
+  });
+  const map = useMemo(() => {
+    const m = new Map<string, Record<string, unknown>>();
+    for (const o of query.data ?? []) m.set(o.templateId, o.config);
+    return m;
+  }, [query.data]);
+  return { effectiveConfig: (tpl: TemplateDefinition) => map.get(tpl.id) ?? tpl.defaultConfig };
+}
 
 // ── Templates: gallery of ready-made animated designs ────────────────────────
 // Users browse first-party templates (no custom-template building anymore),
@@ -20,6 +37,8 @@ export const ViTemplatesPage = () => {
   const [category, setCategory] = useState<string>('all');
   const [preview, setPreview] = useState<TemplateDefinition | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const isSystemAdmin = useVInviteStore((s) => s.user?.role === 'SYSTEM_ADMIN');
+  const { effectiveConfig } = useTemplateOverrides();
 
   // Only show category chips that actually have templates.
   const categories = useMemo(
@@ -36,7 +55,7 @@ export const ViTemplatesPage = () => {
         theme: {
           templateId: tpl.id,
           languages: [...LOCALES],
-          config: structuredClone(tpl.defaultConfig),
+          config: structuredClone(effectiveConfig(tpl)),
         } as unknown as Parameters<typeof vinviteService.createProject>[0]['theme'],
       }),
     onSuccess: (project) => {
@@ -78,10 +97,12 @@ export const ViTemplatesPage = () => {
             <TemplateCard
               key={tpl.id}
               tpl={tpl}
+              config={effectiveConfig(tpl)}
               delayMs={i * 70}
               busy={busyId === tpl.id}
               onPreview={() => setPreview(tpl)}
               onUse={() => use(tpl)}
+              onEdit={isSystemAdmin ? () => navigate(`/template-designer/${tpl.id}`) : undefined}
             />
           ))}
         </div>
@@ -90,6 +111,7 @@ export const ViTemplatesPage = () => {
       {preview && (
         <TemplatePreviewModal
           tpl={preview}
+          config={effectiveConfig(preview)}
           busy={busyId === preview.id}
           onUse={() => use(preview)}
           onClose={() => setPreview(null)}
@@ -113,12 +135,13 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 }
 
 // ── One template card: live cover preview + name + preview/use actions ────────
-function TemplateCard({ tpl, delayMs, busy, onPreview, onUse }: {
-  tpl: TemplateDefinition; delayMs: number; busy: boolean; onPreview: () => void; onUse: () => void;
+function TemplateCard({ tpl, config, delayMs, busy, onPreview, onUse, onEdit }: {
+  tpl: TemplateDefinition; config: Record<string, unknown>; delayMs: number; busy: boolean;
+  onPreview: () => void; onUse: () => void; onEdit?: () => void;
 }) {
   const t = useViT();
   const cat = TEMPLATE_CATEGORIES.find((c) => c.key === tpl.category);
-  const coverConfig = useMemo(() => resolveAssetUrls(tpl, tpl.defaultConfig), [tpl]);
+  const coverConfig = useMemo(() => resolveAssetUrls(tpl, config), [tpl, config]);
 
   return (
     <div className="vi-card vi-fade-up" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', animationDelay: `${delayMs}ms` }}>
@@ -155,17 +178,25 @@ function TemplateCard({ tpl, delayMs, busy, onPreview, onUse }: {
             {busy ? '…' : `✨ ${t('use_template')}`}
           </button>
         </div>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="vi-btn vi-btn-ghost"
+            style={{ fontSize: 13, color: '#a78bfa', borderColor: 'rgba(167,139,250,0.4)', background: 'rgba(124,58,237,0.08)' }}
+          >🛠 {t('adm_edit_template')}</button>
+        )}
       </div>
     </div>
   );
 }
 
 // ── Full-screen preview: real animations + guest language switcher ────────────
-function TemplatePreviewModal({ tpl, busy, onUse, onClose }: {
-  tpl: TemplateDefinition; busy: boolean; onUse: () => void; onClose: () => void;
+function TemplatePreviewModal({ tpl, config: rawConfig, busy, onUse, onClose }: {
+  tpl: TemplateDefinition; config: Record<string, unknown>; busy: boolean; onUse: () => void; onClose: () => void;
 }) {
   const t = useViT();
-  const config = useMemo(() => resolveAssetUrls(tpl, tpl.defaultConfig), [tpl]);
+  const config = useMemo(() => resolveAssetUrls(tpl, rawConfig), [tpl, rawConfig]);
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(6,8,14,0.92)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column', animation: 'viFadeIn 0.2s ease both' }}>

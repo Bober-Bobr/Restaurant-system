@@ -91,3 +91,8 @@ export const updateTemplateSchema = z.object({
   blocks: blockArray.optional(),
   theme: z.record(z.string(), z.any()).optional(),
 });
+
+// System-admin template override: the full rich config replacing defaultConfig.
+export const templateOverrideSchema = z.object({
+  config: z.record(z.string(), z.any()),
+});

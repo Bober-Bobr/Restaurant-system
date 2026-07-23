@@ -719,6 +719,16 @@ model InviteUser {
   templates InviteTemplate[]
 }
 
+// System-admin design override for a built-in rich template: `config` replaces
+// the template's defaultConfig for new invitations, cards and previews.
+model InviteTemplateOverride {
+  id         String   @id @default(cuid())
+  templateId String   @unique
+  config     Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 // Per-device refresh session — powers the "Devices" tab.
 model InviteSession {
   id               String   @id @default(cuid())

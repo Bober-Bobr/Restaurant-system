@@ -80,6 +80,10 @@ export type RichRendererProps = {
   onRsvp?: (payload: RsvpPayload) => Promise<void>;
   // Editor mode: a border-radius/frame hint, and it disables RSVP persistence.
   interactive?: boolean;
+  // Design+ editing: overlay elements become draggable inside the iframe and
+  // report their new position here (percent within their anchor).
+  adminEdit?: boolean;
+  onAdminMove?: (id: string, x: number, y: number) => void;
 };
 
 export type RsvpPayload = {

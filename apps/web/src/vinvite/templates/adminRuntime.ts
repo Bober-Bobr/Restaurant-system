@@ -10,6 +10,43 @@
 
 export const ADMIN_RUNTIME = `(function(){
   var LAYER = (window.__CONFIG__ && window.__CONFIG__.adminLayer) || {};
+  var EDIT = window.__ADMIN_EDIT__ === true;
+
+  /* Design+ editing: drag an overlay element to reposition it; the new percent
+     position is applied live and reported to the host editor on release. */
+  function makeDraggable(wrap, el){
+    wrap.style.pointerEvents = 'auto';
+    wrap.style.cursor = 'move';
+    wrap.style.touchAction = 'none';
+    wrap.style.outline = '1px dashed rgba(124,58,237,0.75)';
+    wrap.style.outlineOffset = '2px';
+    wrap.addEventListener('pointerdown', function(down){
+      down.preventDefault();
+      down.stopPropagation();
+      var fixed = el.anchor === 'fixed' || !el.anchor;
+      var anchor = fixed ? null : document.getElementById(el.anchor);
+      var r = fixed
+        ? { width: window.innerWidth, height: window.innerHeight }
+        : anchor.getBoundingClientRect();
+      var startX = down.clientX, startY = down.clientY;
+      var origX = el.x != null ? el.x : 50, origY = el.y != null ? el.y : 50;
+      function clamp(v){ return Math.max(0, Math.min(100, Math.round(v * 10) / 10)); }
+      function apply(mv){
+        el.x = clamp(origX + (mv.clientX - startX) / r.width * 100);
+        el.y = clamp(origY + (mv.clientY - startY) / r.height * 100);
+        wrap.style.left = el.x + '%';
+        wrap.style.top = el.y + '%';
+      }
+      function onMove(mv){ apply(mv); }
+      function onUp(mv){
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.parent.postMessage({ type: 'vinvite:admin-move', id: el.id, x: el.x, y: el.y }, '*');
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+  }
 
   var KEYFRAMES =
     '@keyframes vaFloat{from{transform:translateY(0)}to{transform:translateY(-12px)}}' +
@@ -111,6 +148,7 @@ export const ADMIN_RUNTIME = `(function(){
 
       wrap.appendChild(node);
       anchor.appendChild(wrap);
+      if (EDIT && !el.cover) makeDraggable(wrap, el);
     }
   }
 

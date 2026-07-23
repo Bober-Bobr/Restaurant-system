@@ -484,3 +484,27 @@ export class VInviteTemplateService {
     await prisma.inviteTemplate.delete({ where: { id } });
   }
 }
+
+// ── Built-in template design overrides (system administrators) ────────────────
+// A SYSTEM_ADMIN can re-design a first-party rich template; the stored config
+// replaces the template's defaultConfig for template cards, previews and every
+// newly created invitation. Reads are public (the templates page needs them
+// before login); writes are role-gated.
+export class VInviteTemplateOverrideService {
+  list() {
+    return prisma.inviteTemplateOverride.findMany({
+      select: { templateId: true, config: true, updatedAt: true },
+    });
+  }
+
+  async save(userId: string, templateId: string, config: Record<string, unknown>) {
+    const user = await prisma.inviteUser.findUnique({ where: { id: userId }, select: { role: true } });
+    if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
+    return prisma.inviteTemplateOverride.upsert({
+      where: { templateId },
+      create: { templateId, config: config as object },
+      update: { config: config as object },
+      select: { templateId: true, config: true, updatedAt: true },
+    });
+  }
+}

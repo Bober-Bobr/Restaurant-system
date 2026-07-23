@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { RichRendererProps, RsvpPayload } from './types';
 import { ADMIN_RUNTIME } from './adminRuntime';
 
@@ -6,14 +6,18 @@ import { ADMIN_RUNTIME } from './adminRuntime';
 // injected via `srcdoc` together with a `window.__CONFIG__` object. The iframe
 // runs with `allow-scripts` but WITHOUT `allow-same-origin`, so its scripts can
 // animate freely yet cannot touch the v-invite.uz origin (cookies, localStorage,
-// the auth store). Config edits are pushed in live via postMessage so the
-// opening animation doesn't replay on every keystroke.
+// the auth store).
+//
+// The srcdoc is built ONCE from the initial props and kept stable afterwards —
+// config/language changes are pushed in via postMessage, so the iframe never
+// reloads (and the opening animation never replays) while editing.
 
 type InMsg =
   | { type: 'vinvite:rsvp'; payload: RsvpPayload }
-  | { type: 'vinvite:height'; height: number };
+  | { type: 'vinvite:height'; height: number }
+  | { type: 'vinvite:admin-move'; id: string; x: number; y: number };
 
-function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[]): string {
+function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean): string {
   // The template runs on the opaque `about:srcdoc` origin, so it can't read the
   // host origin itself. Inject it so templates can resolve their own bundled
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
@@ -22,6 +26,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     window.__CONFIG__ = ${JSON.stringify(config)};
     window.__LANGS__ = ${JSON.stringify(languages)};
     window.__ORIGIN__ = ${JSON.stringify(origin)};
+    window.__ADMIN_EDIT__ = ${adminEdit ? 'true' : 'false'};
   </script>`;
   // The Design+ overlay runtime (system-admin custom elements / palettes)
   // rides along in every template, after the template's own script.
@@ -36,11 +41,23 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     : withBootstrap + adminScript;
 }
 
-export function RichRenderer({ html, config, languages, onRsvp, interactive }: RichRendererProps) {
+export function RichRenderer({ html, config, languages, onRsvp, onAdminMove, adminEdit, interactive }: RichRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedRef = useRef(false);
 
-  // Receive messages from the sandboxed template (RSVP submissions, height).
+  // Built once per mounted template — later prop changes go via postMessage.
+  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit));
+  const htmlRef = useRef(html);
+  useEffect(() => {
+    if (htmlRef.current === html) return;
+    // A different template was swapped in — a real reload is required.
+    htmlRef.current = html;
+    loadedRef.current = false;
+    setDoc(buildSrcDoc(html, config, languages, adminEdit));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [html]);
+
+  // Receive messages from the sandboxed template (RSVP submissions, drags).
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow) return;
@@ -52,13 +69,16 @@ export function RichRenderer({ html, config, languages, onRsvp, interactive }: R
           () => iframeRef.current?.contentWindow?.postMessage({ type: 'vinvite:rsvp-err' }, '*'),
         );
       }
+      if (data.type === 'vinvite:admin-move' && onAdminMove) {
+        onAdminMove(data.id, data.x, data.y);
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [onRsvp]);
+  }, [onRsvp, onAdminMove]);
 
   // Live-update config/languages without reloading the iframe (keeps animations
-  // from replaying). The initial values are already baked into srcdoc below.
+  // from replaying). The initial values are already baked into srcdoc above.
   useEffect(() => {
     if (!loadedRef.current) return;
     iframeRef.current?.contentWindow?.postMessage(
@@ -78,7 +98,7 @@ export function RichRenderer({ html, config, languages, onRsvp, interactive }: R
       // blocked by Permissions Policy unless it is delegated explicitly — the
       // template starts the music on the envelope tap.
       allow="autoplay"
-      srcDoc={buildSrcDoc(html, config, languages)}
+      srcDoc={doc}
       style={{
         display: 'block',
         width: '100%',

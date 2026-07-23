@@ -31,6 +31,10 @@ router.delete('/projects/:id', inviteAuthMiddleware, controller.removeProject.bi
 router.get('/projects/:id/rsvps', inviteAuthMiddleware, controller.listRsvps.bind(controller));
 router.delete('/projects/:id/rsvps/:rsvpId', inviteAuthMiddleware, controller.removeRsvp.bind(controller));
 
+// Built-in template design overrides: public read, system-admin write.
+router.get('/template-overrides', controller.listTemplateOverrides.bind(controller));
+router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.saveTemplateOverride.bind(controller));
+
 router.get('/templates', inviteAuthMiddleware, controller.listTemplates.bind(controller));
 router.post('/templates', inviteAuthMiddleware, controller.createTemplate.bind(controller));
 router.get('/templates/:id', inviteAuthMiddleware, controller.getTemplate.bind(controller));

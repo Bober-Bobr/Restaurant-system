@@ -52,10 +52,19 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   const [openGroup, setOpenGroup] = useState<string | null>(template?.groups[0]?.key ?? null);
   const isSystemAdmin = useVInviteStore((s) => s.user?.role === 'SYSTEM_ADMIN');
 
-  const previewConfig = useMemo(
-    () => (template ? resolveAssetUrls(template, design.config) : design.config),
-    [template, design.config],
-  );
+  // The preview does NOT follow every edit — it holds the last "published to
+  // preview" config until the 👁 button is pressed. Only the Design+ overlay
+  // layer stays live, so dragging elements gives instant feedback.
+  const [pinnedConfig, setPinnedConfig] = useState(design.config);
+  useEffect(() => { setPinnedConfig(design.config); /* re-pin on template swap */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [design.templateId]);
+  const liveAdminLayer = (design.config as { adminLayer?: unknown }).adminLayer;
+  const previewConfig = useMemo(() => {
+    const merged = { ...pinnedConfig, ...(liveAdminLayer !== undefined ? { adminLayer: liveAdminLayer } : {}) };
+    return template ? resolveAssetUrls(template, merged) : merged;
+  }, [template, pinnedConfig, liveAdminLayer]);
+  const previewStale = pinnedConfig !== design.config;
 
   if (!template) {
     return <p style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>{t('not_found')}</p>;
@@ -165,13 +174,41 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
             )}
           </div>
 
-          {/* ── Live preview (phone frame) ── */}
-          <div style={{ flex: '1 1 400px', minWidth: 320, display: 'flex', justifyContent: 'center', position: 'sticky', top: 108 }}>
+          {/* ── Preview (phone frame) — refreshed only via the 👁 button ── */}
+          <div style={{ flex: '1 1 400px', minWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, position: 'sticky', top: 96 }}>
+            <button
+              type="button"
+              onClick={() => setPinnedConfig(design.config)}
+              title={t('refresh_preview')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 999,
+                border: '1px solid', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                borderColor: previewStale ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.14)',
+                background: previewStale ? 'rgba(201,164,44,0.16)' : 'rgba(15,23,42,0.5)',
+                color: previewStale ? '#c9a42c' : '#94a3b8',
+              }}
+            >
+              👁 {t('refresh_preview')}
+              {previewStale && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9a42c', boxShadow: '0 0 8px rgba(201,164,44,0.8)' }} />}
+            </button>
             <div style={{
-              width: '100%', maxWidth: 420, height: 'min(78vh, 820px)', borderRadius: 28, overflow: 'hidden',
+              width: '100%', maxWidth: 420, height: 'min(74vh, 820px)', borderRadius: 28, overflow: 'hidden',
               border: '10px solid #0b1120', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', background: '#000',
             }}>
-              <RichRenderer html={template.html} config={previewConfig} languages={design.languages} interactive />
+              <RichRenderer
+                html={template.html}
+                config={previewConfig}
+                languages={design.languages}
+                interactive
+                adminEdit={isSystemAdmin}
+                onAdminMove={(id, x, y) => {
+                  const layer = (design.config.adminLayer as AdminLayer) ?? {};
+                  setConfig('adminLayer', {
+                    ...layer,
+                    elements: (layer.elements ?? []).map((e) => (e.id === id ? { ...e, x, y } : e)),
+                  });
+                }}
+              />
             </div>
           </div>
         </div>
@@ -538,8 +575,7 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
 
                   {!el.cover && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-                      {slider(el, 'x', 'X %', 0, 100, 50)}
-                      {slider(el, 'y', 'Y %', 0, 100, 50)}
+                      <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: 11, color: '#a78bfa' }}>↔ {t('adm_drag_hint')}</p>
                       {slider(el, 'w', 'W %', 4, 100, 30)}
                       {slider(el, 'rotate', '°', -180, 180, 0)}
                       {slider(el, 'radius', 'R px', 0, 200, 0)}

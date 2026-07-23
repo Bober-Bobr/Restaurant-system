@@ -8,6 +8,7 @@ import { ViLoginPage } from './LoginPage';
 import { ViDashboardPage } from './DashboardPage';
 import { ViEditorPage } from './EditorPage';
 import { ViTemplatesPage } from './TemplatesPage';
+import { ViTemplateDesignerPage } from './TemplateDesignerPage';
 import { ViDevicesPage } from './DevicesPage';
 import { ViProfilePage } from './ProfilePage';
 import { PublicVInvitePage } from './PublicVInvitePage';
@@ -50,6 +51,7 @@ export const VInviteApp = () => {
           <>
             {/* The editor is full-bleed (its own top bar), outside the tabbed layout. */}
             <Route path="/projects/:id" element={<ViEditorPage />} />
+            <Route path="/template-designer/:templateId" element={<ViTemplateDesignerPage />} />
             <Route element={<ViLayout />}>
               <Route path="/" element={<ViDashboardPage />} />
               <Route path="/templates" element={<ViTemplatesPage />} />
