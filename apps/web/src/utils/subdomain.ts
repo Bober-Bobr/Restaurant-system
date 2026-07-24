@@ -39,9 +39,18 @@ export function inviteDomain(): string {
   return INVITE_DOMAIN;
 }
 
-// Single-label subdomains reserved for platform roles — never treated as a restaurant slug.
-// `event` is the bare flyer host (event.v-menu.uz) for flyers with no restaurant.
-const RESERVED_SUBDOMAINS = new Set(['admin', 'manager', 'cabinet', 'rmanager', 'www', 'event']);
+// First path segments on the root domain that are NOT a restaurant catering
+// slug (they belong to the platform: login and the kiosk tablet views).
+const CATERING_RESERVED_PATHS = new Set(['login', 'tablet']);
+
+// The catering site, banquet admin and food-admin are all PATH-based now
+// (v-menu.uz/<slug>, banquet.v-menu.uz/<slug>, food-admin.v-menu.uz/<slug>) —
+// mirroring flyers and invitations — so no per-restaurant subdomain/DNS record
+// is needed. This returns the first path segment (or null when at the root).
+function firstPathSegment(): string | null {
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  return seg || null;
+}
 
 export function toSubdomainSlug(name: string): string {
   return name
@@ -107,38 +116,64 @@ export function getEventSubdomainSlug(): string | null {
   return slug;
 }
 
-// Matches <restaurant>.food-admin.v-menu.uz — true when on that subdomain.
-export function isCateringAdminSubdomain(): boolean {
-  return window.location.hostname.endsWith(`.food-admin.${ROOT_DOMAIN}`);
+// banquet.v-menu.uz — the (single, fixed) restaurant admin/employee/kitchen host.
+// The restaurant is identified by the auth token; the path slug is cosmetic.
+export function isBanquetHost(): boolean {
+  return window.location.hostname === `banquet.${ROOT_DOMAIN}`;
 }
 
-// Matches <restaurant>.banquet.v-menu.uz — the restaurant admin/employee/kitchen app.
-// Returns the restaurant slug or null.
-export function getBanquetSlug(): string | null {
+// food-admin.v-menu.uz — the (single, fixed) catering-admin host. The restaurant
+// is identified by the auth token; the path slug is cosmetic.
+export function isFoodAdminHost(): boolean {
+  return window.location.hostname === `food-admin.${ROOT_DOMAIN}`;
+}
+
+// The production root domain that serves the public catering sites by path
+// (v-menu.uz/<slug>). Excludes localhost / v-menu.local, where the dashboards
+// are served at root paths (/admin/menu …) via role-based routing in dev.
+function isCateringPathHost(): boolean {
   const host = window.location.hostname;
-  const suffix = `.banquet.${ROOT_DOMAIN}`;
-  if (!host.endsWith(suffix)) return null;
-  const slug = host.slice(0, -suffix.length);
-  if (!slug || slug.includes('.')) return null; // only single-label slugs
-  return slug;
+  return host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`;
 }
 
-// Matches <restaurant>.v-menu.uz (single label, non-reserved) → public catering site.
-// Returns the restaurant slug or null.
+// v-menu.uz/<slug> → public catering site. Returns the restaurant slug, or null
+// at the root or on a reserved platform path (/login, /tablet).
 export function getCateringSlug(): string | null {
-  const host = window.location.hostname;
-  const suffix = `.${ROOT_DOMAIN}`;
-  if (!host.endsWith(suffix)) return null;
-  const slug = host.slice(0, -suffix.length);
-  // Exclude multi-label subdomains (e.g. foo.banquet, foo.invitation) and reserved labels.
-  if (!slug || slug.includes('.') || RESERVED_SUBDOMAINS.has(slug)) return null;
-  return slug;
+  if (!isCateringPathHost()) return null;
+  const seg = firstPathSegment();
+  if (!seg || CATERING_RESERVED_PATHS.has(seg)) return null;
+  return seg;
 }
 
-export function getSubdomainSlug(): string | null {
-  const host = window.location.hostname;
-  if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}` || !host.endsWith(`.${ROOT_DOMAIN}`)) return null;
-  return host.replace(`.${ROOT_DOMAIN}`, '');
+// Router basename: banquet/food-admin admin apps live under /<slug>, so the app's
+// routes (/, /admin/menu …) resolve beneath the cosmetic slug. The public catering
+// site likewise lives under /<slug> so its internal pages (/halls, /reviews …)
+// resolve correctly. Everything else (root login/tablet, admin/manager/cabinet/
+// rmanager subdomains, flyers, invitations) uses no basename.
+export function routerBasename(): string {
+  if (isBanquetHost() || isFoodAdminHost()) {
+    const seg = firstPathSegment();
+    return seg ? `/${seg}` : '';
+  }
+  const cateringSlug = getCateringSlug();
+  return cateringSlug ? `/${cateringSlug}` : '';
+}
+
+// Build the public catering-site URL (path-based): https://v-menu.uz/<slug>
+export function buildCateringSiteUrl(slug: string): string {
+  return `https://${ROOT_DOMAIN}/${slug}`;
+}
+
+// Build a banquet-admin URL: https://banquet.v-menu.uz/<slug>/?<params>
+export function buildBanquetUrl(slug: string, params: Record<string, string> = {}): string {
+  const qs = new URLSearchParams(params).toString();
+  return `https://banquet.${ROOT_DOMAIN}/${slug}/${qs ? `?${qs}` : ''}`;
+}
+
+// Build a food-admin URL: https://food-admin.v-menu.uz/<slug>/?<params>
+export function buildFoodAdminUrl(slug: string, params: Record<string, string> = {}): string {
+  const qs = new URLSearchParams(params).toString();
+  return `https://food-admin.${ROOT_DOMAIN}/${slug}/${qs ? `?${qs}` : ''}`;
 }
 
 export function buildSubdomainUrl(slug: string, params: Record<string, string>): string {

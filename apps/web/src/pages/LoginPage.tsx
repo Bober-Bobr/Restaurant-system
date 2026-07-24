@@ -7,7 +7,7 @@ import { publicRestaurantService, type PublicRestaurantSummary } from '../servic
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { translate, locales, type Locale } from '../utils/translate';
-import { buildSubdomainUrl, isRootDomain, toSubdomainSlug, isCateringAdminSubdomain } from '../utils/subdomain';
+import { buildSubdomainUrl, buildBanquetUrl, buildFoodAdminUrl, isRootDomain, toSubdomainSlug, isFoodAdminHost } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
 import logoSrc from '../assets/networking-logo.png';
 import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
@@ -67,15 +67,13 @@ export const LoginPage = () => {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: data.restaurantId ?? '', _rn: data.restaurantName ?? '', _exp: String(data.expiresIn),
       });
-    } else if ((isRootDomain() || isCateringAdminSubdomain()) && data.role === 'CATERING_ADMIN' && data.restaurantName) {
-      const slug = `${toSubdomainSlug(data.restaurantName)}.food-admin`;
-      window.location.href = buildSubdomainUrl(slug, {
+    } else if ((isRootDomain() || isFoodAdminHost()) && data.role === 'CATERING_ADMIN' && data.restaurantName) {
+      window.location.href = buildFoodAdminUrl(toSubdomainSlug(data.restaurantName), {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: data.restaurantId ?? '', _rn: data.restaurantName ?? '', _exp: String(data.expiresIn),
       });
     } else if (isRootDomain() && data.restaurantName) {
-      const slug = `${toSubdomainSlug(data.restaurantName)}.banquet`;
-      window.location.href = buildSubdomainUrl(slug, {
+      window.location.href = buildBanquetUrl(toSubdomainSlug(data.restaurantName), {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: data.restaurantId ?? '', _rn: data.restaurantName ?? '', _exp: String(data.expiresIn),
       });

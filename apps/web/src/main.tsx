@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './app/App';
+import { routerBasename } from './utils/subdomain';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -16,7 +17,7 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename()}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>

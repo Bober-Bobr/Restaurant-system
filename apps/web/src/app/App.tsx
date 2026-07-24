@@ -41,7 +41,7 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isCateringAdminSubdomain, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
 import { VInviteApp } from '../vinvite/VInviteApp';
 import { PublicVInvitePage } from '../vinvite/PublicVInvitePage';
 
@@ -167,16 +167,14 @@ export const App = () => {
       window.location.href = buildSubdomainBase('rmanager');
       return null;
     }
-    // CATERING_ADMIN → food-admin subdomain
+    // CATERING_ADMIN → food-admin.v-menu.uz/<slug>
     if (accessToken && role === 'CATERING_ADMIN' && restaurantName && window.location.pathname !== '/login') {
-      const slug = `${toSubdomainSlug(restaurantName)}.food-admin`;
-      window.location.href = buildSubdomainBase(slug);
+      window.location.href = buildFoodAdminUrl(toSubdomainSlug(restaurantName));
       return null;
     }
-    // Authenticated ADMIN/EMPLOYEE/KITCHEN on root domain → send to their banquet subdomain
+    // Authenticated ADMIN/EMPLOYEE/KITCHEN on root domain → send to banquet.v-menu.uz/<slug>
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
-      const slug = toSubdomainSlug(restaurantName);
-      window.location.href = buildSubdomainBase(`${slug}.banquet`);
+      window.location.href = buildBanquetUrl(toSubdomainSlug(restaurantName));
       return null;
     }
     return (
@@ -239,8 +237,8 @@ export const App = () => {
     );
   }
 
-  // Food-admin subdomain (<slug>.food-admin.v-menu.uz) — requires CATERING_ADMIN auth.
-  if (isCateringAdminSubdomain()) {
+  // Food-admin host (food-admin.v-menu.uz/<slug>) — requires CATERING_ADMIN auth.
+  if (isFoodAdminHost()) {
     const { accessToken, role: catRole } = useAuthStore.getState();
     if (!accessToken || catRole !== 'CATERING_ADMIN') {
       if (window.location.pathname !== '/login') {
