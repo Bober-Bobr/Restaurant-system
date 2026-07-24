@@ -77,7 +77,7 @@ export type Hall = {
 export type TableCategoryPackageItem = {
   id: string;
   servings: number;
-  menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'nameI18n' | 'descriptionI18n' | 'category' | 'priceCents' | 'photoUrl'>;
+  menuItem: Pick<MenuItem, 'id' | 'name' | 'description' | 'nameI18n' | 'descriptionI18n' | 'category' | 'priceCents' | 'photoUrl' | 'isBestseller'>;
 };
 
 export type TableType = 'ADULT' | 'CHILDREN';
@@ -92,6 +92,8 @@ export type TableCategory = {
   discountPercent?: number;
   tableType?: TableType;
   eventType?: TableEventType;
+  // How many hot appetizers a guest may pick for this set menu (default 3).
+  hotAppetizerCount?: number;
   description?: string;
   photoUrl?: string;
   photos?: string[];

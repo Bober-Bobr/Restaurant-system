@@ -13,6 +13,8 @@ export const createTableCategorySchema = z.object({
   discountPercent: z.number().int().min(0).max(100).optional(),
   tableType: z.enum(['ADULT', 'CHILDREN']).optional(),
   eventType: z.enum(['NAHOR', 'FOTIHA', 'TUI', 'OTHERS']).optional(),
+  // How many hot appetizers a guest may pick for this set menu.
+  hotAppetizerCount: z.number().int().min(0).max(20).optional(),
   description: z.string().max(500).optional(),
   photoUrl: z.string().min(1).optional(),
   photos: z.array(z.string()).optional(),

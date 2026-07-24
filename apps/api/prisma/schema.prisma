@@ -357,6 +357,8 @@ model TableCategory {
   // Banquet event type this table belongs to: NAHOR | FOTIHA | TUI | OTHERS.
   // On the tablet the guest picks an event type first, then only its tables show.
   eventType          String                    @default("OTHERS")
+  // How many hot appetizers the guest may pick for this set menu (default 3).
+  hotAppetizerCount  Int                       @default(3)
   description        String?
   photoUrl           String?
   photos             Json                      @default("[]")

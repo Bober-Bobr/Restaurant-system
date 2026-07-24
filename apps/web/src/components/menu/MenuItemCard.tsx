@@ -17,9 +17,18 @@ type MenuItemCardProps = {
   // Toggle mode: select/deselect only, no quantity counter (used for Extras,
   // which are priced per guest rather than by an entered quantity).
   toggleMode?: boolean;
+  // Extras only: lets a paid dish replace an included complimentary dish of the
+  // same category instead of being added as a paid item. When `activeTargetName`
+  // is set the dish is currently standing in for that included dish (free).
+  replace?: {
+    canReplace: boolean;
+    activeTargetName?: string | null;
+    onOpen: () => void;
+    onRevert: () => void;
+  };
 };
 
-export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale, toggleMode = false }: MenuItemCardProps) => {
+export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale, toggleMode = false, replace }: MenuItemCardProps) => {
   const localizedName = dishName(item, locale);
   const localizedDescription = dishDescription(item, locale);
   // Localized category label for the chip. Falls back to the humanized enum when
@@ -126,17 +135,52 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
 
         {/* Controls — hidden in view-only mode */}
         {!viewOnly && toggleMode && (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={() => onQuantityChange(selected ? 0 : 1)}
-            className="w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
-            style={selected
-              ? (dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' })
-              : (dark ? { background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' } : { background: '#1c1917', color: 'white' })}
-          >
-            {selected ? `✓ ${translate('selected', locale)}` : translate('add', locale)}
-          </button>
+        <div className="mt-3 flex flex-col gap-2">
+          {replace?.activeTargetName ? (
+            // This paid dish is currently replacing an included complimentary dish
+            // (served free in its place) — show that state with a revert action.
+            <div className="rounded-lg px-3 py-2" style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.45)' }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#93c5fd' }}>
+                {translate('replacing_label', locale)}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold" style={{ color: dark ? 'white' : '#1c1917' }}>
+                {replace.activeTargetName}
+              </p>
+              <button
+                type="button"
+                onClick={replace.onRevert}
+                className="mt-2 w-full rounded-md py-1.5 text-xs font-semibold"
+                style={{ background: 'rgba(255,255,255,0.08)', color: dark ? 'rgba(255,255,255,0.75)' : '#44403c', border: '1px solid rgba(255,255,255,0.18)' }}
+              >
+                ↺ {translate('revert_to_default', locale)}
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onQuantityChange(selected ? 0 : 1)}
+                className="w-full rounded-lg py-2 text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
+                style={selected
+                  ? (dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' })
+                  : (dark ? { background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' } : { background: '#1c1917', color: 'white' })}
+              >
+                {selected ? `✓ ${translate('selected', locale)}` : translate('add', locale)}
+              </button>
+              {replace?.canReplace && !selected && (
+                <button
+                  type="button"
+                  onClick={replace.onOpen}
+                  className="w-full rounded-lg py-2 text-xs font-semibold transition-all duration-200 active:scale-[0.98]"
+                  style={dark
+                    ? { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.18)' }
+                    : { background: '#f5f5f4', color: '#44403c', border: '1px solid #e7e5e4' }}
+                >
+                  ⇄ {translate('replace_included', locale)}
+                </button>
+              )}
+            </>
+          )}
         </div>
         )}
 

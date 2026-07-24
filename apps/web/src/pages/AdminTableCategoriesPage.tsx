@@ -348,6 +348,7 @@ export const AdminTableCategoriesPage = () => {
   const [ratePerPersonText, setRatePerPersonText] = useState('0');
   const [tableType, setTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
   const [eventType, setEventType] = useState<TableEventType>('OTHERS');
+  const [hotAppetizerCount, setHotAppetizerCount] = useState(3);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -360,6 +361,7 @@ export const AdminTableCategoriesPage = () => {
   const [editRatePerPersonText, setEditRatePerPersonText] = useState('0');
   const [editTableType, setEditTableType] = useState<'ADULT' | 'CHILDREN'>('ADULT');
   const [editEventType, setEditEventType] = useState<TableEventType>('OTHERS');
+  const [editHotAppetizerCount, setEditHotAppetizerCount] = useState(3);
   const [editDescription, setEditDescription] = useState('');
   const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -392,6 +394,7 @@ export const AdminTableCategoriesPage = () => {
         ratePerPerson: parseSumToTiyin(ratePerPersonText) ?? 0,
         tableType,
         eventType,
+        hotAppetizerCount,
         description: description.trim() || undefined,
         photos,
         isActive: true,
@@ -405,6 +408,7 @@ export const AdminTableCategoriesPage = () => {
       setRatePerPersonText('0');
       setTableType('ADULT');
       setEventType('OTHERS');
+      setHotAppetizerCount(3);
       setDescription('');
       setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
@@ -437,6 +441,7 @@ export const AdminTableCategoriesPage = () => {
     setEditTableType(category.tableType === 'CHILDREN' ? 'CHILDREN' : 'ADULT');
     // Only NAHOR and OTHERS remain; legacy FOTIHA/TUI collapse into OTHERS.
     setEditEventType(category.eventType === 'NAHOR' ? 'NAHOR' : 'OTHERS');
+    setEditHotAppetizerCount(category.hotAppetizerCount ?? 3);
     setEditDescription(category.description || '');
     setEditPhotos(category.photos ?? []);
     setEditIsActive(category.isActive);
@@ -453,6 +458,7 @@ export const AdminTableCategoriesPage = () => {
         ratePerPerson: parseSumToTiyin(editRatePerPersonText) ?? 0,
         tableType: editTableType,
         eventType: editEventType,
+        hotAppetizerCount: editHotAppetizerCount,
         description: editDescription.trim() || undefined,
         photos: editPhotos,
         isActive: editIsActive,
@@ -503,6 +509,12 @@ export const AdminTableCategoriesPage = () => {
               </select>
             </label>
           </div>
+
+          <label style={{ display: 'grid', gap: 6, maxWidth: 240 }}>
+            {t('hot_appetizer_count')}
+            <input type="number" min={1} max={20} className="adm-input" value={hotAppetizerCount}
+              onChange={(e) => setHotAppetizerCount(Math.max(1, Math.min(20, Math.floor(Number(e.target.value) || 1))))} />
+          </label>
 
           <FoodPackageSection
             selectedCats={selectedCats}
@@ -580,6 +592,12 @@ export const AdminTableCategoriesPage = () => {
                           </select>
                         </label>
                       </div>
+
+                      <label style={{ display: 'grid', gap: 4, maxWidth: 240 }}>
+                        {t('hot_appetizer_count')}
+                        <input type="number" min={1} max={20} className="adm-input" value={editHotAppetizerCount}
+                          onChange={(e) => setEditHotAppetizerCount(Math.max(1, Math.min(20, Math.floor(Number(e.target.value) || 1))))} />
+                      </label>
 
                       <FoodPackageSection
                         selectedCats={editSelectedCats}

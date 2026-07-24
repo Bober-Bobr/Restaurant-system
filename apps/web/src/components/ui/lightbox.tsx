@@ -31,9 +31,11 @@ export const Lightbox = ({ src, alt = '', onClose, compact = false }: LightboxPr
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      {/* Scaled down to comfortably fit the viewport; object-contain preserves the
-          aspect ratio and never upscales past the image's own size, so nothing
-          looks stretched. */}
+      {/* Opened full-screen: the image expands to fill the viewport (up to its own
+          native size). object-contain preserves the aspect ratio and never upscales
+          past the image's own resolution, so nothing looks stretched or blurry.
+          `compact` still trims the height a touch so dish photos don't run edge to
+          edge, but no longer caps the width at a small fixed size. */}
       <img
         src={src}
         alt={alt}
@@ -41,8 +43,8 @@ export const Lightbox = ({ src, alt = '', onClose, compact = false }: LightboxPr
         className="rounded-2xl object-contain shadow-2xl"
         style={
           compact
-            ? { maxWidth: 'min(420px, 86vw)', maxHeight: 'min(420px, 60vh)', width: 'auto', height: 'auto' }
-            : { maxWidth: '80vw', maxHeight: '80vh', width: 'auto', height: 'auto' }
+            ? { maxWidth: '94vw', maxHeight: '86vh', width: 'auto', height: 'auto' }
+            : { maxWidth: '94vw', maxHeight: '92vh', width: 'auto', height: 'auto' }
         }
       />
     </div>,

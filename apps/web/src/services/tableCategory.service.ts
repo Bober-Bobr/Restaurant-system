@@ -14,6 +14,7 @@ export const tableCategoryService = {
     discountPercent?: number;
     tableType?: 'ADULT' | 'CHILDREN';
     eventType?: 'NAHOR' | 'FOTIHA' | 'TUI' | 'OTHERS';
+    hotAppetizerCount?: number;
     description?: string;
     photoUrl?: string;
     photos?: string[];

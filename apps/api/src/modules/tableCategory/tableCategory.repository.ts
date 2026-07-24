@@ -8,6 +8,7 @@ export type CreateTableCategoryData = {
   discountPercent?: number;
   tableType?: string;
   eventType?: string;
+  hotAppetizerCount?: number;
   description?: string;
   photoUrl?: string;
   photos?: string[];
@@ -19,7 +20,7 @@ const packageItemsInclude = {
   packageItems: {
     include: {
       menuItem: {
-        select: { id: true, name: true, description: true, nameI18n: true, descriptionI18n: true, category: true, priceCents: true, photoUrl: true }
+        select: { id: true, name: true, description: true, nameI18n: true, descriptionI18n: true, category: true, priceCents: true, photoUrl: true, isBestseller: true }
       }
     }
   }

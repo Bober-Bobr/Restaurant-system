@@ -61,6 +61,33 @@ function tabletStatusOf(item: MenuItem): TabletStatus {
   return item.showOnTablet === false ? 'NONE' : 'PAID';
 }
 
+// Course categories are guest-selected (hot appetizers + first/second/third);
+// the remaining package categories are the fixed "complimentary" included dishes.
+const COURSE_CATEGORIES: MenuCategory[] = ['HOT_APPETIZERS', 'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'];
+
+// Float best-seller dishes to the front of their list while keeping the relative
+// order of everything else (a stable partition). Used so bestsellers show at the
+// top of their category on the tablet set-menu screens.
+function bestsellerFirst<T extends { menuItem: { isBestseller?: boolean } }>(items: T[]): T[] {
+  const best: T[] = [], rest: T[] = [];
+  for (const it of items) (it.menuItem.isBestseller ? best : rest).push(it);
+  return [...best, ...rest];
+}
+
+// Small gold "Best seller" ribbon overlaid on a dish photo/card corner.
+function BestsellerBadge({ t }: { t: TFn }) {
+  return (
+    <span style={{
+      position: 'absolute', top: 6, left: 6, zIndex: 2,
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '3px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800,
+      letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1,
+      color: 'var(--rg-bg)', background: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+      boxShadow: '0 3px 10px rgba(var(--rg-accent-rgb),0.5)',
+    }}>★ {t('bestseller')}</span>
+  );
+}
+
 // ── Decorative background ─────────────────────────────────────────────────
 
 function PageBackground() {
@@ -378,6 +405,8 @@ function CategorySlide({
     }
     g.items.push(pi);
   }
+  // Float best sellers to the top of each category.
+  for (const g of dishGroups) g.items = bestsellerFirst(g.items);
   const sharedPrice = samePriceCount > 1;
   const hasDistinctive = !!distinctiveItemIds && distinctiveItemIds.size > 0;
 
@@ -576,18 +605,38 @@ function CategorySlide({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                   {g.items.map((pi) => {
                     const distinct = sharedPrice && !!distinctiveItemIds?.has(pi.menuItem.id);
-                    return (
-                      <span key={pi.id} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: distinct ? 700 : 500,
-                        background: distinct ? 'rgba(var(--rg-accent-rgb),0.22)' : 'rgba(255,255,255,0.06)',
-                        color: distinct ? 'var(--rg-accent)' : 'rgba(255,255,255,0.8)',
-                        border: `1px solid ${distinct ? 'var(--rg-accent)' : 'rgba(255,255,255,0.12)'}`,
-                        boxShadow: distinct ? '0 2px 12px rgba(var(--rg-accent-rgb),0.25)' : 'none',
-                      }}>
-                        {distinct && <span style={{ fontSize: 11 }}>★</span>}
+                    const best = !!pi.menuItem.isBestseller;
+                    const highlight = distinct || best;
+                    const photoSrc = pi.menuItem.photoUrl ? getPhotoUrl(pi.menuItem.photoUrl) : null;
+                    const chipStyle: React.CSSProperties = {
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 12px', borderRadius: 999, fontSize: 13, fontWeight: highlight ? 700 : 500,
+                      background: highlight ? 'rgba(var(--rg-accent-rgb),0.22)' : 'rgba(255,255,255,0.06)',
+                      color: highlight ? 'var(--rg-accent)' : 'rgba(255,255,255,0.8)',
+                      border: `1px solid ${highlight ? 'var(--rg-accent)' : 'rgba(255,255,255,0.12)'}`,
+                      boxShadow: highlight ? '0 2px 12px rgba(var(--rg-accent-rgb),0.25)' : 'none',
+                    };
+                    const label = (
+                      <>
+                        {best && <span style={{ fontSize: 11 }}>★</span>}
+                        {distinct && !best && <span style={{ fontSize: 11 }}>★</span>}
                         {dishName(pi.menuItem, locale)}
-                      </span>
+                        {photoSrc && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.65 }}>
+                            <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" />
+                          </svg>
+                        )}
+                      </>
+                    );
+                    // Tapping a dish with a photo opens it full-screen.
+                    return photoSrc ? (
+                      <button key={pi.id} type="button" title={t('view_photo')}
+                        onClick={() => onLightbox(photoSrc)}
+                        style={{ ...chipStyle, cursor: 'zoom-in' }}>
+                        {label}
+                      </button>
+                    ) : (
+                      <span key={pi.id} style={chipStyle}>{label}</span>
                     );
                   })}
                 </div>
@@ -620,7 +669,7 @@ function CategorySlide({
 // identically. `card` wraps the content in its own rg-card section.
 
 function CourseChoiceSection({
-  tableCategory, t, locale, onLightbox, card = false, showName = true,
+  tableCategory, t, locale, onLightbox, card = false, showName = true, hotAppetizerMax = 3,
   hotAppetizerSelectedIds, firstSelectedId, secondSelectedIds, thirdSelectedIds,
   onToggleHotAppetizer, onFirst, onToggleSecond, onToggleThird,
 }: {
@@ -630,6 +679,7 @@ function CourseChoiceSection({
   onLightbox: (src: string | null) => void;
   card?: boolean;
   showName?: boolean;
+  hotAppetizerMax?: number;
   hotAppetizerSelectedIds: string[];
   firstSelectedId?: string;
   secondSelectedIds: string[];
@@ -651,7 +701,7 @@ function CourseChoiceSection({
     { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, changeKey: 'change_third_course' as const,
       multi: false, isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
   ]
-    .map((cfg) => ({ ...cfg, items: (tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category) }))
+    .map((cfg) => ({ ...cfg, items: bestsellerFirst((tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category)) }))
     .filter((group) => group.items.length > 0);
   if (courseGroups.length === 0) return null;
 
@@ -681,8 +731,8 @@ function CourseChoiceSection({
       {courseGroups.map((group, gi) => {
         const selectedCount = group.items.filter((pi) => group.isSelected(pi.menuItem.id)).length;
         // Single-select courses collapse once their one dish is chosen; the
-        // multi-select hot appetizers only collapse after all three picks are made.
-        const full = group.multi ? selectedCount >= 3 : selectedCount >= 1;
+        // multi-select hot appetizers only collapse after every allowed pick is made.
+        const full = group.multi ? selectedCount >= hotAppetizerMax : selectedCount >= 1;
         const collapsed = full && !expandedCats[group.category];
         const displayItems = collapsed
           ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
@@ -711,7 +761,7 @@ function CourseChoiceSection({
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  {t('up_to_three')}
+                  {t('up_to_n', { count: hotAppetizerMax })}
                 </span>
               )}
             </div>
@@ -732,6 +782,7 @@ function CourseChoiceSection({
                     background: selected ? 'rgba(var(--rg-accent-rgb),0.12)' : 'rgba(255,255,255,0.06)',
                     transition: 'outline 0.18s, background 0.18s',
                   }}>
+                  {item.isBestseller && <BestsellerBadge t={t} />}
                   {photoSrc ? (
                     <button type="button"
                       onClick={() => onLightbox(photoSrc)}
@@ -930,6 +981,97 @@ function DishSwapModal({
   );
 }
 
+// ── Extras: pick which included complimentary dish this paid dish replaces ─────
+// Opened from the "Replace an included dish" button on an Extra. Lists the set
+// menu's included dishes in the SAME category; choosing one makes the paid dish
+// stand in for it (served free) rather than being charged as an addition.
+
+function ExtraReplaceModal({
+  extra, candidates, replacements, menuItems, locale, t, onChoose, onClose,
+}: {
+  extra: MenuItem;
+  candidates: TableCategoryPackageItem[];
+  replacements: Record<string, string>;
+  menuItems: MenuItem[];
+  locale: Locale;
+  t: TFn;
+  onChoose: (packageItemId: string) => void;
+  onClose: () => void;
+}) {
+  const themeAccent = usePublicDataStore((s) => s.tabletAccentColor);
+  const themeBg = usePublicDataStore((s) => s.tabletBgColor);
+
+  return createPortal(
+    <div onClick={onClose}
+      style={{
+        ...tabletThemeVars({ accent: themeAccent, bg: themeBg }),
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(6,14,9,0.8)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      } as React.CSSProperties}>
+      <div onClick={(e) => e.stopPropagation()} className="tablet-fade-up"
+        style={{
+          width: '100%', maxWidth: 760, maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column', borderRadius: 24,
+          background: 'linear-gradient(135deg, rgba(var(--rg-bg-rgb),0.98) 0%, rgba(var(--rg-bg-dark-rgb),0.98) 100%)',
+          border: '1px solid rgba(var(--rg-accent-rgb),0.35)', boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
+        }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ minWidth: 0 }}>
+            <p className="rg-label" style={{ margin: 0 }}>{dishName(extra, locale)}</p>
+            <h3 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#fff' }}>{t('choose_dish_to_replace')}</h3>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t('cancel')}
+            style={{ flexShrink: 0, width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
+        </div>
+
+        <div className="scrollbar-none"
+          style={{ overflowY: 'auto', padding: 18, display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))' }}>
+          {candidates.map((pi) => {
+            // The dish currently occupying this slot (default, or an earlier swap).
+            const swapId = replacements[pi.id];
+            const current = swapId ? (menuItems.find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
+            const selected = swapId === extra.id;
+            const photoSrc = current.photoUrl ? getPhotoUrl(current.photoUrl) : null;
+            return (
+              <button key={pi.id} type="button" onClick={() => onChoose(pi.id)}
+                style={{
+                  textAlign: 'left', padding: 0, cursor: 'pointer', borderRadius: 16, overflow: 'hidden',
+                  background: selected ? 'rgba(var(--rg-accent-rgb),0.14)' : 'rgba(255,255,255,0.05)',
+                  border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'border 0.18s, background 0.18s',
+                }}>
+                {photoSrc ? (
+                  <img src={photoSrc} alt={dishName(current, locale)} style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ height: 150, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="34" height="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+                <div style={{ padding: '10px 12px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: selected ? 'var(--rg-accent)' : '#fff', lineHeight: 1.25 }}>
+                    {dishName(current, locale)}
+                  </p>
+                  {selected && (
+                    <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--rg-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="var(--rg-bg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 // ── Reusable: included dishes (non-course categories) with free swaps ──────
 
 function IncludedDishesSection({
@@ -1025,7 +1167,8 @@ function IncludedDishesSection({
         return (
           <div key={pi.id}
             className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-            style={{ animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
+            style={{ position: 'relative', animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
+            {displayItem.isBestseller && <BestsellerBadge t={t} />}
             {displayItem.photoUrl ? (
               <button type="button"
                 onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
@@ -1067,7 +1210,7 @@ function IncludedDishesSection({
 
   const dishGrid = (items: TableCategoryPackageItem[]) => (
     <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-      {items.map((pi, i) => dishCard(pi, i))}
+      {bestsellerFirst(items).map((pi, i) => dishCard(pi, i))}
     </div>
   );
 
@@ -1111,7 +1254,7 @@ function IncludedDishesSection({
               }}>
                 {minorHeader(cat)}
                 <div style={{ display: 'flex', gap: 12 }}>
-                  {items!.map((pi, i) => dishCard(pi, i, 150))}
+                  {bestsellerFirst(items!).map((pi, i) => dishCard(pi, i, 150))}
                 </div>
               </div>
             ))}
@@ -1194,11 +1337,12 @@ function ChildrenTableSection({
 
           <CourseChoiceSection
             tableCategory={tableCategory} t={t} locale={locale} onLightbox={onLightbox} showName={false}
+            hotAppetizerMax={tableCategory.hotAppetizerCount ?? 3}
             hotAppetizerSelectedIds={childHotAppetizerIds}
             firstSelectedId={childFirstCourseId}
             secondSelectedIds={childSecondCourseIds}
             thirdSelectedIds={childThirdCourseIds}
-            onToggleHotAppetizer={toggleChildHotAppetizer}
+            onToggleHotAppetizer={(id) => toggleChildHotAppetizer(id, tableCategory.hotAppetizerCount ?? 3)}
             onFirst={setChildFirstCourse}
             onToggleSecond={toggleChildSecondCourse}
             onToggleThird={toggleChildThirdCourse}
@@ -1384,6 +1528,8 @@ export const TabletMenuPage = () => {
 
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  // The paid Extra currently choosing which included dish it should replace.
+  const [replacingExtra, setReplacingExtra] = useState<MenuItem | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(isTabletWelcomeShown());
 
   // Reveal-on-scroll: re-scan when major content swaps in (table category chosen,
@@ -1550,6 +1696,20 @@ export const TabletMenuPage = () => {
       <PageBackground />
       <FingerTrail accent="var(--rg-accent)" />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} compact />}
+      {replacingExtra && selectedTableCategory && (
+        <ExtraReplaceModal
+          extra={replacingExtra}
+          candidates={(selectedTableCategory.packageItems ?? []).filter(
+            (pi) => pi.menuItem.category === replacingExtra.category && !COURSE_CATEGORIES.includes(pi.menuItem.category)
+          )}
+          replacements={replacements}
+          menuItems={menuItems ?? []}
+          locale={locale}
+          t={t}
+          onChoose={(piId) => { setReplacement(piId, replacingExtra.id); setQuantity(replacingExtra.id, 0); setReplacingExtra(null); }}
+          onClose={() => setReplacingExtra(null)}
+        />
+      )}
 
       <div ref={revealRef} className="relative mx-auto max-w-7xl space-y-4 sm:space-y-6">
 
@@ -1690,11 +1850,12 @@ export const TabletMenuPage = () => {
             {selectedTableCategory && (
               <CourseChoiceSection
                 tableCategory={selectedTableCategory} t={t} locale={locale} onLightbox={setLightboxSrc} card
+                hotAppetizerMax={selectedTableCategory.hotAppetizerCount ?? 3}
                 hotAppetizerSelectedIds={selectedHotAppetizerIds}
                 firstSelectedId={selectedFirstCourseId}
                 secondSelectedIds={selectedSecondCourseIds}
                 thirdSelectedIds={selectedThirdCourseIds}
-                onToggleHotAppetizer={toggleHotAppetizer}
+                onToggleHotAppetizer={(id) => toggleHotAppetizer(id, selectedTableCategory.hotAppetizerCount ?? 3)}
                 onFirst={setFirstCourse}
                 onToggleSecond={toggleSecondCourse}
                 onToggleThird={toggleThirdCourse}
@@ -1771,12 +1932,28 @@ export const TabletMenuPage = () => {
               ) : sortedAndFiltered.length > 0 ? (
                 <div key={activeCategory ?? 'all'} className="tablet-fade-in"
                   style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-                  {sortedAndFiltered.map((item, i) => (
+                  {sortedAndFiltered.map((item, i) => {
+                    // Included complimentary dishes of the same category this paid
+                    // Extra could stand in for (courses are guest-picked, excluded).
+                    const candidates = (selectedTableCategory?.packageItems ?? []).filter(
+                      (pi) => pi.menuItem.category === item.category && !COURSE_CATEGORIES.includes(pi.menuItem.category)
+                    );
+                    // Is this Extra already replacing one of those included dishes?
+                    const replEntry = Object.entries(replacements).find(([, v]) => v === item.id);
+                    const replacedPi = replEntry ? (selectedTableCategory?.packageItems ?? []).find((pi) => pi.id === replEntry[0]) : undefined;
+                    return (
                     <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} toggleMode />
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} toggleMode
+                        replace={selectedTableCategory ? {
+                          canReplace: candidates.length > 0,
+                          activeTargetName: replacedPi ? dishName(replacedPi.menuItem, locale) : null,
+                          onOpen: () => setReplacingExtra(item),
+                          onRevert: () => { if (replEntry) setReplacement(replEntry[0], null); },
+                        } : undefined} />
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-2xl py-14"

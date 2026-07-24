@@ -61,14 +61,14 @@ type SelectionState = {
   setFirstCourse: (menuItemId: string) => void;
   toggleSecondCourse: (menuItemId: string) => void;
   toggleThirdCourse: (menuItemId: string) => void;
-  toggleHotAppetizer: (menuItemId: string) => void;
+  toggleHotAppetizer: (menuItemId: string, max?: number) => void;
   setReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setChildrenTableSelected: (selected: boolean) => void;
   setChildrenCount: (count: number) => void;
   setChildFirstCourse: (menuItemId: string) => void;
   toggleChildSecondCourse: (menuItemId: string) => void;
   toggleChildThirdCourse: (menuItemId: string) => void;
-  toggleChildHotAppetizer: (menuItemId: string) => void;
+  toggleChildHotAppetizer: (menuItemId: string, max?: number) => void;
   setChildReplacement: (packageItemId: string, menuItemId: string | null) => void;
   setGuestCount: (count: number) => void;
   setCustomerName: (value: string) => void;
@@ -154,13 +154,14 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedThirdCourseIds: state.selectedThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
     }));
   },
-  // Hot appetizers: up to two. Re-tapping a chosen one removes it; adding a third
-  // drops the oldest so only the latest two are kept.
-  toggleHotAppetizer: (menuItemId) => {
+  // Hot appetizers: capped at the table's configured count (default 3). Re-tapping
+  // a chosen one removes it; adding beyond the cap drops the oldest so only the
+  // latest `max` picks are kept.
+  toggleHotAppetizer: (menuItemId, max = 3) => {
     set((state) => ({
       selectedHotAppetizerIds: state.selectedHotAppetizerIds.includes(menuItemId)
         ? state.selectedHotAppetizerIds.filter((id) => id !== menuItemId)
-        : [...state.selectedHotAppetizerIds, menuItemId].slice(-3),
+        : [...state.selectedHotAppetizerIds, menuItemId].slice(-Math.max(1, max)),
     }));
   },
   setReplacement: (packageItemId, menuItemId) => {
@@ -203,11 +204,11 @@ export const useTabletStore = create<SelectionState>((set) => ({
       childThirdCourseIds: state.childThirdCourseIds.includes(menuItemId) ? [] : [menuItemId],
     }));
   },
-  toggleChildHotAppetizer: (menuItemId) => {
+  toggleChildHotAppetizer: (menuItemId, max = 3) => {
     set((state) => ({
       childHotAppetizerIds: state.childHotAppetizerIds.includes(menuItemId)
         ? state.childHotAppetizerIds.filter((id) => id !== menuItemId)
-        : [...state.childHotAppetizerIds, menuItemId].slice(-3),
+        : [...state.childHotAppetizerIds, menuItemId].slice(-Math.max(1, max)),
     }));
   },
   setChildReplacement: (packageItemId, menuItemId) => {
