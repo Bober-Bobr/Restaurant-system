@@ -185,6 +185,8 @@ export type AdminParticles = {
   size?: number; // base size px, default 14
   speed?: number; // fall speed multiplier 0.2..3, default 1
   mode?: 'always' | 'scroll';
+  // Colour override; empty = the preset's own palette.
+  color?: string;
 };
 
 // Trail following the guest's cursor/finger: preset shapes (same set as the

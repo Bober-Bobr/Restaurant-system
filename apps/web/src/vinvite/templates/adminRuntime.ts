@@ -348,7 +348,7 @@ export const ADMIN_RUNTIME = `(function(){
       if (it.y > h + it.s) PT.items[i] = spawn(cfg, w, h, true);
       else if (it.x < -it.s * 2) it.x = w + it.s;
       else if (it.x > w + it.s * 2) it.x = -it.s;
-      drawShape(PT.ctx, cfg.preset, PT.img, it, 1);
+      drawShape(PT.ctx, cfg.preset, PT.img, it, 1, cfg.color);
     }
   }
 
