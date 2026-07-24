@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
+import { Lightbox } from '../components/ui/lightbox';
 import type { MenuItem, TabletStatus } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
@@ -89,6 +90,10 @@ export const AdminAdditionalPage = () => {
   const cats = tableCategories ?? [];
   const [selectedCatId, setSelectedCatId] = useState<string>('');
   const selectedCat = cats.find((c) => c.id === selectedCatId) ?? cats[0];
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  // Filters the Extras list below to a single category (independent of the
+  // table-category selector above, which controls what's hidden as "included").
+  const [categoryFilter, setCategoryFilter] = useState<MenuCategory | null>(null);
 
   // Dishes already included in the selected table's set menu — hidden from the
   // Extras list, since they're served complimentary there and are managed on the
@@ -121,44 +126,129 @@ export const AdminAdditionalPage = () => {
     },
   });
 
+  const extrasItems = useMemo(
+    () => (data ?? []).filter((it) => ADDITIONAL_CATEGORIES.includes(it.category) && !includedInSelected.has(it.id)),
+    [data, includedInSelected]
+  );
+
+  // Categories present in the (unfiltered) Extras list, for the filter pills.
+  const presentCategories = useMemo(
+    () => ADDITIONAL_CATEGORIES.filter((cat) => extrasItems.some((it) => it.category === cat)),
+    [extrasItems]
+  );
+
   const grouped = useMemo(() => {
-    const items = (data ?? []).filter(
-      (it) => ADDITIONAL_CATEGORIES.includes(it.category) && !includedInSelected.has(it.id)
-    );
+    const items = categoryFilter ? extrasItems.filter((it) => it.category === categoryFilter) : extrasItems;
     const map = new Map<MenuCategory, MenuItem[]>();
     for (const cat of ADDITIONAL_CATEGORIES) {
       const list = items.filter((it) => it.category === cat).sort((a, b) => a.name.localeCompare(b.name));
       if (list.length > 0) map.set(cat, list);
     }
     return map;
-  }, [data, includedInSelected]);
+  }, [extrasItems, categoryFilter]);
+
+  // Reset an out-of-range filter if the underlying data changes (e.g. the
+  // filtered category no longer has any dishes).
+  useEffect(() => {
+    if (categoryFilter && !presentCategories.includes(categoryFilter)) setCategoryFilter(null);
+  }, [categoryFilter, presentCategories]);
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
       <h1 className="adm-title" style={{ marginBottom: 6 }}>{t('additional_management')}</h1>
       <p style={{ margin: '0 0 18px', color: 'rgba(226,232,240,0.55)', fontSize: 14 }}>{t('additional_help')}</p>
 
-      {/* Table-category selector — controls which category the Free toggles apply to */}
-      <div className="adm-card" style={{ padding: 14, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(226,232,240,0.75)' }}>{t('select_table_category')}</label>
-        {cats.length === 0 ? (
-          <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.5)' }}>{t('no_table_categories')}</span>
-        ) : (
-          <select
-            value={selectedCat?.id ?? ''}
-            onChange={(e) => setSelectedCatId(e.target.value)}
-            style={{
-              padding: '8px 12px', borderRadius: 9, minWidth: 220,
-              background: 'rgba(15,23,42,0.6)', color: '#f8fafc',
-              border: '1px solid rgba(255,255,255,0.12)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+
+      {/* Table-category selector — controls which dishes are hidden below as "included" */}
+      <div className="adm-card" style={{ padding: 14, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(226,232,240,0.75)' }}>{t('select_table_category')}</label>
+          {cats.length === 0 ? (
+            <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.5)' }}>{t('no_table_categories')}</span>
+          ) : (
+            <select
+              value={selectedCat?.id ?? ''}
+              onChange={(e) => setSelectedCatId(e.target.value)}
+              style={{
+                padding: '8px 12px', borderRadius: 9, minWidth: 220,
+                background: 'rgba(15,23,42,0.6)', color: '#f8fafc',
+                border: '1px solid rgba(255,255,255,0.12)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Dishes already included in this set — for reference only (managed on
+            the Table Categories page); each thumbnail opens a full-screen photo. */}
+        {selectedCat && (selectedCat.packageItems ?? []).length > 0 && (
+          <div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(226,232,240,0.45)' }}>
+              {t('included_with_table')}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(selectedCat.packageItems ?? []).map((pi) => {
+                const photo = pi.menuItem.photoUrl ? getPhotoUrl(pi.menuItem.photoUrl) : null;
+                return (
+                  <div key={pi.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '3px 10px 3px 3px', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  }}>
+                    {photo ? (
+                      <button type="button" title={t('view_photo')}
+                        onClick={() => setLightboxSrc(photo)}
+                        style={{ width: 26, height: 26, borderRadius: '50%', padding: 0, overflow: 'hidden', border: 'none', cursor: 'zoom-in', flexShrink: 0 }}>
+                        <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </button>
+                    ) : (
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'rgba(226,232,240,0.85)' }}>{pi.menuItem.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
+
+      {/* Category filter for the Extras list below */}
+      {presentCategories.length > 0 && (
+        <div className="tablet-fade-up" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+          <button
+            onClick={() => setCategoryFilter(null)}
+            style={{
+              padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: categoryFilter === null ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+              color: categoryFilter === null ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${categoryFilter === null ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              transition: 'all 0.15s',
+            }}
+          >
+            {t('filter_all')}
+          </button>
+          {presentCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              style={{
+                padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: categoryFilter === cat ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
+                color: categoryFilter === cat ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                border: `1px solid ${categoryFilter === cat ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {t(CATEGORY_LABEL_KEY[cat])}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>{t('loading_menu')}</p>}
       {!isLoading && grouped.size === 0 && (

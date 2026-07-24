@@ -1244,20 +1244,25 @@ function IncludedDishesSection({
           borderTop: bigGroups.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
         }}>
           {categoryHeader('assorted')}
-          <div className="scrollbar-none" style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'flex-start', overflowX: 'auto' }}>
-            {smallGroups.map(([cat, items], si) => (
-              <div key={cat} style={{
-                flexShrink: 0,
-                paddingLeft: si > 0 ? 16 : 0,
-                marginLeft: si > 0 ? 16 : 0,
-                borderLeft: si > 0 ? '1px solid rgba(var(--rg-accent-rgb),0.3)' : 'none',
-              }}>
-                {minorHeader(cat)}
-                <div style={{ display: 'flex', gap: 12 }}>
-                  {bestsellerFirst(items!).map((pi, i) => dishCard(pi, i, 150))}
+          {/* CSS Grid (not flex) so the dish-card row shares ONE track height across
+              every mini-category column — flexbox only stretches children within
+              their own row, so cards in different mini-categories would otherwise
+              end up different heights depending on each category's tallest card. */}
+          <div className="scrollbar-none" style={{
+            display: 'grid', gridAutoFlow: 'column', gridTemplateRows: 'auto 1fr',
+            columnGap: 0, overflowX: 'auto', alignItems: 'stretch',
+          }}>
+            {smallGroups.map(([cat, items], si) => {
+              const divider = si > 0 ? { paddingLeft: 16, marginLeft: 16, borderLeft: '1px solid rgba(var(--rg-accent-rgb),0.3)' } : {};
+              return (
+                <div key={cat} style={{ display: 'contents' }}>
+                  <div style={{ ...divider }}>{minorHeader(cat)}</div>
+                  <div style={{ ...divider, display: 'flex', gap: 12, height: '100%' }}>
+                    {bestsellerFirst(items!).map((pi, i) => dishCard(pi, i, 150))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
