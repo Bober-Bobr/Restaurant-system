@@ -859,6 +859,23 @@ function TrailEditor({ trail, onChange }: {
           <PhotoUploadField label={t('adm_particle_img')} value={p.src || null} onChange={(url) => set({ src: url ?? '' })} restaurantId="" height={90} />
         )}
 
+        {/* Colour override — the trail recolours to this; a custom image keeps
+            its own colours, so it is hidden in that mode. */}
+        {p.preset !== 'none' && p.preset !== 'custom' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 70 }}>{t('adm_trail_color')}</span>
+            <input
+              type="color"
+              value={p.color || '#e8c76a'}
+              onChange={(e) => set({ color: e.target.value })}
+              style={{ width: 40, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', padding: 0 }}
+            />
+            {p.color && (
+              <button type="button" onClick={() => set({ color: undefined })} style={{ background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('adm_default_colors')}</button>
+            )}
+          </div>
+        )}
+
         {p.preset !== 'none' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
             <label style={{ display: 'grid', gap: 2, fontSize: 11, color: '#94a3b8' }}>

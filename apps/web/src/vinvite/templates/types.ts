@@ -194,6 +194,8 @@ export type AdminTrail = {
   src?: string; // trail image (preset === 'custom')
   size?: number; // base size px, default 14
   density?: number; // particles emitted per move, 1..6, default 2
+  // Colour override; empty = the preset's own palette.
+  color?: string;
 };
 
 export type AdminLayer = {

@@ -282,10 +282,11 @@ export const ADMIN_RUNTIME = `(function(){
   }
 
   /* Shared shape painter for both engines. alpha scales the whole particle
-     (the trail fades items out with their remaining life). */
-  function drawShape(ctx, preset, img, it, alpha){
+     (the trail fades items out with their remaining life); override forces a
+     single colour (the trail's colour picker) instead of the preset palette. */
+  function drawShape(ctx, preset, img, it, alpha, override){
     var pal = PALETTES[preset] || PALETTES.confetti;
-    var color = pal[it.c % pal.length];
+    var color = override || pal[it.c % pal.length];
     ctx.save();
     ctx.translate(it.x, it.y);
     ctx.globalAlpha = alpha != null ? alpha : 1;
@@ -420,7 +421,7 @@ export const ADMIN_RUNTIME = `(function(){
       it.vy += 70 * dt; /* gentle gravity */
       it.rot += it.vr * dt;
       it.ph += dt * 2;
-      drawShape(TR.ctx, TR.cfg.preset, TR.img, it, Math.min(1, it.life));
+      drawShape(TR.ctx, TR.cfg.preset, TR.img, it, Math.min(1, it.life), TR.cfg.color);
     }
   }
 
