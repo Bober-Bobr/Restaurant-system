@@ -777,6 +777,7 @@ function CourseChoiceSection({
                   style={{
                     animationDelay: `${i * 50}ms`,
                     position: 'relative', borderRadius: 14, overflow: 'hidden',
+                    height: '100%', display: 'flex', flexDirection: 'column',
                     outline: selected ? '2px solid var(--rg-accent)' : '1px solid rgba(255,255,255,0.12)',
                     outlineOffset: selected ? 2 : 0,
                     background: selected ? 'rgba(var(--rg-accent-rgb),0.12)' : 'rgba(255,255,255,0.06)',
@@ -800,7 +801,7 @@ function CourseChoiceSection({
                   <button type="button"
                     onClick={() => { group.onToggle(item.id); if (!group.multi) setExpandedCats((e) => ({ ...e, [group.category]: false })); }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
+                      display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto',
                       width: '100%', padding: '8px 10px',
                       border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
                     }}>
@@ -1104,13 +1105,12 @@ function IncludedDishesSection({
     )
   ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
 
-  // Any dish is free to swap in for this table as long as it is not a PAID extra
-  // and not one of the table's default dishes (those defaults are filtered out in
-  // getFreeAlts via packageDefaultIds). Hidden (NONE) dishes stay hidden. This
-  // makes every non-paid, non-default dish selectable for free without having to
-  // curate a per-table list.
+  // Every dish is free to swap in for this table unless it's a PAID extra or one
+  // of the table's own default dishes (those defaults are filtered out in
+  // getFreeAlts via packageDefaultIds). The retired "Don't show" (NONE) state no
+  // longer hides a dish from free selection — anything not marked Paid is free.
   const isFreeForThisTable = (m: MenuItem) =>
-    m.isActive !== false && tabletStatusOf(m) !== 'PAID' && tabletStatusOf(m) !== 'NONE';
+    m.isActive !== false && tabletStatusOf(m) !== 'PAID';
 
   // Free alternatives for a package item: same category, allowed as a free swap
   // for this table, not already part of the package and not swapped-in elsewhere.
@@ -1166,8 +1166,8 @@ function IncludedDishesSection({
         const isSwapped = displayItem.id !== pi.menuItem.id;
         return (
           <div key={pi.id}
-            className="group overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-            style={{ position: 'relative', animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
+            className="group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
+            style={{ position: 'relative', height: '100%', animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
             {displayItem.isBestseller && <BestsellerBadge t={t} />}
             {displayItem.photoUrl ? (
               <button type="button"
@@ -1184,11 +1184,11 @@ function IncludedDishesSection({
                 </svg>
               </div>
             )}
-            <div className="p-2.5">
+            <div className="flex flex-1 flex-col p-2.5">
               <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
               {!viewOnly && freeAlts.length > 0 && (
                 <button type="button" onClick={() => setEditingPiId(pi.id)}
-                  className="mt-2.5"
+                  className="mt-auto pt-2.5"
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
@@ -1942,7 +1942,7 @@ export const TabletMenuPage = () => {
                     const replEntry = Object.entries(replacements).find(([, v]) => v === item.id);
                     const replacedPi = replEntry ? (selectedTableCategory?.packageItems ?? []).find((pi) => pi.id === replEntry[0]) : undefined;
                     return (
-                    <div key={item.id} className="tablet-fade-up" style={{ animationDelay: `${i * 45}ms` }}>
+                    <div key={item.id} className="tablet-fade-up h-full" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
                         onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} toggleMode
                         replace={selectedTableCategory ? {

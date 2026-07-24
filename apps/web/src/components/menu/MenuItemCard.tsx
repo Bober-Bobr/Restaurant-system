@@ -56,7 +56,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
   const Wrapper = dark ? 'div' : Card;
   const wrapperProps = dark
     ? {
-        className: 'group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
+        className: 'group flex h-full flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
         style: {
           background: selected
             ? 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.16) 0%, rgba(255,255,255,0.05) 60%)'

@@ -127,6 +127,8 @@ function FoodPackageSection({
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
   const excluded = useExcludedCategories();
   const categories = FOOD_PACKAGE_CATEGORIES.filter((cat) => !excluded.has(cat));
+  // Full-screen preview of a dish photo when its thumbnail is tapped.
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const grouped = categories.reduce<Record<FoodCategory, MenuItem[]>>(
     (acc, cat) => {
@@ -166,6 +168,7 @@ function FoodPackageSection({
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <span className="adm-label" style={{ marginBottom: 2 }}>{t('food_package')}</span>
 
       {categories.map((cat) => (
@@ -217,6 +220,20 @@ function FoodPackageSection({
                       fontSize: 12, transition: 'all 0.15s',
                     }}
                   >
+                    {item.photoUrl && (
+                      <button
+                        type="button"
+                        title={translate('view_photo', locale)}
+                        onClick={() => setLightboxSrc(getPhotoUrl(item.photoUrl) ?? null)}
+                        style={{
+                          width: 24, height: 24, borderRadius: 6, padding: 0, flexShrink: 0,
+                          overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)',
+                          cursor: 'zoom-in', background: 'rgba(15,23,42,0.5)',
+                        }}
+                      >
+                        <img src={getPhotoUrl(item.photoUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </button>
+                    )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
                       <input
                         type="checkbox"

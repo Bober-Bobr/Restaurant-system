@@ -6,7 +6,7 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
-import type { MenuItem, TableCategory, TabletStatus } from '../types/domain';
+import type { MenuItem, TabletStatus } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
 
@@ -17,19 +17,10 @@ function effectiveStatus(item: MenuItem): TabletStatus {
   return item.showOnTablet === false ? 'NONE' : 'PAID';
 }
 
-// Global visibility, shown as a 2-way segment. Free substitution is no longer a
-// global status — it's configured per table category (see the Free toggle).
-const GLOBAL_OPTIONS: {
-  value: Extract<TabletStatus, 'NONE' | 'PAID'>;
-  labelKey: Parameters<typeof translate>[0];
-  solid: string; solidText: string; bg: string; border: string;
-}[] = [
-  { value: 'NONE', labelKey: 'status_dont_show', solid: 'rgba(148,163,184,0.9)', solidText: '#0f172a', bg: 'rgba(15,23,42,0.5)', border: 'rgba(255,255,255,0.08)' },
-  { value: 'PAID', labelKey: 'status_paid', solid: '#22c55e', solidText: '#0f172a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' },
-];
-
-// Blue accent used when a dish is a free substitution for the selected table.
-const FREE_ACCENT = { solid: '#3b82f6', solidText: '#fff', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.3)' };
+// Card accents: PAID dishes are highlighted green (they show as paid extras on
+// the tablet); everything else is free to select, shown in a neutral card.
+const PAID_ACCENT = { solid: '#22c55e', solidText: '#0f172a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' };
+const FREE_ACCENT = { bg: 'rgba(15,23,42,0.5)', border: 'rgba(255,255,255,0.08)' };
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
@@ -99,7 +90,16 @@ export const AdminAdditionalPage = () => {
   const [selectedCatId, setSelectedCatId] = useState<string>('');
   const selectedCat = cats.find((c) => c.id === selectedCatId) ?? cats[0];
 
-  // Global Hidden/Paid status (unchanged behavior).
+  // Dishes already included in the selected table's set menu — hidden from the
+  // Extras list, since they're served complimentary there and are managed on the
+  // Table Categories page rather than here.
+  const includedInSelected = useMemo(
+    () => new Set((selectedCat?.packageItems ?? []).map((pi) => pi.menuItem.id)),
+    [selectedCat]
+  );
+
+  // Paid ⇄ free toggle. Non-paid dishes are FREE (guests can pick them at no
+  // charge), so turning "Paid" off sets FREE rather than the retired NONE state.
   const statusMutation = useMutation({
     mutationFn: ({ id, tabletStatus }: { id: string; tabletStatus: TabletStatus }) =>
       // Keep showOnTablet in sync for any legacy reader (true only when PAID).
@@ -121,62 +121,17 @@ export const AdminAdditionalPage = () => {
     },
   });
 
-  // Per-table-category free-substitution list.
-  const freeMutation = useMutation({
-    mutationFn: ({ catId, ids }: { catId: string; ids: string[] }) =>
-      tableCategoryService.update(catId, { freeSubstitutionItemIds: ids }),
-    onMutate: async ({ catId, ids }) => {
-      await queryClient.cancelQueries({ queryKey: ['tableCategories'] });
-      const prev = queryClient.getQueryData<TableCategory[]>(['tableCategories']);
-      queryClient.setQueryData<TableCategory[]>(['tableCategories'], (old) =>
-        (old ?? []).map((c) => (c.id === catId ? { ...c, freeSubstitutionItemIds: ids } : c))
-      );
-      return { prev };
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(['tableCategories'], ctx.prev);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
-    },
-  });
-
-  // Legacy global free set: dishes flagged FREE before the per-table feature.
-  // Used as the fallback / seed for a table category that hasn't been configured.
-  const legacyFreeIds = useMemo(
-    () => new Set((data ?? []).filter((it) => effectiveStatus(it) === 'FREE').map((it) => it.id)),
-    [data]
-  );
-
-  // Effective free set for the selected table category (its own list, or the
-  // legacy global set when the category hasn't been configured yet).
-  const effectiveFreeIds = useMemo(() => {
-    const ids = selectedCat?.freeSubstitutionItemIds;
-    return ids != null ? new Set(ids) : new Set(legacyFreeIds);
-  }, [selectedCat, legacyFreeIds]);
-
-  const toggleFree = (itemId: string) => {
-    if (!selectedCat) return;
-    // Seed from the category's own list, or from the legacy global set the first
-    // time it's configured, so existing free dishes aren't silently dropped.
-    const base = selectedCat.freeSubstitutionItemIds != null
-      ? selectedCat.freeSubstitutionItemIds
-      : [...legacyFreeIds];
-    const set = new Set(base);
-    if (set.has(itemId)) set.delete(itemId);
-    else set.add(itemId);
-    freeMutation.mutate({ catId: selectedCat.id, ids: [...set] });
-  };
-
   const grouped = useMemo(() => {
-    const items = (data ?? []).filter((it) => ADDITIONAL_CATEGORIES.includes(it.category));
+    const items = (data ?? []).filter(
+      (it) => ADDITIONAL_CATEGORIES.includes(it.category) && !includedInSelected.has(it.id)
+    );
     const map = new Map<MenuCategory, MenuItem[]>();
     for (const cat of ADDITIONAL_CATEGORIES) {
       const list = items.filter((it) => it.category === cat).sort((a, b) => a.name.localeCompare(b.name));
       if (list.length > 0) map.set(cat, list);
     }
     return map;
-  }, [data]);
+  }, [data, includedInSelected]);
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
@@ -216,11 +171,9 @@ export const AdminAdditionalPage = () => {
             <h2 className="adm-heading" style={{ margin: '0 0 12px' }}>{t(CATEGORY_LABEL_KEY[cat])}</h2>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {items.map((item) => {
-                const status = effectiveStatus(item);
-                const globalValue: 'NONE' | 'PAID' = status === 'PAID' ? 'PAID' : 'NONE';
-                const isFree = effectiveFreeIds.has(item.id);
+                const isPaid = effectiveStatus(item) === 'PAID';
                 const photo = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
-                const accent = isFree ? FREE_ACCENT : GLOBAL_OPTIONS.find((o) => o.value === globalValue)!;
+                const accent = isPaid ? PAID_ACCENT : FREE_ACCENT;
                 return (
                   <div key={item.id} style={{
                     display: 'flex', flexDirection: 'column', gap: 10,
@@ -239,54 +192,27 @@ export const AdminAdditionalPage = () => {
                       </div>
                     </div>
 
-                    {/* Global visibility: Hidden / Paid */}
-                    <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, background: 'rgba(0,0,0,0.25)' }}>
-                      {GLOBAL_OPTIONS.map((opt) => {
-                        const active = globalValue === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => { if (!active) statusMutation.mutate({ id: item.id, tabletStatus: opt.value }); }}
-                            style={{
-                              flex: 1, padding: '6px 8px', borderRadius: 7, border: 'none',
-                              cursor: active ? 'default' : 'pointer',
-                              fontSize: 12, fontWeight: 700, letterSpacing: '0.01em',
-                              background: active ? opt.solid : 'transparent',
-                              color: active ? opt.solidText : 'rgba(226,232,240,0.6)',
-                              transition: 'background 0.15s, color 0.15s',
-                            }}
-                          >
-                            {t(opt.labelKey)}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Per-table-category free substitution */}
+                    {/* Single "Paid" toggle: on → paid extra, off → free to select. */}
                     <button
                       type="button"
-                      disabled={!selectedCat}
-                      onClick={() => toggleFree(item.id)}
-                      title={selectedCat?.name}
+                      onClick={() => statusMutation.mutate({ id: item.id, tabletStatus: isPaid ? 'FREE' : 'PAID' })}
+                      aria-pressed={isPaid}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                        padding: '7px 10px', borderRadius: 8,
-                        cursor: selectedCat ? 'pointer' : 'not-allowed',
-                        opacity: selectedCat ? 1 : 0.5,
+                        padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
                         fontSize: 12, fontWeight: 700, letterSpacing: '0.01em',
-                        background: isFree ? FREE_ACCENT.solid : 'transparent',
-                        color: isFree ? FREE_ACCENT.solidText : 'rgba(96,165,250,0.9)',
-                        border: `1px solid ${isFree ? FREE_ACCENT.solid : 'rgba(59,130,246,0.4)'}`,
+                        background: isPaid ? PAID_ACCENT.solid : 'transparent',
+                        color: isPaid ? PAID_ACCENT.solidText : 'rgba(226,232,240,0.7)',
+                        border: `1px solid ${isPaid ? PAID_ACCENT.solid : 'rgba(255,255,255,0.14)'}`,
                         transition: 'background 0.15s, color 0.15s',
                       }}
                     >
-                      {isFree && (
+                      {isPaid && (
                         <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
                           <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
-                      {t('free_for_this_table')}
+                      {t('status_paid')}
                     </button>
                   </div>
                 );
