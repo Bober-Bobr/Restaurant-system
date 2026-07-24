@@ -48,6 +48,7 @@ export function flyerTheme(inv: Partial<Invitation>): DesignTheme {
     textScale: inv.textScale ?? 1,
     particles: inv.particles ?? null,
     particlesImageUrl: inv.particlesImageUrl ?? null,
+    particlesColor: inv.particlesColor ?? null,
     trailTemplate: inv.trailTemplate ?? 'sparkle',
     trailColor: inv.trailColor ?? null,
     trailImageUrl: inv.trailImageUrl ?? null,

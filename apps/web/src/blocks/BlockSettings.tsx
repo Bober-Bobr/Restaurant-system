@@ -153,7 +153,7 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
         </Labeled>
       );
     case 'datetime':
-      return <Labeled text={t(field.labelKey)}><input type="datetime-local" style={input} value={txt ? txt.slice(0, 16) : ''} onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : null)} /></Labeled>;
+      return <DateTimeField label={t(field.labelKey)} value={txt} onChange={onChange} t={t} />;
     case 'number':
       return <Labeled text={t(field.labelKey)}><input type="number" min={1} max={60} step={0.5} style={input} value={typeof value === 'number' ? value : ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))} /></Labeled>;
     case 'boolean':
@@ -188,6 +188,55 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
     default:
       return null;
   }
+}
+
+// ── Date + time picker ───────────────────────────────────────────────────────
+// Split into a plain date input and a time input — clearer than a combined
+// datetime-local, especially on mobile. The value is stored as an absolute
+// instant (ISO/UTC) so the countdown reaches zero at the same real moment for
+// every viewer; here we convert to/from the editor's LOCAL wall-clock so the
+// time shown is exactly what was entered (fixes the timezone drift where a
+// saved 19:00 reopened as 14:00).
+function pad2(n: number): string { return String(n).padStart(2, '0'); }
+function isoToLocalParts(iso: string): { date: string; time: string } {
+  if (!iso) return { date: '', time: '' };
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: '', time: '' };
+  return {
+    date: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`,
+    time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}`,
+  };
+}
+function localPartsToIso(date: string, time: string): string | null {
+  if (!date) return null;
+  const d = new Date(`${date}T${time || '00:00'}`); // parsed in local time
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function DateTimeField({ label, value, onChange, t }: { label: string; value: string; onChange: (v: string | null) => void; t: T }) {
+  const { date, time } = isoToLocalParts(value);
+  return (
+    <Labeled text={label}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input
+          type="date"
+          style={{ ...input, flex: '1 1 56%', colorScheme: 'dark' }}
+          value={date}
+          onChange={(e) => onChange(localPartsToIso(e.target.value, time))}
+        />
+        <input
+          type="time"
+          style={{ ...input, flex: '1 1 44%', colorScheme: 'dark' }}
+          value={time}
+          onChange={(e) => onChange(localPartsToIso(date, e.target.value))}
+        />
+        {value && (
+          <button type="button" onClick={() => onChange(null)} title={t('reset_auto')}
+            style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(15,23,42,0.9)', color: '#e2e8f0', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
+        )}
+      </div>
+    </Labeled>
+  );
 }
 
 function ActionEditor({ value, onChange, t }: { value?: ButtonAction; onChange: (v: ButtonAction) => void; t: T }) {

@@ -109,7 +109,7 @@ export const PublicInvitationPage = () => {
     };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
-        <ParticleField kind={invitation.particles} imageUrl={particlesImg} fixed />
+        <ParticleField kind={invitation.particles} imageUrl={particlesImg} color={invitation.particlesColor || accent} fixed />
         <FingerTrail accent={trailAccent} template={trailTpl} imageUrl={trailImg} />
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>

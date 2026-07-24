@@ -20,6 +20,8 @@ export type DesignTheme = {
   particles?: string | null;
   // Custom falling-particle image (used when particles = 'custom').
   particlesImageUrl?: string | null;
+  // Particle colour. Empty = sync with the accent color.
+  particlesColor?: string | null;
 };
 
 export type DesignTemplate = {

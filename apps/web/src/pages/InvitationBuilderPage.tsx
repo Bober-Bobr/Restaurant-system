@@ -116,6 +116,7 @@ export const InvitationBuilderPage = () => {
         textScale: theme.textScale ?? 1,
         particles: theme.particles ?? null,
         particlesImageUrl: theme.particlesImageUrl ?? null,
+        particlesColor: theme.particlesColor ?? null,
         trailTemplate: theme.trailTemplate ?? null,
         trailColor: theme.trailColor ?? null,
         trailImageUrl: theme.trailImageUrl ?? null,

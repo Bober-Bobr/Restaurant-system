@@ -13,12 +13,63 @@ const KEYFRAMES = `
 @keyframes pfDrift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 `;
 
-// Warm metallic golds for the "gold confetti" variant.
+// Warm metallic golds — the fallback when no base color can be parsed.
 const GOLD = ['#f4b400', '#e8a917', '#ffd75e', '#d99310', '#ffe9a8', '#c98a12', '#f6c026'];
-// Saturated party palette for the birthday variant.
-const BIRTHDAY = ['#ff3b3b', '#ff9f1c', '#ffd23f', '#2ec4b6', '#3a86ff', '#8338ec', '#ff5da2', '#06d6a0', '#ef476f'];
-// Glossy wrapped-candy colors.
-const CANDY_COLORS = ['#e23b3b', '#ff6fae', '#37c26a', '#3a86ff', '#ff8c1a', '#9b5de5', '#f4243e'];
+
+// ── Colour helpers: derive a tonal palette from one base colour ───────────────
+// Particles default to (and can be pinned to) the design's accent colour; we
+// spread it into lightness/saturation variants so the shower still has depth
+// instead of one flat tone.
+function hexToHsl(hex: string): [number, number, number] | null {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((hex || '').trim());
+  if (!m) return null;
+  const r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hslToHex(h: number, s: number, l: number): string {
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r: number, g: number, b: number;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const to = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+function paletteFromBase(hex: string): string[] {
+  const hsl = hexToHsl(hex);
+  if (!hsl) return GOLD;
+  const [h, s, l] = hsl;
+  const cl = (x: number) => Math.max(0.14, Math.min(0.9, x));
+  const cs = (x: number) => Math.max(0.15, Math.min(1, x));
+  return [
+    hslToHex(h, s, l),
+    hslToHex(h, cs(s - 0.12), cl(l + 0.16)),
+    hslToHex(h, s, cl(l - 0.12)),
+    hslToHex(h, cs(s - 0.2), cl(l + 0.26)),
+    hslToHex(h, s, cl(l + 0.07)),
+    hslToHex(h, cs(s + 0.1), cl(l - 0.05)),
+  ];
+}
 
 type P = {
   left: number; delay: number; fall: number; sway: number; drift: number;
@@ -75,12 +126,12 @@ function CandySvg({ size, color }: { size: number; color: string }) {
   );
 }
 
-// Solid black heart with a soft highlight (not an emoji).
-function HeartSvg({ size }: { size: number }) {
+// Heart with a soft highlight (not an emoji); tinted with the particle colour.
+function HeartSvg({ size, color }: { size: number; color: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" style={{ display: 'block', opacity: 0.7, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>
-      <path d="M16 28.7C16 28.7 2.7 20.3 2.7 11.2 2.7 7.1 6 4 9.8 4 12.3 4 14.6 5.6 16 7.9 17.4 5.6 19.7 4 22.2 4 26 4 29.3 7.1 29.3 11.2 29.3 20.3 16 28.7 16 28.7Z" fill="#141414" />
-      <ellipse cx="11" cy="11" rx="3.2" ry="2.1" fill="rgba(255,255,255,0.3)" />
+    <svg width={size} height={size} viewBox="0 0 32 32" style={{ display: 'block', opacity: 0.8, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>
+      <path d="M16 28.7C16 28.7 2.7 20.3 2.7 11.2 2.7 7.1 6 4 9.8 4 12.3 4 14.6 5.6 16 7.9 17.4 5.6 19.7 4 22.2 4 26 4 29.3 7.1 29.3 11.2 29.3 20.3 16 28.7 16 28.7Z" fill={color} />
+      <ellipse cx="11" cy="11" rx="3.2" ry="2.1" fill="rgba(255,255,255,0.35)" />
     </svg>
   );
 }
@@ -94,7 +145,7 @@ function Inner({ kind, p, imageUrl }: { kind: ParticleKind; p: P; imageUrl?: str
   if (kind === 'snow') return <div style={{ animation: `pfDrift ${p.spin * 4}s linear infinite` }}><SnowflakeSvg size={p.size} opacity={0.5 + p.ratio * 0.4} /></div>;
   if (kind === 'candy') return <div style={{ animation: `pfDrift ${p.spin * 3}s linear infinite` }}><CandySvg size={p.size} color={p.color} /></div>;
   // hearts: a soft rock/pulse rather than a full spin
-  return <div style={{ animation: `pfHeart ${p.spin * 1.5}s ease-in-out infinite` }}><HeartSvg size={p.size} /></div>;
+  return <div style={{ animation: `pfHeart ${p.spin * 1.5}s ease-in-out infinite` }}><HeartSvg size={p.size} color={p.color} /></div>;
 }
 
 // Size range per kind so detailed shapes are large enough to read.
@@ -109,13 +160,15 @@ function sizeFor(k: ParticleKind): number {
 // Full-page falling particle overlay. Purely decorative, never intercepts pointer
 // events, and sits above everything else. `fixed` anchors it to the viewport
 // (public pages); otherwise it fills its nearest positioned ancestor (editor frame).
-export function ParticleField({ kind, count = 80, fixed = false, imageUrl }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean; imageUrl?: string | null }) {
+export function ParticleField({ kind, count = 80, fixed = false, imageUrl, color }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean; imageUrl?: string | null; color?: string | null }) {
   const k = (kind ?? 'none') as ParticleKind;
+  // Particle colour syncs with the accent (or an explicit override) by default.
+  const base = color || '#c9a42c';
   // Candies, hearts and custom images are larger — fewer of them read as
   // scattered accents rather than a dense, cluttered overlay.
   const n = (k === 'candy' || k === 'hearts' || k === 'custom') ? Math.round(count * 0.35) : count;
   const particles = useMemo<P[]>(() => {
-    const palette = k === 'birthday' ? BIRTHDAY : k === 'candy' ? CANDY_COLORS : GOLD;
+    const palette = paletteFromBase(base);
     return Array.from({ length: n }, () => ({
       left: Math.random() * 100,
       delay: -Math.random() * 14,
@@ -128,7 +181,7 @@ export function ParticleField({ kind, count = 80, fixed = false, imageUrl }: { k
       color: pick(palette),
       round: Math.random() < 0.25,
     }));
-  }, [n, k]);
+  }, [n, k, base]);
 
   if (!k || k === 'none') return null;
   if (k === 'custom' && !imageUrl) return null;

@@ -58,6 +58,7 @@ export type Invitation = {
   textScale: number | null;
   particles: string | null;
   particlesImageUrl: string | null;
+  particlesColor: string | null;
   trailTemplate: string | null;
   trailColor: string | null;
   trailImageUrl: string | null;

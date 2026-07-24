@@ -538,6 +538,8 @@ model Invitation {
   particles           String?
   // Custom falling-particle image (used when particles = 'custom').
   particlesImageUrl   String?
+  // Particle colour override (empty = sync with accent color).
+  particlesColor      String?
   // Cursor/finger trail: sparkle | hearts | candy | custom.
   trailTemplate       String?
   trailColor          String?

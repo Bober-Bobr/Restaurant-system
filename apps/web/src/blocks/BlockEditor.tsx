@@ -88,7 +88,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
         zoom: 0.8,
       }}>
         <div style={{ position: 'relative', background: pageBackground, minHeight: 600, fontFamily: '"Playfair Display", Georgia, serif' }}>
-          <ParticleField kind={theme.particles as ParticleKind | undefined} imageUrl={theme.particlesImageUrl ? (getPhotoUrl(theme.particlesImageUrl) ?? theme.particlesImageUrl) : null} />
+          <ParticleField kind={theme.particles as ParticleKind | undefined} imageUrl={theme.particlesImageUrl ? (getPhotoUrl(theme.particlesImageUrl) ?? theme.particlesImageUrl) : null} color={theme.particlesColor || accent} />
           {blocks.length === 0 && (
             <p style={{ padding: '80px 24px', textAlign: 'center', color: '#475569', fontSize: 14, fontFamily: 'system-ui, sans-serif' }}>{t('empty_design')}</p>
           )}
@@ -298,6 +298,15 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
       {/* Custom falling-particle image. */}
       {theme.particles === 'custom' && (
         <PhotoUploadField label={t('particle_image')} value={theme.particlesImageUrl} onChange={(url) => set('particlesImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
+      )}
+      {/* Particle colour — syncs with the accent by default; override here. A
+          custom image keeps its own colours, so hide it in that mode. */}
+      {theme.particles && theme.particles !== 'none' && theme.particles !== 'custom' && (
+        <label style={{ display: 'grid', gap: 5 }}>
+          <span style={panelLabel}>{t('particle_color')}</span>
+          {colorRow('particlesColor', theme.accentColor || '#c9a42c')}
+          {theme.particlesColor && <button type="button" onClick={() => set('particlesColor', null)} style={{ justifySelf: 'start', marginTop: 2, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('sync_with_accent')}</button>}
+        </label>
       )}
       <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (
