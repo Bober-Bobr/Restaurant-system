@@ -1088,6 +1088,31 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
   .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: clamp(0.9rem, 2.4vw, 1.8rem); }
   .gallery-item:first-child { grid-column: auto; aspect-ratio: 0.82; }
 }
+/* Narrow phones: keep the RSVP form inside the card (fields/button never
+   push past its padding). Layered on the mobile-first base, so desktop
+   (the min-width rules above) is untouched. */
+@media (max-width: 560px) {
+  .rsvp-section { padding: var(--section-pad) 0.9rem; }
+  .rsvp-card { padding: 1.6rem 1.15rem; border-radius: 6px; }
+  .rsvp-form { gap: 1.1rem; }
+  .field input, .field textarea, .field select {
+    padding: 0.75rem 0.85rem; font-size: 1rem;
+    max-width: 100%;
+  }
+  .attend-row { gap: 0.5rem; }
+  .attend-row label {
+    padding: 0.7rem 0.4rem; font-size: 0.85rem;
+    line-height: 1.25; word-break: break-word;
+  }
+  .rsvp-submit {
+    width: 100%; max-width: 100%; justify-self: stretch;
+    padding: 0.95rem 1rem; letter-spacing: 0.18em;
+    white-space: normal;
+  }
+}
+/* Never let a luxury button exceed its container, whatever the label. */
+.btn-luxury { max-width: 100%; }
+
 @media (max-height: 640px) {
   .intro-scene { width: min(70vw, 360px); }
   .intro-label h2 { font-size: 1.2rem; }
