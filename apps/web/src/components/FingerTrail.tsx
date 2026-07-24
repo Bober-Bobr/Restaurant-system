@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-export type TrailTemplate = 'sparkle' | 'hearts' | 'candy';
+export type TrailTemplate = 'sparkle' | 'hearts' | 'candy' | 'custom';
 
 // ── Finger-trail effect ─────────────────────────────────────────────────────
 // A trail of accent-colored shapes that follows the finger/cursor across the
@@ -9,7 +9,8 @@ export type TrailTemplate = 'sparkle' | 'hearts' | 'candy';
 //   sparkle — soft glowing dots (default; used by restaurant flyers)
 //   hearts  — little hearts that float gently upward
 //   candy   — twisted candy-wrapper shapes that drift and spin
-export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; template?: TrailTemplate }) {
+//   custom  — an uploaded image (imageUrl) drawn at each trail point
+export function FingerTrail({ accent, template = 'sparkle', imageUrl }: { accent: string; template?: TrailTemplate; imageUrl?: string | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -17,6 +18,11 @@ export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; 
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // A 'custom' trail with no image falls back to the default sparkle look.
+    const glyph: TrailTemplate = template === 'custom' && !imageUrl ? 'sparkle' : template;
+    const customImg = glyph === 'custom' && imageUrl ? new Image() : null;
+    if (customImg && imageUrl) customImg.src = imageUrl;
 
     const rgb = (() => {
       const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(accent.trim());
@@ -69,22 +75,22 @@ export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; 
       // Number of particles scales with how fast the finger moves. Hearts/candy
       // are larger glyphs, so we emit fewer of them than sparkle dots.
       const dist = hasLast ? Math.hypot(x - lastX, y - lastY) : 0;
-      const cap = template === 'sparkle' ? 6 : 3;
-      const step = template === 'sparkle' ? 8 : 14;
+      const cap = glyph === 'sparkle' ? 6 : 3;
+      const step = glyph === 'sparkle' ? 8 : 14;
       const count = Math.min(cap, 1 + Math.floor(dist / step));
       for (let i = 0; i < count; i++) {
-        const size = template === 'sparkle' ? 2 + Math.random() * 3 : 9 + Math.random() * 7;
+        const size = glyph === 'sparkle' ? 2 + Math.random() * 3 : 9 + Math.random() * 7;
         particles.push({
           x, y,
           vx: (Math.random() - 0.5) * 0.6,
-          vy: (Math.random() - 0.5) * 0.6 - (template === 'sparkle' ? 0.3 : 0.7),
+          vy: (Math.random() - 0.5) * 0.6 - (glyph === 'sparkle' ? 0.3 : 0.7),
           life: 1,
           size,
           rot: Math.random() * Math.PI * 2,
           spin: (Math.random() - 0.5) * 0.12,
         });
       }
-      const max = template === 'sparkle' ? 400 : 160;
+      const max = glyph === 'sparkle' ? 400 : 160;
       if (particles.length > max) particles = particles.slice(-max);
       lastX = x; lastY = y; hasLast = true;
     };
@@ -97,22 +103,34 @@ export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; 
     window.addEventListener('mousemove', onMouse, { passive: true });
     window.addEventListener('touchmove', onTouch, { passive: true });
 
-    const fade = template === 'sparkle' ? 0.025 : 0.016;
+    const fade = glyph === 'sparkle' ? 0.025 : 0.016;
     const tick = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (const p of particles) {
         p.x += p.vx; p.y += p.vy; p.life -= fade;
         p.rot += p.spin;
-        if (template !== 'sparkle') p.vy -= 0.004; // gentle upward float
+        if (glyph !== 'sparkle') p.vy -= 0.004; // gentle upward float
         if (p.life <= 0) continue;
 
-        if (template === 'sparkle') {
+        if (glyph === 'sparkle') {
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${cr},${cg},${cb},${p.life * 0.85})`;
           ctx.shadowBlur = 8;
           ctx.shadowColor = `rgba(${cr},${cg},${cb},${p.life})`;
           ctx.fill();
+        } else if (glyph === 'custom' && customImg) {
+          // Uploaded image trail: draw the picture, scaled up, fading out.
+          if (customImg.complete && customImg.naturalWidth) {
+            const s = p.size * 2.4;
+            const ratio = customImg.naturalHeight / customImg.naturalWidth || 1;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life * 0.95);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * 0.4);
+            ctx.drawImage(customImg, -s / 2, -s * ratio / 2, s, s * ratio);
+            ctx.restore();
+          }
         } else {
           ctx.save();
           ctx.translate(p.x, p.y);
@@ -120,7 +138,7 @@ export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; 
           ctx.fillStyle = `rgba(${cr},${cg},${cb},${p.life * 0.9})`;
           ctx.shadowBlur = 6;
           ctx.shadowColor = `rgba(${cr},${cg},${cb},${p.life * 0.7})`;
-          if (template === 'hearts') heartPath(p.size); else candyPath(p.size);
+          if (glyph === 'hearts') heartPath(p.size); else candyPath(p.size);
           ctx.fill();
           ctx.restore();
         }
@@ -136,7 +154,7 @@ export function FingerTrail({ accent, template = 'sparkle' }: { accent: string; 
       window.removeEventListener('mousemove', onMouse);
       window.removeEventListener('touchmove', onTouch);
     };
-  }, [accent, template]);
+  }, [accent, template, imageUrl]);
 
   return (
     <canvas

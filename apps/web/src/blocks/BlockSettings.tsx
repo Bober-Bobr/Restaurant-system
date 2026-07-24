@@ -4,6 +4,7 @@ import { FONT_OPTIONS, fontStack } from './fonts';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
 import { PhotoUploadField } from '../components/PhotoUploadField';
+import { VideoUploadField } from '../components/VideoUploadField';
 import { getPhotoUrl } from '../utils/photoUrl';
 
 type T = (k: TranslationKey) => string;
@@ -15,12 +16,6 @@ const input: React.CSSProperties = {
 const label: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
 
 const ANIMATION_TYPES: AnimationType[] = ['none', 'fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'zoom', 'blur', 'flip'];
-
-// Blocks whose text can be recolored per-block (a "Text color" picker is shown).
-// Empty value = inherit the page-wide text color from the theme.
-const TEXT_COLOR_BLOCKS = new Set<Block['type']>([
-  'hero', 'heading', 'text', 'countdown', 'timing', 'menu', 'socials', 'contacts', 'rsvp', 'form', 'savecontact', 'promo', 'divider',
-]);
 
 export function BlockSettings({ block, onChange, t, restaurantId }: {
   block: Block;
@@ -42,15 +37,18 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
       {def.fields.map((f) => (
         <FieldEditor key={f.key} field={f} value={block.props[f.key]} onChange={(v) => setProp(f.key, v)} t={t} restaurantId={restaurantId} />
       ))}
-      {TEXT_COLOR_BLOCKS.has(block.type) && (
-        <FieldEditor
-          field={{ key: 'textColor', labelKey: 'bf_text_color', type: 'color' }}
-          value={block.props.textColor}
-          onChange={(v) => setProp('textColor', v)}
-          t={t}
-          restaurantId={restaurantId}
-        />
-      )}
+      {/* Per-block text color — available on every block (empty = inherit the
+          page-wide theme color). */}
+      <FieldEditor
+        field={{ key: 'textColor', labelKey: 'bf_text_color', type: 'color' }}
+        value={block.props.textColor}
+        onChange={(v) => setProp('textColor', v)}
+        t={t}
+        restaurantId={restaurantId}
+      />
+      {block.props.textColor ? (
+        <button type="button" onClick={() => setProp('textColor', '')} style={{ justifySelf: 'start', marginTop: -6, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('reset_auto')}</button>
+      ) : null}
       {/* Per-block font size — headings and body text, available on every block. */}
       <FontSizeControls
         heading={typeof block.props.headingScale === 'number' ? block.props.headingScale : 1}
@@ -175,6 +173,8 @@ function FieldEditor({ field, value, onChange, t, restaurantId }: {
       );
     case 'image':
       return <PhotoUploadField label={t(field.labelKey)} value={txt || null} onChange={(url) => onChange(url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />;
+    case 'video':
+      return <VideoUploadField label={t(field.labelKey)} value={txt || null} onChange={(url) => onChange(url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />;
     case 'action':
       return <ActionEditor value={value as ButtonAction | undefined} onChange={onChange} t={t} />;
     case 'gallery':
@@ -218,6 +218,14 @@ function addBtn(onClick: () => void, text: string) {
 }
 
 function GalleryItemsEditor({ items, onChange, t, restaurantId }: { items: GalleryItem[]; onChange: (v: GalleryItem[]) => void; t: T; restaurantId: string }) {
+  // Reorder items (photos/videos) — the carousel plays them in this order.
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= items.length) return;
+    const next = [...items];
+    const [m] = next.splice(from, 1);
+    next.splice(to, 0, m);
+    onChange(next);
+  };
   return (
     <Labeled text={t('bf_gallery')}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -225,12 +233,23 @@ function GalleryItemsEditor({ items, onChange, t, restaurantId }: { items: Galle
           rowBox(<>
             <img src={getPhotoUrl(it.photoUrl) ?? it.photoUrl} alt="" style={{ width: 54, height: 42, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
             <input style={{ ...input, flex: 1 }} placeholder="https://instagram.com/reel/..." value={it.videoUrl ?? ''} onChange={(e) => onChange(items.map((x, j) => j === i ? { ...x, videoUrl: e.target.value || null } : x))} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+              {moveBtn(() => move(i, i - 1), '↑', i === 0, t('move_up'))}
+              {moveBtn(() => move(i, i + 1), '↓', i === items.length - 1, t('move_down'))}
+            </div>
             {delBtn(() => onChange(items.filter((_, j) => j !== i)))}
           </>)
         ))}
         <PhotoUploadField label={t('add_item')} value={null} onChange={(url) => { if (url) onChange([...items, { photoUrl: url, videoUrl: null }]); }} restaurantId={restaurantId} height={90} hint={t('drop_or_paste')} />
       </div>
     </Labeled>
+  );
+}
+
+function moveBtn(onClick: () => void, glyph: string, disabled: boolean, title: string) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} title={title}
+      style={{ width: 24, height: 20, borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', cursor: disabled ? 'default' : 'pointer', background: 'rgba(15,23,42,0.9)', color: disabled ? 'rgba(226,232,240,0.25)' : '#e2e8f0', fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</button>
   );
 }
 

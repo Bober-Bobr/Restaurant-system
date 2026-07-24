@@ -534,8 +534,15 @@ model Invitation {
   textColor           String?
   // Page-wide text size multiplier (1 = default).
   textScale           Float?  @default(1)
-  // Falling particle effect: none | confetti | snow | candy.
+  // Falling particle effect: none | confetti | snow | candy | custom.
   particles           String?
+  // Custom falling-particle image (used when particles = 'custom').
+  particlesImageUrl   String?
+  // Cursor/finger trail: sparkle | hearts | candy | custom.
+  trailTemplate       String?
+  trailColor          String?
+  // Custom trail image (used when trailTemplate = 'custom').
+  trailImageUrl       String?
 
   // Optional looping background music played on the public invitation
   musicUrl            String?

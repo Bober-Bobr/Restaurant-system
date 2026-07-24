@@ -178,6 +178,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
         ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
         : <img src={src} alt="" style={{ width: '100%', display: 'block' }} />;
     }
+    case 'video':
+      return <VideoView p={p} />;
     case 'button':
       return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
     case 'countdown':
@@ -250,6 +252,32 @@ function HtmlBlock({ html }: { html: string }) {
 
 function Placeholder({ label }: { label: string }) {
   return <div style={{ margin: '12px 16px', aspectRatio: '3/2', borderRadius: 12, border: '1px dashed rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(0,0,0,0.4)', fontSize: 13, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</div>;
+}
+
+// Self-hosted video block: plays inline within the page. autoplay requires the
+// video to be muted (browser policy), so that pairing is enforced.
+function VideoView({ p }: { p: BlockProps }) {
+  const src = img(str(p, 'url'));
+  if (!src) return <Placeholder label="Video" />;
+  const rounded = bool(p, 'rounded');
+  const autoplay = bool(p, 'autoplay');
+  const muted = autoplay || bool(p, 'muted');
+  return (
+    <div style={{ padding: rounded ? '12px 16px' : 0 }}>
+      <video
+        // React doesn't reliably reflect the `muted` prop to the attribute, which
+        // browsers require before allowing muted autoplay — set it on the node.
+        ref={(el) => { if (el) el.muted = muted; }}
+        src={src}
+        controls={bool(p, 'controls')}
+        autoPlay={autoplay}
+        loop={bool(p, 'loop')}
+        playsInline
+        preload="metadata"
+        style={{ width: '100%', display: 'block', borderRadius: rounded ? 16 : 0, background: '#000' }}
+      />
+    </div>
+  );
 }
 
 function yandexMaps(address: string) {
@@ -821,7 +849,7 @@ export function VConnectFooter({ label }: { label: string }) {
       </span>
       <img src={networkingLogoSrc} alt="V-connect" style={{ height: 60, width: 'auto' }} />
       <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.03em', color: '#000', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
-        V-connect
+        V-CONNECT
       </span>
     </div>
   );

@@ -5,7 +5,7 @@ import { invitationService, normalizeGalleryItems, type Invitation, type Invitat
 import { getPhotoUrl } from '../utils/photoUrl';
 import { getEventSubdomainSlug } from '../utils/subdomain';
 import { useScrollReveal } from '../utils/useScrollReveal';
-import { FingerTrail } from '../components/FingerTrail';
+import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
 import { BlockList, VConnectFooter, VConnectContact, findVcContact, readableText, type RenderCtx } from '../blocks/BlockRenderer';
 import { ParticleField } from '../blocks/ParticleField';
@@ -87,6 +87,11 @@ export const PublicInvitationPage = () => {
   const bgImage = invitation.backgroundImageUrl ? (getPhotoUrl(invitation.backgroundImageUrl) ?? invitation.backgroundImageUrl) : null;
   const galleryItems = normalizeGalleryItems(invitation.galleryPhotos);
   const musicSrc = invitation.musicUrl ? (getPhotoUrl(invitation.musicUrl) ?? invitation.musicUrl) : null;
+  // Cursor/finger trail + falling-particle custom images.
+  const trailTpl = (invitation.trailTemplate || 'sparkle') as TrailTemplate;
+  const trailImg = invitation.trailImageUrl ? (getPhotoUrl(invitation.trailImageUrl) ?? invitation.trailImageUrl) : null;
+  const particlesImg = invitation.particlesImageUrl ? (getPhotoUrl(invitation.particlesImageUrl) ?? invitation.particlesImageUrl) : null;
+  const trailAccent = invitation.trailColor || accent;
   const pageBackground = bgImage
     ? `${bgColor} url(${bgImage}) top center / contain repeat`
     : `radial-gradient(circle at 20% 0%, ${hexToRgba(accent, 0.18)} 0%, transparent 40%), radial-gradient(circle at 80% 100%, ${hexToRgba(accent, 0.14)} 0%, transparent 50%), ${bgColor}`;
@@ -104,8 +109,8 @@ export const PublicInvitationPage = () => {
     };
     return (
       <main style={{ minHeight: '100vh', background: pageBackground, color: TEXT, fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
-        <ParticleField kind={invitation.particles} fixed />
-        <FingerTrail accent={accent} />
+        <ParticleField kind={invitation.particles} imageUrl={particlesImg} fixed />
+        <FingerTrail accent={trailAccent} template={trailTpl} imageUrl={trailImg} />
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
           <BlockList blocks={invitation.blocks} ctx={ctx} />
@@ -136,7 +141,7 @@ export const PublicInvitationPage = () => {
       display: 'flex', justifyContent: 'center',
       position: 'relative',
     }}>
-      <FingerTrail accent={accent} />
+      <FingerTrail accent={trailAccent} template={trailTpl} imageUrl={trailImg} />
       {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
       <div ref={revealRef} style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
 

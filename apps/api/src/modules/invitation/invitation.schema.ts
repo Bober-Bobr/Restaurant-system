@@ -74,6 +74,10 @@ const baseShape = {
   textColor: z.string().max(32).optional().nullable(),
   textScale: z.number().min(0.5).max(2).optional().nullable(),
   particles: z.string().max(20).optional().nullable(),
+  particlesImageUrl: z.string().max(500).optional().nullable(),
+  trailTemplate: z.string().max(20).optional().nullable(),
+  trailColor: z.string().max(32).optional().nullable(),
+  trailImageUrl: z.string().max(500).optional().nullable(),
   musicUrl: z.string().max(500).optional().nullable(),
 
   isPublished: z.boolean().optional(),

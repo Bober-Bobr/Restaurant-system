@@ -10,12 +10,16 @@ export type DesignTheme = {
   musicUrl?: string | null;
   trailTemplate?: string | null;
   trailColor?: string | null;
+  // Custom trail image (used when trailTemplate = 'custom').
+  trailImageUrl?: string | null;
   // Page-wide text color. Applies to every block that doesn't set its own.
   textColor?: string | null;
   // Page-wide text size multiplier (1 = default). Scales all block text.
   textScale?: number | null;
-  // Falling particle effect: 'none' | 'confetti' | 'snow' | 'candy'.
+  // Falling particle effect: 'none' | 'confetti' | 'snow' | 'candy' | 'custom'.
   particles?: string | null;
+  // Custom falling-particle image (used when particles = 'custom').
+  particlesImageUrl?: string | null;
 };
 
 export type DesignTemplate = {

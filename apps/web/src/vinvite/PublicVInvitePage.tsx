@@ -83,8 +83,8 @@ export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
 
   return (
     <main style={{ minHeight: '100vh', background: pageBackground, color: '#1a1a1a', fontFamily: '"Playfair Display", Georgia, serif', display: 'flex', justifyContent: 'center', position: 'relative' }}>
-      <ParticleField kind={theme.particles} fixed />
-      <FingerTrail accent={theme.trailColor || accent} template={(theme.trailTemplate ?? 'sparkle') as TrailTemplate} />
+      <ParticleField kind={theme.particles} imageUrl={theme.particlesImageUrl ? (getPhotoUrl(theme.particlesImageUrl) ?? theme.particlesImageUrl) : null} fixed />
+      <FingerTrail accent={theme.trailColor || accent} template={(theme.trailTemplate ?? 'sparkle') as TrailTemplate} imageUrl={theme.trailImageUrl ? (getPhotoUrl(theme.trailImageUrl) ?? theme.trailImageUrl) : null} />
       {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
       <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
         <BlockList blocks={site.blocks ?? []} ctx={ctx} />

@@ -47,6 +47,10 @@ export function flyerTheme(inv: Partial<Invitation>): DesignTheme {
     textColor: inv.textColor ?? null,
     textScale: inv.textScale ?? 1,
     particles: inv.particles ?? null,
+    particlesImageUrl: inv.particlesImageUrl ?? null,
+    trailTemplate: inv.trailTemplate ?? 'sparkle',
+    trailColor: inv.trailColor ?? null,
+    trailImageUrl: inv.trailImageUrl ?? null,
     musicUrl: inv.musicUrl ?? null,
   };
 }

@@ -88,7 +88,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
         zoom: 0.8,
       }}>
         <div style={{ position: 'relative', background: pageBackground, minHeight: 600, fontFamily: '"Playfair Display", Georgia, serif' }}>
-          <ParticleField kind={theme.particles as ParticleKind | undefined} />
+          <ParticleField kind={theme.particles as ParticleKind | undefined} imageUrl={theme.particlesImageUrl ? (getPhotoUrl(theme.particlesImageUrl) ?? theme.particlesImageUrl) : null} />
           {blocks.length === 0 && (
             <p style={{ padding: '80px 24px', textAlign: 'center', color: '#475569', fontSize: 14, fontFamily: 'system-ui, sans-serif' }}>{t('empty_design')}</p>
           )}
@@ -248,8 +248,9 @@ function SlideOver({ title, onClose, children }: { title: string; onClose: () =>
   );
 }
 
-const TRAILS: { key: string; label: string }[] = [
-  { key: 'sparkle', label: 'Sparkle' }, { key: 'hearts', label: 'Hearts' }, { key: 'candy', label: 'Candy' },
+const TRAILS: { key: string; labelKey: TranslationKey }[] = [
+  { key: 'sparkle', labelKey: 'trail_sparkle' }, { key: 'hearts', labelKey: 'trail_hearts' },
+  { key: 'candy', labelKey: 'trail_candy' }, { key: 'custom', labelKey: 'trail_custom' },
 ];
 
 function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: DesignTheme; onChange: (t: DesignTheme) => void; t: T; restaurantId: string; showTrail?: boolean }) {
@@ -291,8 +292,13 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
           <option value="hearts">{t('particle_hearts')}</option>
           <option value="snow">{t('particle_snow')}</option>
           <option value="candy">{t('particle_candy')}</option>
+          <option value="custom">{t('particle_custom')}</option>
         </select>
       </label>
+      {/* Custom falling-particle image. */}
+      {theme.particles === 'custom' && (
+        <PhotoUploadField label={t('particle_image')} value={theme.particlesImageUrl} onChange={(url) => set('particlesImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
+      )}
       <PhotoUploadField label={t('background_photo')} value={theme.backgroundImageUrl} onChange={(url) => set('backgroundImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
       {showTrail && (
         <>
@@ -302,10 +308,14 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
               {TRAILS.map((tr) => {
                 const on = (theme.trailTemplate ?? 'sparkle') === tr.key;
                 return <button key={tr.key} type="button" onClick={() => set('trailTemplate', tr.key)}
-                  style={{ padding: '7px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: '1px solid', borderColor: on ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.12)', background: on ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)', color: on ? '#c9a42c' : '#e2e8f0' }}>{tr.label}</button>;
+                  style={{ padding: '7px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: '1px solid', borderColor: on ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.12)', background: on ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)', color: on ? '#c9a42c' : '#e2e8f0' }}>{t(tr.labelKey)}</button>;
               })}
             </div>
           </label>
+          {/* Custom cursor/finger-trail image. */}
+          {theme.trailTemplate === 'custom' && (
+            <PhotoUploadField label={t('trail_image')} value={theme.trailImageUrl} onChange={(url) => set('trailImageUrl', url)} restaurantId={restaurantId} hint={t('drop_or_paste')} />
+          )}
           <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('trail_color')}</span>{colorRow('trailColor', '#c2185b')}</label>
         </>
       )}

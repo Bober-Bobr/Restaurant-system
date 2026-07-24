@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-export type ParticleKind = 'none' | 'confetti' | 'birthday' | 'snow' | 'candy' | 'hearts';
+export type ParticleKind = 'none' | 'confetti' | 'birthday' | 'snow' | 'candy' | 'hearts' | 'custom';
 
 // fall = vertical drop; sway = gentle side drift; tumble = 3D paper flip (gives
 // confetti its realistic spinning look); heart = soft rock + pulse; drift = a
@@ -85,7 +85,11 @@ function HeartSvg({ size }: { size: number }) {
   );
 }
 
-function Inner({ kind, p }: { kind: ParticleKind; p: P }) {
+function Inner({ kind, p, imageUrl }: { kind: ParticleKind; p: P; imageUrl?: string | null }) {
+  if (kind === 'custom') {
+    if (!imageUrl) return null;
+    return <div style={{ animation: `pfDrift ${p.spin * 3}s linear infinite` }}><img src={imageUrl} alt="" style={{ width: p.size, height: 'auto', display: 'block', opacity: 0.85 }} /></div>;
+  }
   if (kind === 'confetti' || kind === 'birthday') return <ConfettiPiece p={p} />;
   if (kind === 'snow') return <div style={{ animation: `pfDrift ${p.spin * 4}s linear infinite` }}><SnowflakeSvg size={p.size} opacity={0.5 + p.ratio * 0.4} /></div>;
   if (kind === 'candy') return <div style={{ animation: `pfDrift ${p.spin * 3}s linear infinite` }}><CandySvg size={p.size} color={p.color} /></div>;
@@ -98,17 +102,18 @@ function sizeFor(k: ParticleKind): number {
   if (k === 'snow') return 12 + Math.random() * 14;
   if (k === 'candy') return 16 + Math.random() * 14;
   if (k === 'hearts') return 14 + Math.random() * 12;
+  if (k === 'custom') return 22 + Math.random() * 20;
   return 7 + Math.random() * 7; // confetti / birthday
 }
 
 // Full-page falling particle overlay. Purely decorative, never intercepts pointer
 // events, and sits above everything else. `fixed` anchors it to the viewport
 // (public pages); otherwise it fills its nearest positioned ancestor (editor frame).
-export function ParticleField({ kind, count = 80, fixed = false }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean }) {
+export function ParticleField({ kind, count = 80, fixed = false, imageUrl }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean; imageUrl?: string | null }) {
   const k = (kind ?? 'none') as ParticleKind;
-  // Candies and hearts are larger, detailed shapes — fewer of them read as
+  // Candies, hearts and custom images are larger — fewer of them read as
   // scattered accents rather than a dense, cluttered overlay.
-  const n = (k === 'candy' || k === 'hearts') ? Math.round(count * 0.35) : count;
+  const n = (k === 'candy' || k === 'hearts' || k === 'custom') ? Math.round(count * 0.35) : count;
   const particles = useMemo<P[]>(() => {
     const palette = k === 'birthday' ? BIRTHDAY : k === 'candy' ? CANDY_COLORS : GOLD;
     return Array.from({ length: n }, () => ({
@@ -126,6 +131,7 @@ export function ParticleField({ kind, count = 80, fixed = false }: { kind?: Part
   }, [n, k]);
 
   if (!k || k === 'none') return null;
+  if (k === 'custom' && !imageUrl) return null;
 
   return (
     <div aria-hidden style={{ position: fixed ? 'fixed' : 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 2147483000, perspective: 700 }}>
@@ -133,7 +139,7 @@ export function ParticleField({ kind, count = 80, fixed = false }: { kind?: Part
       {particles.map((p, i) => (
         <div key={i} style={{ position: 'absolute', top: 0, left: `${p.left}%`, animation: `pfFall ${p.fall}s linear ${p.delay}s infinite`, willChange: 'transform' }}>
           <div style={{ ['--pf-drift' as string]: `${p.drift}px`, animation: `pfSway ${p.sway}s ease-in-out infinite` }}>
-            <Inner kind={k} p={p} />
+            <Inner kind={k} p={p} imageUrl={imageUrl} />
           </div>
         </div>
       ))}

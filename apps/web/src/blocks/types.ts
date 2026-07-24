@@ -10,6 +10,7 @@ export type BlockType =
   | 'heading'
   | 'text'
   | 'image'
+  | 'video'
   | 'button'
   | 'countdown'
   | 'timing'
@@ -45,7 +46,7 @@ export type SocialLink = { label: string; url: string };
 
 export type TimingItem = { time: string; label: string };
 
-export type FieldType = 'text' | 'textarea' | 'html' | 'image' | 'color' | 'datetime' | 'boolean' | 'number' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
+export type FieldType = 'text' | 'textarea' | 'html' | 'image' | 'video' | 'color' | 'datetime' | 'boolean' | 'number' | 'gallery' | 'menu' | 'socials' | 'timing' | 'action' | 'select';
 
 export type BlockFieldDef = {
   key: string;
@@ -116,6 +117,20 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'timer', labelKey: 'bf_timer', type: 'boolean' },
       { key: 'timerLabel', labelKey: 'bf_label', type: 'text' },
       { key: 'timerAt', labelKey: 'bf_datetime', type: 'datetime' },
+    ],
+  },
+  // Self-hosted video: uploaded from the device (drag/drop/paste), plays inline.
+  video: {
+    type: 'video', icon: '🎬', labelKey: 'block_video',
+    defaultProps: { url: '', rounded: true, autoplay: true, loop: true, muted: true, controls: true },
+    defaultAnim: { type: 'fade', durationMs: 700, delayMs: 0 },
+    fields: [
+      { key: 'url', labelKey: 'bf_video', type: 'video' },
+      { key: 'rounded', labelKey: 'bf_rounded', type: 'boolean' },
+      { key: 'autoplay', labelKey: 'bf_autoplay', type: 'boolean' },
+      { key: 'loop', labelKey: 'bf_loop', type: 'boolean' },
+      { key: 'muted', labelKey: 'bf_muted', type: 'boolean' },
+      { key: 'controls', labelKey: 'bf_controls', type: 'boolean' },
     ],
   },
   button: {
@@ -284,7 +299,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
 // `menu` and `promo` are intentionally omitted — a static photo (image block) is
 // used instead. Both types are still rendered for back-compat with old designs.
 export const PALETTE_ORDER: BlockType[] = [
-  'heading', 'text', 'image', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'html', 'divider', 'vccontact',
+  'heading', 'text', 'image', 'video', 'button', 'link', 'hero', 'countdown', 'timing', 'gallery', 'map', 'form', 'rsvp', 'savecontact', 'contacts', 'socials', 'html', 'divider', 'vccontact',
 ];
 
 export function createBlock(type: BlockType): Block {
