@@ -12,7 +12,8 @@ import { dishName } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTabletMusicStarted, pauseTabletMusic, resumeTabletMusic } from '../utils/tabletMusic';
-import { FingerTrail } from '../components/FingerTrail';
+import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
+import { ParticleField, type ParticleKind } from '../blocks/ParticleField';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
 type MenuCategory = MenuItem['category'];
@@ -1527,6 +1528,12 @@ export const TabletMenuPage = () => {
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
   const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
   const tabletBgColor     = usePublicDataStore((s) => s.tabletBgColor);
+  const tabletParticles         = usePublicDataStore((s) => s.tabletParticles);
+  const tabletParticlesColor    = usePublicDataStore((s) => s.tabletParticlesColor);
+  const tabletParticlesImageUrl = usePublicDataStore((s) => s.tabletParticlesImageUrl);
+  const tabletTrailTemplate     = usePublicDataStore((s) => s.tabletTrailTemplate);
+  const tabletTrailColor        = usePublicDataStore((s) => s.tabletTrailColor);
+  const tabletTrailImageUrl     = usePublicDataStore((s) => s.tabletTrailImageUrl);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const error             = usePublicDataStore((s) => s.error);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
@@ -1699,7 +1706,19 @@ export const TabletMenuPage = () => {
         )}
 
       <PageBackground />
-      <FingerTrail accent="var(--rg-accent)" />
+      {tabletParticles && tabletParticles !== 'none' && (
+        <ParticleField
+          kind={tabletParticles as ParticleKind}
+          color={tabletParticlesColor || tabletAccentColor || '#c9a42c'}
+          imageUrl={tabletParticlesImageUrl ? (getPhotoUrl(tabletParticlesImageUrl) ?? tabletParticlesImageUrl) : null}
+          fixed
+        />
+      )}
+      <FingerTrail
+        accent={tabletTrailColor || tabletAccentColor || '#c9a42c'}
+        template={(tabletTrailTemplate as TrailTemplate) || 'sparkle'}
+        imageUrl={tabletTrailImageUrl ? (getPhotoUrl(tabletTrailImageUrl) ?? tabletTrailImageUrl) : null}
+      />
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} compact />}
       {replacingExtra && selectedTableCategory && (
         <ExtraReplaceModal

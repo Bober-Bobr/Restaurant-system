@@ -101,6 +101,12 @@ router.get('/restaurant', async (request, response, next) => {
       companyName: company?.name ?? null,
       tabletAccentColor: restaurant.tabletAccentColor ?? null,
       tabletBgColor: restaurant.tabletBgColor ?? null,
+      tabletParticles: restaurant.tabletParticles ?? null,
+      tabletParticlesColor: restaurant.tabletParticlesColor ?? null,
+      tabletParticlesImageUrl: restaurant.tabletParticlesImageUrl ?? null,
+      tabletTrailTemplate: restaurant.tabletTrailTemplate ?? null,
+      tabletTrailColor: restaurant.tabletTrailColor ?? null,
+      tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
     });
   } catch (error) { next(error); }
 });

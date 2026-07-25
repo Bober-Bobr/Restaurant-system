@@ -117,14 +117,14 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
               : { background: '#f6efd9', color: '#8a6d1a', border: '1px solid #ecdfb4' }}>
             {categoryLabel}
           </span>
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold leading-snug" style={{ color: dark ? 'white' : '#1c1917' }}>
-              {localizedName || 'Menu Item'}
-            </h3>
-            <span className="shrink-0 text-sm font-bold" style={{ color: dark ? 'var(--rg-accent)' : '#1c1917' }}>
-              {formatSum(Number(item.priceCents ?? 0))}
-            </span>
-          </div>
+          {/* Name then price on its own line below — the price is no longer
+              squeezed onto the name row where narrow cards would clip it. */}
+          <h3 className="text-sm font-semibold leading-snug" style={{ color: dark ? 'white' : '#1c1917' }}>
+            {localizedName || 'Menu Item'}
+          </h3>
+          <span className="mt-1 block text-sm font-bold" style={{ color: dark ? 'var(--rg-accent)' : '#1c1917' }}>
+            {formatSum(Number(item.priceCents ?? 0))}
+          </span>
           {localizedDescription && (
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed"
               style={{ color: dark ? 'rgba(255,255,255,0.55)' : '#78716c' }}>

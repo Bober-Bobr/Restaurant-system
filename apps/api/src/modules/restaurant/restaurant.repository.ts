@@ -58,7 +58,7 @@ export class RestaurantRepository {
     return prisma.restaurant.create({ data: { ...data, name, ownerId } });
   }
 
-  async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string; backgroundImageUrl?: string | null; tabletAccentColor?: string | null; tabletBgColor?: string | null }) {
+  async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string; backgroundImageUrl?: string | null; tabletAccentColor?: string | null; tabletBgColor?: string | null; tabletParticles?: string | null; tabletParticlesColor?: string | null; tabletParticlesImageUrl?: string | null; tabletTrailTemplate?: string | null; tabletTrailColor?: string | null; tabletTrailImageUrl?: string | null }) {
     return prisma.restaurant.update({ where: { id }, data });
   }
 

@@ -309,6 +309,14 @@ model Restaurant {
   // Per-restaurant tablet/summary color palette (hex). Null → default gold theme.
   tabletAccentColor String?
   tabletBgColor     String?
+  // Per-restaurant tablet cursor/finger-trail + falling-particle effects (like the
+  // flyer/invitation builder). Null → defaults (sparkle trail in accent, no particles).
+  tabletParticles         String?  // ParticleKind: none|confetti|birthday|snow|candy|hearts|custom
+  tabletParticlesColor    String?
+  tabletParticlesImageUrl String?
+  tabletTrailTemplate     String?  // sparkle|hearts|candy|custom
+  tabletTrailColor        String?
+  tabletTrailImageUrl     String?
   // Master switch: when true, subcategories are disabled everywhere — the menu
   // items Subcategory column and the catering-site subcategory headers are hidden.
   hideSubcategories Boolean       @default(false)

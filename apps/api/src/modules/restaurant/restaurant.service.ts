@@ -11,6 +11,12 @@ type RestaurantUpdateData = {
   backgroundImageUrl?: string | null;
   tabletAccentColor?: string | null;
   tabletBgColor?: string | null;
+  tabletParticles?: string | null;
+  tabletParticlesColor?: string | null;
+  tabletParticlesImageUrl?: string | null;
+  tabletTrailTemplate?: string | null;
+  tabletTrailColor?: string | null;
+  tabletTrailImageUrl?: string | null;
 };
 
 export class RestaurantService {

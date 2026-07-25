@@ -35,35 +35,97 @@ const DEFAULT_ACCENT = '#c9a42c';
 const DEFAULT_BG = '#1a3320';
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
-// Per-restaurant tablet/summary color palette. Two colors (accent + background)
-// drive the whole tablet theme; null values fall back to the default gold theme.
+// Falling-particle presets + cursor-trail templates offered on the tablet, the
+// same set the flyer/invitation builder uses.
+const TABLET_PARTICLE_KINDS: { value: string; key: Parameters<typeof translate>[0] }[] = [
+  { value: 'none', key: 'particle_none' },
+  { value: 'confetti', key: 'particle_confetti' },
+  { value: 'birthday', key: 'particle_birthday' },
+  { value: 'hearts', key: 'particle_hearts' },
+  { value: 'snow', key: 'particle_snow' },
+  { value: 'candy', key: 'particle_candy' },
+  { value: 'custom', key: 'particle_custom' },
+];
+const TABLET_TRAIL_TEMPLATES: { value: string; key: Parameters<typeof translate>[0] }[] = [
+  { value: 'sparkle', key: 'trail_sparkle' },
+  { value: 'hearts', key: 'trail_hearts' },
+  { value: 'candy', key: 'trail_candy' },
+  { value: 'custom', key: 'trail_custom' },
+];
+
+// Per-restaurant tablet/summary theme: color palette + cursor-trail and falling-
+// particle effects (same customization as the flyer/invitation builder). Null
+// values fall back to the defaults (gold theme, sparkle trail, no particles).
 function TabletThemeEditor({ r, locale }: { r: Restaurant; locale: Lang }) {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const queryClient = useQueryClient();
 
   const [accent, setAccent] = useState(r.tabletAccentColor ?? DEFAULT_ACCENT);
   const [bg, setBg] = useState(r.tabletBgColor ?? DEFAULT_BG);
+  const [particles, setParticles] = useState(r.tabletParticles ?? 'none');
+  const [particlesColor, setParticlesColor] = useState(r.tabletParticlesColor ?? '');
+  const [particlesImageUrl, setParticlesImageUrl] = useState<string | null>(r.tabletParticlesImageUrl ?? null);
+  const [trailTemplate, setTrailTemplate] = useState(r.tabletTrailTemplate ?? 'sparkle');
+  const [trailColor, setTrailColor] = useState(r.tabletTrailColor ?? '');
+  const [trailImageUrl, setTrailImageUrl] = useState<string | null>(r.tabletTrailImageUrl ?? null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setAccent(r.tabletAccentColor ?? DEFAULT_ACCENT);
     setBg(r.tabletBgColor ?? DEFAULT_BG);
-  }, [r.id, r.tabletAccentColor, r.tabletBgColor]);
+    setParticles(r.tabletParticles ?? 'none');
+    setParticlesColor(r.tabletParticlesColor ?? '');
+    setParticlesImageUrl(r.tabletParticlesImageUrl ?? null);
+    setTrailTemplate(r.tabletTrailTemplate ?? 'sparkle');
+    setTrailColor(r.tabletTrailColor ?? '');
+    setTrailImageUrl(r.tabletTrailImageUrl ?? null);
+  }, [r.id, r.tabletAccentColor, r.tabletBgColor, r.tabletParticles, r.tabletParticlesColor, r.tabletParticlesImageUrl, r.tabletTrailTemplate, r.tabletTrailColor, r.tabletTrailImageUrl]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['manager-restaurants'] });
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
+  // Only send a colour when it's a valid hex; otherwise null = "sync with accent".
+  const colOrNull = (c: string) => (HEX6.test(c) ? c : null);
+
   const save = useMutation({
-    mutationFn: () => restaurantService.update(r.id, { tabletAccentColor: accent, tabletBgColor: bg }),
+    mutationFn: () => restaurantService.update(r.id, {
+      tabletAccentColor: accent, tabletBgColor: bg,
+      tabletParticles: particles,
+      tabletParticlesColor: colOrNull(particlesColor),
+      tabletParticlesImageUrl: particles === 'custom' ? particlesImageUrl : null,
+      tabletTrailTemplate: trailTemplate,
+      tabletTrailColor: colOrNull(trailColor),
+      tabletTrailImageUrl: trailTemplate === 'custom' ? trailImageUrl : null,
+    }),
     onSuccess: () => { flash(); invalidate(); },
   });
   const reset = useMutation({
-    mutationFn: () => restaurantService.update(r.id, { tabletAccentColor: null, tabletBgColor: null }),
-    onSuccess: () => { setAccent(DEFAULT_ACCENT); setBg(DEFAULT_BG); flash(); invalidate(); },
+    mutationFn: () => restaurantService.update(r.id, {
+      tabletAccentColor: null, tabletBgColor: null,
+      tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null,
+      tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null,
+    }),
+    onSuccess: () => {
+      setAccent(DEFAULT_ACCENT); setBg(DEFAULT_BG);
+      setParticles('none'); setParticlesColor(''); setParticlesImageUrl(null);
+      setTrailTemplate('sparkle'); setTrailColor(''); setTrailImageUrl(null);
+      flash(); invalidate();
+    },
   });
 
-  const dirty = accent !== (r.tabletAccentColor ?? DEFAULT_ACCENT) || bg !== (r.tabletBgColor ?? DEFAULT_BG);
-  const isDefault = !r.tabletAccentColor && !r.tabletBgColor;
+  const dirty =
+    accent !== (r.tabletAccentColor ?? DEFAULT_ACCENT) ||
+    bg !== (r.tabletBgColor ?? DEFAULT_BG) ||
+    particles !== (r.tabletParticles ?? 'none') ||
+    (particlesColor || '') !== (r.tabletParticlesColor ?? '') ||
+    (particlesImageUrl ?? null) !== (r.tabletParticlesImageUrl ?? null) ||
+    trailTemplate !== (r.tabletTrailTemplate ?? 'sparkle') ||
+    (trailColor || '') !== (r.tabletTrailColor ?? '') ||
+    (trailImageUrl ?? null) !== (r.tabletTrailImageUrl ?? null);
+  const isDefault = !r.tabletAccentColor && !r.tabletBgColor &&
+    (!r.tabletParticles || r.tabletParticles === 'none') && !r.tabletParticlesColor && !r.tabletParticlesImageUrl &&
+    (!r.tabletTrailTemplate || r.tabletTrailTemplate === 'sparkle') && !r.tabletTrailColor && !r.tabletTrailImageUrl;
+
   const swatch = (value: string, onChange: (v: string) => void, label: string) => (
     <label style={{ display: 'grid', gap: 4 }}>
       <span style={labelStyle}>{label}</span>
@@ -73,6 +135,26 @@ function TabletThemeEditor({ r, locale }: { r: Restaurant; locale: Lang }) {
         <input value={value}
           onChange={(e) => { const v = e.target.value; onChange(v); }}
           style={{ ...inputStyle, width: 110, fontFamily: 'monospace', textTransform: 'lowercase' }} placeholder="#000000" />
+      </div>
+    </label>
+  );
+
+  // Optional colour that defaults to the accent; the swatch shows the accent when
+  // unset, and a "sync with accent" link clears the override.
+  const effectColor = (value: string, onChange: (v: string) => void, label: string) => (
+    <label style={{ display: 'grid', gap: 4 }}>
+      <span style={labelStyle}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input type="color" value={HEX6.test(value) ? value : accent} onChange={(e) => onChange(e.target.value)}
+          style={{ width: 44, height: 40, padding: 2, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer' }} />
+        {value ? (
+          <button type="button" onClick={() => onChange('')}
+            style={{ ...inputStyle, width: 'auto', cursor: 'pointer', color: 'rgba(226,232,240,0.7)' }}>
+            {t('sync_with_accent')}
+          </button>
+        ) : (
+          <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.45)' }}>{t('sync_with_accent')}</span>
+        )}
       </div>
     </label>
   );
@@ -96,7 +178,51 @@ function TabletThemeEditor({ r, locale }: { r: Restaurant; locale: Lang }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+      {/* Falling particles */}
+      <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ margin: '0 0 10px', ...labelStyle }}>{t('particles')}</p>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ display: 'grid', gap: 4 }}>
+            <span style={labelStyle}>{t('particles')}</span>
+            <select value={particles} onChange={(e) => setParticles(e.target.value)} style={{ ...inputStyle, width: 200, cursor: 'pointer' }}>
+              {TABLET_PARTICLE_KINDS.map((o) => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
+            </select>
+          </label>
+          {particles !== 'none' && particles !== 'custom' && effectColor(particlesColor, setParticlesColor, t('particle_color'))}
+          {particles === 'custom' && (
+            <div style={{ minWidth: 220 }}>
+              <span style={labelStyle}>{t('particle_image')}</span>
+              <div style={{ marginTop: 4 }}>
+                <PhotoUploadField value={particlesImageUrl} onChange={setParticlesImageUrl} restaurantId={r.id} height={110} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cursor / finger trail */}
+      <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ margin: '0 0 10px', ...labelStyle }}>{t('trail')}</p>
+        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ display: 'grid', gap: 4 }}>
+            <span style={labelStyle}>{t('trail')}</span>
+            <select value={trailTemplate} onChange={(e) => setTrailTemplate(e.target.value)} style={{ ...inputStyle, width: 200, cursor: 'pointer' }}>
+              {TABLET_TRAIL_TEMPLATES.map((o) => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
+            </select>
+          </label>
+          {trailTemplate !== 'custom' && effectColor(trailColor, setTrailColor, t('trail_color'))}
+          {trailTemplate === 'custom' && (
+            <div style={{ minWidth: 220 }}>
+              <span style={labelStyle}>{t('trail_image')}</span>
+              <div style={{ marginTop: 4 }}>
+                <PhotoUploadField value={trailImageUrl} onChange={setTrailImageUrl} restaurantId={r.id} height={110} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
         <button type="button" className="adm-btn-primary" style={{ fontSize: 13, opacity: HEX6.test(accent) && HEX6.test(bg) && dirty ? 1 : 0.5 }}
           disabled={save.isPending || !dirty || !HEX6.test(accent) || !HEX6.test(bg)} onClick={() => save.mutate()}>
           {save.isPending ? t('saving') : t('save')}

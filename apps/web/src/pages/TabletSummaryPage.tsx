@@ -142,6 +142,9 @@ export const TabletSummaryPage = () => {
   const [submitError, setSubmitError]               = useState<string | null>(null);
   const [discountEnabled, setDiscountEnabled]       = useState(false);
   const [discountText, setDiscountText]             = useState('');
+  // Manual total override — replaces the computed total (e.g. a negotiated price).
+  const [manualTotalEnabled, setManualTotalEnabled] = useState(false);
+  const [manualTotalText, setManualTotalText]       = useState('');
   const [confirmedExportSnapshot, setConfirmedExportSnapshot] = useState<null | {
     customerName: string; customerPhone: string; secondCustomerName: string; secondCustomerPhone: string;
     eventDate: string; hallName: string; tableCategoryName: string;
@@ -256,24 +259,36 @@ export const TabletSummaryPage = () => {
       : [];
 
   const originalPerGuestCents = pricing.perGuestCents;
-  const finalPerGuestCents = Math.round(originalPerGuestCents * factor);
+  const computedPerGuestCents = Math.round(originalPerGuestCents * factor);
   // Total includes the optional children's table (adult per-guest figure is unchanged).
   const originalTotalCents = pricing.subtotalCents + childrenSubtotalCents;
-  const finalTotalCents = Math.round(originalTotalCents * factor);
+  const computedTotalCents = Math.round(originalTotalCents * factor);
   const finalChildrenSubtotalCents = Math.round(childrenSubtotalCents * factor);
 
-  // Prepaid deposit — subtracted from the (post-discount) total.
+  // Manual total override — when enabled with a valid amount, it REPLACES the
+  // computed total (discount included); the per-guest figure is derived from it
+  // so the summary + exports stay internally consistent.
+  const manualTotalCents = manualTotalEnabled ? (parseSumToTiyin(manualTotalText) ?? null) : null;
+  const overriding = manualTotalCents != null;
+  const finalTotalCents = overriding ? manualTotalCents : computedTotalCents;
+  const finalPerGuestCents = overriding
+    ? (guestCount > 0 ? Math.round(manualTotalCents / guestCount) : manualTotalCents)
+    : computedPerGuestCents;
+  // Discount visuals are suppressed while a manual total is in force.
+  const showDiscount = hasDiscount && !overriding;
+
+  // Prepaid deposit — subtracted from the (post-discount / manual) total.
   const depositCents = parseSumToTiyin(depositText) ?? 0;
   const amountDueCents = Math.max(0, finalTotalCents - depositCents);
 
   // Pricing payload for exports — per-guest and total figures.
   const exportPricing = {
     perGuestCents: finalPerGuestCents,
-    originalPerGuestCents,
+    originalPerGuestCents: overriding ? finalPerGuestCents : originalPerGuestCents,
     totalCents: finalTotalCents,
-    originalTotalCents,
-    discountPercent,
-    hasDiscount,
+    originalTotalCents: overriding ? finalTotalCents : originalTotalCents,
+    discountPercent: overriding ? 0 : discountPercent,
+    hasDiscount: showDiscount,
     depositCents,
     amountDueCents,
     guestCount,
@@ -688,7 +703,7 @@ export const TabletSummaryPage = () => {
                 <p className="rg-label">{t('pricing')}</p>
               </div>
 
-              {/* Discount control */}
+              {/* Discount control — the label only appears once the box is ticked */}
               <div className="px-4 sm:px-6 pt-3 sm:pt-4">
                 <label className="flex items-center gap-3 cursor-pointer select-none">
                   <input
@@ -697,7 +712,9 @@ export const TabletSummaryPage = () => {
                     onChange={(e) => setDiscountEnabled(e.target.checked)}
                     style={{ accentColor: 'var(--rg-accent)', width: 18, height: 18 }}
                   />
-                  <span className="text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>{t('apply_discount')}</span>
+                  {discountEnabled && (
+                    <span className="text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>{t('apply_discount')}</span>
+                  )}
                 </label>
                 {discountEnabled && (
                   <div className="mt-3 flex items-center gap-2">
@@ -712,6 +729,33 @@ export const TabletSummaryPage = () => {
                       style={{ width: 110 }}
                     />
                     <span className="text-sm font-semibold" style={{ color: 'var(--rg-accent)' }}>%</span>
+                  </div>
+                )}
+
+                {/* Manual total override — the label only appears once ticked */}
+                <label className="mt-3 flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={manualTotalEnabled}
+                    onChange={(e) => setManualTotalEnabled(e.target.checked)}
+                    style={{ accentColor: 'var(--rg-accent)', width: 18, height: 18 }}
+                  />
+                  {manualTotalEnabled && (
+                    <span className="text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>{t('edit_amount_manually')}</span>
+                  )}
+                </label>
+                {manualTotalEnabled && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={manualTotalText}
+                      onChange={(e) => setManualTotalText(e.target.value)}
+                      placeholder={String(Math.round(computedTotalCents / 100))}
+                      className="rg-input"
+                      style={{ width: 200 }}
+                    />
+                    <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>so'm</span>
                   </div>
                 )}
 
@@ -739,7 +783,7 @@ export const TabletSummaryPage = () => {
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                   <span style={{ color: 'rgba(255,255,255,0.55)' }} className="text-sm">{t('price_per_guest')}</span>
                   <div className="flex flex-col items-end">
-                    {hasDiscount && (
+                    {showDiscount && (
                       <span className="flex items-center gap-2">
                         <span className="text-xs whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.45)' }}>
                           {formatSum(originalPerGuestCents)}
@@ -780,7 +824,7 @@ export const TabletSummaryPage = () => {
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="rg-label">{t('total')}</span>
                     <div className="flex flex-col items-end">
-                      {hasDiscount && (
+                      {showDiscount && (
                         <span className="flex items-center gap-2">
                           <span className="text-sm whitespace-nowrap line-through" style={{ color: 'rgba(255,255,255,0.5)' }}>
                             {formatSum(originalTotalCents)}
