@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
@@ -1388,42 +1388,70 @@ function servingLabel(index: number, locale: Locale, t: TFn) {
 }
 
 function SelectedDishesBar({
-  hotIds, firstId, secondIds, thirdIds, menuItems, locale, t, onLightbox,
+  hotIds, firstId, secondIds, thirdIds, extras, packageItems, menuItems, locale, t, onLightbox,
+  onPickFreeCourse, onRemovePaid,
 }: {
   hotIds: string[];
   firstId?: string;
   secondIds: string[];
   thirdIds: string[];
+  // Paid "Additional" selections: menu-item id → quantity (>0 = selected).
+  extras: Record<string, number>;
+  packageItems: TableCategoryPackageItem[];
   menuItems: MenuItem[];
   locale: Locale;
   t: TFn;
   onLightbox: (src: string | null) => void;
+  // Swap a paid main dish for a free course option of the same category.
+  onPickFreeCourse: (category: MenuCategory, freeItemId: string) => void;
+  onRemovePaid: (paidItemId: string) => void;
 }) {
+  // The paid main dish whose "swap for free" picker is open.
+  const [swapFor, setSwapFor] = useState<MenuItem | null>(null);
+  const themeAccent = usePublicDataStore((s) => s.tabletAccentColor);
+  const themeBg = usePublicDataStore((s) => s.tabletBgColor);
+
   const resolve = (ids: string[]) =>
     ids.map((id) => menuItems.find((m) => m.id === id)).filter((m): m is MenuItem => !!m);
 
-  // Flatten every pick into the order it is served in.
-  const dishes = [
-    ...resolve(hotIds),
-    ...resolve(firstId ? [firstId] : []),
-    ...resolve(secondIds),
-    ...resolve(thirdIds),
-  ];
+  // Rows are grouped by serving category so a paid main dish sits alongside the
+  // free pick of the same course. Free picks come from the course selection;
+  // paid main dishes are the "Additional" selections in a course category.
+  type Row = { item: MenuItem; paid: boolean; category: MenuCategory };
+  const freeByCat: Record<string, MenuItem[]> = {
+    HOT_APPETIZERS: resolve(hotIds),
+    FIRST_COURSE: resolve(firstId ? [firstId] : []),
+    SECOND_COURSE: resolve(secondIds),
+    THIRD_COURSE: resolve(thirdIds),
+  };
+  const paidCourseItems = menuItems.filter(
+    (m) => (extras[m.id] ?? 0) > 0 && COURSE_CATEGORIES.includes(m.category)
+  );
+  const rows: Row[] = [];
+  for (const cat of COURSE_CATEGORIES) {
+    for (const m of freeByCat[cat] ?? []) rows.push({ item: m, paid: false, category: cat });
+    for (const m of paidCourseItems.filter((p) => p.category === cat)) rows.push({ item: m, paid: true, category: cat });
+  }
 
-  if (dishes.length === 0) return null;
+  if (rows.length === 0) return null;
+
+  // Free course options of a category that a paid dish can be swapped for.
+  const freeOptionsFor = (category: MenuCategory) =>
+    packageItems.filter((pi) => pi.menuItem.category === category).map((pi) => pi.menuItem);
 
   return (
     <section className="rg-card reveal" style={{ padding: 'clamp(14px, 2.5vw, 20px)' }}>
       <p className="rg-label" style={{ marginBottom: 12 }}>{t('your_selection')}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {dishes.map((it, i) => {
+        {rows.map(({ item: it, paid, category }, i) => {
           const photoSrc = it.photoUrl ? getPhotoUrl(it.photoUrl) : null;
+          const canSwap = paid && freeOptionsFor(category).length > 0;
           return (
             <div key={`${it.id}-${i}`} style={{
               display: 'flex', gap: 12, alignItems: 'center',
               padding: 8, borderRadius: 14,
-              background: 'rgba(var(--rg-accent-rgb),0.08)',
-              border: '1px solid rgba(var(--rg-accent-rgb),0.22)',
+              background: paid ? 'rgba(59,130,246,0.1)' : 'rgba(var(--rg-accent-rgb),0.08)',
+              border: `1px solid ${paid ? 'rgba(59,130,246,0.4)' : 'rgba(var(--rg-accent-rgb),0.22)'}`,
             }}>
               {/* Serving-order badge */}
               <span style={{
@@ -1456,7 +1484,7 @@ function SelectedDishesBar({
                 </div>
               )}
 
-              {/* Serving label (primary) + dish name (secondary) */}
+              {/* Serving label (primary) + dish name (secondary) + paid tag/swap */}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p style={{
                   margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -1467,11 +1495,83 @@ function SelectedDishesBar({
                 <p style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.25 }}>
                   {dishName(it, locale)}
                 </p>
+                {paid && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 800, letterSpacing: '0.03em',
+                      color: '#93c5fd', background: 'rgba(59,130,246,0.16)', border: '1px solid rgba(59,130,246,0.45)',
+                    }}>★ {t('status_paid')}</span>
+                    {canSwap && (
+                      <button type="button" onClick={() => setSwapFor(it)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '3px 10px', borderRadius: 999, cursor: 'pointer',
+                          fontSize: 11.5, fontWeight: 700,
+                          color: 'var(--rg-accent-soft)', background: 'rgba(var(--rg-accent-rgb),0.12)',
+                          border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
+                        }}>
+                        ⇄ {t('swap_free')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Swap-a-paid-dish-for-a-free-course-option picker */}
+      {swapFor && createPortal(
+        <div onClick={() => setSwapFor(null)}
+          style={{
+            ...tabletThemeVars({ accent: themeAccent, bg: themeBg }),
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(6,14,9,0.8)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          } as React.CSSProperties}>
+          <div onClick={(e) => e.stopPropagation()} className="tablet-fade-up"
+            style={{
+              width: '100%', maxWidth: 760, maxHeight: '88vh', display: 'flex', flexDirection: 'column', borderRadius: 24,
+              background: 'linear-gradient(135deg, rgba(var(--rg-bg-rgb),0.98) 0%, rgba(var(--rg-bg-dark-rgb),0.98) 100%)',
+              border: '1px solid rgba(var(--rg-accent-rgb),0.35)', boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ minWidth: 0 }}>
+                <p className="rg-label" style={{ margin: 0 }}>{dishName(swapFor, locale)}</p>
+                <h3 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: '#fff' }}>{t('choose_replacement')}</h3>
+              </div>
+              <button type="button" onClick={() => setSwapFor(null)} aria-label={t('cancel')}
+                style={{ flexShrink: 0, width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
+            </div>
+            <div className="scrollbar-none" style={{ overflowY: 'auto', padding: 18, display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))' }}>
+              {freeOptionsFor(swapFor.category).map((opt) => {
+                const optPhoto = opt.photoUrl ? getPhotoUrl(opt.photoUrl) : null;
+                return (
+                  <button key={opt.id} type="button"
+                    onClick={() => { onPickFreeCourse(swapFor.category, opt.id); onRemovePaid(swapFor.id); setSwapFor(null); }}
+                    style={{ textAlign: 'left', padding: 0, cursor: 'pointer', borderRadius: 16, overflow: 'hidden', background: 'rgba(255,255,255,0.05)', border: '2px solid rgba(255,255,255,0.1)' }}>
+                    {optPhoto ? (
+                      <img src={optPhoto} alt={dishName(opt, locale)} style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <div style={{ height: 150, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="34" height="34" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div style={{ padding: '10px 12px 12px' }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.25 }}>{dishName(opt, locale)}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </section>
   );
 }
@@ -1511,6 +1611,7 @@ function TabletMusicToggle() {
 
 export const TabletMenuPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
   const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
@@ -1556,11 +1657,15 @@ export const TabletMenuPage = () => {
   }, [loadPublicData, restaurantId]);
 
   // Reset table-category selection on every mount so the slide reappears
-  // each time a guest navigates back to this page (kiosk behavior). When the
-  // admin Events page hands off a draft (prefill=1), keep its pre-selected
-  // table category instead of clearing it.
+  // each time a guest navigates back to this page (kiosk behavior). Two cases
+  // keep the current selection instead: the admin Events page hands off a draft
+  // (prefill=1), and returning from the Summary page to edit the selection
+  // (fromSummary state) — there the guest's saved settings/dishes must persist.
   useEffect(() => {
-    if (searchParams.get('prefill') !== '1') setTableCategory('');
+    const keepSelection =
+      searchParams.get('prefill') === '1' ||
+      !!(location.state as { fromSummary?: boolean } | null)?.fromSummary;
+    if (!keepSelection) setTableCategory('');
   }, []);
 
   const dismissWelcome = () => {
@@ -1863,10 +1968,19 @@ export const TabletMenuPage = () => {
                 firstId={selectedFirstCourseId}
                 secondIds={selectedSecondCourseIds}
                 thirdIds={selectedThirdCourseIds}
+                extras={selectedItems}
+                packageItems={selectedTableCategory.packageItems ?? []}
                 menuItems={menuItems ?? []}
                 locale={locale}
                 t={t}
                 onLightbox={setLightboxSrc}
+                onPickFreeCourse={(category, freeId) => {
+                  if (category === 'HOT_APPETIZERS') toggleHotAppetizer(freeId, selectedTableCategory.hotAppetizerCount ?? 3);
+                  else if (category === 'FIRST_COURSE') setFirstCourse(freeId);
+                  else if (category === 'SECOND_COURSE') toggleSecondCourse(freeId);
+                  else if (category === 'THIRD_COURSE') toggleThirdCourse(freeId);
+                }}
+                onRemovePaid={(id) => setQuantity(id, 0)}
               />
             )}
 

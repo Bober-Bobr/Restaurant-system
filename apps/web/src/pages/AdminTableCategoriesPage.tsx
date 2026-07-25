@@ -368,6 +368,8 @@ export const AdminTableCategoriesPage = () => {
   const [hotAppetizerCount, setHotAppetizerCount] = useState(3);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  // The create panel is hidden by default (like the Events page) — this reveals it.
+  const [showCreate, setShowCreate] = useState(false);
 
   // ── Edit state ─────────────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -488,9 +490,16 @@ export const AdminTableCategoriesPage = () => {
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-      <h1 className="adm-title" style={{ marginBottom: 20 }}>{t('table_categories_management')}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 className="adm-title" style={{ margin: 0 }}>{t('table_categories_management')}</h1>
+        {/* The create panel is hidden by default; this button reveals it. */}
+        <Button type="button" onClick={() => setShowCreate((v) => !v)}>
+          {showCreate ? t('hide_form') : `+ ${t('create_table_category')}`}
+        </Button>
+      </div>
 
       {/* ── Create form ── */}
+      {showCreate && (
       <section className="adm-card tablet-fade-up adm-section">
         <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{t('create_table_category')}</h3>
         <form
@@ -563,6 +572,7 @@ export const AdminTableCategoriesPage = () => {
           </div>
         </form>
       </section>
+      )}
 
       {isLoading && <p>{t('loading_table_categories')}</p>}
       {isError && <p>{t('failed_to_load_table_categories')}</p>}

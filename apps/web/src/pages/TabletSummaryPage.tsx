@@ -869,7 +869,10 @@ export const TabletSummaryPage = () => {
             <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
               <p className="rg-label">{t('actions')}</p>
 
-              <button type="button" onClick={() => navigate('/tablet')}
+              {/* Back to the menu to tweak the current selection — the fromSummary
+                  flag tells the tablet to keep the saved table/settings/dishes
+                  instead of resetting to the table-category picker. */}
+              <button type="button" onClick={() => navigate('/tablet', { state: { fromSummary: true } })}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
                 style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}>
                 ← {t('edit_selection')}

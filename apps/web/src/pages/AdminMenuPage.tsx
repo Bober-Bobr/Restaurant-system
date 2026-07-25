@@ -151,6 +151,8 @@ export const AdminMenuPage = () => {
   const [price, setPrice] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [isBestseller, setIsBestseller] = useState(false);
+  // The create panel is hidden by default (like the Events page) — this reveals it.
+  const [showCreate, setShowCreate] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -220,8 +222,15 @@ export const AdminMenuPage = () => {
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
-      <h1 className="adm-title" style={{ marginBottom: 20 }}>{translate('menu_management', locale)}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 className="adm-title" style={{ margin: 0 }}>{translate('menu_management', locale)}</h1>
+        {/* The create panel is hidden by default; this button reveals it. */}
+        <Button type="button" onClick={() => setShowCreate((v) => !v)}>
+          {showCreate ? translate('hide_form', locale) : `+ ${translate('create_menu_item', locale)}`}
+        </Button>
+      </div>
 
+      {showCreate && (
       <section className="adm-card tablet-fade-up adm-section">
         <h3 className="adm-heading" style={{ marginTop: 0, marginBottom: 16 }}>{translate('create_menu_item', locale)}</h3>
         <form
@@ -286,6 +295,7 @@ export const AdminMenuPage = () => {
           </div>
         </form>
       </section>
+      )}
 
       {isLoading ? <p>{translate('loading_menu', locale)}</p> : null}
       {isError ? <p>{translate('failed_load_menu', locale)}</p> : null}
