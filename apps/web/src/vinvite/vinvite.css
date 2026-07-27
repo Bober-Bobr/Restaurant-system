@@ -170,3 +170,164 @@
   background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(8px); padding: 16px;
   animation: viFadeIn 0.2s ease both;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Landing page (v-invite.uz/) — marketing surface for logged-out visitors.
+   Everything below is namespaced .vi-lp* so it never leaks into the app.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Scroll reveal: elements lift into place as they enter the viewport ── */
+.vi-lp-reveal {
+  opacity: 0;
+  transform: translateY(34px);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.vi-lp-reveal.in { opacity: 1; transform: none; }
+
+/* ── Aurora: slow drifting colour fields behind the hero ── */
+@keyframes viAurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(6%, -4%, 0) scale(1.14); }
+  66%  { transform: translate3d(-5%, 5%, 0) scale(0.94); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.vi-lp-aurora {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); pointer-events: none;
+  animation: viAurora 22s ease-in-out infinite;
+}
+
+/* ── Hero headline: gradient sweep across the accent word ── */
+@keyframes viShimmer { to { background-position: 200% center; } }
+.vi-lp-gradient {
+  background: linear-gradient(100deg,
+    var(--vi-accent) 0%, #a78bfa 25%, #d9a85a 50%, var(--vi-accent) 75%, #a78bfa 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: viShimmer 6s linear infinite;
+}
+
+/* ── Word-by-word rise for the hero title ── */
+@keyframes viRise { from { opacity: 0; transform: translateY(90%) rotate(3deg); } to { opacity: 1; transform: none; } }
+.vi-lp-word { display: inline-block; animation: viRise 0.95s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Floating invitation cards beside the hero ── */
+@keyframes viDrift {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50%      { transform: translateY(-22px) rotate(calc(var(--r, 0deg) + 2deg)); }
+}
+.vi-lp-float { animation: viDrift 7s ease-in-out infinite; }
+
+/* ── Scroll cue ── */
+@keyframes viMouse { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(7px); } }
+.vi-lp-scroll-dot { animation: viMouse 1.9s ease-in-out infinite; }
+
+/* ── Work cards: live template previews ── */
+.vi-lp-work {
+  position: relative; overflow: hidden; border-radius: 20px;
+  border: 1px solid var(--vi-border); background: var(--vi-card);
+  box-shadow: var(--vi-shadow);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease, border-color 0.3s ease;
+}
+.vi-lp-work:hover { transform: translateY(-10px); box-shadow: var(--vi-shadow-lg); border-color: var(--vi-ring); }
+.vi-lp-work-veil {
+  position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 22px; opacity: 0; transition: opacity 0.3s ease;
+  background: linear-gradient(to top, rgba(8,10,20,0.72) 0%, rgba(8,10,20,0.12) 45%, transparent 70%);
+}
+.vi-lp-work:hover .vi-lp-work-veil { opacity: 1; }
+
+/* ── Advantage tiles: accent glow follows the pointer ── */
+.vi-lp-tile {
+  position: relative; overflow: hidden;
+  padding: 26px; border-radius: 18px;
+  border: 1px solid var(--vi-border); background: var(--vi-card);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.35s ease;
+}
+.vi-lp-tile::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), var(--vi-accent-soft), transparent 65%);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.vi-lp-tile:hover { transform: translateY(-6px); border-color: var(--vi-ring); box-shadow: var(--vi-shadow-lg); }
+.vi-lp-tile:hover::before { opacity: 1; }
+.vi-lp-tile-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 15px; font-size: 24px;
+  background: var(--vi-accent-soft); border: 1px solid var(--vi-border);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.vi-lp-tile:hover .vi-lp-tile-icon { transform: scale(1.12) rotate(-7deg); }
+
+/* ── FAQ accordion ── */
+.vi-lp-faq {
+  border: 1px solid var(--vi-border); border-radius: 16px;
+  background: var(--vi-card); overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.vi-lp-faq.open { border-color: var(--vi-ring); box-shadow: var(--vi-shadow); }
+.vi-lp-faq-q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px 22px; background: transparent; border: none; cursor: pointer;
+  font-family: inherit; font-size: 16px; font-weight: 650; color: var(--vi-text); text-align: left;
+  transition: color 0.2s ease;
+}
+.vi-lp-faq-q:hover { color: var(--vi-accent); }
+.vi-lp-faq-sign {
+  flex-shrink: 0; width: 26px; height: 26px; position: relative;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vi-lp-faq-sign::before, .vi-lp-faq-sign::after {
+  content: ''; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+.vi-lp-faq-sign::before { width: 13px; height: 2px; }
+.vi-lp-faq-sign::after  { width: 2px; height: 13px; transition: opacity 0.3s ease, transform 0.4s ease; }
+.vi-lp-faq.open .vi-lp-faq-sign { transform: rotate(180deg); color: var(--vi-accent); }
+.vi-lp-faq.open .vi-lp-faq-sign::after { opacity: 0; transform: translate(-50%, -50%) scaleY(0); }
+.vi-lp-faq-a {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vi-lp-faq.open .vi-lp-faq-a { grid-template-rows: 1fr; }
+.vi-lp-faq-a > div { overflow: hidden; }
+.vi-lp-faq-a p {
+  margin: 0; padding: 0 22px 22px; font-size: 15px; line-height: 1.65; color: var(--vi-muted);
+}
+
+/* ── Section kicker ── */
+.vi-lp-kicker {
+  display: inline-block; font-size: 12.5px; font-weight: 750;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--vi-accent); margin-bottom: 12px;
+}
+
+/* ── Sticky landing header ── */
+.vi-lp-head {
+  position: sticky; top: 0; z-index: 50;
+  transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  border-bottom: 1px solid transparent;
+}
+.vi-lp-head.stuck {
+  background: color-mix(in srgb, var(--vi-card) 84%, transparent);
+  backdrop-filter: blur(16px);
+  border-bottom-color: var(--vi-border);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+}
+.vi-lp-navlink {
+  padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  color: var(--vi-muted); text-decoration: none; background: transparent;
+  border: none; cursor: pointer; font-family: inherit;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.vi-lp-navlink:hover { color: var(--vi-accent); background: var(--vi-accent-soft); }
+
+/* ── Respect reduced-motion: keep the layout, drop the movement ── */
+@media (prefers-reduced-motion: reduce) {
+  .vi-lp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .vi-lp-aurora, .vi-lp-float, .vi-lp-scroll-dot, .vi-lp-word, .vi-lp-gradient { animation: none !important; }
+  .vi-lp-work:hover, .vi-lp-tile:hover { transform: none; }
+}

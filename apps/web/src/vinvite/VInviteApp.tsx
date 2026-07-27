@@ -5,6 +5,7 @@ import { useVInviteStore } from './store';
 import { useViT } from './i18n';
 import { vinviteService } from './api';
 import { ViLoginPage } from './LoginPage';
+import { ViLandingPage } from './LandingPage';
 import { ViDashboardPage } from './DashboardPage';
 import { ViEditorPage } from './EditorPage';
 import { ViTemplatesPage } from './TemplatesPage';
@@ -61,7 +62,12 @@ export const VInviteApp = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <>
+            {/* Logged-out visitors land on the marketing page rather than the
+                sign-in form; every other app route still bounces to /login. */}
+            <Route path="/" element={<ViLandingPage />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
         )}
       </Routes>
     </div>
