@@ -9,6 +9,10 @@ import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
 import { LOCALES, type TemplateDefinition } from './templates/types';
 
+// Stable identity: RichRenderer posts into the iframe whenever `config` or
+// `languages` change by reference, so these must not be rebuilt per render.
+const ALL_LOCALES = [...LOCALES];
+
 // ── v-invite.uz/ — public marketing landing ──────────────────────────────────
 // What a logged-out visitor sees: hero → our work (live template previews) →
 // why choose us → FAQ → closing CTA. Everything animates on scroll; the whole
@@ -51,6 +55,22 @@ function useReveal() {
   }, []);
 }
 
+// Live viewport check. Used to render *fewer* live template iframes on phones
+// rather than merely hiding them with CSS — a hidden iframe still loads.
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
 export const ViLandingPage = () => {
   const t = useViT();
   const navigate = useNavigate();
@@ -59,6 +79,7 @@ export const ViLandingPage = () => {
   const reveal = useReveal();
   const [stuck, setStuck] = useState(false);
   const [preview, setPreview] = useState<TemplateDefinition | null>(null);
+  const isMobile = useMediaQuery('(max-width: 860px)');
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -70,42 +91,28 @@ export const ViLandingPage = () => {
   const goCreate = () => navigate('/login');
 
   const scrollTo = (id: string) => {
+    if (id === 'top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
-      {/* ── Header ── */}
-      <header className={`vi-lp-head${stuck ? ' stuck' : ''}`}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <ViLogo />
-          <nav style={{ marginLeft: 26, display: 'flex', gap: 2 }} className="vi-lp-nav">
-            <button type="button" className="vi-lp-navlink" onClick={() => scrollTo('work')}>{t('lp_nav_work')}</button>
-            <button type="button" className="vi-lp-navlink" onClick={() => scrollTo('why')}>{t('lp_nav_why')}</button>
-            <button type="button" className="vi-lp-navlink" onClick={() => scrollTo('faq')}>{t('lp_nav_faq')}</button>
-          </nav>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select
-              className="vi-select"
-              style={{ width: 'auto', padding: '8px 10px', fontSize: 13 }}
-              value={locale}
-              onChange={(e) => setLocale(e.target.value as Locale)}
-            >
-              <option value="ru">RU</option>
-              <option value="uz">UZ</option>
-              <option value="en">EN</option>
-            </select>
-            <ViThemeToggle />
-            <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 13 }} onClick={goCreate}>
-              {t('lp_signin')}
-            </button>
-          </div>
-        </div>
-      </header>
+      <LandingHeader
+        t={t}
+        stuck={stuck}
+        locale={locale}
+        setLocale={setLocale}
+        isMobile={isMobile}
+        onNav={scrollTo}
+        onCreate={goCreate}
+      />
 
       <main style={{ flex: 1 }}>
-        <HeroSection t={t} onCreate={goCreate} onWork={() => scrollTo('work')} />
+        <HeroSection t={t} isMobile={isMobile} onCreate={goCreate} onWork={() => scrollTo('work')} />
         <WorkSection t={t} reveal={reveal} onPreview={setPreview} onCreate={goCreate} />
         <WhySection t={t} reveal={reveal} />
         <FaqSection t={t} reveal={reveal} />
@@ -129,23 +136,164 @@ export const ViLandingPage = () => {
       </footer>
 
       {preview && <PreviewModal tpl={preview} t={t} onClose={() => setPreview(null)} onCreate={goCreate} />}
-
-      {/* Landing-only responsive tweaks. */}
-      <style>{`
-        @media (max-width: 860px) {
-          .vi-lp-nav { display: none !important; }
-          .vi-lp-hero-grid { grid-template-columns: 1fr !important; }
-          .vi-lp-hero-art { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 };
 
+// ── Header ───────────────────────────────────────────────────────────────────
+// Desktop: logo + inline section links + locale/theme/sign-in.
+// Mobile: compact bar (logo + theme + burger); the links, language picker and
+// sign-in move into a sheet that drops down under the bar.
+
+const NAV_ITEMS: { id: string; label: ViKey }[] = [
+  { id: 'work', label: 'lp_nav_work' },
+  { id: 'why', label: 'lp_nav_why' },
+  { id: 'faq', label: 'lp_nav_faq' },
+];
+
+function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate }: {
+  t: (k: ViKey) => string;
+  stuck: boolean;
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  isMobile: boolean;
+  onNav: (id: string) => void;
+  onCreate: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // The sheet only exists on mobile — collapse it if the viewport grows.
+  useEffect(() => { if (!isMobile) setMenuOpen(false); }, [isMobile]);
+
+  // Escape closes the sheet, and the page behind it must not scroll away.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  // Closing the sheet also releases the body scroll lock, but that only happens
+  // once React commits — so the scroll has to wait for the next frame or it
+  // would run against a still-locked body and do nothing.
+  const go = (id: string) => {
+    if (!menuOpen) { onNav(id); return; }
+    setMenuOpen(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => onNav(id)));
+  };
+
+  const localeSelect = (compact: boolean) => (
+    <select
+      className="vi-select"
+      style={compact
+        ? { width: 'auto', padding: '8px 10px', fontSize: 13 }
+        : { width: '100%', padding: '12px 14px', fontSize: 15 }}
+      value={locale}
+      onChange={(e) => setLocale(e.target.value as Locale)}
+      aria-label="Language"
+    >
+      <option value="ru">RU — Русский</option>
+      <option value="uz">UZ — Ozbekcha</option>
+      <option value="en">EN — English</option>
+    </select>
+  );
+
+  return (
+    <header className={`vi-lp-head${stuck || menuOpen ? ' stuck' : ''}`}>
+      <div className="vi-lp-head-bar">
+        <button
+          type="button"
+          onClick={() => go('top')}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', display: 'flex' }}
+          aria-label="v-invite.uz"
+        >
+          <ViLogo size={isMobile ? 28 : 34} />
+        </button>
+
+        {/* Desktop links */}
+        <nav className="vi-lp-nav">
+          {NAV_ITEMS.map((item) => (
+            <button key={item.id} type="button" className="vi-lp-navlink" onClick={() => go(item.id)}>
+              {t(item.label)}
+            </button>
+          ))}
+        </nav>
+
+        <div className="vi-lp-head-right">
+          <span className="vi-lp-desktop-only">{localeSelect(true)}</span>
+          <ViThemeToggle />
+          <button
+            type="button"
+            className="vi-btn vi-btn-ghost vi-lp-desktop-only"
+            style={{ fontSize: 13 }}
+            onClick={onCreate}
+          >
+            {t('lp_signin')}
+          </button>
+
+          {/* Burger — mobile only */}
+          <button
+            type="button"
+            className={`vi-lp-burger${menuOpen ? ' open' : ''}`}
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span /><span /><span />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile sheet */}
+      {isMobile && (
+        <>
+          <div
+            className={`vi-lp-sheet-scrim${menuOpen ? ' open' : ''}`}
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className={`vi-lp-sheet${menuOpen ? ' open' : ''}`}>
+            <nav style={{ display: 'grid', gap: 4 }}>
+              {NAV_ITEMS.map((item, i) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="vi-lp-sheet-link"
+                  style={{ transitionDelay: menuOpen ? `${60 + i * 45}ms` : '0ms' }}
+                  onClick={() => go(item.id)}
+                >
+                  {t(item.label)}
+                  <span aria-hidden="true">→</span>
+                </button>
+              ))}
+            </nav>
+            <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+              {localeSelect(false)}
+              <button
+                type="button"
+                className="vi-btn vi-btn-primary"
+                style={{ width: '100%', padding: '13px', fontSize: 15 }}
+                onClick={() => { setMenuOpen(false); onCreate(); }}
+              >
+                {t('lp_signin')}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </header>
+  );
+}
+
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-function HeroSection({ t, onCreate, onWork }: {
-  t: (k: ViKey) => string; onCreate: () => void; onWork: () => void;
+function HeroSection({ t, isMobile, onCreate, onWork }: {
+  t: (k: ViKey) => string; isMobile: boolean; onCreate: () => void; onWork: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
   const line1 = t('lp_hero_title_1').split(' ');
@@ -168,36 +316,19 @@ function HeroSection({ t, onCreate, onWork }: {
   ];
 
   return (
-    <section style={{ position: 'relative', padding: '70px 20px 90px', overflow: 'hidden' }}>
+    <section className="vi-lp-hero">
       {/* Drifting aurora fields */}
-      <div className="vi-lp-aurora" style={{ width: 620, height: 620, top: -240, right: -160, background: 'radial-gradient(circle, rgba(37,99,235,0.34), transparent 68%)' }} />
-      <div className="vi-lp-aurora" style={{ width: 520, height: 520, bottom: -220, left: -170, background: 'radial-gradient(circle, rgba(217,168,90,0.34), transparent 68%)', animationDelay: '-8s' }} />
-      <div className="vi-lp-aurora" style={{ width: 400, height: 400, top: '38%', left: '46%', background: 'radial-gradient(circle, rgba(167,139,250,0.26), transparent 70%)', animationDelay: '-15s' }} />
+      <div className="vi-lp-aurora vi-lp-aurora-a" style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.34), transparent 68%)' }} />
+      <div className="vi-lp-aurora vi-lp-aurora-b" style={{ background: 'radial-gradient(circle, rgba(217,168,90,0.34), transparent 68%)', animationDelay: '-8s' }} />
+      <div className="vi-lp-aurora vi-lp-aurora-c" style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.26), transparent 70%)', animationDelay: '-15s' }} />
 
-      <div
-        className="vi-lp-hero-grid"
-        style={{
-          position: 'relative', maxWidth: 1180, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 48, alignItems: 'center',
-        }}
-      >
-        <div>
-          <span
-            className="vi-pop"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '7px 15px', borderRadius: 999, fontSize: 13, fontWeight: 650,
-              background: 'var(--vi-accent-soft)', color: 'var(--vi-accent)',
-              border: '1px solid var(--vi-border)', animationDelay: '80ms',
-            }}
-          >
+      <div className="vi-lp-hero-grid">
+        <div className="vi-lp-hero-copy">
+          <span className="vi-pop vi-lp-badge" style={{ animationDelay: '80ms' }}>
             ✨ {t('lp_badge')}
           </span>
 
-          <h1 style={{
-            margin: '20px 0 0', fontSize: 'clamp(38px, 6vw, 66px)', lineHeight: 1.07,
-            fontWeight: 850, letterSpacing: '-0.035em',
-          }}>
+          <h1 className="vi-lp-h1">
             <span style={{ display: 'block', overflow: 'hidden', paddingBottom: 4 }}>
               {line1.map((w) => word(w))}
             </span>
@@ -206,42 +337,35 @@ function HeroSection({ t, onCreate, onWork }: {
             </span>
           </h1>
 
-          <p className="vi-fade-up" style={{
-            margin: '22px 0 0', maxWidth: 540, fontSize: 17, lineHeight: 1.65,
-            color: 'var(--vi-muted)', animationDelay: '620ms',
-          }}>
+          <p className="vi-fade-up vi-lp-hero-sub" style={{ animationDelay: '620ms' }}>
             {t('lp_hero_sub')}
           </p>
 
-          <div className="vi-fade-up" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30, animationDelay: '760ms' }}>
-            <button type="button" className="vi-btn vi-btn-primary" style={{ padding: '15px 30px', fontSize: 15.5, borderRadius: 14 }} onClick={onCreate}>
+          <div className="vi-fade-up vi-lp-hero-cta" style={{ animationDelay: '760ms' }}>
+            <button type="button" className="vi-btn vi-btn-primary" onClick={onCreate}>
               {t('lp_cta_primary')} <span style={{ fontSize: 17 }}>→</span>
             </button>
-            <button type="button" className="vi-btn vi-btn-ghost" style={{ padding: '15px 26px', fontSize: 15.5, borderRadius: 14 }} onClick={onWork}>
+            <button type="button" className="vi-btn vi-btn-ghost" onClick={onWork}>
               👁 {t('lp_cta_secondary')}
             </button>
-          </div>
-
-          <div className="vi-fade-up" style={{ display: 'flex', gap: 38, marginTop: 44, flexWrap: 'wrap', animationDelay: '900ms' }}>
-            {stats.map((s) => (
-              <div key={s.label}>
-                <div style={{ fontSize: 32, fontWeight: 850, letterSpacing: '-0.03em', color: 'var(--vi-accent)' }}>{s.value}</div>
-                <div style={{ fontSize: 13, color: 'var(--vi-muted)', marginTop: 2 }}>{t(s.label)}</div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* Live template cards, gently drifting */}
-        <HeroArt />
+        <HeroArt isMobile={isMobile} />
+
+        <div className="vi-fade-up vi-lp-hero-stats" style={{ animationDelay: '900ms' }}>
+          {stats.map((s) => (
+            <div key={s.label}>
+              <div className="vi-lp-stat-value">{s.value}</div>
+              <div className="vi-lp-stat-label">{t(s.label)}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Scroll cue */}
-      <div className="vi-fade-up" style={{
-        position: 'relative', maxWidth: 1180, margin: '58px auto 0',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-        animationDelay: '1100ms',
-      }}>
+      <div className="vi-fade-up vi-lp-scroll" style={{ animationDelay: '1100ms' }}>
         <span style={{ fontSize: 11.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--vi-muted)', fontWeight: 700 }}>
           {t('lp_scroll')}
         </span>
@@ -256,37 +380,34 @@ function HeroSection({ t, onCreate, onWork }: {
   );
 }
 
-// Two real templates rendered live, stacked and drifting at different rhythms.
-function HeroArt() {
-  const cards = RICH_TEMPLATES.slice(0, 2);
-  const configs = useMemo(() => cards.map((tpl) => resolveAssetUrls(tpl, tpl.defaultConfig as Record<string, unknown>)), [cards]);
-  if (cards.length === 0) return <div />;
+// Real templates rendered live. Desktop stacks two drifting cards; phones show a
+// single upright card — one iframe instead of two, and no rotation to cut off.
+function HeroArt({ isMobile }: { isMobile: boolean }) {
+  const cards = useMemo(() => RICH_TEMPLATES.slice(0, isMobile ? 1 : 2), [isMobile]);
+  const configs = useMemo(
+    () => cards.map((tpl) => resolveAssetUrls(tpl, tpl.defaultConfig as Record<string, unknown>)),
+    [cards],
+  );
+  if (cards.length === 0) return <div className="vi-lp-hero-art" />;
 
   return (
-    <div className="vi-lp-hero-art" style={{ position: 'relative', height: 520 }}>
+    <div className="vi-lp-hero-art">
       {cards.map((tpl, i) => {
         const front = i === cards.length - 1;
+        const rot = isMobile ? 0 : front ? 4 : -6;
         return (
           <div
             key={tpl.id}
-            className="vi-lp-float vi-pop"
+            className={`vi-lp-hero-card vi-pop${isMobile ? '' : ' vi-lp-float'}${front ? ' front' : ' back'}`}
             style={{
-              position: 'absolute',
-              top: front ? 40 : 0,
-              left: front ? '30%' : '2%',
-              width: 262, height: 430,
-              borderRadius: 26, overflow: 'hidden',
-              border: '1px solid var(--vi-border)',
-              boxShadow: 'var(--vi-shadow-lg)',
-              background: '#0b0f1c',
               zIndex: front ? 2 : 1,
-              ['--r' as string]: front ? '4deg' : '-6deg',
-              transform: `rotate(${front ? 4 : -6}deg)`,
-              animationDelay: `${i * 1.4}s, ${300 + i * 140}ms`,
+              ['--r' as string]: `${rot}deg`,
+              transform: `rotate(${rot}deg)`,
+              animationDelay: isMobile ? '300ms' : `${i * 1.4}s, ${300 + i * 140}ms`,
             }}
           >
             <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-              <RichRenderer html={tpl.html} config={configs[i]!} languages={[...LOCALES]} interactive />
+              <RichRenderer html={tpl.html} config={configs[i]!} languages={ALL_LOCALES} interactive />
             </div>
           </div>
         );
@@ -354,7 +475,7 @@ function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
           }}
         >
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <RichRenderer html={tpl.html} config={config} languages={[...LOCALES]} interactive />
+            <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
           </div>
 
           <span style={{
@@ -561,7 +682,7 @@ function PreviewModal({ tpl, t, onClose, onCreate }: {
         }}
       >
         <div style={{ flex: 1, position: 'relative' }}>
-          <RichRenderer html={tpl.html} config={config} languages={[...LOCALES]} interactive />
+          <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
         </div>
 
         <button

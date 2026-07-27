@@ -317,6 +317,12 @@
   border-bottom-color: var(--vi-border);
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
 }
+.vi-lp-head-bar {
+  max-width: 1180px; margin: 0 auto; padding: 14px 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+.vi-lp-nav { margin-left: 26px; display: flex; gap: 2px; }
+.vi-lp-head-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .vi-lp-navlink {
   padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 600;
   color: var(--vi-muted); text-decoration: none; background: transparent;
@@ -325,9 +331,185 @@
 }
 .vi-lp-navlink:hover { color: var(--vi-accent); background: var(--vi-accent-soft); }
 
+/* ── Burger (mobile only) — morphs into an X ── */
+.vi-lp-burger {
+  display: none; position: relative;
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 12px; border: 1px solid var(--vi-border);
+  background: transparent; cursor: pointer; padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.vi-lp-burger:hover { background: var(--vi-accent-soft); border-color: var(--vi-ring); }
+.vi-lp-burger span {
+  position: absolute; left: 50%; width: 18px; height: 2px; border-radius: 2px;
+  background: var(--vi-text); transform: translateX(-50%);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, background 0.2s ease;
+}
+.vi-lp-burger span:nth-child(1) { top: 14px; }
+.vi-lp-burger span:nth-child(2) { top: 20px; }
+.vi-lp-burger span:nth-child(3) { top: 26px; }
+.vi-lp-burger.open span { background: var(--vi-accent); }
+.vi-lp-burger.open span:nth-child(1) { transform: translateX(-50%) translateY(6px) rotate(45deg); }
+.vi-lp-burger.open span:nth-child(2) { opacity: 0; transform: translateX(-50%) scaleX(0.4); }
+.vi-lp-burger.open span:nth-child(3) { transform: translateX(-50%) translateY(-6px) rotate(-45deg); }
+
+/* ── Mobile sheet menu ── */
+.vi-lp-sheet-scrim {
+  position: fixed; inset: 0; z-index: -1;
+  background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(3px);
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.vi-lp-sheet-scrim.open { opacity: 1; pointer-events: auto; }
+.vi-lp-sheet {
+  overflow: hidden; padding: 0 18px;
+  max-height: 0; opacity: 0;
+  background: color-mix(in srgb, var(--vi-card) 96%, transparent);
+  border-bottom: 1px solid transparent;
+  transition: max-height 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.28s ease, padding 0.42s ease, border-color 0.3s ease;
+}
+.vi-lp-sheet.open {
+  max-height: 420px; opacity: 1; padding: 8px 18px 20px;
+  border-bottom-color: var(--vi-border);
+}
+.vi-lp-sheet-link {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 15px 14px; border-radius: 12px;
+  background: transparent; border: 1px solid transparent;
+  font-family: inherit; font-size: 16px; font-weight: 650; color: var(--vi-text);
+  cursor: pointer; text-align: left;
+  opacity: 0; transform: translateX(-10px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.vi-lp-sheet.open .vi-lp-sheet-link { opacity: 1; transform: none; }
+.vi-lp-sheet-link:hover, .vi-lp-sheet-link:active {
+  background: var(--vi-accent-soft); color: var(--vi-accent); border-color: var(--vi-border);
+}
+.vi-lp-sheet-link span { color: var(--vi-accent); font-size: 15px; }
+
+/* ── Hero ── */
+.vi-lp-hero { position: relative; padding: 70px 20px 90px; overflow: hidden; }
+.vi-lp-hero-grid {
+  position: relative; max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: 1.05fr 0.95fr;
+  grid-template-areas: 'copy art' 'stats art';
+  column-gap: 48px; align-items: center;
+}
+.vi-lp-hero-copy { grid-area: copy; min-width: 0; }
+.vi-lp-hero-art { grid-area: art; position: relative; height: 520px; }
+.vi-lp-hero-stats {
+  grid-area: stats; display: flex; gap: 38px; flex-wrap: wrap; margin-top: 44px;
+}
+.vi-lp-stat-value { font-size: 32px; font-weight: 850; letter-spacing: -0.03em; color: var(--vi-accent); }
+.vi-lp-stat-label { font-size: 13px; color: var(--vi-muted); margin-top: 2px; }
+
+.vi-lp-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 15px; border-radius: 999px; font-size: 13px; font-weight: 650;
+  background: var(--vi-accent-soft); color: var(--vi-accent);
+  border: 1px solid var(--vi-border);
+}
+.vi-lp-h1 {
+  margin: 20px 0 0; font-size: clamp(38px, 6vw, 66px); line-height: 1.07;
+  font-weight: 850; letter-spacing: -0.035em;
+}
+.vi-lp-hero-sub {
+  margin: 22px 0 0; max-width: 540px; font-size: 17px; line-height: 1.65; color: var(--vi-muted);
+}
+.vi-lp-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+.vi-lp-hero-cta .vi-btn { padding: 15px 30px; font-size: 15.5px; border-radius: 14px; }
+
+.vi-lp-hero-card {
+  position: absolute; width: 262px; height: 430px;
+  border-radius: 26px; overflow: hidden;
+  border: 1px solid var(--vi-border); box-shadow: var(--vi-shadow-lg);
+  background: #0b0f1c;
+}
+.vi-lp-hero-card.back { top: 0; left: 2%; }
+.vi-lp-hero-card.front { top: 40px; left: 30%; }
+
+.vi-lp-aurora-a { width: 620px; height: 620px; top: -240px; right: -160px; }
+.vi-lp-aurora-b { width: 520px; height: 520px; bottom: -220px; left: -170px; }
+.vi-lp-aurora-c { width: 400px; height: 400px; top: 38%; left: 46%; }
+
+.vi-lp-scroll {
+  position: relative; max-width: 1180px; margin: 58px auto 0;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+/* == Tablet: tighten the two-column hero == */
+@media (max-width: 980px) {
+  .vi-lp-hero-grid { column-gap: 28px; }
+  .vi-lp-hero-art { height: 460px; }
+  .vi-lp-hero-card { width: 224px; height: 370px; }
+  .vi-lp-hero-card.front { left: 26%; }
+}
+
+/* == Mobile: single column, sheet menu, one upright preview == */
+@media (max-width: 860px) {
+  .vi-lp-nav, .vi-lp-desktop-only { display: none !important; }
+  .vi-lp-burger { display: block; }
+  .vi-lp-head-bar { padding: 10px 16px; gap: 10px; }
+  .vi-lp-head-right { gap: 6px; }
+
+  .vi-lp-hero { padding: 30px 18px 64px; }
+  .vi-lp-hero-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'copy' 'art' 'stats';
+    row-gap: 34px; justify-items: center; text-align: center;
+  }
+  .vi-lp-hero-copy { display: flex; flex-direction: column; align-items: center; }
+  .vi-lp-h1 { font-size: clamp(31px, 8.6vw, 46px); line-height: 1.12; }
+  .vi-lp-hero-sub { margin-top: 16px; font-size: 15.5px; max-width: 460px; }
+  .vi-lp-hero-cta { margin-top: 24px; width: 100%; max-width: 340px; justify-content: center; }
+  .vi-lp-hero-cta .vi-btn { flex: 1 1 100%; padding: 15px 20px; }
+
+  /* Upright, centred, no absolute stacking - the card is now in normal flow. */
+  .vi-lp-hero-art {
+    height: auto; display: flex; justify-content: center; width: 100%;
+  }
+  .vi-lp-hero-card {
+    position: relative; top: auto; left: auto;
+    width: min(270px, 76vw); height: min(444px, 125vw);
+  }
+
+  .vi-lp-hero-stats {
+    margin-top: 0; gap: 0; width: 100%; max-width: 400px;
+    display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;
+  }
+  .vi-lp-stat-value { font-size: 25px; }
+  .vi-lp-stat-label { font-size: 11.5px; line-height: 1.35; }
+
+  /* Keep the blur fields from forcing horizontal overflow on narrow screens. */
+  .vi-lp-aurora-a { width: 380px; height: 380px; top: -160px; right: -140px; }
+  .vi-lp-aurora-b { width: 340px; height: 340px; bottom: -150px; left: -140px; }
+  .vi-lp-aurora-c { display: none; }
+
+  .vi-lp-scroll { margin-top: 40px; }
+}
+
+/* == Small phones == */
+@media (max-width: 560px) {
+  .vi-lp-badge { font-size: 11.5px; padding: 6px 12px; }
+  .vi-lp-hero-sub { font-size: 15px; }
+  .vi-lp-sheet.open { max-height: 460px; }
+}
+
+/* == Very narrow (~320px) == */
+@media (max-width: 380px) {
+  .vi-lp-head-bar { padding: 9px 12px; }
+  .vi-lp-h1 { font-size: 28px; }
+  .vi-lp-hero-card { width: 82vw; height: 135vw; }
+  .vi-lp-stat-value { font-size: 22px; }
+  .vi-lp-stat-label { font-size: 10.5px; }
+}
+
 /* ── Respect reduced-motion: keep the layout, drop the movement ── */
 @media (prefers-reduced-motion: reduce) {
   .vi-lp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
   .vi-lp-aurora, .vi-lp-float, .vi-lp-scroll-dot, .vi-lp-word, .vi-lp-gradient { animation: none !important; }
   .vi-lp-work:hover, .vi-lp-tile:hover { transform: none; }
+  /* The sheet still opens/closes, just without the slide-in choreography. */
+  .vi-lp-sheet-link { opacity: 1 !important; transform: none !important; transition-delay: 0ms !important; }
 }
