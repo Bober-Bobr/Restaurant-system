@@ -196,6 +196,7 @@ export const OwnerCabinetPage = () => {
     RESTAURANT_MANAGER: 'restaurant_manager_role',
     EMPLOYEE: 'employee_role',
     KITCHEN: 'kitchen_role',
+    NFC_MAKER: 'nfc_maker_role',
   };
 
   return (

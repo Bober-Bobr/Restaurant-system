@@ -42,8 +42,12 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
 import { VInviteApp } from '../vinvite/VInviteApp';
+import { NfcApp } from '../vconnect/NfcApp';
+import { VConnectLoginPage } from '../vconnect/VConnectLoginPage';
+import { PublicPlaquePage } from '../vconnect/PublicPlaquePage';
+import '../vconnect/vconnect.css';
 import { PublicVInvitePage } from '../vinvite/PublicVInvitePage';
 
 export const App = () => {
@@ -73,6 +77,24 @@ export const App = () => {
       useAuthStore.getState().setAuth(at, rt, u, exp || 15 * 60 * 1000, r, rid || null, rn || null);
       window.history.replaceState({}, '', window.location.pathname);
     }
+  }
+
+  // ── v-connect.uz: the NFC-plaque product ──
+  // nfc.v-connect.uz → the builder (it consumes the _at/_rt handoff above);
+  // v-connect.uz/login → sign-in; v-connect.uz/<slug> → a published plaque.
+  if (isConnectHost()) {
+    if (isNfcBuilderHost()) return <NfcApp />;
+    const plaqueSlug = getPlaqueSlug();
+    if (plaqueSlug) {
+      return <PublicPlaquePage slug={plaqueSlug} />;
+    }
+    // Bare v-connect.uz (or /login) → the sign-in page.
+    return (
+      <Routes>
+        <Route path="/login" element={<VConnectLoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   // Catering subdomain (<restaurant>.v-menu.uz) → public catering site

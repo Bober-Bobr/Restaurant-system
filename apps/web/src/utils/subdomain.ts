@@ -180,3 +180,59 @@ export function buildSubdomainUrl(slug: string, params: Record<string, string>):
   const qs = new URLSearchParams(params).toString();
   return `https://${slug}.${ROOT_DOMAIN}/?${qs}`;
 }
+
+// ── v-connect.uz — the NFC-plaque product ────────────────────────────────────
+// Two hosts only (the .uz registrar rejects wildcard DNS, so published plaques
+// are PATH-based just like flyers, invitations and v-invite sites):
+//   v-connect.uz            → login (/login) and published plaques (/<slug>)
+//   nfc.v-connect.uz        → the plaque builder
+const CONNECT_DOMAIN: string = (import.meta.env.VITE_CONNECT_DOMAIN as string | undefined) ?? 'v-connect.uz';
+
+// First path segments on v-connect.uz that belong to the platform, not a plaque.
+const CONNECT_RESERVED_PATHS = new Set(['login']);
+
+export function connectDomain(): string {
+  return CONNECT_DOMAIN;
+}
+
+// The bare v-connect.uz host (login + published plaques).
+export function isConnectRootDomain(): boolean {
+  const host = window.location.hostname;
+  return host === CONNECT_DOMAIN || host === `www.${CONNECT_DOMAIN}` || host === 'v-connect.local';
+}
+
+// nfc.v-connect.uz → the NFC plaque builder app.
+export function isNfcBuilderHost(): boolean {
+  const host = window.location.hostname;
+  return host === `nfc.${CONNECT_DOMAIN}` || host === 'nfc.v-connect.local';
+}
+
+// Any v-connect host at all — used by the App dispatcher to claim the domain.
+export function isConnectHost(): boolean {
+  return isConnectRootDomain() || isNfcBuilderHost();
+}
+
+// v-connect.uz/<slug> → a published plaque. Null at the root or on /login.
+export function getPlaqueSlug(): string | null {
+  if (!isConnectRootDomain()) return null;
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  if (!seg || CONNECT_RESERVED_PATHS.has(seg)) return null;
+  return seg;
+}
+
+// The public URL an NFC tag is written with.
+export function buildPlaqueUrl(slug: string): string {
+  return `https://${CONNECT_DOMAIN}/${slug}`;
+}
+
+// The builder host, optionally carrying a login handoff (same _at/_rt/_u/_r
+// query protocol the v-menu subdomains use).
+export function buildNfcBuilderUrl(params: Record<string, string> = {}): string {
+  const qs = new URLSearchParams(params).toString();
+  return `https://nfc.${CONNECT_DOMAIN}/${qs ? `?${qs}` : ''}`;
+}
+
+// The v-connect login page.
+export function buildConnectLoginUrl(): string {
+  return `https://${CONNECT_DOMAIN}/login`;
+}

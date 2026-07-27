@@ -153,6 +153,8 @@ enum AdminRole {
   RESTAURANT_MANAGER
   EMPLOYEE
   KITCHEN
+  // v-connect.uz — builds NFC plaques for businesses. Not tied to a restaurant.
+  NFC_MAKER
 }
 
 model AdminUser {
@@ -171,6 +173,7 @@ model AdminUser {
   expenseDays      ExpenseDay[] @relation("ManagerExpenseDays")
   guestInvitations GuestInvitation[] @relation("ManagerGuestInvitations")
   designTemplates  DesignTemplate[] @relation("ManagerDesignTemplates")
+  nfcPlaques       NfcPlaque[]      @relation("NfcPlaques")
 
   @@index([restaurantId])
 }
@@ -861,4 +864,41 @@ model InviteTemplate {
   user InviteUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ── NFC plaque (v-connect.uz) ────────────────────────────────────────────────
+// A block-designed page for a business, published at v-connect.uz/<slug> and
+// reached by tapping an NFC tag. Built in the nfc.v-connect.uz builder by an
+// NFC_MAKER; the same shared block designer that powers flyers/invitations.
+model NfcPlaque {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  createdById String?
+
+  // Business identity shown in the builder list (and as the default title).
+  businessName String
+  // Ordered freeform block layout (JSON array of Block).
+  blocks       Json    @default("[]")
+
+  // Theme (mirrors the flyer/invitation theme columns).
+  accentColor        String?
+  backgroundColor    String?
+  backgroundImageUrl String?
+  textColor          String?
+  textScale          Float?  @default(1)
+  particles          String?
+  particlesColor     String?
+  particlesImageUrl  String?
+  musicUrl           String?
+  trailTemplate      String  @default("sparkle")
+  trailColor         String?
+  trailImageUrl      String?
+
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   AdminUser? @relation("NfcPlaques", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdById])
 }

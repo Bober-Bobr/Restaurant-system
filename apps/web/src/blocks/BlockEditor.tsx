@@ -13,7 +13,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 type T = (k: TranslationKey, p?: Record<string, string | number>) => string;
 
 export type BlockEditorProps = {
-  kind: 'flyer' | 'invitation';
+  kind: 'flyer' | 'invitation' | 'plaque';
   blocks: Block[];
   theme: DesignTheme;
   onBlocksChange: (b: Block[]) => void;
@@ -116,8 +116,8 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           ))}
           {/* Every flyer ends with the mandatory V-connect attribution, then the
               contact card (in preview; in edit mode it shows as its own block). */}
-          {kind === 'flyer' && <VConnectFooter label={t('website_developed_by')} />}
-          {kind === 'flyer' && preview && (() => {
+          {(kind === 'flyer' || kind === 'plaque') && <VConnectFooter label={t('website_developed_by')} />}
+          {(kind === 'flyer' || kind === 'plaque') && preview && (() => {
             const vc = findVcContact(blocks);
             return vc ? (
               <VConnectContact
@@ -142,7 +142,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
       {paletteOpen && (
         <Modal onClose={() => setPaletteOpen(false)} title={t('choose_block')}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
-            {PALETTE_ORDER.filter((type) => kind === 'flyer' || type !== 'vccontact').map((type) => (
+            {PALETTE_ORDER.filter((type) => kind === 'flyer' || kind === 'plaque' || type !== 'vccontact').map((type) => (
               <button key={type} type="button" onClick={() => addBlock(type)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 8px', borderRadius: 12, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>
                 <span style={{ fontSize: 24 }}>{BLOCK_DEFS[type].icon}</span>

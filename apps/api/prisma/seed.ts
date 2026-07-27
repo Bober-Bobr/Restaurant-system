@@ -31,6 +31,8 @@ async function main() {
     }
   }
 
+  await seedNfcMaker();
+
   const existing = await prisma.restaurant.findFirst({
     where: { ownerId: owner.id, name: 'Madinabek' }
   });
@@ -50,6 +52,30 @@ async function main() {
   });
 
   console.log(`Created restaurant "Madinabek" (id: ${restaurant.id}) for owner "${owner.username}".`);
+}
+
+// ── v-connect.uz: the NFC-plaque builder account ─────────────────────────────
+// Idempotent: the password is only set when the account is first created, so
+// re-running the seed never resets a password that was changed in production.
+// Override the default with NFC_MAKER_PASSWORD when seeding a real environment.
+async function seedNfcMaker() {
+  const username = 'nfc_maker';
+  const existing = await prisma.adminUser.findUnique({ where: { username } });
+  if (existing) {
+    if (existing.role !== AdminRole.NFC_MAKER) {
+      await prisma.adminUser.update({ where: { id: existing.id }, data: { role: AdminRole.NFC_MAKER } });
+      console.log(`Updated "${username}" to role NFC_MAKER.`);
+    } else {
+      console.log(`NFC maker "${username}" already exists, skipping.`);
+    }
+    return;
+  }
+  const password = process.env.NFC_MAKER_PASSWORD || 'XfjuaJiM$^+pYZMPQvK7';
+  const passwordHash = await bcrypt.hash(password, 12);
+  await prisma.adminUser.create({
+    data: { username, passwordHash, role: AdminRole.NFC_MAKER },
+  });
+  console.log(`Created NFC maker account "${username}".`);
 }
 
 main()

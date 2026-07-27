@@ -17,6 +17,7 @@ import { publicApiRouter } from './modules/public/public.routes.js';
 import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
+import { nfcPlaqueRouter } from './modules/nfcPlaque/nfcPlaque.routes.js';
 import { photoRoutes } from './modules/photos/photo.routes.js';
 import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
 import { companyRouter } from './modules/company/company.routes.js';
@@ -83,6 +84,7 @@ protectedApi.use('/companies', companyRouter);
 app.use('/api/invitations', invitationRouter);
 app.use('/api/guest-invitations', guestInvitationRouter);
 app.use('/api/design-templates', designTemplateRouter);
+app.use('/api/nfc-plaques', nfcPlaqueRouter);
 // v-invite.uz — standalone invitation-builder product (own users/auth, mixed
 // public + authenticated routes handled inside the router).
 app.use('/api/vinvite', vinviteRouter);

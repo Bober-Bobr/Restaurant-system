@@ -18,7 +18,8 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   CATERING_ADMIN: 'Food Admin',
   RESTAURANT_MANAGER: 'Restaurant Manager',
   EMPLOYEE: 'Employee',
-  KITCHEN: 'Kitchen'
+  KITCHEN: 'Kitchen',
+  NFC_MAKER: 'NFC Maker'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
@@ -29,7 +30,8 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   CATERING_ADMIN: { background: '#0ea5e9', color: '#fff' },
   RESTAURANT_MANAGER: { background: '#d97706', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' },
-  KITCHEN: { background: '#ea580c', color: '#fff' }
+  KITCHEN: { background: '#ea580c', color: '#fff' },
+  NFC_MAKER: { background: '#c8a97a', color: '#171310' }
 };
 
 const formatError = (error: unknown): string => {

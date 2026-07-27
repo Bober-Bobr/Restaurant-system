@@ -1,0 +1,126 @@
+/* ── v-connect.uz design system ───────────────────────────────────────────────
+   Black + beige: near-black surfaces, warm sand accents, thin gold-ish rules.
+   Deliberately quieter and more architectural than the v-menu gold-on-navy and
+   the v-invite cream-on-blue, so the three products never look alike. */
+
+.vc-root {
+  --vc-black:      #0b0b0a;
+  --vc-black-2:    #131211;
+  --vc-surface:    #1a1817;
+  --vc-surface-2:  #221f1d;
+  --vc-beige:      #e8dcc8;
+  --vc-beige-soft: #cbbda3;
+  --vc-beige-dim:  rgba(232, 220, 200, 0.55);
+  --vc-line:       rgba(232, 220, 200, 0.14);
+  --vc-line-soft:  rgba(232, 220, 200, 0.08);
+  --vc-accent:     #c8a97a;
+  --vc-accent-dim: rgba(200, 169, 122, 0.16);
+  --vc-danger:     #e07a6a;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(200, 169, 122, 0.10) 0%, transparent 60%),
+    radial-gradient(90% 60% at 10% 110%, rgba(232, 220, 200, 0.05) 0%, transparent 55%),
+    var(--vc-black);
+  color: var(--vc-beige);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Motion ── */
+@keyframes vcFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes vcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vcSpin { to { transform: rotate(360deg); } }
+@keyframes vcSheen { from { transform: translateX(-160%) skewX(-18deg); } to { transform: translateX(260%) skewX(-18deg); } }
+@keyframes vcPulse { 0%, 100% { opacity: .35; } 50% { opacity: .75; } }
+
+.vc-fade-up { animation: vcFadeUp .6s cubic-bezier(.22,1,.36,1) both; }
+.vc-fade-in { animation: vcFadeIn .5s ease both; }
+
+/* ── Surfaces ── */
+.vc-card {
+  background: linear-gradient(168deg, var(--vc-surface) 0%, var(--vc-black-2) 100%);
+  border: 1px solid var(--vc-line);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .5);
+}
+
+/* Hairline rule with a soft centre, used under headings. */
+.vc-rule {
+  height: 1px; border: 0; margin: 0;
+  background: linear-gradient(90deg, transparent, var(--vc-line), transparent);
+}
+
+/* ── Type ── */
+.vc-title {
+  margin: 0; font-size: 26px; font-weight: 300; letter-spacing: .04em;
+  color: var(--vc-beige);
+}
+.vc-label {
+  display: block; font-size: 10.5px; font-weight: 600;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--vc-beige-dim); margin-bottom: 8px;
+}
+.vc-eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: .34em;
+  text-transform: uppercase; color: var(--vc-accent);
+}
+.vc-muted { color: var(--vc-beige-dim); }
+
+/* ── Inputs ── */
+.vc-input, .vc-select, .vc-textarea {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid var(--vc-line);
+  color: var(--vc-beige); font-size: 14px; font-family: inherit;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.vc-input::placeholder, .vc-textarea::placeholder { color: rgba(232, 220, 200, .3); }
+.vc-input:focus, .vc-select:focus, .vc-textarea:focus {
+  border-color: var(--vc-accent);
+  box-shadow: 0 0 0 3px var(--vc-accent-dim);
+  background: rgba(0, 0, 0, .5);
+}
+.vc-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+/* ── Buttons ── */
+.vc-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 20px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
+  font-family: inherit; cursor: pointer; text-decoration: none;
+  border: 1px solid transparent; position: relative; overflow: hidden;
+  transition: transform .15s ease, background .22s ease, border-color .22s ease, color .22s ease, box-shadow .22s ease;
+  white-space: nowrap;
+}
+.vc-btn:active { transform: scale(.98); }
+.vc-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.vc-btn-primary {
+  background: linear-gradient(100deg, #b9975f 0%, var(--vc-accent) 45%, #e2cba0 100%);
+  color: #171310; box-shadow: 0 10px 26px rgba(200, 169, 122, .18);
+}
+.vc-btn-primary::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.5), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+}
+.vc-btn-primary:hover:not(:disabled)::after { animation: vcSheen .85s ease; }
+.vc-btn-primary:hover:not(:disabled) { box-shadow: 0 14px 32px rgba(200, 169, 122, .3); }
+
+.vc-btn-ghost { background: transparent; color: var(--vc-beige); border-color: var(--vc-line); }
+.vc-btn-ghost:hover:not(:disabled) { background: var(--vc-accent-dim); border-color: var(--vc-accent); color: var(--vc-accent); }
+
+.vc-btn-danger { background: transparent; color: var(--vc-danger); border-color: rgba(224, 122, 106, .4); }
+.vc-btn-danger:hover:not(:disabled) { background: rgba(224, 122, 106, .12); }
+
+/* ── Badge ── */
+.vc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  border: 1px solid var(--vc-line);
+  color: var(--vc-beige-dim);
+}
+.vc-badge.live { color: var(--vc-accent); border-color: rgba(200, 169, 122, .4); background: var(--vc-accent-dim); }
+.vc-badge.live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: vcPulse 2s ease-in-out infinite; }
