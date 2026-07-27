@@ -821,33 +821,38 @@ button,input,textarea,select{font:inherit;color:inherit}
   border:1px solid rgba(216,178,104,.4);
   box-shadow:0 26px 60px rgba(23,28,58,.1);
 }
+/* The floating-label rules are scoped to DIRECT children on purpose: the
+   attend chips are <label>s nested inside a .field too, and an unscoped
+   `.field label` would drag them out of flow (position:absolute) and make them
+   unclickable (pointer-events:none) — same specificity, so their own rules
+   could not win the properties they do not declare. */
 .field{position:relative;margin-bottom:26px}
-.field input,.field textarea{
+.field > input,.field > textarea{
   width:100%;padding:14px 2px 11px;border:0;background:transparent;
   border-bottom:1px solid var(--line);
   font-size:1rem;font-weight:300;color:var(--ink);
   transition:border-color .4s var(--e);
 }
-.field textarea{resize:none;min-height:78px;line-height:1.6}
-.field label{
+.field > textarea{resize:none;min-height:78px;line-height:1.6}
+.field > label{
   position:absolute;left:2px;top:14px;pointer-events:none;
   font-size:.95rem;font-weight:300;color:var(--ink-soft);
   transition:all .38s var(--e-out);
 }
-.field input:focus,.field textarea:focus{outline:none}
-.field input:focus + label,.field textarea:focus + label,
-.field input:not(:placeholder-shown) + label,.field textarea:not(:placeholder-shown) + label{
+.field > input:focus,.field > textarea:focus{outline:none}
+.field > input:focus + label,.field > textarea:focus + label,
+.field > input:not(:placeholder-shown) + label,.field > textarea:not(:placeholder-shown) + label{
   top:-9px;font-size:.58rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-dk);
 }
-.field .underline{
+.field > .underline{
   position:absolute;left:0;bottom:0;height:1.5px;width:100%;
   background:linear-gradient(90deg,var(--gold-dk),var(--gold),var(--gold-lt));
   transform:scaleX(0);transform-origin:left;
   transition:transform .55s var(--e-out);
 }
-.field input:focus ~ .underline,.field textarea:focus ~ .underline{transform:scaleX(1)}
-.field.invalid input{border-bottom-color:var(--coral)}
-.field.invalid label{color:var(--coral)}
+.field > input:focus ~ .underline,.field > textarea:focus ~ .underline{transform:scaleX(1)}
+.field.invalid > input{border-bottom-color:var(--coral)}
+.field.invalid > label{color:var(--coral)}
 
 .field-group > span.lbl{
   display:block;font-size:.58rem;letter-spacing:.26em;text-transform:uppercase;
@@ -855,17 +860,30 @@ button,input,textarea,select{font:inherit;color:inherit}
 }
 .attend-row{display:flex;gap:10px;flex-wrap:wrap}
 .attend-row label{
-  flex:1 1 auto;min-width:130px;cursor:pointer;
+  position:relative;flex:1 1 auto;min-width:130px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
   padding:13px 16px;border-radius:100px;text-align:center;
   border:1px solid rgba(216,178,104,.45);
-  font-size:.78rem;color:var(--ink-soft);
-  transition:all .38s var(--e-out);
+  font-size:.78rem;line-height:1.35;color:var(--ink-soft);
+  transition:background .38s var(--e-out),color .38s var(--e-out),
+             border-color .38s var(--e-out),box-shadow .38s var(--e-out);
+  -webkit-tap-highlight-color:transparent;
 }
-.attend-row input{position:absolute;opacity:0;pointer-events:none}
+/* The radio itself is only a hit-target for assistive tech and the keyboard —
+   the chip is the visible control, so focus has to be shown on the chip. */
+.attend-row input{
+  position:absolute;inset:0;width:100%;height:100%;
+  margin:0;padding:0;border:0;opacity:0;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+}
+.attend-row label:focus-within{outline:2px solid var(--gold-dk);outline-offset:3px}
 .attend-row label.sel{
   background:linear-gradient(100deg,var(--gold-dk),var(--gold) 45%,#F3DFAE);
   color:#241A06;border-color:transparent;
   box-shadow:0 8px 20px rgba(216,178,104,.34);
+}
+@media (hover:hover){
+  .attend-row label:not(.sel):hover{border-color:var(--gold);color:var(--ink)}
 }
 
 .btn-submit{
