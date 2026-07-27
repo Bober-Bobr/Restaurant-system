@@ -32,6 +32,7 @@ export type FieldType =
   | 'audio'
   | 'gallery' // list of { image, caption (localized) }
   | 'schedule' // list of { time, label (localized) }
+  | 'quotes' // list of { author, text (localized) } — wishes / testimonials
   | 'palette' // ordered list of colour swatches (hex strings)
   // Show/hide switch for a block. The value at `path` is the HIDDEN flag
   // (true = hidden), so an unset config means everything is visible.
@@ -57,6 +58,7 @@ export type TemplateFieldGroup = {
 // Localized gallery / schedule item shapes shared across templates.
 export type GalleryItem = { image: string; caption: LocalizedText };
 export type ScheduleItem = { time: string; label: LocalizedText };
+export type QuoteItem = { author: string; text: LocalizedText };
 
 // The shape persisted per project (in InviteProject.theme JSON). When
 // `templateId` is present the project is a rich design; otherwise it's a

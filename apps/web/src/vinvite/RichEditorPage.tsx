@@ -14,7 +14,7 @@ import { getPath, resolveAssetUrls, setPath } from './templates/utils';
 import {
   LOCALES,
   type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle, type AdminTrail,
-  type GalleryItem, type LocalizedText, type RichDesignData, type ScheduleItem,
+  type GalleryItem, type LocalizedText, type QuoteItem, type RichDesignData, type ScheduleItem,
   type TemplateDefinition, type TemplateField,
 } from './templates/types';
 
@@ -353,6 +353,8 @@ function FieldEditor({ field, design, setConfig }: {
       return <GalleryEditor field={field} design={design} setConfig={setConfig} />;
     case 'schedule':
       return <ScheduleEditor field={field} design={design} setConfig={setConfig} />;
+    case 'quotes':
+      return <QuotesEditor field={field} design={design} setConfig={setConfig} />;
     default:
       return null;
   }
@@ -492,6 +494,56 @@ function ScheduleEditor({ field, design, setConfig }: {
         </div>
       ))}
       <button type="button" className="adm-btn-ghost" style={{ fontSize: 13 }} onClick={() => update([...items, { time: '19:00', label: {} }])}>
+        ＋ {t('add_item')}
+      </button>
+    </div>
+  );
+}
+
+// Wishes / testimonials: a free-text author line plus the quote itself, written
+// per active language. Order is the order they are leafed through on the page.
+function QuotesEditor({ field, design, setConfig }: {
+  field: TemplateField; design: RichDesignData; setConfig: (path: string, value: unknown) => void;
+}) {
+  const t = useViT();
+  const items = (getPath(design.config, field.path) as QuoteItem[] | undefined) ?? [];
+  const update = (next: QuoteItem[]) => setConfig(field.path, next);
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= items.length) return;
+    const next = [...items];
+    const [m] = next.splice(from, 1);
+    next.splice(to, 0, m!);
+    update(next);
+  };
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {items.map((item, i) => (
+        <div key={i} style={itemBox}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              style={{ ...panelInput, flex: 1 }}
+              placeholder={t('fld_author')}
+              value={item.author ?? ''}
+              onChange={(e) => update(items.map((it, j) => (j === i ? { ...it, author: e.target.value } : it)))}
+            />
+            <button type="button" className="adm-btn-ghost" style={{ fontSize: 12, padding: '5px 9px' }} disabled={i === 0} onClick={() => move(i, i - 1)}>↑</button>
+            <button type="button" className="adm-btn-ghost" style={{ fontSize: 12, padding: '5px 9px' }} disabled={i === items.length - 1} onClick={() => move(i, i + 1)}>↓</button>
+            <button type="button" className="adm-btn-danger" style={{ fontSize: 12, padding: '5px 9px' }} onClick={() => update(items.filter((_, j) => j !== i))}>×</button>
+          </div>
+          {design.languages.map((lang) => (
+            <div key={lang} style={{ display: 'flex', gap: 6 }}>
+              {design.languages.length > 1 && <span style={langTag}>{lang}</span>}
+              <textarea
+                style={{ ...panelInput, minHeight: 64, resize: 'vertical' }}
+                placeholder={t('fld_quote')}
+                value={asLocalized(item.text)[lang] ?? ''}
+                onChange={(e) => update(items.map((it, j) => (j === i ? { ...it, text: { ...asLocalized(it.text), [lang]: e.target.value } } : it)))}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+      <button type="button" className="adm-btn-ghost" style={{ fontSize: 13 }} onClick={() => update([...items, { author: '', text: {} }])}>
         ＋ {t('add_item')}
       </button>
     </div>
