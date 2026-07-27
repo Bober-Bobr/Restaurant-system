@@ -397,7 +397,13 @@
   column-gap: 48px; align-items: center;
 }
 .vi-lp-hero-copy { grid-area: copy; min-width: 0; }
-.vi-lp-hero-art { grid-area: art; position: relative; height: 520px; }
+/* Mobile-first stage. flex-wrap/gap are insurance: at fractional viewport
+   widths the JS breakpoint (<=860px) and the CSS one (>=861px) can briefly
+   disagree, and two cards may land in this flow layout. */
+.vi-lp-hero-art {
+  grid-area: art; position: relative;
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; width: 100%;
+}
 .vi-lp-hero-stats {
   grid-area: stats; display: flex; gap: 38px; flex-wrap: wrap; margin-top: 44px;
 }
@@ -421,13 +427,23 @@
 .vi-lp-hero-cta .vi-btn { padding: 15px 30px; font-size: 15.5px; border-radius: 14px; }
 
 .vi-lp-hero-card {
-  position: absolute; width: 262px; height: 430px;
+  position: relative;
+  width: min(270px, 76vw);
+  aspect-ratio: 262 / 430;
   border-radius: 26px; overflow: hidden;
   border: 1px solid var(--vi-border); box-shadow: var(--vi-shadow-lg);
   background: #0b0f1c;
 }
-.vi-lp-hero-card.back { top: 0; left: 2%; }
-.vi-lp-hero-card.front { top: 40px; left: 30%; }
+
+/* Desktop only: two cards stacked and overlapping inside a fixed-height stage. */
+@media (min-width: 861px) {
+  .vi-lp-hero-art { display: block; height: 520px; }
+  .vi-lp-hero-card {
+    position: absolute; width: 262px; height: 430px; aspect-ratio: auto;
+  }
+  .vi-lp-hero-card.back { top: 0; left: 2%; }
+  .vi-lp-hero-card.front { top: 40px; left: 30%; }
+}
 
 .vi-lp-aurora-a { width: 620px; height: 620px; top: -240px; right: -160px; }
 .vi-lp-aurora-b { width: 520px; height: 520px; bottom: -220px; left: -170px; }
@@ -439,7 +455,7 @@
 }
 
 /* == Tablet: tighten the two-column hero == */
-@media (max-width: 980px) {
+@media (min-width: 861px) and (max-width: 980px) {
   .vi-lp-hero-grid { column-gap: 28px; }
   .vi-lp-hero-art { height: 460px; }
   .vi-lp-hero-card { width: 224px; height: 370px; }
@@ -464,15 +480,6 @@
   .vi-lp-hero-sub { margin-top: 16px; font-size: 15.5px; max-width: 460px; }
   .vi-lp-hero-cta { margin-top: 24px; width: 100%; max-width: 340px; justify-content: center; }
   .vi-lp-hero-cta .vi-btn { flex: 1 1 100%; padding: 15px 20px; }
-
-  /* Upright, centred, no absolute stacking - the card is now in normal flow. */
-  .vi-lp-hero-art {
-    height: auto; display: flex; justify-content: center; width: 100%;
-  }
-  .vi-lp-hero-card {
-    position: relative; top: auto; left: auto;
-    width: min(270px, 76vw); height: min(444px, 125vw);
-  }
 
   .vi-lp-hero-stats {
     margin-top: 0; gap: 0; width: 100%; max-width: 400px;
@@ -500,7 +507,6 @@
 @media (max-width: 380px) {
   .vi-lp-head-bar { padding: 9px 12px; }
   .vi-lp-h1 { font-size: 28px; }
-  .vi-lp-hero-card { width: 82vw; height: 135vw; }
   .vi-lp-stat-value { font-size: 22px; }
   .vi-lp-stat-label { font-size: 10.5px; }
 }
