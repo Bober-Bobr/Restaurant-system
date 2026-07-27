@@ -16,6 +16,7 @@ import { pricingRouter } from './modules/pricing/pricing.routes.js';
 import { publicApiRouter } from './modules/public/public.routes.js';
 import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
 import { hallRouter } from './modules/hall/hall.routes.js';
+import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
 import { photoRoutes } from './modules/photos/photo.routes.js';
 import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
 import { companyRouter } from './modules/company/company.routes.js';
@@ -72,6 +73,7 @@ protectedApi.use('/pricing', requireRestaurant, pricingRouter);
 protectedApi.use('/exports', requireRestaurant, exportRouter);
 protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
+protectedApi.use('/extra-services', requireRestaurant, extraServiceRouter);
 protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);

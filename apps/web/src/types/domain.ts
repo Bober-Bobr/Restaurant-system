@@ -28,6 +28,8 @@ export type EventMenuConfig = {
   childReplacements: Record<string, string>;
   // Selected paid "Extras": menu-item id → quantity (per-guest handled elsewhere).
   extras: Record<string, number>;
+  // Additional paid restaurant services chosen on the Summary page.
+  extraServiceIds?: string[];
 };
 
 export type Event = {
@@ -72,6 +74,20 @@ export type Hall = {
   photoUrl?: string;
   photos?: string[];
   isActive: boolean;
+};
+
+// An additional paid service the restaurant offers alongside the banquet
+// (decor, photographer, live music…). Guests pick these on the Summary page.
+export type ExtraService = {
+  id: string;
+  name: string;
+  description?: string | null;
+  // Price in tiyin (1/100 so'm).
+  priceCents: number;
+  // Photo/video URLs served from /uploads.
+  media?: string[];
+  isActive: boolean;
+  sortOrder: number;
 };
 
 export type TableCategoryPackageItem = {

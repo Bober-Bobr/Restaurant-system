@@ -332,11 +332,33 @@ model Restaurant {
   halls           Hall[]
   invitations     Invitation[]
   reviews         Review[]
+  extraServices   ExtraService[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   @@index([ownerId])
   @@index([companyId])
+}
+
+// Additional paid services a restaurant offers alongside the banquet (decor,
+// photographer, live music…). Guests pick them on the tablet Summary page; the
+// selected ones are added to the total and listed in the PDF/Excel exports.
+model ExtraService {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  // Price in tiyin (1/100 so'm), like every other money field.
+  priceCents   Int        @default(0)
+  // Photo/video URLs served from /uploads (JSON array of strings).
+  media        Json       @default("[]")
+  isActive     Boolean    @default(true)
+  sortOrder    Int        @default(0)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([restaurantId])
 }
 
 model Review {

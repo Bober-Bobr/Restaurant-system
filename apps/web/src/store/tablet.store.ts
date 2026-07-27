@@ -32,6 +32,8 @@ type SelectionState = {
   selectedThirdCourseIds: string[];
   // Free replacements: included package-item id → chosen FREE menu-item id.
   replacements: Record<string, string>;
+  // Additional paid restaurant services the guest picked on the Summary page.
+  selectedExtraServiceIds: string[];
   guestCount: number;
   // The event being edited via the menu flow (undefined = creating a new event).
   // When set, confirming on the Summary page UPDATES this event instead of creating.
@@ -63,6 +65,7 @@ type SelectionState = {
   toggleThirdCourse: (menuItemId: string) => void;
   toggleHotAppetizer: (menuItemId: string, max?: number) => void;
   setReplacement: (packageItemId: string, menuItemId: string | null) => void;
+  toggleExtraService: (serviceId: string) => void;
   setChildrenTableSelected: (selected: boolean) => void;
   setChildrenCount: (count: number) => void;
   setChildFirstCourse: (menuItemId: string) => void;
@@ -93,6 +96,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedSecondCourseIds: [],
   selectedThirdCourseIds: [],
   replacements: {},
+  selectedExtraServiceIds: [],
   guestCount: 0,
   editingEventId: undefined,
   customerName: '',
@@ -129,6 +133,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
       replacements: {},
+      selectedExtraServiceIds: [],
       // Reset the children's-table add-on whenever the main table changes.
       childrenTableSelected: false,
       childrenCount: 0,
@@ -171,6 +176,13 @@ export const useTabletStore = create<SelectionState>((set) => ({
       else next[packageItemId] = menuItemId;
       return { replacements: next };
     });
+  },
+  toggleExtraService: (serviceId) => {
+    set((state) => ({
+      selectedExtraServiceIds: state.selectedExtraServiceIds.includes(serviceId)
+        ? state.selectedExtraServiceIds.filter((id) => id !== serviceId)
+        : [...state.selectedExtraServiceIds, serviceId],
+    }));
   },
   setChildrenTableSelected: (selected) => {
     // Deselecting clears the children's course/count selections too.
@@ -274,6 +286,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedThirdCourseIds: cfg?.thirdCourseIds ?? [],
       replacements: cfg?.replacements ?? {},
       selectedItems: cfg?.extras ?? {},
+      selectedExtraServiceIds: cfg?.extraServiceIds ?? [],
       // Children's table.
       childrenTableSelected: childrenSelected,
       childrenCount: d.childrenCount ?? 0,
@@ -294,6 +307,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
       replacements: {},
+      selectedExtraServiceIds: [],
       guestCount: 0,
       editingEventId: undefined,
       customerName: '',

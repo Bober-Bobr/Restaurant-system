@@ -10,6 +10,7 @@ import { AdminSubcategoriesPage } from '../pages/AdminSubcategoriesPage';
 import { AdminAdditionalPage } from '../pages/AdminAdditionalPage';
 import { AdminTableCategoriesPage } from '../pages/AdminTableCategoriesPage';
 import { AdminHallsPage } from '../pages/AdminHallsPage';
+import { AdminExtraServicesPage } from '../pages/AdminExtraServicesPage';
 import { AdminPhotosPage } from '../pages/AdminPhotosPage';
 import { AdminRestaurantsPage } from '../pages/AdminRestaurantsPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
@@ -334,6 +335,7 @@ export const App = () => {
         <Route path="/admin/additional" element={<AdminAdditionalPage />} />
         <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />
         <Route path="/admin/halls" element={<AdminHallsPage />} />
+        <Route path="/admin/extra-services" element={<AdminExtraServicesPage />} />
         <Route path="/admin/photos" element={<AdminPhotosPage />} />
         <Route path="/admin/restaurants" element={<AdminRestaurantsPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />

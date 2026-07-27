@@ -69,6 +69,7 @@ export const AdminLayout = () => {
     { to: '/admin/additional', label: t('additional') },
     { to: '/admin/table-categories', label: t('tables') },
     { to: '/admin/halls', label: t('halls') },
+    ...(role === 'ADMIN' ? [{ to: '/admin/extra-services', label: t('extra_services') }] : []),
     { to: '/admin/photos', label: t('photos') },
     ...(role === 'ADMIN' ? [{ to: '/admin/users', label: t('users') }] : []),
     ...(role === 'ADMIN' ? [{ to: '/admin/settings', label: t('settings') }] : []),
@@ -78,7 +79,7 @@ export const AdminLayout = () => {
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
   // Secondary tabs tucked behind the "⋯" overflow menu to keep the bar compact.
-  const OVERFLOW_PATHS = new Set(['/admin/arrangement', '/admin/subcategories', '/admin/halls', '/admin/users', '/admin/settings', '/devices']);
+  const OVERFLOW_PATHS = new Set(['/admin/arrangement', '/admin/subcategories', '/admin/halls', '/admin/extra-services', '/admin/users', '/admin/settings', '/devices']);
   const primaryNav = navItems.filter((i) => !OVERFLOW_PATHS.has(i.to));
   const overflowNav = navItems.filter((i) => OVERFLOW_PATHS.has(i.to));
   const overflowActive = overflowNav.some((i) => isActive(i.to));

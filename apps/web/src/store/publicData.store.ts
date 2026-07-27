@@ -3,12 +3,14 @@ import { publicHallService } from '../services/publicHall.service';
 import { publicMenuService } from '../services/publicMenu.service';
 import { publicTableCategoryService } from '../services/publicTableCategory.service';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
-import type { Hall, MenuItem, TableCategory } from '../types/domain';
+import { publicExtraServiceService } from '../services/publicExtraService.service';
+import type { ExtraService, Hall, MenuItem, TableCategory } from '../types/domain';
 
 type PublicDataState = {
   menuItems: MenuItem[];
   halls: Hall[];
   tableCategories: TableCategory[];
+  extraServices: ExtraService[];
   restaurantName: string | null;
   restaurantLogoUrl: string | null;
   tabletAccentColor: string | null;
@@ -29,6 +31,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   menuItems: [],
   halls: [],
   tableCategories: [],
+  extraServices: [],
   restaurantName: null,
   restaurantLogoUrl: null,
   tabletAccentColor: null,
@@ -44,24 +47,26 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   isLoaded: false,
   loadPublicData: async (restaurantId: string) => {
     if (!restaurantId) {
-      set({ menuItems: [], halls: [], tableCategories: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, isLoaded: true, isLoading: false });
+      set({ menuItems: [], halls: [], tableCategories: [], extraServices: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, isLoaded: true, isLoading: false });
       return;
     }
     if (get().isLoading) return;
     set({ isLoading: true, error: undefined });
 
     try {
-      const [menuItems, halls, tableCategories, restaurant] = await Promise.all([
+      const [menuItems, halls, tableCategories, restaurant, extraServices] = await Promise.all([
         publicMenuService.listActive(restaurantId),
         publicHallService.listActive(restaurantId),
         publicTableCategoryService.listActive(restaurantId),
         publicRestaurantService.get(restaurantId),
+        publicExtraServiceService.listActive(restaurantId).catch(() => [] as ExtraService[]),
       ]);
 
       set({
         menuItems,
         halls,
         tableCategories,
+        extraServices,
         restaurantName: restaurant.name,
         restaurantLogoUrl: restaurant.logoUrl,
         tabletAccentColor: restaurant.tabletAccentColor ?? null,

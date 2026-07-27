@@ -10,7 +10,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
-import type { Event, EventMenuConfig, TableCategoryPackageItem } from '../types/domain';
+import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
@@ -48,7 +48,7 @@ function PageBackground() {
 // ── Shared page header ────────────────────────────────────────────────────
 
 function PageHeader({
-  title, locale, setLocale, isLoading, t, restaurantLogoUrl, restaurantName,
+  title, locale, setLocale, isLoading, t, restaurantLogoUrl, restaurantName, onBack,
 }: {
   title: string;
   locale: Locale;
@@ -57,6 +57,8 @@ function PageHeader({
   t: (key: Parameters<typeof translate>[0]) => string;
   restaurantLogoUrl: string | null;
   restaurantName: string | null;
+  // When provided, a prominent "Back" button is rendered top-left, beneath the logo.
+  onBack?: () => void;
 }) {
   const logoSrc = restaurantLogoUrl ? getPhotoUrl(restaurantLogoUrl) : null;
   return (
@@ -86,7 +88,105 @@ function PageHeader({
           ))}
         </select>
       </div>
+
+      {/* Prominent "Back" — top-left of the screen, directly beneath the logo. */}
+      {onBack && (
+        <div className="mt-4 flex">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-2.5 rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-bold transition-all duration-200 hover:shadow-lg active:scale-[0.98]"
+            style={{
+              background: 'rgba(var(--rg-accent-rgb),0.16)',
+              color: 'var(--rg-accent)',
+              border: '1.5px solid rgba(var(--rg-accent-rgb),0.45)',
+            }}
+          >
+            <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" strokeWidth={2.4} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            {t('back')}
+          </button>
+        </div>
+      )}
     </header>
+  );
+}
+
+// ── Additional-service card (media + price + Select) ──────────────────────
+
+const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
+
+function ExtraServiceCard({
+  service, selected, onToggle, t,
+}: {
+  service: ExtraService;
+  selected: boolean;
+  onToggle: () => void;
+  t: (key: Parameters<typeof translate>[0]) => string;
+}) {
+  const media = service.media ?? [];
+  const [index, setIndex] = useState(0);
+  const current = media[Math.min(index, media.length - 1)];
+
+  return (
+    <div
+      className="flex flex-col overflow-hidden rounded-2xl transition-all"
+      style={{
+        background: selected ? 'rgba(var(--rg-accent-rgb),0.12)' : 'rgba(255,255,255,0.06)',
+        border: `1px solid ${selected ? 'rgba(var(--rg-accent-rgb),0.5)' : 'rgba(255,255,255,0.08)'}`,
+      }}
+    >
+      {current && (
+        <div style={{ position: 'relative', background: 'rgba(0,0,0,0.35)' }}>
+          {isVideoUrl(current) ? (
+            <video src={getPhotoUrl(current)} controls playsInline
+              style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+          ) : (
+            <img src={getPhotoUrl(current)} alt={service.name}
+              style={{ width: '100%', height: 170, objectFit: 'cover', display: 'block' }} />
+          )}
+          {media.length > 1 && (
+            <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1.5 p-2">
+              {media.map((m, i) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-label={`${i + 1}`}
+                  onClick={() => setIndex(i)}
+                  style={{
+                    width: 8, height: 8, borderRadius: '50%', padding: 0, border: 'none', cursor: 'pointer',
+                    background: i === index ? 'var(--rg-accent)' : 'rgba(255,255,255,0.5)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <p className="text-sm font-semibold text-white">{service.name}</p>
+        {service.description && (
+          <p className="text-xs whitespace-pre-wrap" style={{ color: 'rgba(255,255,255,0.55)' }}>
+            {service.description}
+          </p>
+        )}
+        <p className="mt-auto pt-2 text-base font-bold" style={{ color: 'var(--rg-accent)' }}>
+          {formatSum(service.priceCents)}
+        </p>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full rounded-xl py-2.5 text-sm font-bold transition-all duration-200"
+          style={selected
+            ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' }
+            : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.18)' }}
+        >
+          {selected ? `✓ ${t('selected')}` : t('select')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -102,6 +202,7 @@ export const TabletSummaryPage = () => {
     selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     childFirstCourseId, childSecondCourseIds, childThirdCourseIds,
     editingEventId,
+    selectedExtraServiceIds, toggleExtraService,
     locale, setLocale, setGuestCount, reset,
     customerName: draftCustomerName, customerPhone: draftCustomerPhone,
     secondCustomerName: draftSecondCustomerName, secondCustomerPhone: draftSecondCustomerPhone,
@@ -111,6 +212,7 @@ export const TabletSummaryPage = () => {
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
   const tableCategories   = usePublicDataStore((s) => s.tableCategories);
+  const extraServices     = usePublicDataStore((s) => s.extraServices);
   const restaurantName    = usePublicDataStore((s) => s.restaurantName);
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
   const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
@@ -155,6 +257,7 @@ export const TabletSummaryPage = () => {
       depositCents: number; amountDueCents: number; guestCount: number };
     childrenTableName?: string; childrenCount?: number; childrenRateCents?: number; childrenSubtotalCents?: number;
     childrenDishes?: { name: string; category: string; categoryLabel: string; servings: number }[];
+    extraServices?: { name: string; description?: string | null; priceCents: number }[];
     locale: Locale; restaurantName: string; restaurantLogoUrl: string | null;
   }>(null);
 
@@ -258,10 +361,19 @@ export const TabletSummaryPage = () => {
         )
       : [];
 
+  // Additional restaurant services the guest ticked — a flat per-event cost each,
+  // added on top of the per-guest table pricing.
+  const selectedServices = useMemo(
+    () => (extraServices || []).filter((s) => selectedExtraServiceIds.includes(s.id)),
+    [extraServices, selectedExtraServiceIds],
+  );
+  const servicesSubtotalCents = selectedServices.reduce((sum, s) => sum + s.priceCents, 0);
+
   const originalPerGuestCents = pricing.perGuestCents;
   const computedPerGuestCents = Math.round(originalPerGuestCents * factor);
-  // Total includes the optional children's table (adult per-guest figure is unchanged).
-  const originalTotalCents = pricing.subtotalCents + childrenSubtotalCents;
+  // Total includes the optional children's table and any chosen extra services
+  // (the adult per-guest figure is unchanged).
+  const originalTotalCents = pricing.subtotalCents + childrenSubtotalCents + servicesSubtotalCents;
   const computedTotalCents = Math.round(originalTotalCents * factor);
   const finalChildrenSubtotalCents = Math.round(childrenSubtotalCents * factor);
 
@@ -294,6 +406,17 @@ export const TabletSummaryPage = () => {
     guestCount,
   };
 
+  // Chosen services for the exports — discount is applied so the PDF adds up.
+  const servicesExport = selectedServices.length > 0
+    ? {
+        extraServices: selectedServices.map((s) => ({
+          name: s.name,
+          description: s.description ?? null,
+          priceCents: overriding ? s.priceCents : Math.round(s.priceCents * factor),
+        })),
+      }
+    : {};
+
   // Children's-table fields for the event record and exports (empty when off).
   const childrenExport = childrenActive
     ? {
@@ -319,6 +442,7 @@ export const TabletSummaryPage = () => {
     childThirdCourseIds: childrenActive ? childThirdCourseIds : [],
     childReplacements: childrenActive ? childReplacements : {},
     extras: Object.fromEntries(Object.entries(selectedItems).filter(([, q]) => q > 0)),
+    extraServiceIds: selectedExtraServiceIds,
   });
 
   const handleConfirm = async () => {
@@ -371,6 +495,7 @@ export const TabletSummaryPage = () => {
         includedDishes: buildIncludedDishes(),
         pricing: exportPricing,
         ...childrenExport,
+        ...servicesExport,
         locale,
         restaurantName: restaurantName ?? '',
         restaurantLogoUrl: restaurantLogoUrl ?? null,
@@ -401,7 +526,7 @@ export const TabletSummaryPage = () => {
           secondCustomerName: secondCustomerName.trim() || undefined, secondCustomerPhone: secondCustomerPhone.trim() || undefined,
           eventDate: eventDate && eventTime ? new Date(`${eventDate}T${eventTime}`).toISOString() : undefined,
           hallName: selectedHall?.name || '', tableCategoryName: selectedTableCategory?.name || '',
-          guestCount, selectedItems: pricedSelections, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
+          guestCount, selectedItems: pricedSelections, menuItems: menuItems || [], includedDishes, pricing: exportPricing, ...childrenExport, ...servicesExport, locale, restaurantName: restaurantName ?? '', restaurantLogoUrl: restaurantLogoUrl ?? null },
         { responseType: 'blob' }
       );
       const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
@@ -509,7 +634,11 @@ export const TabletSummaryPage = () => {
       <FingerTrail accent="var(--rg-accent)" />
 
       <div ref={revealRef} className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
-        <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName} />
+        {/* Back to the menu to tweak the current selection — the fromSummary flag
+            tells the tablet to keep the saved table/settings/dishes instead of
+            resetting to the table-category picker. */}
+        <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName}
+          onBack={() => navigate('/tablet', { state: { fromSummary: true } })} />
 
         <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
 
@@ -691,6 +820,37 @@ export const TabletSummaryPage = () => {
                 </div>
               )}
             </section>
+
+            {/* Additional restaurant services — shown before the booking is
+                finalized; ticking one adds its price to the total. */}
+            {extraServices.length > 0 && (
+              <section className="rg-card p-4 sm:p-6 reveal">
+                <p className="rg-heading">{t('extra_services')}</p>
+                <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  {t('extra_services_pick_hint')}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {extraServices.map((service) => (
+                    <ExtraServiceCard
+                      key={service.id}
+                      service={service}
+                      selected={selectedExtraServiceIds.includes(service.id)}
+                      onToggle={() => toggleExtraService(service.id)}
+                      t={t}
+                    />
+                  ))}
+                </div>
+                {servicesSubtotalCents > 0 && (
+                  <div className="mt-4 flex items-baseline justify-between gap-2 rounded-2xl px-4 py-3"
+                    style={{ background: 'rgba(var(--rg-accent-rgb),0.12)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }}>
+                    <span className="rg-label">{t('services_subtotal')}</span>
+                    <span className="text-base font-bold whitespace-nowrap" style={{ color: 'var(--rg-accent)' }}>
+                      {formatSum(servicesSubtotalCents)}
+                    </span>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
 
           {/* ── Sidebar ── */}
@@ -817,6 +977,22 @@ export const TabletSummaryPage = () => {
                 </div>
               )}
 
+              {/* Additional services line */}
+              {selectedServices.length > 0 && (
+                <div className="px-4 sm:px-6 pt-3">
+                  <div className="flex items-baseline justify-between gap-2 py-3"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.55)' }} className="text-sm">
+                      {t('extra_services')}
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}> · {selectedServices.length}</span>
+                    </span>
+                    <span className="font-semibold whitespace-nowrap text-white">
+                      {formatSum(Math.round(servicesSubtotalCents * factor))}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Total */}
               <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-3 sm:pt-4">
                 <div className="rounded-2xl px-4 sm:px-5 py-3 sm:py-4"
@@ -868,15 +1044,6 @@ export const TabletSummaryPage = () => {
             {/* Actions */}
             <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
               <p className="rg-label">{t('actions')}</p>
-
-              {/* Back to the menu to tweak the current selection — the fromSummary
-                  flag tells the tablet to keep the saved table/settings/dishes
-                  instead of resetting to the table-category picker. */}
-              <button type="button" onClick={() => navigate('/tablet', { state: { fromSummary: true } })}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
-                style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                ← {t('edit_selection')}
-              </button>
 
               <button type="button"
                 disabled={confirmDisabled || isSubmitting}

@@ -36,6 +36,8 @@ interface SummaryData {
   childrenRateCents?: number;
   childrenSubtotalCents?: number;
   childrenDishes?: { name: string; category: string; categoryLabel?: string; servings?: number }[];
+  // Additional paid restaurant services the guest selected on the Summary page.
+  extraServices?: { name: string; description?: string | null; priceCents: number }[];
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -319,6 +321,17 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
       }
     }
 
+    // ── Additional restaurant services (name → price, not a quantity) ─────
+    const extraServices = data.extraServices ?? [];
+    if (extraServices.length > 0) {
+      sectionRow(t('extra_services').toUpperCase());
+      for (const service of extraServices) {
+        const label = service.description ? `${service.name} — ${service.description}` : service.name;
+        dataRow(label, formatSom(service.priceCents), shade);
+        shade = !shade;
+      }
+    }
+
     // ── Pricing rows at the bottom of the table ───────────────────────────
     const hasDiscount = !!data.pricing.hasDiscount && (data.pricing.discountPercent ?? 0) > 0;
     const totalCents = data.pricing.totalCents ?? data.pricing.perGuestCents;
@@ -337,6 +350,10 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
     if (data.childrenTableName && (data.childrenSubtotalCents ?? 0) > 0) {
       const per = data.childrenRateCents != null ? ` (${data.childrenCount} × ${formatSom(data.childrenRateCents)})` : '';
       dataRow(`${t('children_table')}${per}`, formatSom(data.childrenSubtotalCents ?? 0), false);
+    }
+    const servicesTotalCents = extraServices.reduce((sum, sv) => sum + sv.priceCents, 0);
+    if (servicesTotalCents > 0) {
+      dataRow(t('extra_services'), formatSom(servicesTotalCents), false);
     }
     if (hasDiscount && data.pricing.originalTotalCents != null) {
       dataRow(`${t('total')} (${t('original_price')})`, formatSom(data.pricing.originalTotalCents), false);

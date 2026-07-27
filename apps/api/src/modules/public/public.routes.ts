@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { MenuRepository } from '../menu/menu.repository.js';
 import { HallRepository } from '../hall/hall.repository.js';
+import { ExtraServiceRepository } from '../extraService/extraService.repository.js';
 import { TableCategoryRepository } from '../tableCategory/tableCategory.repository.js';
 import { RestaurantRepository } from '../restaurant/restaurant.repository.js';
 import { generateSummaryPdf } from './pdf.service.js';
@@ -42,6 +43,7 @@ const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
+const extraServiceRepository = new ExtraServiceRepository();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
 // Flyer "form" block → call-back request for the manager.
@@ -132,6 +134,15 @@ router.get('/table-categories', async (request, response, next) => {
     const restaurantId = String(request.query.restaurantId ?? '');
     if (!restaurantId) { response.json([]); return; }
     response.json(await tableCategoryRepository.listActive(restaurantId));
+  } catch (error) { next(error); }
+});
+
+// Additional paid services offered by the restaurant, shown on the tablet Summary page.
+router.get('/extra-services', async (request, response, next) => {
+  try {
+    const restaurantId = String(request.query.restaurantId ?? '');
+    if (!restaurantId) { response.json([]); return; }
+    response.json(await extraServiceRepository.listActive(restaurantId));
   } catch (error) { next(error); }
 });
 

@@ -28,6 +28,8 @@ interface SummaryData {
   childrenCount?: number;
   childrenRateCents?: number;
   childrenSubtotalCents?: number;
+  // Additional paid restaurant services the guest selected on the Summary page.
+  extraServices?: { name: string; description?: string | null; priceCents: number }[];
   pricing: {
     perGuestCents: number;
     originalPerGuestCents?: number;
@@ -191,6 +193,32 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
     }
   });
 
+  // Additional restaurant services
+  const extraServices = data.extraServices ?? [];
+  if (extraServices.length > 0) {
+    worksheet.addRow([]);
+    worksheet.addRow([translate('extra_services', data.locale)]);
+    const servicesHeaderRow = worksheet.lastRow!.number;
+    worksheet.getCell(`A${servicesHeaderRow}`).font = { bold: true, size: 14, color: { argb: 'FF1F4E78' } };
+    worksheet.getCell(`A${servicesHeaderRow}`).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' }
+    };
+    extraServices.forEach((service) => {
+      const row = worksheet.addRow([service.name, '', '', '', tiyinToSom(service.priceCents)]);
+      row.eachCell((cell) => {
+        cell.font = { ...cell.font, family: 2 };
+        cell.alignment = { wrapText: true, vertical: 'top' };
+      });
+      if (service.description) {
+        const descRow = worksheet.addRow([service.description, '', '', '', '']);
+        descRow.font = { italic: true, size: 10, family: 2 };
+        descRow.getCell(1).alignment = { wrapText: true, vertical: 'top' };
+      }
+    });
+  }
+
   // Pricing
   worksheet.addRow([]);
   worksheet.addRow([translate('pricing', data.locale)]);
@@ -222,6 +250,15 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   perGuestRow.getCell(1).font = { bold: true, family: 2 };
   perGuestRow.getCell(5).font = { bold: true, family: 2 };
   perGuestRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+
+  // Additional services subtotal
+  const servicesTotalCents = extraServices.reduce((sum, sv) => sum + sv.priceCents, 0);
+  if (servicesTotalCents > 0) {
+    const svRow = worksheet.addRow([translate('extra_services', data.locale), '', '', '', tiyinToSom(servicesTotalCents)]);
+    svRow.getCell(1).font = { family: 2 };
+    svRow.getCell(5).font = { family: 2 };
+    svRow.eachCell((cell) => { cell.alignment = { wrapText: true }; });
+  }
 
   // Children's table line
   if (data.childrenTableName && (data.childrenSubtotalCents ?? 0) > 0) {
