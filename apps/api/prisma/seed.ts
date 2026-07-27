@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Independent of the owner/restaurant seeding below, which returns early when
+  // no OWNER exists — the NFC account must be created either way.
+  await seedNfcMaker();
+
   let owner = await prisma.adminUser.findFirst({
     where: { role: AdminRole.OWNER },
     orderBy: { createdAt: 'asc' }
@@ -30,8 +34,6 @@ async function main() {
       console.log(`Created owner account "${username}".`);
     }
   }
-
-  await seedNfcMaker();
 
   const existing = await prisma.restaurant.findFirst({
     where: { ownerId: owner.id, name: 'Madinabek' }
