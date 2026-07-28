@@ -7,6 +7,8 @@ import { translate, locales, type Locale } from '../utils/translate';
 import { buildConnectLoginUrl } from '../utils/subdomain';
 import { NfcPlaquesPage } from './NfcPlaquesPage';
 import { NfcBuilderPage } from './NfcBuilderPage';
+import { NfcTemplatesPage } from './NfcTemplates';
+import { NfcTemplateEditorPage } from './NfcTemplateEditorPage';
 import { VC_LOGO } from './branding';
 import './vconnect.css';
 
@@ -36,15 +38,39 @@ export const NfcApp = () => {
       <Routes>
         <Route element={<NfcLayout />}>
           <Route path="/" element={<NfcPlaquesPage />} />
+          <Route path="/templates" element={<NfcTemplatesPage />} />
         </Route>
-        {/* The editor is full-bleed — it brings its own top bar. */}
+        {/* The editors are full-bleed — they bring their own top bar. */}
         <Route path="/plaques/new" element={<NfcBuilderPage />} />
         <Route path="/plaques/:plaqueId" element={<NfcBuilderPage />} />
+        <Route path="/templates/:templateId" element={<NfcTemplateEditorPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
 };
+
+function NfcNavLink({ to, end, children }: { to: string; end?: boolean; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      style={({ isActive }) => ({
+        padding: '7px 13px',
+        borderRadius: 7,
+        textDecoration: 'none',
+        fontSize: 12.5,
+        letterSpacing: '0.03em',
+        border: '1px solid',
+        borderColor: isActive ? 'var(--vc-accent)' : 'transparent',
+        background: isActive ? 'var(--vc-accent-dim)' : 'transparent',
+        color: isActive ? 'var(--vc-accent)' : 'var(--vc-beige-dim)',
+      })}
+    >
+      {children}
+    </NavLink>
+  );
+}
 
 function NfcLayout() {
   const username = useAuthStore((s) => s.username);
@@ -75,6 +101,11 @@ function NfcLayout() {
           </NavLink>
 
           <span className="vc-badge" style={{ marginLeft: 4 }}>NFC</span>
+
+          <nav style={{ display: 'flex', gap: 4, marginLeft: 6 }}>
+            <NfcNavLink to="/" end>{t('vc_my_plaques')}</NfcNavLink>
+            <NfcNavLink to="/templates">{t('my_templates')}</NfcNavLink>
+          </nav>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex', gap: 4 }}>

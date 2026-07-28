@@ -15,6 +15,11 @@ export class DesignTemplateController {
   async create(request: Request, response: Response) {
     const admin = request.admin!;
     const data = createDesignTemplateSchema.parse(request.body);
+    // An NFC maker only ever designs plaques — don't let one seed flyer or
+    // invitation templates into the shared store.
+    if (admin.role === 'NFC_MAKER' && data.kind !== 'plaque') {
+      throw createHttpError(403, 'NFC makers can only create plaque templates');
+    }
     const created = await repo.create({
       ownerId: admin.id,
       name: data.name,

@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { nfcPlaqueService } from '../services/nfcPlaque.service';
-import type { DesignTheme } from '../services/designTemplate.service';
+import { designTemplateService, type DesignTheme } from '../services/designTemplate.service';
+import type { PickedDesign } from '../blocks/builtinTemplates';
+import { NfcTemplateGrid } from './NfcTemplates';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { buildPlaqueUrl } from '../utils/subdomain';
@@ -80,6 +82,9 @@ export const NfcBuilderPage = () => {
   const [theme, setTheme] = useState<DesignTheme>(PLAQUE_THEME);
   const [isPublished, setIsPublished] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  // A brand-new plaque starts at the template chooser; an existing one is
+  // already past that decision.
+  const [chosen, setChosen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -110,9 +115,10 @@ export const NfcBuilderPage = () => {
       });
       setIsPublished(existing.isPublished);
       savedSigRef.current = sig(existing.businessName, existing.slug, existing.isPublished, existing.blocks ?? [], theme);
-    } else {
-      setBlocks(seedPlaqueBlocks(''));
+      setChosen(true);
     }
+    // A new plaque stays empty until `applyTemplate` runs — the chooser below
+    // gates the editor, so seeding here would be thrown away.
     setInitialized(true);
     // theme is intentionally excluded: it is being initialised here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +129,33 @@ export const NfcBuilderPage = () => {
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(businessName));
   }, [businessName, slugTouched]);
+
+  // "Blank" falls back to the starter layout so a new plaque is never an empty
+  // page; anything else applies the picked design verbatim.
+  const applyTemplate = (picked: PickedDesign | null) => {
+    if (picked) {
+      setBlocks(structuredClone(picked.blocks));
+      setTheme({ ...PLAQUE_THEME, ...picked.theme });
+    } else {
+      setBlocks(seedPlaqueBlocks(businessName));
+      setTheme(PLAQUE_THEME);
+    }
+    setChosen(true);
+  };
+
+  const saveAsTemplate = async () => {
+    const name = window.prompt(t('template_name'), businessName.trim());
+    if (!name?.trim()) return;
+    try {
+      await designTemplateService.create({ name: name.trim(), kind: 'plaque', blocks, theme });
+      await queryClient.invalidateQueries({ queryKey: ['design-templates', 'plaque'] });
+      setError(null);
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 1800);
+    } catch (e) {
+      setError(errText(e));
+    }
+  };
 
   const currentSig = sig(businessName, slug, isPublished, blocks, theme);
   const dirty = initialized && currentSig !== savedSigRef.current;
@@ -169,6 +202,17 @@ export const NfcBuilderPage = () => {
     );
   }
 
+  // New plaque → pick a starting design first.
+  if (!plaqueId && !chosen) {
+    return (
+      <div className="vc-root" style={{ minHeight: '100vh' }}>
+        <main style={{ maxWidth: 1120, margin: '0 auto', padding: '28px 20px 64px' }}>
+          <NfcTemplateGrid mode="choose" onPick={applyTemplate} onBack={() => navigate('/')} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="vc-root" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -196,6 +240,9 @@ export const NfcBuilderPage = () => {
             {plaqueId && validSlug && (
               <LinkQrButton url={buildPlaqueUrl(slug)} filename={`nfc-${slug}`} t={t} />
             )}
+            <button type="button" className="vc-btn vc-btn-ghost" style={{ fontSize: 12.5 }} onClick={() => void saveAsTemplate()}>
+              {t('save_as_template')}
+            </button>
             <button type="button" className="vc-btn vc-btn-ghost" style={{ fontSize: 12.5 }} onClick={togglePublish} disabled={!canSave}>
               {isPublished ? t('vc_unpublish') : t('vc_publish')}
             </button>

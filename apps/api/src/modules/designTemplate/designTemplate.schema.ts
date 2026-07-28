@@ -16,7 +16,7 @@ const blockArray = z
 
 export const createDesignTemplateSchema = z.object({
   name: z.string().min(1).max(120),
-  kind: z.enum(['flyer', 'invitation']),
+  kind: z.enum(['flyer', 'invitation', 'plaque']),
   blocks: blockArray.optional(),
   theme: z.record(z.string(), z.any()).optional(),
 });

@@ -145,9 +145,107 @@ function restaurantFlyer(): BuiltinTemplate {
   };
 }
 
+// ── Ready-made NFC plaques (v-connect.uz) ───────────────────────────────────
+// A plaque is what someone sees one second after tapping their phone on a tag,
+// so these stay short: who you are, one line of why, the actions worth taking,
+// and the save-contact card. No countdowns, no RSVP, no lead forms.
+// The `vccontact` block closes every one — it is the studio's own credit line.
+
+// Warm beige card for a shop, office or studio.
+function businessPlaque(): BuiltinTemplate {
+  return {
+    id: 'builtin-plaque-business',
+    name: 'Бизнес · Беж',
+    theme: {
+      accentColor: '#c8a97a',
+      backgroundColor: '#faf7f0',
+      textColor: '#1a1817',
+      textScale: 1,
+      trailTemplate: 'sparkle',
+      trailColor: '#c8a97a',
+      particles: 'none',
+    },
+    blocks: [
+      b('image', { url: '', rounded: true }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
+      b('heading', { text: 'НАЗВАНИЕ КОМПАНИИ', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('text', { text: 'Коротко о том, чем вы занимаетесь — одна-две строки.', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 100 }),
+      b('divider', { shape: 'line', text: '' }, { type: 'fade', durationMs: 400, delayMs: 0 }),
+
+      b('button', { label: 'ПОЗВОНИТЬ', action: { kind: 'phone', value: '' } }, { type: 'slide-up', durationMs: 600, delayMs: 0 }),
+      b('button', { label: 'НАПИСАТЬ В TELEGRAM', action: { kind: 'link', value: '' } }, { type: 'slide-up', durationMs: 600, delayMs: 80 }),
+      b('savecontact', { label: 'СОХРАНИТЬ КОНТАКТ', name: '', phone: '' }, { type: 'slide-up', durationMs: 600, delayMs: 160 }),
+
+      b('divider', { shape: 'icon', text: '' }, { type: 'fade', durationMs: 400, delayMs: 0 }),
+      b('map', { label: 'КАК НАС НАЙТИ', address: '' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+      b('socials', { title: 'МЫ В СОЦСЕТЯХ', links: [] }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('vccontact', { phone: '', telegram: '', instagram: '' }, { type: 'none', durationMs: 0, delayMs: 0 }),
+    ],
+  };
+}
+
+// Dark plaque for a cafe, bar or restaurant table tag — menu link first.
+function cafePlaque(): BuiltinTemplate {
+  return {
+    id: 'builtin-plaque-cafe',
+    name: 'Кафе · Тёмный',
+    theme: {
+      accentColor: '#d8b26a',
+      backgroundColor: '#101010',
+      textColor: '#f4efe4',
+      textScale: 1,
+      trailTemplate: 'sparkle',
+      trailColor: '#d8b26a',
+      particles: 'none',
+    },
+    blocks: [
+      b('hero', { title: 'НАЗВАНИЕ', subtitle: 'ДОБРО ПОЖАЛОВАТЬ', imageUrl: '' }, { type: 'zoom', durationMs: 900, delayMs: 0 }),
+      b('button', { label: 'ОТКРЫТЬ МЕНЮ', action: { kind: 'link', value: '' } }, { type: 'slide-up', durationMs: 650, delayMs: 0 }),
+      b('button', { label: 'ЗАБРОНИРОВАТЬ СТОЛ', action: { kind: 'phone', value: '' } }, { type: 'slide-up', durationMs: 650, delayMs: 80 }),
+
+      b('divider', { shape: 'wave', text: '' }, { type: 'fade', durationMs: 400, delayMs: 0 }),
+      b('gallery', { items: [], autoSlide: true, slideInterval: 4 }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+
+      b('heading', { text: 'ЧАСЫ РАБОТЫ', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+      b('text', { text: 'Пн–Вс · 10:00 — 23:00', align: 'center' }, { type: 'fade', durationMs: 600, delayMs: 80 }),
+
+      b('map', { label: 'КАК НАС НАЙТИ', address: '' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+      b('socials', { title: '', links: [] }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('savecontact', { label: 'СОХРАНИТЬ КОНТАКТ', name: '', phone: '' }, { type: 'fade', durationMs: 600, delayMs: 0 }),
+      b('vccontact', { phone: '', telegram: '', instagram: '' }, { type: 'none', durationMs: 0, delayMs: 0 }),
+    ],
+  };
+}
+
+// A one-screen personal card: photo, name, role, the three ways to reach you.
+function personalPlaque(): BuiltinTemplate {
+  return {
+    id: 'builtin-plaque-personal',
+    name: 'Визитка · Минимал',
+    theme: {
+      accentColor: '#8c7b62',
+      backgroundColor: '#ffffff',
+      textColor: '#1c1c1c',
+      textScale: 1,
+      trailTemplate: 'sparkle',
+      trailColor: '#8c7b62',
+      particles: 'none',
+    },
+    blocks: [
+      b('image', { url: '', rounded: true }, { type: 'zoom', durationMs: 800, delayMs: 0 }),
+      b('heading', { text: 'ИМЯ ФАМИЛИЯ', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 0 }),
+      b('text', { text: 'Должность · Компания', align: 'center' }, { type: 'fade', durationMs: 700, delayMs: 100 }),
+      b('divider', { shape: 'line', text: '' }, { type: 'fade', durationMs: 400, delayMs: 0 }),
+      b('savecontact', { label: 'СОХРАНИТЬ КОНТАКТ', name: '', phone: '' }, { type: 'slide-up', durationMs: 650, delayMs: 0 }),
+      b('contacts', { title: '', phone: '', telegramUrl: '', instagramUrl: '' }, { type: 'fade', durationMs: 700, delayMs: 80 }),
+      b('vccontact', { phone: '', telegram: '', instagram: '' }, { type: 'none', durationMs: 0, delayMs: 0 }),
+    ],
+  };
+}
+
 // Built-in templates per designer kind. Rebuilt on each call so block ids are
 // fresh when applied into the editor.
 export function builtinTemplates(kind: DesignKind): BuiltinTemplate[] {
   if (kind === 'invitation') return [weddingInvitation()];
+  if (kind === 'plaque') return [businessPlaque(), cafePlaque(), personalPlaque()];
   return [restaurantFlyer()];
 }

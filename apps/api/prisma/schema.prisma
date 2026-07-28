@@ -726,7 +726,7 @@ model DesignTemplate {
   id        String   @id @default(cuid())
   ownerId   String?
   name      String
-  kind      String // flyer | invitation
+  kind      String // flyer | invitation | plaque
   blocks    Json     @default("[]")
   theme     Json     @default("{}")
   // Pinned to the top of the template chooser.

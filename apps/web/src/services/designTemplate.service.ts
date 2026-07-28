@@ -1,7 +1,7 @@
 import { httpClient } from './http';
 import type { Block } from '../blocks/types';
 
-export type DesignKind = 'flyer' | 'invitation';
+export type DesignKind = 'flyer' | 'invitation' | 'plaque';
 
 export type DesignTheme = {
   accentColor?: string | null;
