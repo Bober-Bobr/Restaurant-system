@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RichRendererProps, RsvpPayload } from './types';
 import { ADMIN_RUNTIME } from './adminRuntime';
 
@@ -79,23 +79,29 @@ export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdmi
     return () => window.removeEventListener('message', onMessage);
   }, [onRsvp, onAdminMove]);
 
-  // Live-update config/languages without reloading the iframe (keeps animations
-  // from replaying). The initial values are already baked into srcdoc above.
-  useEffect(() => {
-    if (!loadedRef.current) return;
+  // Push the current state into the frame without reloading it (which would
+  // replay every animation). The initial values are baked into srcdoc above.
+  const pushState = useCallback(() => {
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'vinvite:config', config, languages, contacts, ...(adminEdit ? { adminPlay: !!adminPlay } : {}) },
       '*',
     );
-    // `contacts` is in the deps because they load asynchronously — they are
-    // usually absent at mount and arrive a moment later.
   }, [config, languages, contacts, adminEdit, adminPlay]);
+
+  // `contacts` is fetched asynchronously and usually resolves BEFORE the frame
+  // finishes loading, so this effect alone would drop it: it bails while
+  // loadedRef is false, and the identity never changes again to re-trigger it.
+  // The onLoad handler below therefore pushes once more.
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    pushState();
+  }, [pushState]);
 
   return (
     <iframe
       ref={iframeRef}
       title="invitation"
-      onLoad={() => { loadedRef.current = true; }}
+      onLoad={() => { loadedRef.current = true; pushState(); }}
       // allow-scripts only: no same-origin access to the parent page.
       sandbox="allow-scripts allow-popups allow-downloads"
       // The frame is cross-origin (no allow-same-origin), so audio playback is
