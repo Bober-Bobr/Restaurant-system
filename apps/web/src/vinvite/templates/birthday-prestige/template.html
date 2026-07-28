@@ -530,38 +530,54 @@ a{color:inherit}
 .stop .hour{font-family:var(--mono);font-size:.62rem;letter-spacing:.24em;color:var(--brass-dk)}
 .stop h3{font-family:var(--display);font-weight:300;font-size:1.42rem;color:var(--warm-white);margin:6px 0 6px;overflow-wrap:break-word}
 
-/* ---- GALLERY: asymmetric magazine spread ---- */
-.spread{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(10px,3vw,18px);align-items:start}
-.plate{position:relative;overflow:hidden;background:var(--graphite);cursor:pointer;
-  box-shadow:0 40px 80px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04)}
-.plate .img{
-  width:100%;height:100%;background:linear-gradient(160deg,#1D1E23,#0A0A0D);
-  background-size:cover;background-position:center;
-  transform:scale(1.14);transition:transform 2.4s var(--glide);
-  animation:driftZoom var(--dz,26s) var(--calm) infinite;
+/* ---- GALLERY: Polaroid filmstrip (same treatment as the other templates) ----
+   A horizontal, snap-scrolling strip of prints. The white frames are the second
+   paper surface in an otherwise dark house, so they read as objects laid on the
+   table rather than pictures hung on the wall. */
+.filmstrip{
+  display:flex;gap:clamp(16px,4.5vw,26px);
+  padding:14px var(--gutter) 30px;
+  margin-inline:calc(var(--gutter) * -1);
+  overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
 }
-.plate.on .img{transform:scale(1)}
-@keyframes driftZoom{0%,100%{scale:1}50%{scale:1.07}}
-.plate::after{
+.filmstrip::-webkit-scrollbar{display:none}
+.polaroid{
+  flex:0 0 auto;width:min(62vw,232px);scroll-snap-align:center;cursor:pointer;
+  background:linear-gradient(168deg,var(--ivory) 0%,var(--beige) 100%);
+  padding:11px 11px 44px;border-radius:2px;
+  box-shadow:0 26px 50px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(198,162,94,.2);
+  rotate:var(--r,0deg);
+  animation:floatCard var(--fd,7s) var(--calm) var(--fdel,0s) infinite;
+  transition:transform .5s var(--glide), box-shadow .5s var(--calm), rotate .5s var(--glide);
+}
+@media (hover:hover){
+  .polaroid:hover{rotate:0deg;transform:translateY(-8px) scale(1.03);
+    box-shadow:0 36px 64px -18px rgba(0,0,0,.9), 0 0 0 1px rgba(198,162,94,.45)}
+}
+.polaroid:active{transform:scale(.98)}
+@keyframes floatCard{0%,100%{translate:0 0}50%{translate:0 -9px}}
+.polaroid .shot{
+  position:relative;aspect-ratio:1/1.06;overflow:hidden;
+  background:var(--graphite) center/cover no-repeat;
+}
+.polaroid .shot::after{ /* the same warm house light falls across every print */
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(196deg,rgba(255,206,146,.14),transparent 42%,rgba(0,0,0,.5));
+  background:linear-gradient(196deg,rgba(255,206,146,.16),transparent 44%,rgba(0,0,0,.42));
 }
-.plate figcaption{
-  position:absolute;left:14px;bottom:12px;right:14px;z-index:2;
-  font-family:var(--mono);font-size:.54rem;letter-spacing:.24em;text-transform:uppercase;
-  color:rgba(247,243,236,.82);text-shadow:0 2px 10px rgba(0,0,0,.8);
+.polaroid figcaption{
+  font-family:var(--mono);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;
+  color:#6B5F4E;text-align:center;padding-top:12px;min-height:1.2em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-/* The spread lays out in a repeating 4-plate rhythm; extra photos continue it. */
-.plate:nth-child(4n+1){grid-column:1/10;aspect-ratio:4/5}
-.plate:nth-child(4n+2){grid-column:7/13;aspect-ratio:1;margin-top:-16%;z-index:2}
-.plate:nth-child(4n+3){grid-column:1/8;aspect-ratio:5/4;margin-top:-6%}
-.plate:nth-child(4n+4){grid-column:6/13;aspect-ratio:3/4;margin-top:-4%;z-index:2}
-.plate:nth-child(4n+1){animation:hover1 15s var(--calm) infinite}
-.plate:nth-child(4n+3){animation:hover1 18s var(--calm) -6s infinite}
-.plate:nth-child(4n+2){animation:hover2 16s var(--calm) -3s infinite}
-.plate:nth-child(4n+4){animation:hover2 19s var(--calm) -9s infinite}
-@keyframes hover1{0%,100%{translate:0 0}50%{translate:0 -10px}}
-@keyframes hover2{0%,100%{translate:0 0}50%{translate:0 9px}}
+/* the swipe affordance, in place of a descriptive caption */
+.swipe-hint{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  font-family:var(--mono);font-size:.56rem;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--gray-dim);
+}
+.swipe-hint i{width:26px;height:1px;background:linear-gradient(90deg,transparent,var(--brass-dk))}
+.swipe-hint i:last-child{transform:scaleX(-1)}
 
 /* ---- THE LETTER ---- */
 .letter-stage{perspective:1600px}
@@ -846,11 +862,10 @@ a{color:inherit}
   .stop .pip{left:-120px;width:89px}
   .letter{padding:74px 68px}
   .letter .body{font-size:1.3rem}
-  .spread{gap:24px}
-  .plate:nth-child(4n+1){grid-column:1/8}
-  .plate:nth-child(4n+2){grid-column:8/13;margin-top:8%}
-  .plate:nth-child(4n+3){grid-column:1/6;margin-top:-2%}
-  .plate:nth-child(4n+4){grid-column:6/13;margin-top:-14%}
+  .filmstrip{justify-content:center;flex-wrap:wrap;overflow:visible;margin-inline:0;padding-inline:0}
+  .polaroid{width:210px}
+  .polaroid:nth-child(odd){margin-top:24px}
+  .swipe-hint{display:none}          /* nothing to swipe once the strip wraps */
   .choice{grid-template-columns:1fr 1fr}
   .rail{right:26px;height:40vh}
 }
@@ -1069,9 +1084,9 @@ a{color:inherit}
       <div class="head">
         <div class="line enter e-part"><span class="num">04</span><span class="rule"></span></div>
         <h2 class="enter e-lift" data-t="theHouse"></h2>
-        <p class="dek enter e-lift" style="--w:.12s" data-t="aFewFrames"></p>
       </div>
-      <div class="spread" id="spread"></div>
+      <div class="filmstrip" id="filmstrip"></div>
+      <p class="swipe-hint enter e-lift" aria-hidden="true"><i></i><span data-t="swipeToView"></span><i></i></p>
     </div>
   </section>
 
@@ -1221,8 +1236,8 @@ var UI = {
     dateLbl:'Дата', timeLbl:'Время', dressLbl:'Дресс-код', venueLbl:'Место',
     giftsLbl:'Подарки', contactsLbl:'Контакты', directions:'Как добраться',
     anyQuestions:'Остались вопросы?',
-    orderOfEvening:'Порядок вечера', theHouse:'Место встречи',
-    aFewFrames:'Несколько кадров зала, каким он будет.',
+    orderOfEvening:'Порядок вечера', theHouse:'Кадры',
+    swipeToView:'Листайте, чтобы посмотреть',
     aWordBefore:'Несколько слов перед встречей',
     untilDoorsOpen:'До открытия дверей',
     days:'Дни', hours:'Часы', minutes:'Минуты', seconds:'Секунды', addToCalendar:'В календарь',
@@ -1254,8 +1269,8 @@ var UI = {
     dateLbl:'Sana', timeLbl:'Vaqt', dressLbl:'Dress-kod', venueLbl:'Manzilgoh',
     giftsLbl:'Sovgalar', contactsLbl:'Kontaktlar', directions:'Qanday borish',
     anyQuestions:'Savollaringiz bormi?',
-    orderOfEvening:'Kecha tartibi', theHouse:'Uchrashuv joyi',
-    aFewFrames:'Zal qanday bolishi haqida bir necha kadr.',
+    orderOfEvening:'Kecha tartibi', theHouse:'Kadrlar',
+    swipeToView:'Korish uchun suring',
     aWordBefore:'Uchrashuvdan oldin bir necha soz',
     untilDoorsOpen:'Eshiklar ochilguncha',
     days:'Kun', hours:'Soat', minutes:'Daqiqa', seconds:'Soniya', addToCalendar:'Kalendarga qoshish',
@@ -1287,8 +1302,8 @@ var UI = {
     dateLbl:'Date', timeLbl:'Time', dressLbl:'Dress', venueLbl:'Venue',
     giftsLbl:'Gifts', contactsLbl:'Contacts', directions:'Directions',
     anyQuestions:'Any questions?',
-    orderOfEvening:'Order of the evening', theHouse:'The house',
-    aFewFrames:'A few frames of the room as it will be.',
+    orderOfEvening:'Order of the evening', theHouse:'Photographs',
+    swipeToView:'Swipe to view',
     aWordBefore:'A word before you come',
     untilDoorsOpen:'Until the doors open',
     days:'Days', hours:'Hours', minutes:'Minutes', seconds:'Seconds', addToCalendar:'Add to calendar',
@@ -1602,25 +1617,29 @@ function renderItinerary(){
 }
 
 function renderGallery(){
-  var host = one('#spread');
+  var host = one('#filmstrip');
   host.innerHTML = '';
   var items = cfg('gallery', []);
   items = Array.isArray(items) ? items.filter(function(g){ return g && g.image; }) : [];
   one('#gallery').style.display = (items.length && !hiddenKey('gallery')) ? '' : 'none';
   items.forEach(function(g, i){
     var fig = document.createElement('figure');
-    fig.className = 'plate enter e-part';
-    fig.style.setProperty('--dz', (24 + (i % 4) * 2.4).toFixed(0) + 's');
-    var img = document.createElement('div');
-    img.className = 'img';
-    loadBg(img, g.image);
-    fig.appendChild(img);
+    fig.className = 'polaroid enter e-lift';
+    /* Alternating tilt and desynced float, so the strip reads as loose prints. */
+    fig.style.setProperty('--r', ((i % 2 ? 1 : -1) * (2 + (i % 3))).toFixed(0) + 'deg');
+    fig.style.setProperty('--fd', (6.8 + (i % 4) * 0.6).toFixed(1) + 's');
+    fig.style.setProperty('--fdel', (-(i * 1.5)).toFixed(1) + 's');
+
+    var shot = document.createElement('div');
+    shot.className = 'shot';
+    loadBg(shot, g.image);
+    fig.appendChild(shot);
+
     var cap = loc(g.caption);
-    if (cap) {
-      var fc = document.createElement('figcaption');
-      fc.textContent = cap;
-      fig.appendChild(fc);
-    }
+    var fc = document.createElement('figcaption');
+    fc.textContent = cap || '';
+    fig.appendChild(fc);
+
     fig.addEventListener('click', function(){ openLightbox(g.image, cap); });
     host.appendChild(fig);
   });
@@ -1647,8 +1666,14 @@ var dials = { d: one('[data-t-cd="d"]'), h: one('[data-t-cd="h"]'), m: one('[dat
 var two = function(n){ return String(Math.max(0,n)).padStart(2,'0'); };
 
 function settle(dial, value){
-  var now = dial.querySelector('.d');
+  /* The incoming digit is appended AFTER the outgoing one, so the FIRST .d is
+     the stale one mid-crossfade. Always read the last, and sweep up anything
+     still fading from an earlier change — otherwise a burst of updates inside
+     one animation leaves several numerals stacked in the same box. */
+  var kids = dial.querySelectorAll('.d');
+  var now = kids.length ? kids[kids.length - 1] : null;
   if (!now || now.textContent === value) return;
+  for (var i = 0; i < kids.length - 1; i++) kids[i].remove();
   var next = document.createElement('span');
   next.className = 'd';
   next.textContent = value;
@@ -1667,18 +1692,40 @@ function settle(dial, value){
     { duration:700, easing:curve });
 }
 
-function strike(){
-  var left = eventDate().getTime() - Date.now();
-  if (left <= 0) {
-    Object.keys(dials).forEach(function(k){ settle(dials[k], '00'); });
-    return;
-  }
+function countdownParts(){
+  var left = Math.max(0, eventDate().getTime() - Date.now());
   var s = Math.floor(left / 1000);
-  settle(dials.d, two(Math.floor(s / 86400)));
-  settle(dials.h, two(Math.floor(s / 3600) % 24));
-  settle(dials.m, two(Math.floor(s / 60) % 60));
-  settle(dials.s, two(s % 60));
+  return {
+    d: two(Math.floor(s / 86400)),
+    h: two(Math.floor(s / 3600) % 24),
+    m: two(Math.floor(s / 60) % 60),
+    s: two(s % 60)
+  };
 }
+
+/* The once-a-second tick: values cross-fade into each other. */
+function strike(){
+  var v = countdownParts();
+  Object.keys(dials).forEach(function(k){ settle(dials[k], v[k]); });
+}
+
+/* A hard reset, used whenever the config changes. Editing the date in the
+   builder republishes the config on every keystroke; animating each of those
+   would flicker, and waiting for the next tick would leave the dials showing
+   the previous date for up to a second. So collapse each dial to a single
+   digit holding the new value at once. */
+function renderCountdown(){
+  var v = countdownParts();
+  Object.keys(dials).forEach(function(k){
+    var dial = dials[k];
+    dial.textContent = '';
+    var span = document.createElement('span');
+    span.className = 'd';
+    span.textContent = v[k];
+    dial.appendChild(span);
+  });
+}
+
 strike();
 setInterval(strike, 1000);
 
@@ -1896,6 +1943,7 @@ function renderAll(){
   renderLedger();
   renderItinerary();
   renderGallery();
+  renderCountdown();
   renderMusic();
   renderLangbar();
   var logo = one('#vconnectLogo');
