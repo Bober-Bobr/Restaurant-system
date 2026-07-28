@@ -1,4 +1,9 @@
 /// <reference types="node" />
+// Loads apps/api/.env so the script is runnable on its own:
+//   npx tsx prisma/seed.ts
+// (the server gets DATABASE_URL through src/config/env.ts, but this script is
+// executed directly by tsx and nothing else populates the environment).
+import 'dotenv/config';
 import { AdminRole, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
