@@ -738,6 +738,38 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
             )}
           </div>
 
+          {/* ── Page-wide text size ── */}
+          <div>
+            <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_text_size')}</div>
+            <div style={{ padding: 10, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>A</span>
+              <input
+                type="range"
+                min={0.7}
+                max={1.5}
+                step={0.05}
+                value={layer.textScale ?? 1}
+                onChange={(e) => save({ ...layer, textScale: Number(e.target.value) })}
+                style={{ flex: 1 }}
+              />
+              <span style={{ fontSize: 16, color: '#94a3b8' }}>A</span>
+              <span style={{ fontSize: 12, color: '#e2e8f0', minWidth: 44, textAlign: 'right' }}>
+                {Math.round((layer.textScale ?? 1) * 100)}%
+              </span>
+              {layer.textScale != null && layer.textScale !== 1 && (
+                <button
+                  type="button"
+                  className="vi-btn vi-btn-ghost"
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  onClick={() => save({ ...layer, textScale: undefined })}
+                >
+                  {t('adm_reset')}
+                </button>
+              )}
+            </div>
+            <p style={{ margin: '6px 2px 0', fontSize: 11, color: '#94a3b8' }}>{t('adm_text_size_hint')}</p>
+          </div>
+
           {/* ── Falling particles ── */}
           <ParticlesEditor
             particles={layer.particles}

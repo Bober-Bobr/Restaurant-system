@@ -96,6 +96,14 @@ export const ADMIN_RUNTIME = `(function(){
 
   function renderStyles(){
     var css = KEYFRAMES;
+    /* Page-wide text size. Templates size everything in rem and none of them
+       sets a root font-size, so scaling the root scales the whole page. This
+       rule is !important and lives in a <style> appended after the template's
+       own, so it wins regardless of where the template declares html rules. */
+    var ts = LAYER.textScale;
+    if (typeof ts === 'number' && ts > 0 && ts !== 1) {
+      css += 'html{font-size:' + (Math.round(ts * 1000) / 10) + '% !important}';
+    }
     var els = LAYER.elements || [];
     for (var e = 0; e < els.length; e++) { if (els[e]) css += pathCss(els[e]); }
     var styles = LAYER.styles || [];

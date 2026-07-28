@@ -210,4 +210,10 @@ export type AdminLayer = {
   styles?: AdminSectionStyle[];
   particles?: AdminParticles;
   trail?: AdminTrail;
+  // Page-wide text size multiplier (1 = the template's own sizing). Every rich
+  // template sizes its type in `rem` and none sets a root font-size, so the
+  // runtime scales the root and the whole page follows proportionally. The
+  // `vw` half of a `clamp()` deliberately does not scale — those are the
+  // responsive caps that keep display type from overflowing narrow phones.
+  textScale?: number;
 };
