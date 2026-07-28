@@ -1319,6 +1319,14 @@ var all = function(s,c){ return Array.prototype.slice.call((c||document).querySe
 var STILL = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var between = function(a,b){ return a + Math.random()*(b-a); };
 
+/* Every .animate() call in this file is decoration. Route them through here so
+   a browser without the Web Animations API — or reduced-motion — degrades to a
+   plain swap instead of throwing and killing the rest of the script. */
+function anim(el, frames, opts){
+  if (STILL || !el || typeof el.animate !== 'function') return null;
+  try { return el.animate(frames, opts); } catch (e) { return null; }
+}
+
 function t(key){ return (UI[lang] && UI[lang][key]) || UI.ru[key] || key; }
 function loc(v){
   if (v == null) return '';
@@ -1641,22 +1649,22 @@ var two = function(n){ return String(Math.max(0,n)).padStart(2,'0'); };
 function settle(dial, value){
   var now = dial.querySelector('.d');
   if (!now || now.textContent === value) return;
-  if (STILL) { now.textContent = value; return; }
   var next = document.createElement('span');
   next.className = 'd';
   next.textContent = value;
   dial.appendChild(next);
   var curve = 'cubic-bezier(.19,1,.22,1)';
-  now.animate(
+  var out = anim(now,
     [{ opacity:1, filter:'blur(0px)', transform:'translateY(0) scale(1)' },
      { opacity:0, filter:'blur(6px)', transform:'translateY(-24%) scale(.96)' }],
-    { duration:620, easing:curve, fill:'forwards' }
-  ).onfinish = function(){ now.remove(); };
-  next.animate(
+    { duration:620, easing:curve, fill:'forwards' });
+  /* Without an animation the outgoing digit has to go immediately, or both
+     numerals would sit stacked in the same box. */
+  if (out) out.onfinish = function(){ now.remove(); }; else now.remove();
+  anim(next,
     [{ opacity:0, filter:'blur(6px)', transform:'translateY(22%) scale(1.04)' },
      { opacity:1, filter:'blur(0px)', transform:'translateY(0) scale(1)' }],
-    { duration:700, easing:curve }
-  );
+    { duration:700, easing:curve });
 }
 
 function strike(){
@@ -1722,15 +1730,16 @@ one('#attendRow').addEventListener('click', function(e){
 
 function setSeats(n){
   seats = Math.min(20, Math.max(1, n));
-  if (STILL) { seatVal.textContent = seats; return; }
-  seatVal.animate(
+  var a = anim(seatVal,
     [{ opacity:1, transform:'translateY(0)' },
      { opacity:0, transform:'translateY(-40%)', offset:.45 },
      { opacity:0, transform:'translateY(40%)',  offset:.46 },
      { opacity:1, transform:'translateY(0)' }],
-    { duration:460, easing:'cubic-bezier(.19,1,.22,1)' }
-  );
-  setTimeout(function(){ seatVal.textContent = seats; }, 200);
+    { duration:460, easing:'cubic-bezier(.19,1,.22,1)' });
+  /* Swap the numeral at the midpoint of the flip, or straight away if there is
+     no flip to hide it behind. */
+  if (a) setTimeout(function(){ seatVal.textContent = seats; }, 200);
+  else seatVal.textContent = seats;
 }
 one('#plus').addEventListener('click',  function(){ setSeats(seats + 1); });
 one('#minus').addEventListener('click', function(){ setSeats(seats - 1); });
@@ -1763,13 +1772,10 @@ one('#rsvpForm').addEventListener('submit', function(e){
     fine.textContent = t('nameRequired');
     fine.style.color = 'var(--copper)';
     nameEl.focus();
-    if (!STILL) {
-      nameEl.animate(
-        [{ transform:'translateX(0)' }, { transform:'translateX(-5px)' },
-         { transform:'translateX(5px)' }, { transform:'translateX(0)' }],
-        { duration:320, easing:'ease-out' }
-      );
-    }
+    anim(nameEl,
+      [{ transform:'translateX(0)' }, { transform:'translateX(-5px)' },
+       { transform:'translateX(5px)' }, { transform:'translateX(0)' }],
+      { duration:320, easing:'ease-out' });
     return;
   }
   nameField.classList.remove('invalid');
