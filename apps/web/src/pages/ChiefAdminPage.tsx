@@ -11,7 +11,6 @@ import type { AdminRole } from '../store/auth.store';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { buildAbsoluteUrl } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
-import { VConnectContactCard } from '../components/VConnectContactCard';
 
 const formatError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
@@ -356,8 +355,6 @@ export const ChiefAdminPage = () => {
                 {createUser.isPending ? 'Creating...' : 'Create'}
               </button>
             </section>
-
-            <VConnectContactCard />
 
             <section>
               <h2 style={{ fontSize: 16, marginBottom: 12 }}>All users ({users.length})</h2>

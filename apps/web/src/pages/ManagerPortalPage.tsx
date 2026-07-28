@@ -11,6 +11,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 import { flyerCoverUrl } from '../blocks/cover';
 import networkingLogoSrc from '../assets/networking-logo.png';
+import { VConnectContactCard } from '../components/VConnectContactCard';
 
 export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
   pageTitle?: string;
@@ -217,6 +218,12 @@ export const ManagerPortalPage = () => {
         {!flyersQuery.isLoading && flyers.length === 0 && (
           <p style={{ color: 'rgba(226,232,240,0.5)', marginTop: 16 }}>{t('no_flyers_yet')}</p>
         )}
+
+        {/* Applies to every flyer this manager publishes, so it lives with the
+            flyers rather than in the platform admin. */}
+        <div style={{ marginTop: 32 }}>
+          <VConnectContactCard />
+        </div>
       </main>
     </div>
   );
