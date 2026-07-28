@@ -17,16 +17,18 @@ export const PlatformContactCard = () => {
 
   const [phone, setPhone] = useState('');
   const [telegram, setTelegram] = useState('');
+  const [instagram, setInstagram] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!data) return;
     setPhone(data.phone ?? '');
     setTelegram(data.telegram ?? '');
+    setInstagram(data.instagram ?? '');
   }, [data]);
 
   const save = useMutation({
-    mutationFn: () => vinviteService.savePlatformContact({ phone: phone.trim(), telegram: telegram.trim() }),
+    mutationFn: () => vinviteService.savePlatformContact({ phone: phone.trim(), telegram: telegram.trim(), instagram: instagram.trim() }),
     onSuccess: async () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -54,6 +56,10 @@ export const PlatformContactCard = () => {
       <div>
         <label className="vi-label">{t('pc_telegram')}</label>
         <input className="vi-input" value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@username" />
+      </div>
+      <div>
+        <label className="vi-label">{t('pc_instagram')}</label>
+        <input className="vi-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@username" />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

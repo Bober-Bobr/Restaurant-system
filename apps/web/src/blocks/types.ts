@@ -215,11 +215,12 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   // attribution footer, not in the normal block flow.
   vccontact: {
     type: 'vccontact', icon: '🛠', labelKey: 'bl_vccontact',
-    defaultProps: { phone: '', telegram: '' },
+    defaultProps: { phone: '', telegram: '', instagram: '' },
     defaultAnim: { type: 'none', durationMs: 0, delayMs: 0 },
     fields: [
       { key: 'phone', labelKey: 'bf_vc_phone', type: 'text' },
       { key: 'telegram', labelKey: 'bf_vc_telegram', type: 'text' },
+      { key: 'instagram', labelKey: 'bf_vc_instagram', type: 'text' },
     ],
   },
   rsvp: {

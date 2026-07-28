@@ -17,7 +17,7 @@ type InMsg =
   | { type: 'vinvite:height'; height: number }
   | { type: 'vinvite:admin-move'; id: string; x: number; y: number; kf?: number };
 
-function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string }): string {
+function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string; instagram: string }): string {
   // The template runs on the opaque `about:srcdoc` origin, so it can't read the
   // host origin itself. Inject it so templates can resolve their own bundled
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
@@ -28,7 +28,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     window.__ORIGIN__ = ${JSON.stringify(origin)};
     window.__ADMIN_EDIT__ = ${adminEdit ? 'true' : 'false'};
     window.__ADMIN_PLAY__ = ${adminPlay ? 'true' : 'false'};
-    window.__CONTACTS__ = ${JSON.stringify(contacts ?? { phone: '', telegram: '' })};
+    window.__CONTACTS__ = ${JSON.stringify(contacts ?? { phone: '', telegram: '', instagram: '' })};
   </script>`;
   // The Design+ overlay runtime (system-admin custom elements / palettes)
   // rides along in every template, after the template's own script.

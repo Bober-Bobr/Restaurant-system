@@ -20,16 +20,18 @@ export const VConnectContactCard = () => {
 
   const [phone, setPhone] = useState('');
   const [telegram, setTelegram] = useState('');
+  const [instagram, setInstagram] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!data) return;
     setPhone(data.phone ?? '');
     setTelegram(data.telegram ?? '');
+    setInstagram(data.instagram ?? '');
   }, [data]);
 
   const save = useMutation({
-    mutationFn: () => platformContactService.save({ phone: phone.trim(), telegram: telegram.trim() }),
+    mutationFn: () => platformContactService.save({ phone: phone.trim(), telegram: telegram.trim(), instagram: instagram.trim() }),
     onSuccess: async () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -55,6 +57,10 @@ export const VConnectContactCard = () => {
         <label style={{ display: 'grid', gap: 6, fontSize: 12.5, color: 'rgba(226,232,240,0.7)' }}>
           {t('pc_telegram')}
           <input className="adm-input" value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@username" />
+        </label>
+        <label style={{ display: 'grid', gap: 6, fontSize: 12.5, color: 'rgba(226,232,240,0.7)' }}>
+          {t('pc_instagram')}
+          <input className="adm-input" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@username" />
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button type="submit" className="adm-btn-primary" disabled={save.isPending}>

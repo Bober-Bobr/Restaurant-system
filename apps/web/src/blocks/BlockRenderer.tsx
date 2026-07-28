@@ -214,10 +214,11 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'vccontact':
       return (
         <VConnectContact
-          phone={str(p, 'phone')} telegram={str(p, 'telegram')}
+          phone={str(p, 'phone')} telegram={str(p, 'telegram')} instagram={str(p, 'instagram')}
           title={translate('vc_contact_title', 'ru')}
           callLabel={translate('vc_call', 'ru')}
           telegramLabel={translate('vc_telegram', 'ru')}
+          instagramLabel={translate('vc_instagram', 'ru')}
         />
       );
     default:
@@ -825,10 +826,10 @@ export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) 
 
 // The V-connect contact info a flyer carries (in its single `vccontact` block),
 // used to render the contact card beneath the attribution footer.
-export function findVcContact(blocks: Block[]): { phone: string; telegram: string } | null {
+export function findVcContact(blocks: Block[]): { phone: string; telegram: string; instagram: string } | null {
   const b = blocks.find((x) => x.type === 'vccontact' && !x.hidden);
   if (!b) return null;
-  return { phone: str(b.props, 'phone'), telegram: str(b.props, 'telegram') };
+  return { phone: str(b.props, 'phone'), telegram: str(b.props, 'telegram'), instagram: str(b.props, 'instagram') };
 }
 
 // Mandatory attribution shown at the bottom of every flyer: "Website developed
@@ -858,14 +859,16 @@ export function VConnectFooter({ label }: { label: string }) {
 // "Contact us" section for reaching V-connect, rendered just below the footer
 // ad. Phone and Telegram are set per flyer in the builder (the `vccontact`
 // block). Renders nothing until at least one is filled in.
-export function VConnectContact({ phone, telegram, title, callLabel, telegramLabel }: {
-  phone?: string | null; telegram?: string | null;
-  title: string; callLabel: string; telegramLabel: string;
+export function VConnectContact({ phone, telegram, instagram, title, callLabel, telegramLabel, instagramLabel }: {
+  phone?: string | null; telegram?: string | null; instagram?: string | null;
+  title: string; callLabel: string; telegramLabel: string; instagramLabel: string;
 }) {
   const tel = (phone || '').trim();
   const tg = (telegram || '').trim();
-  if (!tel && !tg) return null;
+  const ig = (instagram || '').trim();
+  if (!tel && !tg && !ig) return null;
   const tgHref = tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/^@/, '')}`;
+  const igHref = ig.startsWith('http') ? ig : `https://instagram.com/${ig.replace(/^@/, '')}`;
   const chip: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 999,
     fontSize: 14, fontWeight: 700, letterSpacing: '0.04em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)',
@@ -877,6 +880,7 @@ export function VConnectContact({ phone, telegram, title, callLabel, telegramLab
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
         {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: '#000', color: '#fff' }}>{callLabel} {tel}</a>}
         {tg && <a href={tgHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: '#fff', color: '#000' }}>{telegramLabel}</a>}
+        {ig && <a href={igHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: '#fff', color: '#000' }}>{instagramLabel}</a>}
       </div>
     </div>
   );

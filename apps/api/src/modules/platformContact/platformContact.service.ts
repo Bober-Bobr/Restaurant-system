@@ -4,9 +4,9 @@ import { prisma } from '../../db/prisma.js';
 export const BRANDS = ['vconnect', 'vinvite'] as const;
 export type Brand = (typeof BRANDS)[number];
 
-export type PlatformContactDto = { brand: Brand; phone: string; telegram: string };
+export type PlatformContactDto = { brand: Brand; phone: string; telegram: string; instagram: string };
 
-const EMPTY = (brand: Brand): PlatformContactDto => ({ brand, phone: '', telegram: '' });
+const EMPTY = (brand: Brand): PlatformContactDto => ({ brand, phone: '', telegram: '', instagram: '' });
 
 export class PlatformContactService {
   // Always returns a row per brand — a brand that has never been configured
@@ -16,24 +16,27 @@ export class PlatformContactService {
     return BRANDS.map((brand) => {
       const row = rows.find((r) => r.brand === brand);
       return row
-        ? { brand, phone: row.phone ?? '', telegram: row.telegram ?? '' }
+        ? { brand, phone: row.phone ?? '', telegram: row.telegram ?? '', instagram: row.instagram ?? '' }
         : EMPTY(brand);
     });
   }
 
   async get(brand: Brand): Promise<PlatformContactDto> {
     const row = await prisma.platformContact.findUnique({ where: { brand } });
-    return row ? { brand, phone: row.phone ?? '', telegram: row.telegram ?? '' } : EMPTY(brand);
+    return row
+      ? { brand, phone: row.phone ?? '', telegram: row.telegram ?? '', instagram: row.instagram ?? '' }
+      : EMPTY(brand);
   }
 
-  async upsert(brand: Brand, data: { phone?: string; telegram?: string }): Promise<PlatformContactDto> {
+  async upsert(brand: Brand, data: { phone?: string; telegram?: string; instagram?: string }): Promise<PlatformContactDto> {
     const phone = (data.phone ?? '').trim() || null;
     const telegram = (data.telegram ?? '').trim() || null;
+    const instagram = (data.instagram ?? '').trim() || null;
     const row = await prisma.platformContact.upsert({
       where: { brand },
-      create: { brand, phone, telegram },
-      update: { phone, telegram },
+      create: { brand, phone, telegram, instagram },
+      update: { phone, telegram, instagram },
     });
-    return { brand, phone: row.phone ?? '', telegram: row.telegram ?? '' };
+    return { brand, phone: row.phone ?? '', telegram: row.telegram ?? '', instagram: row.instagram ?? '' };
   }
 }

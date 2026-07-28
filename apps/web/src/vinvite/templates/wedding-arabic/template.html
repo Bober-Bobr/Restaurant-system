@@ -2093,6 +2093,7 @@ function renderPlatformContacts(){
   host.innerHTML = '';
   var phone = (c.phone || '').trim();
   var tg = (c.telegram || '').trim();
+  var ig = (c.instagram || '').trim();
   function link(href, label, svg){
     var a = document.createElement('a');
     a.href = href; a.target = '_blank'; a.rel = 'noopener';
@@ -2104,6 +2105,9 @@ function renderPlatformContacts(){
   if (tg) host.appendChild(link(tg.indexOf('http') === 0 ? tg : 'https://t.me/' + tg.replace(/^@/,''),
     tg.replace(/^https?:\/\/t\.me\//,'@').replace(/^@?/,'@'),
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>'));
+  if (ig) host.appendChild(link(ig.indexOf('http') === 0 ? ig : 'https://instagram.com/' + ig.replace(/^@/,''),
+    ig.replace(/^https?:\/\/(www\.)?instagram\.com\//,'@').replace(/^@?/,'@'),
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>'));
 }
 
 function renderAll(){

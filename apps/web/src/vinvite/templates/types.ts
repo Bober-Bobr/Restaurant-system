@@ -80,7 +80,7 @@ export type RichRendererProps = {
   languages: Locale[];
   // Studio contact details rendered under the "developed by" credit. Global to
   // the platform and editable only by a SYSTEM_ADMIN — never per invitation.
-  contacts?: { phone: string; telegram: string };
+  contacts?: { phone: string; telegram: string; instagram: string };
   // Guest-facing published mode enables the RSVP → server bridge.
   onRsvp?: (payload: RsvpPayload) => Promise<void>;
   // Editor mode: a border-radius/frame hint, and it disables RSVP persistence.

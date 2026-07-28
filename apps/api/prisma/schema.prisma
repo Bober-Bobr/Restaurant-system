@@ -915,6 +915,7 @@ model PlatformContact {
   brand     String   @unique // "vconnect" | "vinvite"
   phone     String?
   telegram  String?
+  instagram String?
   updatedAt DateTime @updatedAt
 }
 

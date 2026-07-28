@@ -122,10 +122,11 @@ export const PublicInvitationPage = () => {
               the platform-wide v-connect details unless this flyer carries its
               own vccontact block. */}
           <VConnectContact
-            phone={flyerContact.phone} telegram={flyerContact.telegram}
+            phone={flyerContact.phone} telegram={flyerContact.telegram} instagram={flyerContact.instagram}
             title={translate('vc_contact_title', 'ru')}
             callLabel={translate('vc_call', 'ru')}
             telegramLabel={translate('vc_telegram', 'ru')}
+            instagramLabel={translate('vc_instagram', 'ru')}
           />
         </div>
       </main>

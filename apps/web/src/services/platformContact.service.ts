@@ -2,7 +2,7 @@ import axios from 'axios';
 import { httpClient } from './http';
 
 export type Brand = 'vconnect' | 'vinvite';
-export type PlatformContact = { brand: Brand; phone: string; telegram: string };
+export type PlatformContact = { brand: Brand; phone: string; telegram: string; instagram: string };
 
 const apiRoot = (): string =>
   (import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api').replace(/\/$/, '');
@@ -11,8 +11,8 @@ const apiRoot = (): string =>
 // require a session. Failure is non-fatal: the page simply shows no contacts.
 export async function fetchPlatformContacts(): Promise<Record<Brand, PlatformContact>> {
   const out: Record<Brand, PlatformContact> = {
-    vconnect: { brand: 'vconnect', phone: '', telegram: '' },
-    vinvite: { brand: 'vinvite', phone: '', telegram: '' },
+    vconnect: { brand: 'vconnect', phone: '', telegram: '', instagram: '' },
+    vinvite: { brand: 'vinvite', phone: '', telegram: '', instagram: '' },
   };
   try {
     const { data } = await axios.get<PlatformContact[]>(`${apiRoot()}/public/platform-contacts`);
@@ -31,7 +31,7 @@ export const platformContactService = {
     const { data } = await httpClient.get<PlatformContact>('/platform-contacts');
     return data;
   },
-  async save(payload: { phone: string; telegram: string }) {
+  async save(payload: { phone: string; telegram: string; instagram: string }) {
     const { data } = await httpClient.patch<PlatformContact>('/platform-contacts', payload);
     return data;
   },

@@ -122,8 +122,9 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           {(kind === 'flyer' || kind === 'plaque') && <VConnectFooter label={t('website_developed_by')} />}
           {(kind === 'flyer' || kind === 'plaque') && preview && (
             <VConnectContact
-              phone={flyerContact.phone} telegram={flyerContact.telegram}
+              phone={flyerContact.phone} telegram={flyerContact.telegram} instagram={flyerContact.instagram}
               title={t('vc_contact_title')} callLabel={t('vc_call')} telegramLabel={t('vc_telegram')}
+              instagramLabel={t('vc_instagram')}
             />
           )}
         </div>

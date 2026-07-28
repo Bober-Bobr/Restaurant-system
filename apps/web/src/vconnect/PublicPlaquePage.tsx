@@ -93,9 +93,11 @@ export const PublicPlaquePage = ({ slug }: { slug: string }) => {
           <VConnectContact
             phone={vc.phone}
             telegram={vc.telegram}
+            instagram={vc.instagram}
             title={translate('vc_contact_title', 'ru')}
             callLabel={translate('vc_call', 'ru')}
             telegramLabel={translate('vc_telegram', 'ru')}
+            instagramLabel={translate('vc_instagram', 'ru')}
           />
         )}
       </div>
