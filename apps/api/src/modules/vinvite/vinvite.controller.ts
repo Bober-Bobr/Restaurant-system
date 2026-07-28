@@ -4,15 +4,20 @@ import {
   projectSlug, refreshSchema, registerSchema, rsvpSchema, templateOverrideSchema,
   updateProfileSchema, updateProjectSchema, updateTemplateSchema,
 } from './vinvite.schema.js';
+import createHttpError from 'http-errors';
 import {
   VInviteAuthService, VInviteProjectService, VInviteTemplateService,
   VInviteTemplateOverrideService, type DeviceInfo,
 } from './vinvite.service.js';
+import { PlatformContactService } from '../platformContact/platformContact.service.js';
+import { platformContactSchema } from '../platformContact/platformContact.schema.js';
+import { prisma } from '../../db/prisma.js';
 
 const authService = new VInviteAuthService();
 const projectService = new VInviteProjectService();
 const templateService = new VInviteTemplateService();
 const overrideService = new VInviteTemplateOverrideService();
+const platformContactService = new PlatformContactService();
 
 function deviceInfo(request: Request): DeviceInfo {
   return {
@@ -200,6 +205,24 @@ export class VInviteController {
       String(request.params.templateId),
       config,
     ));
+  }
+
+  // The v-invite contact block shown under the "developed with love" credit on
+  // every invitation. Readable by any signed-in user (the editor previews it);
+  // writable only by a SYSTEM_ADMIN — these details are the studio's, not the
+  // honoree's, so an individual invitation can never change them.
+  async getPlatformContact(_request: Request, response: Response) {
+    response.json(await platformContactService.get('vinvite'));
+  }
+
+  async savePlatformContact(request: Request, response: Response) {
+    const user = await prisma.inviteUser.findUnique({
+      where: { id: request.inviteUser!.id },
+      select: { role: true },
+    });
+    if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
+    const payload = platformContactSchema.parse(request.body);
+    response.json(await platformContactService.upsert('vinvite', payload));
   }
 
   async publicRsvp(request: Request, response: Response) {

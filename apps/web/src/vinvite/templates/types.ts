@@ -78,6 +78,9 @@ export type RichRendererProps = {
   html: string; // the template's raw HTML (with the __CONFIG__ hook)
   config: Record<string, unknown>;
   languages: Locale[];
+  // Studio contact details rendered under the "developed by" credit. Global to
+  // the platform and editable only by a SYSTEM_ADMIN — never per invitation.
+  contacts?: { phone: string; telegram: string };
   // Guest-facing published mode enables the RSVP → server bridge.
   onRsvp?: (payload: RsvpPayload) => Promise<void>;
   // Editor mode: a border-radius/frame hint, and it disables RSVP persistence.

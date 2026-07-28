@@ -902,3 +902,19 @@ model NfcPlaque {
 
   @@index([createdById])
 }
+
+// ── Platform contact details (v-connect / v-invite) ──────────────────────────
+// One row per brand. Shown under the "developed by" credit on every published
+// flyer (brand "vconnect") and every v-invite invitation (brand "vinvite"), so
+// a visitor can always reach the studio that built the page.
+//   vconnect → edited by a v-menu CHIEF_ADMIN; a flyer may override it locally
+//              with its own vccontact block.
+//   vinvite  → edited by a v-invite SYSTEM_ADMIN only, and never overridable.
+model PlatformContact {
+  id        String   @id @default(cuid())
+  brand     String   @unique // "vconnect" | "vinvite"
+  phone     String?
+  telegram  String?
+  updatedAt DateTime @updatedAt
+}
+

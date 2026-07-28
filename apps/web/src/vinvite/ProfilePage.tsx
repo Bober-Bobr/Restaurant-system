@@ -3,6 +3,7 @@ import axios from 'axios';
 import { vinviteService } from './api';
 import { useVInviteStore } from './store';
 import { useViT } from './i18n';
+import { PlatformContactCard } from './PlatformContactCard';
 
 function errMessage(e: unknown): string {
   if (axios.isAxiosError(e)) return (e.response?.data as { message?: string })?.message ?? e.message;
@@ -67,6 +68,9 @@ export const ViProfilePage = () => {
           </p>
         </div>
       </div>
+
+      {/* Studio contacts — system administrators only. */}
+      {user.role === 'SYSTEM_ADMIN' && <PlatformContactCard />}
 
       {/* Edit form */}
       <form onSubmit={save} className="vi-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>

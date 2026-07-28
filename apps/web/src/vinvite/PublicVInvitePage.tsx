@@ -9,6 +9,7 @@ import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer
 import { ParticleField } from '../blocks/ParticleField';
 import { getTemplate, readRichDesign } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
+import { usePlatformContacts } from '../hooks/usePlatformContacts';
 import { resolveAssetUrls } from './templates/utils';
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -29,6 +30,8 @@ export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
     enabled: !!slug,
   });
 
+  const contactFor = usePlatformContacts();
+
   const submitRsvp = useCallback(
     (payload: RsvpSubmission) => vinviteService.publicRsvp(slug, payload),
     [slug],
@@ -45,6 +48,7 @@ export const PublicVInvitePage = ({ slug: slugProp }: { slug?: string }) => {
           html={richTemplate.html}
           config={resolveAssetUrls(richTemplate, rich.config)}
           languages={rich.languages}
+          contacts={contactFor('vinvite')}
           onRsvp={submitRsvp}
         />
       </main>

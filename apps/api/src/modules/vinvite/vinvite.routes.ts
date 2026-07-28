@@ -35,6 +35,11 @@ router.delete('/projects/:id/rsvps/:rsvpId', inviteAuthMiddleware, controller.re
 router.get('/template-overrides', controller.listTemplateOverrides.bind(controller));
 router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.saveTemplateOverride.bind(controller));
 
+// The studio's own contact block. Any signed-in user may read it (the editor
+// shows a preview); only a SYSTEM_ADMIN may change it.
+router.get('/platform-contact', inviteAuthMiddleware, controller.getPlatformContact.bind(controller));
+router.put('/platform-contact', inviteAuthMiddleware, controller.savePlatformContact.bind(controller));
+
 router.get('/templates', inviteAuthMiddleware, controller.listTemplates.bind(controller));
 router.post('/templates', inviteAuthMiddleware, controller.createTemplate.bind(controller));
 router.get('/templates/:id', inviteAuthMiddleware, controller.getTemplate.bind(controller));

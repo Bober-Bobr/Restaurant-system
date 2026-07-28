@@ -7,7 +7,8 @@ import { getEventSubdomainSlug } from '../utils/subdomain';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
-import { BlockList, VConnectFooter, VConnectContact, findVcContact, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { BlockList, VConnectFooter, VConnectContact, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { useFlyerContact } from '../hooks/usePlatformContacts';
 import { ParticleField } from '../blocks/ParticleField';
 import { translate } from '../utils/translate';
 
@@ -69,6 +70,8 @@ export const PublicInvitationPage = () => {
 
   const cd = useCountdown(invitation?.countdownAt);
   const revealRef = useScrollReveal<HTMLDivElement>([invitation]);
+  // Hooks must run unconditionally, so this sits above the early returns.
+  const flyerContact = useFlyerContact(invitation?.blocks);
 
   if (isLoading) {
     return <main style={{ minHeight: '100vh', background: PAGE_BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>...</main>;
@@ -115,17 +118,15 @@ export const PublicInvitationPage = () => {
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
           <BlockList blocks={invitation.blocks} ctx={ctx} />
           <VConnectFooter label={translate('website_developed_by', 'ru')} />
-          {(() => {
-            const vc = findVcContact(invitation.blocks);
-            return vc ? (
-              <VConnectContact
-                phone={vc.phone} telegram={vc.telegram}
-                title={translate('vc_contact_title', 'ru')}
-                callLabel={translate('vc_call', 'ru')}
-                telegramLabel={translate('vc_telegram', 'ru')}
-              />
-            ) : null;
-          })()}
+          {/* Shown on every flyer, directly under the credit. Values come from
+              the platform-wide v-connect details unless this flyer carries its
+              own vccontact block. */}
+          <VConnectContact
+            phone={flyerContact.phone} telegram={flyerContact.telegram}
+            title={translate('vc_contact_title', 'ru')}
+            callLabel={translate('vc_call', 'ru')}
+            telegramLabel={translate('vc_telegram', 'ru')}
+          />
         </div>
       </main>
     );

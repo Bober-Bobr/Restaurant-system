@@ -6,6 +6,7 @@ import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
 import { VideoUploadField } from '../components/VideoUploadField';
 import { vinviteService, type InviteRsvp, type TelegramStatus } from './api';
+import { usePlatformContacts } from '../hooks/usePlatformContacts';
 import { useViT, type ViKey } from './i18n';
 import { useVInviteStore } from './store';
 import { getTemplate } from './templates';
@@ -52,6 +53,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   const [tab, setTab] = useState<'design' | 'rsvp'>(initialTab && projectId ? initialTab : 'design');
   const [openGroup, setOpenGroup] = useState<string | null>(template?.groups[0]?.key ?? null);
   const isSystemAdmin = useVInviteStore((s) => s.user?.role === 'SYSTEM_ADMIN');
+  const contactFor = usePlatformContacts();
 
   // The preview does NOT follow every edit — it holds the last "published to
   // preview" config until the 👁 button is pressed. Only the Design+ overlay
@@ -219,6 +221,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 html={template.html}
                 config={previewConfig}
                 languages={design.languages}
+                contacts={contactFor('vinvite')}
                 interactive
                 adminEdit={isSystemAdmin}
                 adminPlay={adminPlay}

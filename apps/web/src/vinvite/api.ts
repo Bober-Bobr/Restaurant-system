@@ -260,6 +260,17 @@ export const vinviteService = {
     return data;
   },
 
+  // The studio contact block under the "developed with love" credit. Readable
+  // by any signed-in user; the PUT is rejected for anyone but a SYSTEM_ADMIN.
+  async getPlatformContact(): Promise<{ brand: string; phone: string; telegram: string }> {
+    const { data } = await viHttp.get<{ brand: string; phone: string; telegram: string }>('/platform-contact');
+    return data;
+  },
+  async savePlatformContact(payload: { phone: string; telegram: string }) {
+    const { data } = await viHttp.put<{ brand: string; phone: string; telegram: string }>('/platform-contact', payload);
+    return data;
+  },
+
   // RSVP responses (owner)
   async listRsvps(projectId: string): Promise<InviteRsvp[]> {
     const { data } = await viHttp.get<InviteRsvp[]>(`/projects/${projectId}/rsvps`);

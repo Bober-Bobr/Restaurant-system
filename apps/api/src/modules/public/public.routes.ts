@@ -14,6 +14,7 @@ import { InvitationController } from '../invitation/invitation.controller.js';
 import { GuestInvitationController } from '../guestInvitation/guestInvitation.controller.js';
 import { ReviewController } from '../review/review.controller.js';
 import { NfcPlaqueController } from '../nfcPlaque/nfcPlaque.controller.js';
+import { PlatformContactService } from '../platformContact/platformContact.service.js';
 import { isAllowedImage } from '../../utils/imageUpload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,6 +42,7 @@ const invitationController = new InvitationController();
 const guestInvitationController = new GuestInvitationController();
 const reviewController = new ReviewController();
 const nfcPlaqueController = new NfcPlaqueController();
+const platformContactService = new PlatformContactService();
 const menuRepository = new MenuRepository();
 const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
@@ -54,6 +56,14 @@ router.post('/invitations/:slug/requests', invitationController.submitRequest.bi
 // Standalone guest invitations (wedding-style) + RSVP submission.
 router.get('/guest-invitations/:slug', guestInvitationController.publicBySlug.bind(guestInvitationController));
 router.post('/guest-invitations/:slug/rsvp', guestInvitationController.submitRsvp.bind(guestInvitationController));
+
+// Studio contact details shown under the "developed by" credit on every
+// published flyer (vconnect) and v-invite invitation (vinvite).
+router.get('/platform-contacts', async (_request, response, next) => {
+  try {
+    response.json(await platformContactService.listAll());
+  } catch (error) { next(error); }
+});
 
 // Published NFC plaque behind a tag: v-connect.uz/<slug>.
 router.get('/nfc-plaques/:slug', nfcPlaqueController.publicBySlug.bind(nfcPlaqueController));

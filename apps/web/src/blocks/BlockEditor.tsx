@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Block, BlockType } from './types';
 import { BLOCK_DEFS, PALETTE_ORDER, createBlock } from './types';
-import { BlockView, VConnectFooter, VConnectContact, findVcContact, readableText, type RenderCtx } from './BlockRenderer';
+import { BlockView, VConnectFooter, VConnectContact, readableText, type RenderCtx } from './BlockRenderer';
+import { useFlyerContact } from '../hooks/usePlatformContacts';
 import { ParticleField, type ParticleKind } from './ParticleField';
 import { BlockSettings } from './BlockSettings';
 import type { DesignTheme } from '../services/designTemplate.service';
@@ -45,6 +46,8 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // Global v-connect details, overridden by this page's own vccontact block.
+  const flyerContact = useFlyerContact(blocks);
 
   const accent = theme.accentColor || '#c9a42c';
   const bgColor = theme.backgroundColor || '#fafaf7';
@@ -117,15 +120,12 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           {/* Every flyer ends with the mandatory V-connect attribution, then the
               contact card (in preview; in edit mode it shows as its own block). */}
           {(kind === 'flyer' || kind === 'plaque') && <VConnectFooter label={t('website_developed_by')} />}
-          {(kind === 'flyer' || kind === 'plaque') && preview && (() => {
-            const vc = findVcContact(blocks);
-            return vc ? (
-              <VConnectContact
-                phone={vc.phone} telegram={vc.telegram}
-                title={t('vc_contact_title')} callLabel={t('vc_call')} telegramLabel={t('vc_telegram')}
-              />
-            ) : null;
-          })()}
+          {(kind === 'flyer' || kind === 'plaque') && preview && (
+            <VConnectContact
+              phone={flyerContact.phone} telegram={flyerContact.telegram}
+              title={t('vc_contact_title')} callLabel={t('vc_call')} telegramLabel={t('vc_telegram')}
+            />
+          )}
         </div>
       </div>
 
