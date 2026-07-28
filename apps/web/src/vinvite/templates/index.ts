@@ -1,4 +1,5 @@
 import { birthdayMidnightTemplate } from './birthday-midnight/definition';
+import { birthdayPrestigeTemplate } from './birthday-prestige/definition';
 import { birthdayTuscanTemplate } from './birthday-tuscan/definition';
 import { weddingArabicTemplate } from './wedding-arabic/definition';
 import { weddingCelestialTemplate } from './wedding-celestial/definition';
@@ -9,6 +10,7 @@ import type { RichDesignData, TemplateCategory, TemplateDefinition } from './typ
 export const RICH_TEMPLATES: TemplateDefinition[] = [
   birthdayTuscanTemplate,
   birthdayMidnightTemplate,
+  birthdayPrestigeTemplate,
   weddingArabicTemplate,
   weddingCelestialTemplate,
 ];
