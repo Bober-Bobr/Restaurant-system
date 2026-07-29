@@ -53,6 +53,10 @@ export type TemplateFieldGroup = {
   key: string;
   labelKey: string;
   icon: string;
+  // Element id of the page section this group edits. Opening the group scrolls
+  // the editor preview there. Omit for groups with no single home on the page
+  // (visibility switches, background music).
+  section?: string;
 };
 
 // Localized gallery / schedule item shapes shared across templates.
@@ -93,6 +97,9 @@ export type RichRendererProps = {
   // Design+ editing: play motion-path animations in the editor preview
   // (paused by default so elements stay under the cursor while dragging).
   adminPlay?: boolean;
+  // Editor: scroll the preview to this section id whenever it changes. The
+  // runtime skips the template's intro so any section is reachable.
+  focusSection?: string;
 };
 
 export type RsvpPayload = {

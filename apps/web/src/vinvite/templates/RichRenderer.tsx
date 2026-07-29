@@ -43,7 +43,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     : withBootstrap + adminScript;
 }
 
-export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, adminEdit, adminPlay, interactive }: RichRendererProps) {
+export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, adminEdit, adminPlay, interactive, focusSection }: RichRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedRef = useRef(false);
 
@@ -96,6 +96,14 @@ export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdmi
     if (!loadedRef.current) return;
     pushState();
   }, [pushState]);
+
+  // Editor: scroll the preview to the section the honoree is editing. Skipped
+  // until the frame has loaded — a fresh frame starts at the top anyway, and
+  // the section elements do not exist yet.
+  useEffect(() => {
+    if (!focusSection || !loadedRef.current) return;
+    iframeRef.current?.contentWindow?.postMessage({ type: 'vinvite:focus', section: focusSection }, '*');
+  }, [focusSection]);
 
   return (
     <iframe

@@ -464,12 +464,49 @@ export const ADMIN_RUNTIME = `(function(){
 
   function render(){ renderStyles(); renderElements(); initParticles(); initTrail(); }
 
+  /* ── Editor focus: jump the preview to the section being edited ──────────
+     Only the editor sends this. Every template opens behind an intro that
+     locks scrolling (html.held / html.is-locked) and, in most cases, a
+     full-screen overlay marked data-vi-intro. Both are cleared here so any
+     section is reachable; the editor's "refresh" button reloads the frame to
+     replay the intro from the top.
+     overflow-y is set rather than the shorthand on purpose — the shorthand
+     would also clear the templates' overflow-x:hidden, which is what stops
+     the page drifting sideways on Safari. */
+  function skipIntro(){
+    var intros = document.querySelectorAll('[data-vi-intro]');
+    for (var i = intros.length - 1; i >= 0; i--) {
+      if (intros[i].parentNode) intros[i].parentNode.removeChild(intros[i]);
+    }
+    var nodes = [document.documentElement, document.body];
+    for (var n = 0; n < nodes.length; n++) {
+      if (!nodes[n]) continue;
+      nodes[n].style.overflowY = 'auto';
+      nodes[n].style.height = 'auto';
+      nodes[n].style.touchAction = 'auto';
+    }
+  }
+
+  function focusSection(id){
+    var el = id ? document.getElementById(id) : null;
+    if (!el) return;
+    skipIntro();
+    /* one frame for the unlock to take effect before measuring the scroll */
+    setTimeout(function(){
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      catch (e) { el.scrollIntoView(); }
+    }, 40);
+  }
+
   window.addEventListener('message', function(e){
     var d = e.data;
     if (d && typeof d === 'object' && d.type === 'vinvite:config' && d.config) {
       LAYER = d.config.adminLayer || {};
       if (d.adminPlay != null) PLAY = d.adminPlay === true;
       render();
+    }
+    if (d && typeof d === 'object' && d.type === 'vinvite:focus') {
+      focusSection(d.section);
     }
   });
 

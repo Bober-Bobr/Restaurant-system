@@ -94,6 +94,18 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
 
+// A translucent wash of an arbitrary CSS color — used for hairline rules and
+// chip borders that must follow the page's text color. Hex is converted
+// directly; anything else (rgb(), named, var()) falls back to color-mix.
+function softInk(color: string, alpha: number): string {
+  const hex = color.trim().replace(/^#/, '');
+  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+  if (/^[a-f\d]{6}$/i.test(full)) {
+    return `rgba(${parseInt(full.slice(0, 2), 16)},${parseInt(full.slice(2, 4), 16)},${parseInt(full.slice(4, 6), 16)},${alpha})`;
+  }
+  return `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`;
+}
+
 // Pick a legible text color (dark or light) for a given background color.
 export function readableText(bg: string | null | undefined): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((bg || '').trim());
@@ -219,6 +231,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
           callLabel={translate('vc_call', 'ru')}
           telegramLabel={translate('vc_telegram', 'ru')}
           instagramLabel={translate('vc_instagram', 'ru')}
+          color={str(p, 'textColor') || ctx.text}
         />
       );
     default:
@@ -835,21 +848,24 @@ export function findVcContact(blocks: Block[]): { phone: string; telegram: strin
 // Mandatory attribution shown at the bottom of every flyer: "Website developed
 // by" → the V-connect logo → "V-connect" in bold. Not a block — always
 // rendered, not removable. `label` is the leading "Website developed by" line.
-export function VConnectFooter({ label }: { label: string }) {
+// `color` is the page's resolved text color, so the attribution follows the
+// theme instead of staying black on a dark flyer. Callers pass ctx.text.
+export function VConnectFooter({ label, color }: { label: string; color?: string | null }) {
+  const ink = (color || '').trim() || '#000';
   return (
     <div
       aria-label="V-connect"
       style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
         padding: '26px 20px 30px', margin: '10px 0 0',
-        borderTop: '1px solid rgba(0,0,0,0.08)',
+        borderTop: `1px solid ${softInk(ink, 0.12)}`,
       }}
     >
-      <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: '#000', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', textAlign: 'center', textTransform: 'uppercase', opacity: 0.75 }}>
+      <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: ink, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', textAlign: 'center', textTransform: 'uppercase', opacity: 0.75 }}>
         {label}
       </span>
       <img src={networkingLogoSrc} alt="V-connect" style={{ height: 60, width: 'auto' }} />
-      <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.03em', color: '#000', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
+      <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.03em', color: ink, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         V-CONNECT
       </span>
     </div>
@@ -859,28 +875,33 @@ export function VConnectFooter({ label }: { label: string }) {
 // "Contact us" section for reaching V-connect, rendered just below the footer
 // ad. Phone and Telegram are set per flyer in the builder (the `vccontact`
 // block). Renders nothing until at least one is filled in.
-export function VConnectContact({ phone, telegram, instagram, title, callLabel, telegramLabel, instagramLabel }: {
+export function VConnectContact({ phone, telegram, instagram, title, callLabel, telegramLabel, instagramLabel, color }: {
   phone?: string | null; telegram?: string | null; instagram?: string | null;
   title: string; callLabel: string; telegramLabel: string; instagramLabel: string;
+  // The page's resolved text color; chips invert around it so they stay legible
+  // on a dark theme instead of being fixed black-on-white.
+  color?: string | null;
 }) {
   const tel = (phone || '').trim();
   const tg = (telegram || '').trim();
   const ig = (instagram || '').trim();
   if (!tel && !tg && !ig) return null;
+  const ink = (color || '').trim() || '#000';
+  const onInk = readableText(ink);
   const tgHref = tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/^@/, '')}`;
   const igHref = ig.startsWith('http') ? ig : `https://instagram.com/${ig.replace(/^@/, '')}`;
   const chip: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 999,
     fontSize: 14, fontWeight: 700, letterSpacing: '0.04em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)',
-    textDecoration: 'none', border: '1px solid rgba(0,0,0,0.15)',
+    textDecoration: 'none', border: `1px solid ${softInk(ink, 0.28)}`,
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '4px 20px 34px' }}>
-      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#000', opacity: 0.7, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{title}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: ink, opacity: 0.7, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{title}</span>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: '#000', color: '#fff' }}>{callLabel} {tel}</a>}
-        {tg && <a href={tgHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: '#fff', color: '#000' }}>{telegramLabel}</a>}
-        {ig && <a href={igHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: '#fff', color: '#000' }}>{instagramLabel}</a>}
+        {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: ink, color: onInk }}>{callLabel} {tel}</a>}
+        {tg && <a href={tgHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: 'transparent', color: ink }}>{telegramLabel}</a>}
+        {ig && <a href={igHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: 'transparent', color: ink }}>{instagramLabel}</a>}
       </div>
     </div>
   );

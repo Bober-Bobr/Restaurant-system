@@ -88,7 +88,7 @@ export const PublicPlaquePage = ({ slug }: { slug: string }) => {
 
       <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
         <BlockList blocks={blocks} ctx={ctx} />
-        <VConnectFooter label={translate('website_developed_by', 'ru')} />
+        <VConnectFooter label={translate('website_developed_by', 'ru')} color={ctx.text} />
         {vc && (
           <VConnectContact
             phone={vc.phone}
@@ -98,6 +98,7 @@ export const PublicPlaquePage = ({ slug }: { slug: string }) => {
             callLabel={translate('vc_call', 'ru')}
             telegramLabel={translate('vc_telegram', 'ru')}
             instagramLabel={translate('vc_instagram', 'ru')}
+            color={ctx.text}
           />
         )}
       </div>

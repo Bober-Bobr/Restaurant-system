@@ -117,7 +117,7 @@ export const PublicInvitationPage = () => {
         {musicSrc && <MusicPlayer src={musicSrc} accent={accent} />}
         <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
           <BlockList blocks={invitation.blocks} ctx={ctx} />
-          <VConnectFooter label={translate('website_developed_by', 'ru')} />
+          <VConnectFooter label={translate('website_developed_by', 'ru')} color={ctx.text} />
           {/* Shown on every flyer, directly under the credit. Values come from
               the platform-wide v-connect details unless this flyer carries its
               own vccontact block. */}
@@ -127,6 +127,7 @@ export const PublicInvitationPage = () => {
             callLabel={translate('vc_call', 'ru')}
             telegramLabel={translate('vc_telegram', 'ru')}
             instagramLabel={translate('vc_instagram', 'ru')}
+            color={ctx.text}
           />
         </div>
       </main>

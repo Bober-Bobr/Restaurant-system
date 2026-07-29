@@ -8,11 +8,11 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 // RSVP → V-invite attribution. Warm ivory · champagne gold · deep coffee.
 
 const groups: TemplateFieldGroup[] = [
-  { key: 'couple', labelKey: 'tg_couple', icon: '💍' },
-  { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
-  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓' },
-  { key: 'venue', labelKey: 'tg_venue', icon: '📍' },
-  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷' },
+  { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'hero' },
+  { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'invitation' },
+  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'countdown' },
+  { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
+  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'gallery' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
   { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
 ];

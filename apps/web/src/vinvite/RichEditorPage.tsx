@@ -16,7 +16,7 @@ import {
   LOCALES,
   type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle, type AdminTrail,
   type GalleryItem, type LocalizedText, type QuoteItem, type RichDesignData, type ScheduleItem,
-  type TemplateDefinition, type TemplateField,
+  type TemplateDefinition, type TemplateField, type TemplateFieldGroup,
 } from './templates/types';
 
 // ── Form-based editor for rich (first-party) templates ───────────────────────
@@ -55,22 +55,24 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   const isSystemAdmin = useVInviteStore((s) => s.user?.role === 'SYSTEM_ADMIN');
   const contactFor = usePlatformContacts();
 
-  // The preview does NOT follow every edit — it holds the last "published to
-  // preview" config until the 👁 button is pressed. Only the Design+ overlay
-  // layer stays live, so dragging elements gives instant feedback.
-  const [pinnedConfig, setPinnedConfig] = useState(design.config);
+  // The preview follows every edit — config changes are pushed into the frame
+  // over postMessage, so nothing reloads and no animation replays.
+  const previewConfig = useMemo(
+    () => (template ? resolveAssetUrls(template, design.config) : design.config),
+    [template, design.config],
+  );
   // Design+ motion paths are paused in the editor (so elements stay under the
   // cursor while dragging) unless this is toggled on.
   const [adminPlay, setAdminPlay] = useState(false);
-  useEffect(() => { setPinnedConfig(design.config); /* re-pin on template swap */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [design.templateId]);
-  const liveAdminLayer = (design.config as { adminLayer?: unknown }).adminLayer;
-  const previewConfig = useMemo(() => {
-    const merged = { ...pinnedConfig, ...(liveAdminLayer !== undefined ? { adminLayer: liveAdminLayer } : {}) };
-    return template ? resolveAssetUrls(template, merged) : merged;
-  }, [template, pinnedConfig, liveAdminLayer]);
-  const previewStale = pinnedConfig !== design.config;
+  // Bumping this remounts RichRenderer, which rebuilds the srcdoc from the
+  // current config — i.e. replays the invitation from its intro.
+  const [reloadKey, setReloadKey] = useState(0);
+  // Section the preview should jump to. Driven by whichever group is open and
+  // by the section a Design+ control last touched.
+  const [focusSection, setFocusSection] = useState<string | undefined>(undefined);
+
+  // A template swap invalidates any section id from the previous template.
+  useEffect(() => { setFocusSection(undefined); setReloadKey((k) => k + 1); }, [design.templateId]);
 
   if (!template) {
     return <p style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>{t('not_found')}</p>;
@@ -78,6 +80,14 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
 
   const setConfig = (path: string, value: unknown) => {
     onChange({ ...design, config: setPath(design.config, path, value) });
+  };
+
+  // Opening a group jumps the preview to the part of the page it edits. Groups
+  // without a home on the page (visibility, music) leave the preview alone.
+  const toggleGroup = (group: TemplateFieldGroup) => {
+    const opening = openGroup !== group.key;
+    setOpenGroup(opening ? group.key : null);
+    if (opening && group.section) setFocusSection(group.section);
   };
   const toggleLanguage = (lang: Locale) => {
     const has = design.languages.includes(lang);
@@ -147,7 +157,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 <div key={group.key} style={{ marginBottom: 10, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                   <button
                     type="button"
-                    onClick={() => setOpenGroup(open ? null : group.key)}
+                    onClick={() => toggleGroup(group)}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '13px 15px',
                       cursor: 'pointer', color: '#f1f5f9', fontSize: 14, fontWeight: 700, textAlign: 'left',
@@ -176,26 +186,24 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 setConfig={setConfig}
                 open={openGroup === '__admin'}
                 onToggle={() => setOpenGroup(openGroup === '__admin' ? null : '__admin')}
+                onFocusSection={setFocusSection}
               />
             )}
           </div>
 
-          {/* ── Preview (phone frame) — refreshed only via the 👁 button ── */}
+          {/* ── Preview (phone frame) — live; edits arrive over postMessage ── */}
           <div style={{ flex: '1 1 400px', minWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, position: 'sticky', top: 96 }}>
             <button
               type="button"
-              onClick={() => setPinnedConfig(design.config)}
-              title={t('refresh_preview')}
+              onClick={() => setReloadKey((k) => k + 1)}
+              title={t('replay_invitation')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 999,
-                border: '1px solid', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                borderColor: previewStale ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.14)',
-                background: previewStale ? 'rgba(201,164,44,0.16)' : 'rgba(15,23,42,0.5)',
-                color: previewStale ? '#c9a42c' : '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                background: 'rgba(15,23,42,0.5)', color: '#94a3b8',
               }}
             >
-              👁 {t('refresh_preview')}
-              {previewStale && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c9a42c', boxShadow: '0 0 8px rgba(201,164,44,0.8)' }} />}
+              ↻ {t('replay_invitation')}
             </button>
             {isSystemAdmin && (
               <button
@@ -218,11 +226,13 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
               border: '10px solid #0b1120', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', background: '#000',
             }}>
               <RichRenderer
+                key={reloadKey}
                 html={template.html}
                 config={previewConfig}
                 languages={design.languages}
                 contacts={contactFor('vinvite')}
                 interactive
+                focusSection={focusSection}
                 adminEdit={isSystemAdmin}
                 adminPlay={adminPlay}
                 onAdminMove={(id, x, y, kf) => {
@@ -569,12 +579,14 @@ const ANIMS: { key: AdminElement['anim']; label: string }[] = [
   { key: 'spin', label: 'Spin' },
 ];
 
-function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
+function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocusSection }: {
   template: TemplateDefinition;
   design: RichDesignData;
   setConfig: (path: string, value: unknown) => void;
   open: boolean;
   onToggle: () => void;
+  // Jump the preview to whichever section a control here is acting on.
+  onFocusSection: (section: string) => void;
 }) {
   const t = useViT();
   const layer: AdminLayer = (design.config.adminLayer as AdminLayer) ?? {};
@@ -583,20 +595,31 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle }: {
   const sections = template.sectionIds ?? [];
 
   const save = (next: AdminLayer) => setConfig('adminLayer', next);
-  const setElement = (id: string, patch: Partial<AdminElement>) =>
+  // Editing an element scrolls to the section it lives in, so the change is
+  // visible without hunting for it. 'fixed' elements are already on screen.
+  const focusAnchor = (anchor: string | undefined) => {
+    if (anchor && anchor !== 'fixed') onFocusSection(anchor);
+  };
+  const setElement = (id: string, patch: Partial<AdminElement>) => {
+    focusAnchor(patch.anchor ?? elements.find((e) => e.id === id)?.anchor);
     save({ ...layer, elements: elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
-  const addElement = (type: AdminElement['type']) =>
+  };
+  const addElement = (type: AdminElement['type']) => {
+    const anchor = sections[0] ?? 'fixed';
+    focusAnchor(anchor);
     save({
       ...layer,
       elements: [...elements, {
         id: Math.random().toString(36).slice(2, 9),
-        type, src: '', anchor: sections[0] ?? 'fixed',
+        type, src: '', anchor,
         x: 50, y: 50, w: 30, rotate: 0, anim: 'none',
       }],
     });
+  };
   const removeElement = (id: string) => save({ ...layer, elements: elements.filter((e) => e.id !== id) });
 
   const setStyle = (section: string, patch: Partial<AdminSectionStyle>) => {
+    onFocusSection(section);
     const existing = styles.find((s) => s.section === section);
     const next = existing
       ? styles.map((s) => (s.section === section ? { ...s, ...patch } : s))

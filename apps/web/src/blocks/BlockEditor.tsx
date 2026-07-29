@@ -119,12 +119,13 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           ))}
           {/* Every flyer ends with the mandatory V-connect attribution, then the
               contact card (in preview; in edit mode it shows as its own block). */}
-          {(kind === 'flyer' || kind === 'plaque') && <VConnectFooter label={t('website_developed_by')} />}
+          {(kind === 'flyer' || kind === 'plaque') && <VConnectFooter label={t('website_developed_by')} color={ctx.text} />}
           {(kind === 'flyer' || kind === 'plaque') && preview && (
             <VConnectContact
               phone={flyerContact.phone} telegram={flyerContact.telegram} instagram={flyerContact.instagram}
               title={t('vc_contact_title')} callLabel={t('vc_call')} telegramLabel={t('vc_telegram')}
               instagramLabel={t('vc_instagram')}
+              color={ctx.text}
             />
           )}
         </div>

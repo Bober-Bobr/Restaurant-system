@@ -12,15 +12,15 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
-  { key: 'honoree', labelKey: 'tg_honoree', icon: '🎂' },
-  { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
-  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓' },
-  { key: 'venue', labelKey: 'tg_venue', icon: '📍' },
-  { key: 'schedule', labelKey: 'tg_schedule', icon: '🕐' },
-  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷' },
-  { key: 'dress', labelKey: 'tg_dress', icon: '👗' },
-  { key: 'gifts', labelKey: 'tg_gifts', icon: '🎁' },
-  { key: 'contacts', labelKey: 'tg_contacts', icon: '☎️' },
+  { key: 'honoree', labelKey: 'tg_honoree', icon: '🎂', section: 'room' },
+  { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'welcome' },
+  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'details' },
+  { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
+  { key: 'schedule', labelKey: 'tg_schedule', icon: '🕐', section: 'evening' },
+  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'gallery' },
+  { key: 'dress', labelKey: 'tg_dress', icon: '👗', section: 'details' },
+  { key: 'gifts', labelKey: 'tg_gifts', icon: '🎁', section: 'letter' },
+  { key: 'contacts', labelKey: 'tg_contacts', icon: '☎️', section: 'close' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
 ];
 

@@ -10,12 +10,12 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 // Midnight navy · indigo · violet · platinum · star gold.
 
 const groups: TemplateFieldGroup[] = [
-  { key: 'couple', labelKey: 'tg_couple', icon: '💍' },
-  { key: 'invite', labelKey: 'tg_invite', icon: '✉️' },
-  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓' },
-  { key: 'venue', labelKey: 'tg_venue', icon: '📍' },
-  { key: 'schedule', labelKey: 'tg_schedule', icon: '🕐' },
-  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷' },
+  { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'top' },
+  { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'invitation' },
+  { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'countdown' },
+  { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
+  { key: 'schedule', labelKey: 'tg_schedule', icon: '🕐', section: 'details' },
+  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'memories' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
   { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
 ];
@@ -100,6 +100,9 @@ export const weddingCelestialTemplate: TemplateDefinition = {
   fields,
   groups,
   Renderer: RichRenderer,
-  sectionIds: ['hero', 'invitation', 'details', 'story', 'gallery', 'countdown', 'rsvp'],
+  // These must match the real element ids in template.html — the Design+ runtime
+  // anchors by getElementById and silently skips a section it cannot find.
+  // ('hero' and 'gallery' were listed here but the markup calls them top/memories.)
+  sectionIds: ['top', 'invitation', 'details', 'story', 'memories', 'countdown', 'rsvp'],
   accentVars: ['--gold', '--star-gold'],
 };
