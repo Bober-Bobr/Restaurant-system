@@ -20,7 +20,16 @@ export class AuthRepository {
     });
     const restaurantIds = restaurants.map((r) => r.id);
     return prisma.adminUser.findMany({
-      where: { OR: [{ id: ownerId }, { restaurantId: { in: restaurantIds } }] },
+      // Performers carry no restaurantId — they are a platform-wide pool that
+      // any venue can book — so a restaurant-scoped filter alone hides them
+      // from the very people allowed to create them.
+      where: {
+        OR: [
+          { id: ownerId },
+          { restaurantId: { in: restaurantIds } },
+          { role: AdminRole.PERFORMER },
+        ],
+      },
       select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
@@ -33,7 +42,14 @@ export class AuthRepository {
     });
     if (!restaurant) return [];
     return prisma.adminUser.findMany({
-      where: { OR: [{ id: restaurant.ownerId }, { restaurantId }] },
+      // Performers are included for the same reason as in listByOwner.
+      where: {
+        OR: [
+          { id: restaurant.ownerId },
+          { restaurantId },
+          { role: AdminRole.PERFORMER },
+        ],
+      },
       select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });

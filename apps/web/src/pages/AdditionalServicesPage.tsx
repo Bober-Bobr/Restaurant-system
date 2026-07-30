@@ -408,11 +408,36 @@ function PerformersSection({ t, prefill }: {
             : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)' }} />}
           <div className="min-w-0">
             <p className="text-lg font-bold text-white">{detail.displayName}</p>
-            {detail.craft && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{detail.craft}</p>}
           </div>
         </div>
 
-        {detail.bio && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap' }}>{detail.bio}</p>}
+        {/* Craft, description and phone — the three things a guest decides on. */}
+        {detail.craft && (
+          <div className="grid gap-1">
+            <span className="rg-label">{t('pf_craft')}</span>
+            <p className="text-sm font-semibold" style={{ color: 'var(--rg-accent)' }}>{detail.craft}</p>
+          </div>
+        )}
+
+        {detail.bio && (
+          <div className="grid gap-1">
+            <span className="rg-label">{t('pf_bio')}</span>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', whiteSpace: 'pre-wrap' }}>{detail.bio}</p>
+          </div>
+        )}
+
+        {detail.phone && (
+          <div className="grid gap-1">
+            <span className="rg-label">{t('pf_phone')}</span>
+            <a
+              href={`tel:${detail.phone}`}
+              className="text-sm font-semibold"
+              style={{ color: 'var(--rg-accent)', textDecoration: 'none' }}
+            >
+              {detail.phone}
+            </a>
+          </div>
+        )}
 
         {detail.photos.length > 0 && (
           <div className="flex flex-wrap gap-2">

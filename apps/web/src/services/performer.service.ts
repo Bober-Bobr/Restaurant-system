@@ -114,6 +114,7 @@ export type PublicPerformerDetail = {
   displayName: string;
   craft: string | null;
   bio: string | null;
+  phone: string | null;
   avatarUrl: string | null;
   photos: string[];
   videos: string[];

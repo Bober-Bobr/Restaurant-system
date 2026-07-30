@@ -255,20 +255,30 @@ export class AuthService {
         if (target.role === AdminRole.CHIEF_ADMIN || target.role === AdminRole.OWNER) {
           throw createHttpError(403, 'Owners cannot manage other Owners or Chief Admins.');
         }
-        const ownerRestaurantIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
-        if (!target.restaurantId || !ownerRestaurantIds.includes(target.restaurantId)) {
-          throw createHttpError(403, 'Cannot manage users outside your restaurants.');
+        // Performers belong to no restaurant, so the restaurant check below can
+        // never pass for them. Owners may create performers, so they must be
+        // able to fix a mistyped password afterwards.
+        if (target.role !== AdminRole.PERFORMER) {
+          const ownerRestaurantIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
+          if (!target.restaurantId || !ownerRestaurantIds.includes(target.restaurantId)) {
+            throw createHttpError(403, 'Cannot manage users outside your restaurants.');
+          }
         }
       }
     } else if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
       if (!isSelf) {
-        if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
-          throw createHttpError(403, 'Administrators can only edit Employee or Kitchen accounts.');
-        }
-        const callerRestId =
-          caller.restaurantId ?? (await this.authRepository.findById(caller.id))?.restaurantId ?? null;
-        if (!callerRestId || target.restaurantId !== callerRestId) {
-          throw createHttpError(403, 'Cannot manage users outside your restaurant.');
+        // A restaurant ADMIN may also create performers — and so may edit them.
+        // CATERING_ADMIN cannot create them and cannot edit them either.
+        const canEditPerformer = caller.role === AdminRole.ADMIN && target.role === AdminRole.PERFORMER;
+        if (!canEditPerformer) {
+          if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
+            throw createHttpError(403, 'Administrators can only edit Employee, Kitchen or Performer accounts.');
+          }
+          const callerRestId =
+            caller.restaurantId ?? (await this.authRepository.findById(caller.id))?.restaurantId ?? null;
+          if (!callerRestId || target.restaurantId !== callerRestId) {
+            throw createHttpError(403, 'Cannot manage users outside your restaurant.');
+          }
         }
       }
     } else {

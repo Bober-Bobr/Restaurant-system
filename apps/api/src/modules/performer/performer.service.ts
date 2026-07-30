@@ -233,17 +233,20 @@ export class PerformerService {
       displayName: user.performerProfile?.displayName || user.username,
       craft: user.performerProfile?.craft ?? null,
       bio: user.performerProfile?.bio ?? null,
+      phone: user.performerProfile?.phone ?? null,
       avatarUrl: user.performerProfile?.avatarUrl ?? null,
       photos: user.performerProfile?.photos ?? [],
       videos: user.performerProfile?.videos ?? [],
     };
-    // The phone is deliberately absent: guests reach a performer through a
-    // booking request, not by calling them directly.
+    // The phone IS public here, by product decision: guests browsing performers
+    // want to reach them directly, not only through a booking request. It is
+    // shown on the profile view only, never in the list.
     return {
       id: profile.userId,
       displayName: profile.displayName,
       craft: profile.craft,
       bio: profile.bio,
+      phone: profile.phone,
       avatarUrl: profile.avatarUrl,
       photos: profile.photos,
       videos: profile.videos,
