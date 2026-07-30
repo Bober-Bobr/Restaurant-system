@@ -1,44 +1,39 @@
 # What you need to do
 
-Everything built but **not yet live**, in the order to do it. Nothing in Parts
-1–4 (module permissions, Additional Services, invitations, performers) is
-running in production until this is worked through.
+Everything built across Parts 1–4 — module permissions, the Additional Services
+page, invitation orders, and performers — exists in the repository but is **not
+running in production**. This document is the full list of what stands between
+here and live, in the order it has to happen.
 
-Five migrations are pending, two hosts need DNS/nginx/TLS, and four things need
-setting up by hand afterwards — including one (**Step 8**) that has no UI at all
-and which silently makes a whole feature invisible if skipped.
+There are five pending database migrations, one new host to stand up, one nginx
+change you would not guess, and four pieces of manual setup afterwards. One of
+those four (Step 8) has no user interface at all, and skipping it silently makes
+an entire feature invisible.
 
-Detailed performer host guide: [SETUP-PERFORMER.md](SETUP-PERFORMER.md).
-
----
-
-## At a glance
-
-| # | Step | Where | Risk if skipped |
-|---|---|---|---|
-| 1 | Back up the database | server | two migrations drop columns |
-| 2 | Deploy code + migrations | server | nothing else works |
-| 3 | Verify migrations landed | server | silent half-state |
-| 4 | DNS for `performer` (+ v-connect) | AIRNET | host does not resolve |
-| 5 | nginx blocks | server | wrong app / 413 on video |
-| 6 | TLS certificates | server | no HTTPS |
-| 7 | Grant module permissions | Chief Admin UI | new restaurants locked out |
-| 8 | **Promote a v-invite SYSTEM_ADMIN** | **SQL only** | **invitation orders invisible forever** |
-| 9 | Rotate the `nfc_maker` password | server | known-compromised password |
-| 10 | Create performer accounts | admin UI | performers block is empty |
-| 11 | Set studio contacts | manager / v-invite UI | blank attribution blocks |
-| 12 | End-to-end verification | browser | — |
+Read [§ Nginx configuration](#nginx-configuration) before Step 5 — it explains
+how this system actually routes API traffic, which is not what the per-host
+blocks suggest.
 
 ---
 
 ## Step 1 — Back up the database
 
-Do this first. Two of the pending migrations drop columns
-(`InviteRequest.photoUrl`, `InviteRequest.performers`). Both are on a table with
-little or no production data, so the real risk is low — but a five-migration
-batch is not the moment to find out you have no backup.
+Do this before anything else touches Postgres.
 
-**1.1 — Dump**
+Two of the pending migrations drop columns: `20260730160000_invite_request_photos`
+removes `InviteRequest.photoUrl` after copying it into the new `photoUrls` array,
+and `20260730180000_performers` removes the unused `InviteRequest.performers`.
+Both act on a table that is almost certainly empty in your production database,
+since the invitation-orders feature has never been live. So the genuine risk here
+is close to zero. That is not the point — the point is that you are about to
+apply five migrations in one batch, and this is the last moment at which taking a
+dump costs you nothing.
+
+Take the dump by running `pg_dump` inside the container. Read the credentials
+from the container's own environment rather than hardcoding them, because
+`docker-compose.yml` defaults to `vmenu`/`vmenu` but honours `POSTGRES_USER` and
+`POSTGRES_DB` from a `.env` file, and if yours overrides them a hardcoded command
+fails in a confusing way:
 
 ```bash
 cd /root/Restaurant-system
@@ -46,79 +41,104 @@ docker compose exec -T postgres sh -c \
   'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > ~/vmenu-backup-$(date +%F-%H%M).sql
 ```
 
-**1.2 — Check it is not empty**
+Then confirm you actually got something. A failed dump can produce a zero-byte
+file and a zero exit code, which is exactly the sort of thing you discover at the
+worst possible time:
 
 ```bash
 ls -lh ~/vmenu-backup-*.sql | tail -1
-head -5 ~/vmenu-backup-*.sql | tail -1     # expect PostgreSQL dump header
+head -1 ~/vmenu-backup-*.sql
 ```
 
-A zero-byte file means the dump failed silently. Do not continue.
+The file should be at least tens of kilobytes and start with a PostgreSQL dump
+header. If it is empty, stop and work out why before continuing.
 
 ---
 
-## Step 2 — Deploy code + migrations
+## Step 2 — Deploy the code and run the migrations
 
-**2.1 — Confirm the tree is clean**
+`deploy.sh` does the whole sequence: fast-forward pull, `npm install`, load
+`DATABASE_URL` from `apps/api/.env`, bring Postgres up if it is not running,
+`prisma generate`, `prisma migrate deploy`, build the API, build the frontend,
+copy `dist` into `/var/www/restaurant`, verify the deployed bundle hash matches
+the one just built, and restart the API under pm2.
+
+Before running it, confirm your working tree is clean. The script pulls with
+`--ff-only`, so any local edit on the server aborts the deploy partway through
+its first step:
 
 ```bash
 cd /root/Restaurant-system
-git status --short         # must be empty; deploy.sh uses --ff-only
-```
-
-**2.2 — Deploy**
-
-```bash
+git status --short      # must print nothing
 ./deploy.sh
 ```
 
-Pull → install → `prisma migrate deploy` → build API → build web → copy to
-`/var/www/restaurant` (bundle hash verified) → `pm2 restart restaurant-api`.
+Watch the output under `==> Running database migrations...`. Five migrations
+should apply.
 
-**2.3 — Watch the migration section**
+`20260730100000_restaurant_module_permissions` is Part 1. It adds the three
+boolean columns to `Restaurant` and — importantly — backfills every restaurant
+that already exists to banquet + catering ON. That backfill is what stops the
+deploy locking out every customer you already have, and Step 3 verifies it
+worked.
 
-Under `==> Running database migrations...` you should see these five applied:
+`20260730140000_invite_request` is Part 3. It creates the `InviteRequest` table
+that invitation orders land in.
 
-| Migration | Brings |
-|---|---|
-| `20260730100000_restaurant_module_permissions` | Part 1 — the three module switches |
-| `20260730140000_invite_request` | Part 3 — invitation orders |
-| `20260730160000_invite_request_photos` | multiple photos per order |
-| `20260730170000_admin_role_performer` | Part 4 — the `PERFORMER` enum value |
-| `20260730180000_performers` | Part 4 — profile / calendar / bookings |
+`20260730160000_invite_request_photos` converts that table's single `photoUrl`
+to a `photoUrls` array, carrying over any existing value first.
 
-If earlier v-connect migrations (`nfc_plaque`, `platform_contact`, …) also apply
-here, that is expected — they were pending too.
+`20260730170000_admin_role_performer` adds the `PERFORMER` value to the
+`AdminRole` enum, and does nothing else. It is alone in its own migration on
+purpose: PostgreSQL will not let a newly added enum value be *used* in the same
+transaction that adds it, and Prisma wraps each migration in a transaction. Do
+not merge it into the next one.
 
-**Stop on any error.** Do not continue to step 4 with a partial migration.
+`20260730180000_performers` creates `PerformerProfile`, `PerformerBooking` and
+`PerformerEvent`, and drops the unused `InviteRequest.performers` column.
+
+If you also see the older v-connect migrations (`nfc_plaque`,
+`platform_contact`, `platform_contact_instagram`, `extra_services`,
+`admin_role_nfc_maker`) applying here, that is expected — they were pending too
+and have simply been waiting for a deploy.
+
+If any migration errors, stop. Do not carry on to the host setup with a
+half-applied schema; fix the error or restore from Step 1 first.
 
 ---
 
-## Step 3 — Verify migrations landed
+## Step 3 — Verify the migrations actually landed
 
-All commands read the DB credentials from inside the container, so they work
-whether or not you overrode `POSTGRES_USER` / `POSTGRES_DB`.
+`deploy.sh` will fail loudly on a migration error, but it is worth confirming the
+resulting schema directly, because the difference between "the deploy succeeded"
+and "the feature will work" is exactly these four checks.
 
-**3.1 — New tables**
+All of them read credentials from inside the container, for the reason given in
+Step 1.
+
+First, confirm the new tables exist:
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt"' \
   | grep -Ei 'performer|inviterequest|nfcplaque|platformcontact'
 ```
 
-Expect: `PerformerProfile`, `PerformerEvent`, `PerformerBooking`,
-`InviteRequest`, `NfcPlaque`, `PlatformContact`.
+You are looking for `PerformerProfile`, `PerformerEvent`, `PerformerBooking`,
+`InviteRequest`, and — from the earlier v-connect work — `NfcPlaque` and
+`PlatformContact`.
 
-**3.2 — The module columns**
+Second, confirm the module columns landed on `Restaurant`:
 
 ```bash
 docker compose exec -T postgres sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\d \"Restaurant\""' | grep module
 ```
 
-Expect `moduleBanquet`, `moduleCatering`, `moduleAddons`.
+Expect `moduleBanquet`, `moduleCatering` and `moduleAddons`.
 
-**3.3 — The new role**
+Third, confirm the new role exists in the enum. If this is missing, creating a
+performer in Step 10 fails with a raw database error rather than a friendly
+message:
 
 ```bash
 docker compose exec -T postgres sh -c \
@@ -126,138 +146,131 @@ docker compose exec -T postgres sh -c \
   | grep -E 'PERFORMER|NFC_MAKER'
 ```
 
-**3.4 — Existing restaurants were grandfathered in**
-
-This is the one that protects your current customers. The migration backfills
-every restaurant that already existed to banquet + catering ON:
+Fourth — and this is the one that protects the customers you already have — check
+that existing restaurants were grandfathered in:
 
 ```bash
 docker compose exec -T postgres sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT name, \"moduleBanquet\", \"moduleCatering\", \"moduleAddons\" FROM \"Restaurant\" ORDER BY \"createdAt\""'
 ```
 
-Every pre-existing row should show `t | t | f`. **If any show `f | f | f`, stop
-and tell me** — that restaurant's staff can no longer log in.
+Every restaurant that existed before this deploy should read `t | t | f` —
+banquet on, catering on, additional services off. That is the migration's backfill
+doing its job. **If any pre-existing restaurant reads `f | f | f`, stop and tell
+me.** That venue's ADMIN, EMPLOYEE and KITCHEN accounts can no longer sign in,
+and its public catering site has stopped resolving. It is recoverable in seconds
+from the Chief Admin UI, but you want to know now rather than from a phone call.
 
 ---
 
 ## Step 4 — DNS
 
-**4.1 — Get the server IP from a host that already works**
+One new record is needed: `performer` on `v-menu.uz`.
+
+Start by finding the address the existing hosts point at, rather than assuming
+you remember it. If the server sits behind a proxy or has more than one
+interface, a guess gets you a host that resolves to nothing:
 
 ```bash
 dig +short rmanager.v-menu.uz
 ```
 
-**4.2 — Add the record in the AIRNET panel**
+In the AIRNET control panel for `v-menu.uz`, add an **A record** with the name
+`performer` pointing at that address, at whatever TTL the panel defaults to.
+There is no wildcard involved anywhere in this system — the .uz registrar rejects
+wildcard DNS, which is the whole reason flyers, invitations, plaques and
+restaurant apps are all path-based rather than subdomain-based.
 
-| Type | Name | Value |
-|---|---|---|
-| A | `performer` | IP from 4.1 |
+While you are in the panel, confirm the v-connect records from the earlier work
+exist: an A record for the root `v-connect.uz` and one for `nfc` on that domain,
+both pointing at the same address. Add them if they are missing.
 
-Also confirm these exist from the earlier v-connect work — add them if not:
-
-| Type | Name | Value |
-|---|---|---|
-| A | `v-connect.uz` (root) | same IP |
-| A | `nfc` (on `v-connect.uz`) | same IP |
-
-**4.3 — Verify at the authoritative resolver**
+Now verify, and verify in the right order. First ask a public resolver, which
+goes to the authoritative nameserver and bypasses everything between you and the
+zone:
 
 ```bash
 dig +short performer.v-menu.uz @8.8.8.8
 ```
 
-**4.4 — Then from your own machine**
+Then ask your own machine's resolver:
 
 ```bash
 dig +short performer.v-menu.uz
 ```
 
-> If 4.3 answers and 4.4 does not, your router/ISP has cached the old
-> NXDOMAIN — nothing is wrong with the server. The zone's SOA `minimum` is
-> 86400, so that can persist for 24h. This is what happened with
-> `nfc.v-connect.uz`. Ask AIRNET to lower it to 3600 to avoid a repeat.
+If the first answers and the second does not, nothing is wrong with the server or
+the record. Your router or ISP resolver has cached the earlier NXDOMAIN — the
+negative answer from before the record existed. This zone's SOA `minimum` is
+86400 seconds, so a cached miss can persist for a full day. This is precisely
+what happened with `nfc.v-connect.uz` and cost real time chasing a non-problem.
+You can wait it out, flush the local resolver, or test from mobile data. Asking
+AIRNET to lower the SOA `minimum` to 3600 would mean future hosts appear within
+an hour instead of a day, and is worth doing once.
+
+Do not move on to certbot until the name resolves from the machine that will run
+it, because certbot validates over HTTP against that name.
 
 ---
 
-## Step 5 — nginx
+## Step 5 — Nginx
 
-**5.1 — `performer.v-menu.uz`**
+See [§ Nginx configuration](#nginx-configuration) below for the complete blocks
+and — more importantly — an explanation of how API traffic actually flows in this
+system, which is not what the existing per-host blocks imply.
 
-Full block in [SETUP-PERFORMER.md § Step 2](SETUP-PERFORMER.md). The one line
-that is easy to miss and specific to this host:
-
-```nginx
-client_max_body_size 64M;   # inside location /api/
-```
-
-Performers upload video showreels. The API accepts 60 MB; nginx defaults to
-**1 MB** and rejects the request before Express ever sees it — a bare `413`,
-nothing in the API log, photos still working. Looks like "videos are broken".
-
-**5.2 — v-connect hosts** (if not already done)
-
-Two blocks: `v-connect.uz` (root — serves both `/login` and `/<slug>` plaques)
-and `nfc.v-connect.uz` (the builder). Both need only
-`root /var/www/restaurant` + `try_files … /index.html`; they call the API
-cross-origin, which CORS already allows.
-
-**5.3 — Enable and test**
-
-```bash
-ln -s /etc/nginx/sites-available/performer.v-menu.uz /etc/nginx/sites-enabled/
-nginx -t                       # must say "test is successful"
-systemctl reload nginx
-```
-
-Never reload on a failed test — that takes down every host, not just the new one.
-
-**5.4 — Smoke test over plain HTTP**
-
-```bash
-curl -sI http://performer.v-menu.uz/ | head -1    # expect 200
-```
+The short version: `performer.v-menu.uz` needs a block that does nothing but
+serve the SPA, and the **`api.v-menu.uz`** block needs one line added to it.
 
 ---
 
-## Step 6 — TLS
+## Step 6 — TLS certificates
 
-**6.1 — Record the current SAN list**
+Two separate certificates are involved, because `v-menu.uz` and `v-connect.uz`
+are different domains.
+
+Before touching anything, record what your current certificate covers:
 
 ```bash
 certbot certificates
 ```
 
-Copy the `Domains:` line. You need it verbatim next.
+Copy the `Domains:` line somewhere you can see it. You need it verbatim in a
+moment, and this is the step where a mistake is quietly destructive.
 
-**6.2 — Reissue including the new name**
-
-Every existing name **plus** the new one, in one command:
+To add the new host, reissue the `v-menu.uz` certificate with **every name it
+already covers plus the new one**, in a single command. Certbot replaces the
+certificate rather than appending to it, so any name you leave out of this
+command is dropped, and that host starts failing TLS immediately — with no error
+at the time you run it:
 
 ```bash
 certbot --nginx \
   -d v-menu.uz -d www.v-menu.uz \
+  -d api.v-menu.uz \
   -d admin.v-menu.uz -d manager.v-menu.uz -d cabinet.v-menu.uz \
   -d rmanager.v-menu.uz -d banquet.v-menu.uz -d food-admin.v-menu.uz \
   -d event.v-menu.uz \
   -d performer.v-menu.uz
 ```
 
-> Use what 6.1 actually printed. Omitting a name that is currently covered
-> issues a cert without it, and that host starts failing TLS immediately.
+The names above are the expected set for this system, but your server is the
+authority — use what `certbot certificates` actually printed, plus
+`performer.v-menu.uz`.
 
-**6.3 — v-connect certificate** (separate domain, separate cert)
+If the v-connect certificate has not been issued yet, do it now as a separate
+certificate:
 
 ```bash
 certbot --nginx -d v-connect.uz -d www.v-connect.uz -d nfc.v-connect.uz
 ```
 
-**6.4 — Verify**
+Then confirm the result, remembering that certbot edits your server blocks in
+place to add the `listen 443 ssl` lines and certificate paths:
 
 ```bash
 certbot certificates | grep -A1 Domains
-curl -sI https://performer.v-menu.uz/ | head -1    # expect 200
+curl -sI https://performer.v-menu.uz/ | head -1     # expect 200
 nginx -t && systemctl reload nginx
 ```
 
@@ -265,177 +278,409 @@ nginx -t && systemctl reload nginx
 
 ## Step 7 — Grant module permissions
 
-New restaurants now default to **all modules off**. Existing ones were
-grandfathered in at 3.4.
+From this deploy onward, **newly created restaurants start with all three modules
+off**. Restaurants that already existed were grandfathered in by the migration, as
+verified in Step 3.
 
-**7.1 — Open the Chief Admin dashboard**
+Sign in as `CHIEF_ADMIN` at `https://admin.v-menu.uz` and open the **Companies**
+tab. Each restaurant now shows three switches.
 
-`https://admin.v-menu.uz` → **Companies** tab.
+**Banquets** unlocks the banquet staff roles — ADMIN, EMPLOYEE and KITCHEN — and
+the admin panel at `banquet.v-menu.uz/<slug>`. **Food service site** unlocks the
+public catering site at `v-menu.uz/<slug>` and the CATERING_ADMIN role.
+**Additional services** unlocks the Additional Services page and the button that
+reaches it from the tablet.
 
-**7.2 — Set the switches per restaurant**
+Scroll to the bottom of the tab for a section headed **"Restaurants without a
+company"**. The dashboard has only ever listed restaurants nested under a
+company, but `companyId` is optional — so any company-less restaurant was
+invisible there, and its switches would be unreachable without that section. If
+you have none, it will not appear.
 
-Each restaurant shows three toggles:
+Understand what turning a module *off* does before you use it in anger. It is not
+a cosmetic flag. The gate runs on every token refresh, not just at login, so
+revoking a module ends live sessions within about fifteen minutes: the next
+refresh returns 403 and the axios interceptor logs the user out. Turning Banquets
+off also changes what `banquet.v-menu.uz/<slug>` serves — that host stops showing
+the admin panel and starts showing the Additional Services page instead. That is
+the designed behaviour from Part 2, not a bug, but it will surprise you if you
+flip the switch to test it while someone is working.
 
-| Toggle | Unlocks |
-|---|---|
-| Banquets | banquet staff roles + `banquet.v-menu.uz/<slug>` |
-| Food service site | `v-menu.uz/<slug>` + the Food Admin role |
-| Additional services | the Additional Services page and its button |
-
-**7.3 — Check the company-less section**
-
-Scroll to **"Restaurants without a company"**. Restaurants with no company never
-appeared in the old tree — if you have any, their switches are only reachable
-here.
-
-**7.4 — Understand the revocation behaviour before you use it**
-
-Turning a module **off** ends live sessions within ~15 minutes: the next token
-refresh 403s and the user is logged out. It is not a soft flag. Turning Banquets
-off also means `banquet.v-menu.uz/<slug>` starts serving the Additional Services
-page instead of the admin panel.
+Owners cannot grant themselves modules. An OWNER may edit their own restaurant,
+but the controller strips the three module fields from any payload that does not
+come from a CHIEF_ADMIN, so this is enforced server-side and not merely hidden.
 
 ---
 
-## Step 8 — Promote a v-invite SYSTEM_ADMIN ⚠️
+## Step 8 — Promote a v-invite SYSTEM_ADMIN
 
-**Do not skip this.** There is **no UI and no seed** for it. Until you run this,
-the Notifications page at v-invite.uz does not exist for anyone, and every
-invitation order submitted in Part 3 lands in the database unseen.
+**This one has no user interface, and skipping it makes Part 3 invisible.**
 
-`InviteUser.role` defaults to `"USER"`.
+`InviteUser.role` defaults to `"USER"`. Nothing in the application, and nothing
+in the seed, ever promotes an account to `SYSTEM_ADMIN`. Until you run the
+statement below by hand, the **Notifications** tab does not appear for any
+v-invite account, and every invitation order submitted from the Additional
+Services page lands in the database where nobody can see it. The orders are not
+lost — they are simply unreachable until somebody has the role.
 
-**8.1 — Find the account to promote**
+First, list the accounts so you can pick the right one:
 
 ```bash
 docker compose exec -T postgres sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, email, username, role FROM \"InviteUser\" ORDER BY \"createdAt\""'
 ```
 
-If the list is empty, register at `https://v-invite.uz` first, then re-run.
+If that comes back empty, there are no v-invite accounts yet. Register one at
+`https://v-invite.uz` first, then re-run the query.
 
-**8.2 — Promote it**
-
-Replace the email with the real one:
+Then promote the account, substituting the real email address:
 
 ```bash
 docker compose exec -T postgres sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE \"InviteUser\" SET role = '"'"'SYSTEM_ADMIN'"'"' WHERE email = '"'"'you@example.com'"'"'"'
 ```
 
-**8.3 — Confirm exactly one row changed**
+psql prints the number of rows changed. You want exactly `UPDATE 1`. `UPDATE 0`
+means the email did not match anything — check for typos or a different case
+against the list from the previous query. Anything above 1 means your `WHERE`
+clause matched too broadly, and you should look at what you just changed.
 
-`UPDATE 1`. If it says `UPDATE 0`, the email did not match. If it says more than
-1, you matched too broadly — review 8.1.
+Finally, confirm it in the browser. Sign out and back in at `https://v-invite.uz`
+— the role is read from the token, so an existing session will not show the
+change. A **🔔 Notifications** tab should now appear in the header, carrying an
+unread badge when orders are waiting. That tab is the only place invitation
+orders are visible anywhere in the system.
 
-**8.4 — Verify in the browser**
-
-Sign out and back in at `https://v-invite.uz`. A **🔔 Notifications** tab appears
-in the header. That tab is also the only way to see invitation orders.
+While you are signed in as this account, note that the platform contact card on
+the **Profile** page is also SYSTEM_ADMIN-only — you will need it in Step 11.
 
 ---
 
 ## Step 9 — Rotate the `nfc_maker` password
 
-The seed's default password is **in the repository** and has been shared in
-plain text during development. Treat it as compromised.
+The seed file contains a hardcoded default password for the `nfc_maker` account,
+and that password has additionally been passed around in plain text during
+development. Treat it as compromised and change it.
 
-**9.1 — If the account does not exist yet**, create it with a password you choose:
+Which action you take depends on whether the account already exists.
+
+If the account has **not** been created yet, create it now with a password you
+choose. The seed reads `NFC_MAKER_PASSWORD` from the environment and only falls
+back to the hardcoded default when that is unset:
 
 ```bash
 cd /root/Restaurant-system/apps/api
 NFC_MAKER_PASSWORD='<a-new-strong-password>' npx tsx prisma/seed.ts
 ```
 
-**9.2 — If it already exists**, the seed will **not** reset it — that is
-deliberate, so re-running the seed never clobbers a production password. Change
-it through the UI instead: sign in as `CHIEF_ADMIN` at `admin.v-menu.uz` →
-Users → edit credentials for `nfc_maker`.
+If the account **already exists**, re-running the seed will not help — it
+deliberately skips password changes for existing accounts, so that a routine
+re-seed can never clobber a password someone changed in production. Change it
+through the interface instead: sign in as `CHIEF_ADMIN` at
+`https://admin.v-menu.uz`, open Users, find `nfc_maker`, and edit its
+credentials.
 
-**9.3 — Verify the old password no longer works** at `https://v-connect.uz/login`.
+Either way, confirm afterwards that the old password no longer works by
+attempting to sign in with it at `https://v-connect.uz/login`.
 
 ---
 
 ## Step 10 — Create performer accounts
 
-**10.1 — Sign in as a role that can create them**
+There is no seeded performer, and there should not be — unlike `nfc_maker`, these
+are real people's accounts, and a default one would be a permanently open door.
 
-`CHIEF_ADMIN` (`admin.v-menu.uz` → Users), `OWNER` (`cabinet.v-menu.uz`), or
-`ADMIN` (`banquet.v-menu.uz/<slug>` → `/admin/users`).
+Three roles can create them. A `CHIEF_ADMIN` does it from `admin.v-menu.uz` under
+the Users tab; an `OWNER` from `cabinet.v-menu.uz`; a restaurant `ADMIN` from
+`banquet.v-menu.uz/<slug>` at `/admin/users`. A `CATERING_ADMIN` deliberately
+cannot, and that restriction is enforced on the server rather than by hiding the
+option.
 
-`CATERING_ADMIN` deliberately cannot — enforced server-side.
+Choose the role **Performer**, set a username and password, and save.
 
-**10.2 — Create with role "Performer"**, username + password.
+The account will show no restaurant, and that is correct. A performer is not
+staff of the venue that happened to sign them up — they are platform-wide and
+bookable from any restaurant's Additional Services page. The server forces
+`restaurantId` to null for performers no matter who creates them, including when
+a restaurant ADMIN does it, so you cannot get this wrong from the interface.
 
-**10.3 — The account correctly shows no restaurant.** A performer is
-platform-wide and bookable by anyone, not staff of the venue that signed them
-up. The server forces `restaurantId` to null whoever creates them.
-
-**10.4 — Tell them to sign in at `https://v-menu.uz/login`**, not at
-`performer.v-menu.uz`. Sign-in is on the root domain for every role.
-
----
-
-## Step 11 — Set studio contacts
-
-These fill the attribution block at the bottom of published pages. Blank until
-set.
-
-**11.1 — v-connect** — manager portal (`manager.v-menu.uz`), contacts section.
-
-**11.2 — v-invite** — sign in at `v-invite.uz` as the SYSTEM_ADMIN from step 8 →
-**Profile** → the platform contact card (visible only to a SYSTEM_ADMIN).
+When you hand over the credentials, tell the performer to sign in at
+**`https://v-menu.uz/login`** and not at `performer.v-menu.uz`. Sign-in happens
+on the root domain for every role in the system; the login page then forwards
+them to their own host with the session attached.
 
 ---
 
-## Step 12 — End-to-end verification
+## Step 11 — Set the studio contact details
 
-Work through these in order; each depends on the previous steps.
+These fill the attribution block at the foot of published pages, and they are
+blank until somebody sets them.
 
-**12.1 — Module permissions (Part 1)**
+For **v-connect**, sign in to the manager portal at `https://manager.v-menu.uz`
+and fill in the contacts section. These appear on published NFC plaques.
 
-- Turn Banquets **off** for a test restaurant → its ADMIN is refused at login
-  with a clear message, not a generic error.
-- Turn it back **on** → they can sign in again.
-- Turn Food service **off** → `v-menu.uz/<slug>` stops resolving.
-- Sign in as an OWNER and try to PATCH their own restaurant's modules → the
-  fields are stripped server-side; they cannot self-grant.
-
-**12.2 — Additional Services routing (Part 2)**
-
-- Banquets **off** → `banquet.v-menu.uz/<slug>` shows Additional Services, not a
-  login screen.
-- Banquets **on** + Additional services **on** → confirm an event on the tablet
-  Summary page; the prominent button appears.
-- Additional services **off** → the button is gone.
-
-**12.3 — Invitation orders (Part 3)**
-
-- Submit the invitations form with **several photos**.
-- It appears on the v-invite **Notifications** tab with an unread badge.
-- Mark read / delete both work.
-
-**12.4 — Performers (Part 4)** — full walkthrough in
-[SETUP-PERFORMER.md § Step 6](SETUP-PERFORMER.md). The assertion that matters:
-after the performer **accepts** a booking, they must read **Busy** for that date
-in the guest-facing list. That proves the loop closed.
-
-**12.5 — Nothing else regressed**
-
-Sign in once as each existing role and confirm you land where you used to:
-CHIEF_ADMIN, MANAGER, OWNER, RESTAURANT_MANAGER, CATERING_ADMIN, ADMIN.
+For **v-invite**, sign in at `https://v-invite.uz` as the SYSTEM_ADMIN account
+from Step 8, open **Profile**, and fill in the platform contact card. That card
+is only rendered for a SYSTEM_ADMIN, and the server rejects the write from anyone
+else, so this genuinely has to be that account. These details appear under the
+"developed with love" credit on every published invitation.
 
 ---
 
-## Known open questions
+## Step 12 — Verify end to end
 
-Not blockers, but decisions I flagged and you have not made:
+Work through these in order; each one depends on the steps before it.
 
-- **The public invitation and booking endpoints have no rate limiting.** Both are
-  unauthenticated by necessity. Options: per-IP limit, captcha, or requiring a
-  valid restaurant slug.
-- **An ADMIN can create a performer but cannot delete one** — deliberate, since
-  performers are platform-wide, but say if you want it symmetrical.
-- **Plaque templates are owner-private**, not shared across NFC makers.
-- **`apps/web/tsconfig.json` has no `"noEmit": true`**, so every build emits
-  `.js` files next to sources. Harmless but noisy; one line to fix.
+**Module permissions.** Turn Banquets off for a test restaurant and confirm its
+ADMIN is refused at login with a clear message rather than a generic failure.
+Turn it back on and confirm they can sign in again. Turn Food service off and
+confirm `v-menu.uz/<slug>` stops resolving to that restaurant's site. If you have
+an OWNER account, confirm that saving their own restaurant does not let them
+enable a module for themselves.
+
+**Additional Services routing.** With Banquets off for a restaurant, visit
+`banquet.v-menu.uz/<slug>` and confirm you get the Additional Services page
+rather than a login screen you could never get past. Then turn Banquets on and
+Additional services on, confirm an event on the tablet Summary page, and check
+that the prominent Additional Services button appears on the confirmation screen.
+Turn Additional services off and confirm the button disappears.
+
+**Invitation orders.** Submit the invitations form with several photos attached.
+Confirm it appears on the v-invite Notifications tab with an unread badge, that
+the photos are all visible and open full size, and that marking read and deleting
+both work.
+
+**Performers.** Follow the full walkthrough in
+[SETUP-PERFORMER.md](SETUP-PERFORMER.md) § Step 6. The assertion that actually
+matters is the last one: after the performer accepts a booking request, they must
+read **Busy** for that date in the guest-facing performers list. That is what
+proves the loop closed, because availability is defined as "has a calendar entry
+that day" and accepting a booking is what creates the entry.
+
+**No regressions.** Sign in once as each pre-existing role — CHIEF_ADMIN,
+MANAGER, OWNER, RESTAURANT_MANAGER, CATERING_ADMIN and a restaurant ADMIN — and
+confirm each still lands on the host it always did.
+
+---
+
+## Nginx configuration
+
+### How traffic actually flows here
+
+This is worth understanding before you copy any config, because the existing
+per-host blocks are misleading.
+
+`apps/web/.env` sets `VITE_API_URL="https://api.v-menu.uz/api"` — an **absolute
+origin**, baked into the JavaScript bundle at build time. Every API call from
+every host therefore goes to `api.v-menu.uz`, cross-origin, regardless of which
+hostname served the page. Uploads follow the same path: `getPhotoUrl()` strips
+the trailing `/api` from that value and prefixes it to every stored
+`/uploads/...` path, so images and videos are fetched from
+`https://api.v-menu.uz/uploads/...` too.
+
+The practical consequences:
+
+Every host that serves the SPA needs **nothing but** a document root and an
+SPA fallback. It does not need an `/api/` proxy, and it does not need an
+`/uploads/` alias. If your older blocks contain them, they are dead config —
+harmless, but they will mislead you when debugging, exactly as they misled the
+first draft of this document.
+
+There is exactly **one** block that proxies to the Node process on port 4000 and
+serves the uploads directory: `api.v-menu.uz`. Anything to do with request size
+limits, upload timeouts or CORS headers belongs there and nowhere else.
+
+The API already sends permissive CORS (`cors({ origin: true })`) and sets
+`Cross-Origin-Resource-Policy: cross-origin` on `/uploads`, which is what makes
+this cross-origin arrangement work without per-host configuration.
+
+### Block 1 — the new host, `performer.v-menu.uz`
+
+Create `/etc/nginx/sites-available/performer.v-menu.uz`:
+
+```nginx
+server {
+    listen 80;
+    server_name performer.v-menu.uz;
+
+    root /var/www/restaurant;
+    index index.html;
+
+    # /profile, /calendar, /bookings and /devices are client-side routes. Without
+    # this, reloading the page on any of them returns a 404 from nginx, because
+    # no such file exists on disk.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+That is the entire block. It is deliberately identical in shape to
+`rmanager.v-menu.uz`, because the performer workspace has the same needs: no path
+slug (a performer is identified by their token, not a restaurant), no API proxy,
+no uploads.
+
+Enable it and reload:
+
+```bash
+ln -s /etc/nginx/sites-available/performer.v-menu.uz /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+`nginx -t` must report both `syntax is ok` and `test is successful`. Never reload
+on a failed test — a broken config takes down every host on the server, not just
+the one you were editing.
+
+Smoke-test it over plain HTTP before certbot exists for this name:
+
+```bash
+curl -sI http://performer.v-menu.uz/ | head -1      # expect 200
+```
+
+### Block 2 — the change you would not guess: `api.v-menu.uz`
+
+**This is the one that matters for performers, and it is not on the performer
+host.**
+
+Performers upload video showreels. The API accepts up to 60 MB per file. Nginx's
+default `client_max_body_size` is **1 MB**, and nginx rejects an oversized request
+itself — the request never reaches Express, nothing appears in the API log, and
+the browser receives a bare `413`. Photos, being small, keep working perfectly.
+The result looks like "video upload is broken" rather than a proxy limit.
+
+First check whether a limit is already set globally, in which case you may not
+need to change anything:
+
+```bash
+grep -rn client_max_body_size /etc/nginx/
+```
+
+If that prints nothing, or prints a value below 64M, edit your `api.v-menu.uz`
+server block so it looks like this:
+
+```nginx
+server {
+    listen 80;
+    server_name api.v-menu.uz;
+
+    # Uploads are large: performer showreels are capped at 60 MB server-side.
+    # Nginx defaults to 1 MB and would reject them with a bare 413 before the
+    # API ever sees the request.
+    client_max_body_size 64M;
+
+    location / {
+        proxy_pass http://localhost:4000/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # A 60 MB upload over a slow connection takes a while; the default 60s
+        # would cut it off mid-transfer.
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_request_buffering off;
+    }
+
+    location /uploads/ {
+        alias /root/Restaurant-system/apps/api/uploads/;
+        add_header Cross-Origin-Resource-Policy cross-origin;
+        add_header Access-Control-Allow-Origin *;
+        expires 1y;
+    }
+}
+```
+
+Serving `/uploads/` directly from disk rather than proxying it to Node is worth
+keeping — it means large media never occupies an API worker.
+
+`proxy_request_buffering off` streams the upload straight through instead of
+spooling the whole file to a temp directory before forwarding it. On a 60 MB
+video that is the difference between a snappy upload and a long stall with no
+progress.
+
+Reload and confirm:
+
+```bash
+nginx -t && systemctl reload nginx
+curl -sI https://api.v-menu.uz/api/health | head -1
+```
+
+If your API is not currently on its own hostname and is instead proxied per-host,
+then `VITE_API_URL` in `apps/web/.env` does not match your deployment. In that
+case put `client_max_body_size 64M;` in the `/api/` location of whichever block
+is actually serving the API, and tell me — the routing documentation and this
+guide both assume the `api.v-menu.uz` arrangement that the env file describes.
+
+### Block 3 — v-connect hosts, if not already present
+
+Two blocks, both plain SPA hosts for the same reason as above:
+
+```nginx
+server {
+    listen 80;
+    server_name v-connect.uz www.v-connect.uz;
+
+    root /var/www/restaurant;
+    index index.html;
+
+    # Serves both /login and the published plaques at /<slug>.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name nfc.v-connect.uz;
+
+    root /var/www/restaurant;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### Checking the whole set
+
+The full list of hostnames this system serves, all from the same
+`/var/www/restaurant` build: the root `v-menu.uz` (login, tablet, and path-based
+catering sites), `admin`, `manager`, `cabinet`, `rmanager`, `performer`,
+`banquet`, `food-admin` and `event` on `v-menu.uz`; `api.v-menu.uz` for the API
+and uploads; `v-invite.uz`; and `v-connect.uz` with `nfc.v-connect.uz`.
+
+To see what you currently have configured:
+
+```bash
+grep -rh server_name /etc/nginx/sites-enabled/ | tr -s ' ' | sort -u
+```
+
+---
+
+## Decisions still open
+
+None of these block the deploy, but they are unresolved and I would rather they
+were your choice than my silence.
+
+The public invitation and performer-booking endpoints have **no rate limiting**.
+Both are unauthenticated out of necessity — a restaurant's guest has no account —
+so both are open to spam. The realistic options are a per-IP rate limit in nginx,
+a captcha on the forms, or requiring the request to carry a valid restaurant
+slug. This is the only item here I would consider pre-launch.
+
+A restaurant ADMIN can **create** a performer but cannot **delete** one. That
+asymmetry is deliberate, since a performer is a platform-wide account and one
+venue's admin removing someone other venues book would be worse, but say the word
+if you want it symmetrical.
+
+Plaque design templates are **owner-private** to the NFC maker who created them,
+rather than shared across all makers.
+
+`apps/web/tsconfig.json` has no `"noEmit": true`, so every build emits compiled
+`.js` files next to the `.tsx` sources. They are harmless but noisy, and can
+shadow real sources in Vite's resolution order if one goes stale. One line to fix
+whenever you want it.

@@ -128,18 +128,17 @@ dig +short performer.v-menu.uz
 
 ## Step 2 — nginx
 
-`performer.v-menu.uz` is a plain SPA host. Unlike `banquet.` and `food-admin.`,
-there is **no path slug** — a performer is identified by their token, not by a
-restaurant — so no basename handling is needed.
+**2.1 — Understand where API traffic actually goes**
 
-**2.1 — Check whether `client_max_body_size` is already global**
+`apps/web/.env` sets `VITE_API_URL="https://api.v-menu.uz/api"` — an **absolute
+origin**, baked into the bundle at build time. Every API call from every host
+goes to `api.v-menu.uz`, cross-origin, whatever hostname served the page. Uploads
+follow the same route: `getPhotoUrl()` strips the trailing `/api` and prefixes the
+result to every stored `/uploads/...` path.
 
-```bash
-grep -rn client_max_body_size /etc/nginx/
-```
-
-If it is already set to 64M or more at the `http` level, you may omit it from
-the block below. If this prints nothing, **keep it** — see 2.4.
+So `performer.v-menu.uz` needs **no `/api/` proxy and no `/uploads/` alias**. It
+serves static files and nothing else. If older blocks on your server contain
+those sections, they are dead config — harmless, but misleading when debugging.
 
 **2.2 — Create the server block**
 
@@ -153,34 +152,17 @@ server {
     root /var/www/restaurant;
     index index.html;
 
-    # SPA fallback: /profile, /calendar, /bookings and /devices are client-side
-    # routes. Without this, a refresh on any of them returns 404 from nginx.
+    # /profile, /calendar, /bookings and /devices are client-side routes.
+    # Without this, reloading on any of them returns a 404 from nginx.
     location / {
         try_files $uri $uri/ /index.html;
     }
-
-    location /api/ {
-        proxy_pass http://localhost:4000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Performer media — see 2.4. The API accepts 60 MB; nginx defaults to 1 MB.
-        client_max_body_size 64M;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-    }
-
-    location /uploads/ {
-        alias /root/Restaurant-system/apps/api/uploads/;
-        add_header Cross-Origin-Resource-Policy cross-origin;
-        add_header Access-Control-Allow-Origin *;
-        expires 1y;
-    }
 }
 ```
+
+That is the whole block — deliberately the same shape as `rmanager.v-menu.uz`.
+There is no path slug here, because a performer is identified by their token
+rather than by a restaurant.
 
 **2.3 — Enable and reload**
 
@@ -190,28 +172,53 @@ nginx -t
 systemctl reload nginx
 ```
 
-`nginx -t` must print `syntax is ok` **and** `test is successful`. Do not reload
-on a failed test — you will take the whole server down, not just this host.
+`nginx -t` must print `syntax is ok` **and** `test is successful`. Never reload
+on a failed test — a broken config takes down every host, not just this one.
 
-**2.4 — Why `client_max_body_size` is not optional**
+**2.4 — Raise the upload limit on `api.v-menu.uz` (not here)**
 
-This is the single way this host differs from `rmanager.v-menu.uz`.
+This is the step that is easy to get wrong, because the change belongs to a
+different host than the one you are setting up.
 
-Performers upload video showreels. The API accepts up to 60 MB per file. nginx's
-default limit is **1 MB**, and it rejects the request itself — Express never
-sees it, nothing appears in the API log, and the browser gets a bare `413`. Photos
-would keep working, so it looks like "videos are broken" rather than a config
-problem.
+Performers upload video showreels. The API accepts 60 MB per file; nginx defaults
+to **1 MB** and rejects oversized requests itself — Express never sees them,
+nothing appears in the API log, and the browser gets a bare `413`. Photos keep
+working, so it presents as "videos are broken".
 
-**2.5 — Smoke test over HTTP (before TLS exists)**
+Check whether a limit is already set globally:
 
 ```bash
-curl -sI http://performer.v-menu.uz/ | head -1        # expect 200
-curl -s  http://performer.v-menu.uz/api/health        # proxied to :4000
+grep -rn client_max_body_size /etc/nginx/
 ```
 
-The page will render the login redirect at this point — that is correct. The app
-itself is not deployed until step 3.
+If nothing is set, or it is below 64M, add to the **`api.v-menu.uz`** server
+block:
+
+```nginx
+    client_max_body_size 64M;          # at server level
+
+    location / {
+        proxy_pass http://localhost:4000/;
+        # ... existing proxy_set_header lines ...
+        proxy_read_timeout 300s;       # a 60 MB upload outlasts the 60s default
+        proxy_send_timeout 300s;
+        proxy_request_buffering off;   # stream through instead of spooling first
+    }
+```
+
+Then `nginx -t && systemctl reload nginx`.
+
+The full annotated block is in
+[DEPLOY-CHECKLIST.md § Nginx configuration](DEPLOY-CHECKLIST.md#nginx-configuration).
+
+**2.5 — Smoke test over plain HTTP**
+
+```bash
+curl -sI http://performer.v-menu.uz/ | head -1    # expect 200
+```
+
+The app will redirect to login at this point, which is correct — the new build is
+not deployed until step 3.
 
 ---
 
@@ -443,8 +450,8 @@ log (`pm2 logs restaurant-api`) for a transaction error.
 | Login loops back to `/login` | Browser running a pre-feature build | 3.5, 6a |
 | `performer.v-menu.uz` shows the wrong app | Block missing or not enabled | 2.3 |
 | 404 on refresh at `/calendar` | SPA fallback missing | 2.2 |
-| Video upload fails with 413 | `client_max_body_size` missing | 2.4 |
-| Photos upload but render broken | `/uploads/` alias wrong — must point at `apps/api/uploads/`, not the web root | 2.2 |
+| Video upload fails with 413 | `client_max_body_size` missing on the **`api.v-menu.uz`** block | 2.4 |
+| Photos upload but render broken | `/uploads/` alias wrong on the **`api.v-menu.uz`** block — must point at `apps/api/uploads/` | 2.4 |
 | Performer missing from the guest list | Visibility switch off, or profile never saved | 6b |
 | Everyone shows "Available" regardless of date | No date chosen. Availability is per-date; with no date the field is deliberately absent rather than defaulting to free | 6d |
 | "Performer" not offered as a role | Enum migration did not run | 3.4 |
