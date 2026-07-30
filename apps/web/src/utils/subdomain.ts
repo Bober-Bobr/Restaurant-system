@@ -130,6 +130,12 @@ export function getBanquetSlug(): string | null {
   return firstPathSegment();
 }
 
+// performer.v-menu.uz — the performer workspace (profile, calendar, bookings).
+// Not restaurant-scoped, so no path slug.
+export function isPerformerSubdomain(): boolean {
+  return window.location.hostname === `performer.${ROOT_DOMAIN}`;
+}
+
 // food-admin.v-menu.uz — the (single, fixed) catering-admin host. The restaurant
 // is identified by the auth token; the path slug is cosmetic.
 export function isFoodAdminHost(): boolean {

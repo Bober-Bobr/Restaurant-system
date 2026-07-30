@@ -18,6 +18,7 @@ import { tableCategoryRouter } from './modules/tableCategory/tableCategory.route
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
 import { nfcPlaqueRouter } from './modules/nfcPlaque/nfcPlaque.routes.js';
+import { performerRouter } from './modules/performer/performer.routes.js';
 import { platformContactRouter } from './modules/platformContact/platformContact.routes.js';
 import { photoRoutes } from './modules/photos/photo.routes.js';
 import { restaurantRouter } from './modules/restaurant/restaurant.routes.js';
@@ -80,6 +81,9 @@ protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);
 protectedApi.use('/companies', companyRouter);
+// Performers: not tied to a restaurant, so no requireRestaurant. Each route
+// inside is PERFORMER-only and scoped to the caller's own id.
+protectedApi.use('/performers', performerRouter);
 // Invitations: auth middleware is applied inside the router (it's outside the auto-mounted protected API
 // because routes use roles directly without requireRestaurant).
 app.use('/api/invitations', invitationRouter);

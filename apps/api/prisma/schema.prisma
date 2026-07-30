@@ -155,6 +155,9 @@ enum AdminRole {
   KITCHEN
   // v-connect.uz — builds NFC plaques for businesses. Not tied to a restaurant.
   NFC_MAKER
+  // Additional Services — a performer (musician, host, dancer…) with their own
+  // profile, calendar and booking inbox. Not tied to a restaurant.
+  PERFORMER
 }
 
 model AdminUser {
@@ -174,6 +177,9 @@ model AdminUser {
   guestInvitations GuestInvitation[] @relation("ManagerGuestInvitations")
   designTemplates  DesignTemplate[] @relation("ManagerDesignTemplates")
   nfcPlaques       NfcPlaque[]      @relation("NfcPlaques")
+  performerProfile PerformerProfile?  @relation("PerformerProfile")
+  performerEvents  PerformerEvent[]   @relation("PerformerEvents")
+  performerBookings PerformerBooking[] @relation("PerformerBookings")
 
   @@index([restaurantId])
 }
@@ -648,6 +654,78 @@ model InvitationRequest {
   @@index([invitationId])
 }
 
+// ── Performers (Additional Services) ─────────────────────────────────────────
+// A PERFORMER is an AdminUser with no restaurant. This holds the public-facing
+// profile shown in the Additional Services performers block.
+model PerformerProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  // Stage name shown to guests; falls back to the username when blank.
+  displayName String
+  // What they do — "DJ", "Singer", "Host"… free text, not an enum, because the
+  // list is open-ended and set by whoever creates the account.
+  craft       String?
+  bio         String?
+  phone       String?
+  avatarUrl   String?
+  // JSON arrays of upload URLs.
+  photos      Json    @default("[]")
+  videos      Json    @default("[]")
+  // Hidden from the public list without deleting the account.
+  isVisible   Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user AdminUser @relation("PerformerProfile", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// One entry in a performer's calendar. Either added by hand or created when
+// they accept a booking — `bookingId` is set only in the latter case.
+model PerformerEvent {
+  id          String   @id @default(cuid())
+  performerId String
+  eventDate   DateTime
+  // Kept as a string alongside the date, matching how it is entered.
+  eventTime   String
+  title       String
+  note        String?
+  bookingId   String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  performer AdminUser        @relation("PerformerEvents", fields: [performerId], references: [id], onDelete: Cascade)
+  booking   PerformerBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([performerId, eventDate])
+}
+
+// A booking request raised from the Additional Services page. Lands in the
+// performer's Notifications; accepting it creates the PerformerEvent above.
+model PerformerBooking {
+  id             String   @id @default(cuid())
+  performerId    String
+  restaurantName String
+  contactName    String
+  phone          String
+  eventDate      DateTime
+  eventTime      String
+  eventType      String?
+  note           String?
+  // PENDING | ACCEPTED | DECLINED
+  status         String   @default("PENDING")
+  // Provenance, when raised from a confirmed banquet event.
+  restaurantId   String?
+  eventNumber    Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  performer AdminUser       @relation("PerformerBookings", fields: [performerId], references: [id], onDelete: Cascade)
+  event     PerformerEvent?
+
+  @@index([performerId, status])
+  @@index([eventDate])
+}
+
 // ── Invitation order placed from the Additional Services page ────────────────
 // A restaurant's guest fills this in (unauthenticated) and it lands on the
 // v-invite.uz SYSTEM_ADMIN's Notifications page, where the studio builds the
@@ -670,8 +748,6 @@ model InviteRequest {
   eventDate      DateTime
   eventTime      String
   menu           String?
-  // Reserved — performers are not collected yet, spec pending.
-  performers     String?
   // JSON array of upload URLs. Plural from the start of real use: the honoree
   // usually has several photos for the designers to choose from.
   photoUrls      Json     @default("[]")

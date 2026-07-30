@@ -42,9 +42,13 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
+import { PerformerLayout } from './PerformerLayout';
+import { PerformerProfilePage } from '../pages/PerformerProfilePage';
+import { PerformerCalendarPage } from '../pages/PerformerCalendarPage';
+import { PerformerBookingsPage } from '../pages/PerformerBookingsPage';
 import { VInviteApp } from '../vinvite/VInviteApp';
 import { NfcApp } from '../vconnect/NfcApp';
 import { VConnectLoginPage } from '../vconnect/VConnectLoginPage';
@@ -174,6 +178,36 @@ export const App = () => {
     }
   }
 
+  // Performer subdomain → the performer workspace.
+  if (isPerformerSubdomain()) {
+    const { accessToken, role } = useAuthStore.getState();
+    if (!accessToken || role !== 'PERFORMER') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = buildAbsoluteUrl('/login');
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<PerformerLayout />}>
+          <Route path="/" element={<Navigate to="/profile" replace />} />
+          <Route path="/profile" element={<PerformerProfilePage />} />
+          <Route path="/calendar" element={<PerformerCalendarPage />} />
+          <Route path="/bookings" element={<PerformerBookingsPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/profile" replace />} />
+      </Routes>
+    );
+  }
+
   // On root domain, only /login, /tablet and /tablet/summary are accessible
   if (isRootDomain() && window.location.hostname !== 'localhost') {
     const { accessToken, role, restaurantName } = useAuthStore.getState();
@@ -185,6 +219,11 @@ export const App = () => {
     // MANAGER → manager.v-menu.uz
     if (accessToken && role === 'MANAGER' && window.location.pathname !== '/login') {
       window.location.href = buildSubdomainBase('manager');
+      return null;
+    }
+    // PERFORMER → performer.v-menu.uz
+    if (accessToken && role === 'PERFORMER' && window.location.pathname !== '/login') {
+      window.location.href = buildSubdomainBase('performer');
       return null;
     }
     // RESTAURANT_MANAGER → rmanager.v-menu.uz

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantModules } from '../services/publicRestaurant.service';
 import { inviteRequestService } from '../services/inviteRequest.service';
+import { publicPerformerService, type PublicPerformer, type PublicPerformerDetail } from '../services/performer.service';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { translate, defaultLocale, locales, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -31,7 +32,7 @@ const MAX_PHOTOS = 10;
 //   2. From the booking-confirmed screen on the tablet Summary page, when the
 //      restaurant HAS the addons module.
 //
-// Sections stack below the header. The first is Invitations; more will follow.
+// Sections stack below the header: invitations first, then performers.
 
 function PageBackground() {
   return (
@@ -55,8 +56,7 @@ function PageBackground() {
 // ── Section 1: Invitations ──────────────────────────────────────────────────
 // Collects what the v-invite studio needs to build a guest invitation by hand.
 // The order lands on the SYSTEM_ADMIN's Notifications page at v-invite.uz.
-// Performers are deliberately absent — that field is specified but not yet
-// defined, and the column already exists so adding it needs no migration.
+// Performers are not part of this form — they are their own section below.
 type InvitationPrefill = {
   names?: string[];
   eventType?: string;
@@ -320,6 +320,205 @@ function InvitationSection({ t, prefill }: {
   );
 }
 
+// ── Section 2: Performers ───────────────────────────────────────────────────
+// Every performer registered on the platform, with their availability for the
+// chosen date. Opening one shows their photos and videos; booking raises a
+// request that lands in that performer's Notifications. Accepting it there
+// creates a calendar entry — which is what makes them show as busy here.
+function PerformersSection({ t, prefill }: {
+  t: (key: Parameters<typeof translate>[0]) => string;
+  prefill: InvitationPrefill;
+}) {
+  const [date, setDate] = useState(prefill.eventDate ?? '');
+  const [performers, setPerformers] = useState<PublicPerformer[] | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<PublicPerformerDetail | null>(null);
+  const [contactName, setContactName] = useState(prefill.names?.[0] ?? '');
+  const [phone, setPhone] = useState(prefill.phone ?? '');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bookedIds, setBookedIds] = useState<string[]>([]);
+
+  // Re-query whenever the date changes: availability is per-date.
+  useEffect(() => {
+    let cancelled = false;
+    publicPerformerService.list(date || undefined).then(
+      (list) => { if (!cancelled) setPerformers(list); },
+      () => { if (!cancelled) setPerformers([]); },
+    );
+    return () => { cancelled = true; };
+  }, [date]);
+
+  useEffect(() => {
+    if (!openId) { setDetail(null); return; }
+    let cancelled = false;
+    publicPerformerService.get(openId).then(
+      (d) => { if (!cancelled) setDetail(d); },
+      () => { if (!cancelled) setOpenId(null); },
+    );
+    return () => { cancelled = true; };
+  }, [openId]);
+
+  const book = async (performerId: string) => {
+    if (!date || !contactName.trim() || !phone.trim() || !prefill.eventTime) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await publicPerformerService.book({
+        performerId,
+        restaurantName: prefill.restaurantName ?? '',
+        contactName: contactName.trim(),
+        phone: phone.trim(),
+        eventDate: date,
+        eventTime: prefill.eventTime,
+        eventType: prefill.eventType ?? null,
+        note: note.trim() || null,
+        restaurantId: prefill.restaurantId ?? null,
+        eventNumber: prefill.eventNumber ?? null,
+      });
+      setBookedIds((prev) => [...prev, performerId]);
+      setOpenId(null);
+    } catch {
+      setError(t('addon_pf_error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const canBook = !!date && !!prefill.eventTime && !!contactName.trim() && !!phone.trim() && !busy;
+
+  // ── Detail view ──
+  if (openId && detail) {
+    const booked = bookedIds.includes(detail.id);
+    return (
+      <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
+        <button
+          type="button"
+          onClick={() => setOpenId(null)}
+          className="text-sm font-medium"
+          style={{ color: 'var(--rg-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
+          ← {t('addon_pf_back')}
+        </button>
+
+        <div className="flex items-center gap-3">
+          {detail.avatarUrl
+            ? <img src={getPhotoUrl(detail.avatarUrl)} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+            : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)' }} />}
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-white">{detail.displayName}</p>
+            {detail.craft && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{detail.craft}</p>}
+          </div>
+        </div>
+
+        {detail.bio && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap' }}>{detail.bio}</p>}
+
+        {detail.photos.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {detail.photos.map((url) => (
+              <img key={url} src={getPhotoUrl(url)} alt="" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 10 }} />
+            ))}
+          </div>
+        )}
+
+        {detail.videos.length > 0 && (
+          <div className="grid gap-2">
+            {detail.videos.map((url) => (
+              <video key={url} src={getPhotoUrl(url)} controls preload="metadata"
+                style={{ width: '100%', borderRadius: 10, background: '#000' }} />
+            ))}
+          </div>
+        )}
+
+        {booked ? (
+          <p className="text-sm" style={{ color: '#86efac' }}>{t('addon_pf_booked')}</p>
+        ) : (
+          <>
+            <div className="grid gap-1.5">
+              <label className="rg-label">{t('addon_pf_your_name')}</label>
+              <input className="rg-input" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <label className="rg-label">{t('addon_inv_phone')}</label>
+              <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <label className="rg-label">{t('addon_pf_note')} ({t('addon_inv_optional')})</label>
+              <textarea className="rg-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+            {error && <p className="text-sm" style={{ color: '#fca5a5' }}>{error}</p>}
+            <button
+              type="button"
+              disabled={!canBook}
+              onClick={() => void book(detail.id)}
+              className="w-full rounded-xl py-3 text-sm font-bold transition-all"
+              style={{
+                background: canBook ? 'var(--rg-accent)' : 'rgba(255,255,255,0.12)',
+                color: canBook ? 'var(--rg-bg)' : 'rgba(255,255,255,0.4)',
+                cursor: canBook ? 'pointer' : 'default',
+              }}
+            >
+              {busy ? t('addon_inv_sending') : t('addon_pf_book')}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── List view ──
+  return (
+    <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
+      <div className="space-y-1">
+        <p className="text-lg font-bold text-white">🎤 {t('addon_pf_title')}</p>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('addon_pf_intro')}</p>
+      </div>
+
+      <div className="grid gap-1.5">
+        <label className="rg-label">{t('addon_pf_date')}</label>
+        <input className="rg-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </div>
+
+      {performers === null && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>…</p>}
+      {performers?.length === 0 && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('addon_pf_none')}</p>}
+
+      <div className="grid gap-2">
+        {(performers ?? []).map((p) => (
+          <div key={p.id} className="flex items-center gap-3 rounded-xl p-3"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {p.avatarUrl
+              ? <img src={getPhotoUrl(p.avatarUrl)} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)', flexShrink: 0 }} />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-white">{p.displayName}</p>
+              {p.craft && <p className="truncate text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{p.craft}</p>}
+              {/* Availability is only meaningful once a date is chosen. */}
+              {p.available !== undefined && (
+                <span className="text-xs font-semibold" style={{ color: p.available ? '#86efac' : '#fca5a5' }}>
+                  {p.available ? t('addon_pf_available') : t('addon_pf_busy')}
+                </span>
+              )}
+            </div>
+            {bookedIds.includes(p.id) ? (
+              <span className="text-xs font-semibold" style={{ color: '#86efac' }}>✓</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOpenId(p.id)}
+                className="rounded-xl px-3 py-1.5 text-xs font-semibold"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer' }}
+              >
+                {t('addon_pf_view')}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   /** Restaurant name shown in the header; omitted while resolving by slug. */
   restaurantName?: string | null;
@@ -408,12 +607,18 @@ export const AdditionalServicesView = ({
           )}
         </div>
 
-        {/* Section 1 — Invitations. Further sections will stack below. */}
+        {/* Sections stack in order: invitations, then performers. */}
         {!unavailable && (
-          <InvitationSection
-            t={t}
-            prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
-          />
+          <>
+            <InvitationSection
+              t={t}
+              prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
+            />
+            <PerformersSection
+              t={t}
+              prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
+            />
+          </>
         )}
       </div>
     </main>

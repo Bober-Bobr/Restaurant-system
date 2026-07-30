@@ -18,6 +18,7 @@ import { PlatformContactService } from '../platformContact/platformContact.servi
 import { isAllowedImage } from '../../utils/imageUpload.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
 import { createInviteRequestSchema } from '../inviteRequest/inviteRequest.schema.js';
+import { PerformerController } from '../performer/performer.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reviewPhotoUpload = multer({
@@ -51,6 +52,7 @@ const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 const extraServiceRepository = new ExtraServiceRepository();
 const inviteRequestService = new InviteRequestService();
+const performerController = new PerformerController();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
 // Flyer "form" block → call-back request for the manager.
@@ -119,6 +121,14 @@ router.post('/invite-request-photo', reviewPhotoUpload.array('file', 10), async 
     res.json({ urls, url: urls[0] });
   } catch (err) { next(err); }
 });
+
+// ── Performers (Additional Services) ─────────────────────────────────────────
+// Unauthenticated, like the invitation form above: a restaurant's guest browses
+// performers and raises a booking request without an account. Only public
+// profile fields are returned — never the performer's own phone number.
+router.get('/performers', performerController.listPublic.bind(performerController));
+router.get('/performers/:id', performerController.getPublic.bind(performerController));
+router.post('/performer-bookings', performerController.createBooking.bind(performerController));
 
 router.get('/restaurants', async (_request, response, next) => {
   try {

@@ -172,16 +172,29 @@ export class AuthService {
       }
     }
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
-      if (payload.role !== AdminRole.EMPLOYEE && payload.role !== AdminRole.KITCHEN) {
-        throw createHttpError(403, 'Administrators can only create Employee or Kitchen accounts.');
+      // A restaurant ADMIN may also create performers, who are platform-wide
+      // and belong to no restaurant. CATERING_ADMIN may not.
+      const allowed: AdminRole[] = caller.role === AdminRole.ADMIN
+        ? [AdminRole.EMPLOYEE, AdminRole.KITCHEN, AdminRole.PERFORMER]
+        : [AdminRole.EMPLOYEE, AdminRole.KITCHEN];
+      if (!allowed.includes(payload.role)) {
+        throw createHttpError(403, 'Administrators can only create Employee, Kitchen or Performer accounts.');
       }
-      // Force the new employee into the admin's restaurant
-      const restaurantId = caller.restaurantId
-        ?? (await this.authRepository.findById(caller.id))?.restaurantId
-        ?? null;
-      if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
-      payload.restaurantId = restaurantId;
+      if (payload.role === AdminRole.PERFORMER) {
+        // Never inherit the creator's restaurant — a performer is not staff of
+        // the venue that happened to sign them up.
+        payload.restaurantId = null;
+      } else {
+        // Force the new employee into the admin's restaurant
+        const restaurantId = caller.restaurantId
+          ?? (await this.authRepository.findById(caller.id))?.restaurantId
+          ?? null;
+        if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
+        payload.restaurantId = restaurantId;
+      }
     }
+    // Performers are never restaurant-scoped, whoever creates them.
+    if (payload.role === AdminRole.PERFORMER) payload.restaurantId = null;
     // A banquet/catering role is only assignable where that module is active —
     // otherwise the account would be created and then refused at login.
     await this.assertModuleAssignable(payload.role, payload.restaurantId ?? null);

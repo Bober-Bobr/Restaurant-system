@@ -19,7 +19,8 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   RESTAURANT_MANAGER: 'Restaurant Manager',
   EMPLOYEE: 'Employee',
   KITCHEN: 'Kitchen',
-  NFC_MAKER: 'NFC Maker'
+  NFC_MAKER: 'NFC Maker',
+  PERFORMER: 'Performer'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
@@ -31,7 +32,8 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   RESTAURANT_MANAGER: { background: '#d97706', color: '#fff' },
   EMPLOYEE: { background: '#16a34a', color: '#fff' },
   KITCHEN: { background: '#ea580c', color: '#fff' },
-  NFC_MAKER: { background: '#c8a97a', color: '#171310' }
+  NFC_MAKER: { background: '#c8a97a', color: '#171310' },
+  PERFORMER: { background: '#db2777', color: '#fff' }
 };
 
 const formatError = (error: unknown): string => {
@@ -114,7 +116,9 @@ export const AdminUsersPage = () => {
   });
 
   // OWNER can create ADMIN/CATERING_ADMIN/EMPLOYEE/KITCHEN; ADMIN & CATERING_ADMIN can only create EMPLOYEE/KITCHEN
-  const creatableRoles: AdminRole[] = currentRole === 'OWNER' ? ['ADMIN', 'CATERING_ADMIN', 'EMPLOYEE', 'KITCHEN'] : ['EMPLOYEE', 'KITCHEN'];
+  const creatableRoles: AdminRole[] = currentRole === 'OWNER'
+    ? ['ADMIN', 'CATERING_ADMIN', 'EMPLOYEE', 'KITCHEN', 'PERFORMER']
+    : ['EMPLOYEE', 'KITCHEN', 'PERFORMER'];
   const requiresRestaurantPicker = currentRole === 'OWNER';
 
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
