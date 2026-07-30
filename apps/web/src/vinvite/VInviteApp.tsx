@@ -148,17 +148,10 @@ function ViLayout() {
         background: 'color-mix(in srgb, var(--vi-card) 82%, transparent)',
         backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--vi-border)',
       }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        {/* Row 1 — brand + account controls. The tabs get their own row below
+            so a long nav can never crowd the language/theme/avatar cluster. */}
+        <div className="vi-headbar">
           <NavLink to="/" style={{ textDecoration: 'none', color: 'inherit', flexShrink: 0 }}><ViLogo /></NavLink>
-
-          <nav className="vi-tabs">
-            {tabs.map((tab) => (
-              <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => `vi-tab${isActive ? ' active' : ''}`}>
-                <span>{tab.icon}</span>{tab.label}
-                {!!tab.badge && <span className="vi-tab-badge">{tab.badge}</span>}
-              </NavLink>
-            ))}
-          </nav>
 
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <select className="vi-select" style={{ width: 'auto', padding: '8px 10px', fontSize: 13 }} value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
@@ -177,6 +170,18 @@ function ViLayout() {
             )}
             <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 13 }} onClick={doLogout}>{t('logout')}</button>
           </div>
+        </div>
+
+        {/* Row 2 — navigation. Scrolls sideways rather than wrapping. */}
+        <div className="vi-navbar">
+          <nav className="vi-tabs">
+            {tabs.map((tab) => (
+              <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => `vi-tab${isActive ? ' active' : ''}`}>
+                <span>{tab.icon}</span>{tab.label}
+                {!!tab.badge && <span className="vi-tab-badge">{tab.badge}</span>}
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </header>
 

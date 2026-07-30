@@ -116,13 +116,26 @@
 .vi-label { display: block; font-size: 12px; font-weight: 600; color: var(--vi-muted); margin: 0 0 6px; letter-spacing: 0.02em; }
 
 /* ── Nav tabs ── */
-/* The header nav is one row that scrolls sideways when it runs out of space.
-   It used to wrap, which broke the bar apart: tabs spilled onto a second line
-   and the language/theme/avatar cluster (margin-left:auto) was pushed down with
-   them. Scrolling keeps the bar a single row at any width. */
+/* The header is two rows: brand + account controls on top, navigation beneath.
+   They shared one row until the nav grew to five tabs and started crowding the
+   language/theme/avatar cluster. Splitting them means neither can squeeze the
+   other however many tabs exist or however long their labels get. */
+.vi-headbar {
+  max-width: 1180px; margin: 0 auto;
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+
+.vi-navbar {
+  max-width: 1180px; margin: 0 auto;
+  padding: 0 20px 10px;
+}
+
+/* One row that scrolls sideways when it runs out of space, rather than
+   wrapping — a wrapped nav changes the header's height as tabs come and go. */
 .vi-tabs {
   display: flex; gap: 4px;
-  flex: 1 1 auto; min-width: 0;
+  min-width: 0;
   overflow-x: auto; overflow-y: hidden;
   /* Stops a sideways flick from also dragging the page on iOS. */
   overscroll-behavior-x: contain;
@@ -149,6 +162,15 @@
 }
 .vi-tab:hover { color: var(--vi-accent); background: var(--vi-accent-soft); }
 .vi-tab.active { color: var(--vi-accent); background: var(--vi-accent-soft); border-color: var(--vi-ring); }
+
+/* Tighten the header on phones, where the second row costs vertical space.
+   Must come AFTER the .vi-tab rules above: a media query adds no specificity,
+   so an equally-specific rule later in the file would otherwise win. */
+@media (max-width: 640px) {
+  .vi-headbar { padding: 10px 14px; gap: 10px; }
+  .vi-navbar { padding: 0 14px 8px; }
+  .vi-tab { padding: 8px 12px; font-size: 13px; }
+}
 
 /* ── Misc ── */
 .vi-spinner {
