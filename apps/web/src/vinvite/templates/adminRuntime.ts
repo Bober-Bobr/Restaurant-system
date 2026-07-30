@@ -69,6 +69,35 @@ export const ADMIN_RUNTIME = `(function(){
     '@keyframes vaSlideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}' +
     '@keyframes vaZoom{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}';
 
+  /* Every layer element is built at load, so its animation would start there
+     too — an entrance placed in the sixth section is over long before the
+     guest scrolls to it, and a loop has been burning battery the whole way
+     down. Animations are therefore created PAUSED and resumed the first time
+     the element reaches the screen. Pausing at time 0 with a both/forwards
+     fill holds the from-state, so an entrance still starts from opacity 0.
+     Fixed elements are on screen by definition and are never gated. */
+  var animObs = [];
+  function clearAnimGates(){
+    for (var i = 0; i < animObs.length; i++) animObs[i].disconnect();
+    animObs = [];
+  }
+  function runAnim(nodes){
+    for (var i = 0; i < nodes.length; i++) nodes[i].style.animationPlayState = 'running';
+  }
+  function gateAnim(wrap, nodes, fixed){
+    /* No observer means no way to tell — resume at once rather than leave an
+       entrance animation parked on opacity 0 forever. */
+    if (!nodes.length) return;
+    if (fixed || !('IntersectionObserver' in window)) { runAnim(nodes); return; }
+    var io = new IntersectionObserver(function(entries){
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) { runAnim(nodes); io.disconnect(); return; }
+      }
+    }, { threshold: 0.01, rootMargin: '0px 0px -6% 0px' });
+    io.observe(wrap);
+    animObs.push(io);
+  }
+
   /* Motion path: one @keyframes per element, animating the wrapper's left/top
      (and rotate/scale/opacity per stop). Stop 0 is the element's base pose. */
   function pathCss(el){
@@ -144,6 +173,9 @@ export const ADMIN_RUNTIME = `(function(){
   function renderElements(){
     var old = document.querySelectorAll('[data-va-el]');
     for (var i = old.length - 1; i >= 0; i--) old[i].parentNode.removeChild(old[i]);
+    /* The nodes those observers watched are gone — a live-editing session
+       re-renders on every config push and would otherwise pile them up. */
+    clearAnimGates();
 
     var els = LAYER.elements || [];
     for (var j = 0; j < els.length; j++) {
@@ -177,6 +209,9 @@ export const ADMIN_RUNTIME = `(function(){
           ws.animation = 'vaPath_' + el.id + ' ' + (el.pathDur != null ? el.pathDur : 6) + 's '
             + (el.pathEase || 'ease-in-out') + ' '
             + (mode === 'once' ? '1 forwards' : mode === 'alternate' ? 'infinite alternate' : 'infinite');
+          /* Paused before the node is ever inserted, so it cannot tick a frame
+             on the way in; gateAnim below decides when it starts. */
+          ws.animationPlayState = 'paused';
         }
       }
 
@@ -212,12 +247,19 @@ export const ADMIN_RUNTIME = `(function(){
         };
         if (map[anim]) {
           ns.animation = map[anim];
+          ns.animationPlayState = 'paused';
           if (el.animDelay) ns.animationDelay = el.animDelay + 's';
         }
       }
 
       wrap.appendChild(node);
       anchor.appendChild(wrap);
+      /* Observed after insertion — an IntersectionObserver on a detached node
+         reports nothing until it is connected. */
+      var gated = [];
+      if (ws.animation) gated.push(wrap);
+      if (ns.animation) gated.push(node);
+      gateAnim(wrap, gated, fixed);
       if (EDIT && !el.cover) {
         wrap.style.outline = '1px dashed rgba(124,58,237,0.75)';
         wrap.style.outlineOffset = '2px';
