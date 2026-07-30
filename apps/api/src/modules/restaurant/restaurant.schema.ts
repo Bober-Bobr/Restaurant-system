@@ -20,6 +20,14 @@ export const createRestaurantSchema = z.object({
   tabletTrailTemplate: z.enum(['sparkle', 'hearts', 'candy', 'custom']).optional().nullable(),
   tabletTrailColor: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/).optional().nullable(),
   tabletTrailImageUrl: z.string().optional().nullable(),
+  // Paid module entitlements. Accepted here but stripped for every caller except
+  // CHIEF_ADMIN in the controller — an OWNER may edit their own restaurant and
+  // must not be able to grant themselves a module they have not paid for.
+  moduleBanquet: z.boolean().optional(),
+  moduleCatering: z.boolean().optional(),
+  moduleAddons: z.boolean().optional(),
 });
 
 export const updateRestaurantSchema = createRestaurantSchema.partial();
+
+export const MODULE_FIELDS = ['moduleBanquet', 'moduleCatering', 'moduleAddons'] as const;

@@ -69,7 +69,9 @@ export class AuthRepository {
         data: { username, passwordHash, role: AdminRole.ADMIN }
       });
       const restaurant = await tx.restaurant.create({
-        data: { name: restaurantName, ownerId: user.id }
+        // Self-signup is a banquet signup: grant the module up front, otherwise
+        // the account this transaction creates could not log back in.
+        data: { name: restaurantName, ownerId: user.id, moduleBanquet: true }
       });
       return tx.adminUser.update({
         where: { id: user.id },

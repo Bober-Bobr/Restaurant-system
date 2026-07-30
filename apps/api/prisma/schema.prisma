@@ -323,6 +323,19 @@ model Restaurant {
   // Master switch: when true, subcategories are disabled everywhere — the menu
   // items Subcategory column and the catering-site subcategory headers are hidden.
   hideSubcategories Boolean       @default(false)
+  // ── Paid module entitlements, granted per restaurant by CHIEF_ADMIN ────────
+  // New restaurants start locked; the migration backfills every existing row to
+  // true so nobody already onboarded loses access on deploy.
+  // Banquet module: the banquet staff roles (ADMIN/EMPLOYEE/KITCHEN) and the
+  // admin panel at banquet.v-menu.uz/<slug>.
+  moduleBanquet   Boolean         @default(false)
+  // Catering module: the public food-service site at v-menu.uz/<slug> and the
+  // CATERING_ADMIN role behind food-admin.v-menu.uz/<slug>.
+  moduleCatering  Boolean         @default(false)
+  // "Additional Services" — a separate product, NOT the banquet section's
+  // ExtraService list. Nothing gates on it yet; the switch exists so it can be
+  // sold and toggled ahead of the feature landing.
+  moduleAddons    Boolean         @default(false)
   ownerId         String
   companyId       String?
   owner           AdminUser       @relation("OwnedRestaurants", fields: [ownerId], references: [id], onDelete: Cascade)

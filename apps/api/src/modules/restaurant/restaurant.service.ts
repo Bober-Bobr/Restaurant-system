@@ -17,6 +17,9 @@ type RestaurantUpdateData = {
   tabletTrailTemplate?: string | null;
   tabletTrailColor?: string | null;
   tabletTrailImageUrl?: string | null;
+  moduleBanquet?: boolean;
+  moduleCatering?: boolean;
+  moduleAddons?: boolean;
 };
 
 export class RestaurantService {

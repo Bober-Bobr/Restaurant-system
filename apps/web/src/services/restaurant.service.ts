@@ -18,6 +18,10 @@ export type Restaurant = {
   tabletTrailTemplate: string | null;
   tabletTrailColor: string | null;
   tabletTrailImageUrl: string | null;
+  // Paid module entitlements — writable by CHIEF_ADMIN only (enforced server-side).
+  moduleBanquet: boolean;
+  moduleCatering: boolean;
+  moduleAddons: boolean;
   ownerId: string;
   companyId: string | null;
   company: { id: string; name: string; logoUrl: string | null } | null;
@@ -42,6 +46,9 @@ export type CreateRestaurantPayload = {
   tabletTrailTemplate?: string | null;
   tabletTrailColor?: string | null;
   tabletTrailImageUrl?: string | null;
+  moduleBanquet?: boolean;
+  moduleCatering?: boolean;
+  moduleAddons?: boolean;
 };
 
 export const restaurantService = {

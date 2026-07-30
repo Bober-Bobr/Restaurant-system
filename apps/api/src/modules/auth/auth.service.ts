@@ -20,8 +20,49 @@ export type AuthResponse = {
 
 export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null };
 
+// Roles that only exist because a restaurant bought the matching module. The
+// platform roles (CHIEF_ADMIN, MANAGER, OWNER, RESTAURANT_MANAGER, NFC_MAKER)
+// are not restaurant-scoped and are never gated here.
+const MODULE_BY_ROLE: Partial<Record<AdminRole, 'moduleBanquet' | 'moduleCatering'>> = {
+  [AdminRole.ADMIN]: 'moduleBanquet',
+  [AdminRole.EMPLOYEE]: 'moduleBanquet',
+  [AdminRole.KITCHEN]: 'moduleBanquet',
+  [AdminRole.CATERING_ADMIN]: 'moduleCatering',
+};
+
+const MODULE_DENIED: Record<'moduleBanquet' | 'moduleCatering', string> = {
+  moduleBanquet: 'The banquet module is not active for this restaurant. Contact the platform administrator.',
+  moduleCatering: 'The catering module is not active for this restaurant. Contact the platform administrator.',
+};
+
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
+
+  // Gate a restaurant-scoped role on its module. Called on login AND on refresh,
+  // so revoking a module ends live sessions within the 15-minute access-token
+  // window instead of waiting for the user to sign out.
+  private async assertModuleAccess(role: AdminRole, restaurantId: string | null): Promise<void> {
+    const required = MODULE_BY_ROLE[role];
+    if (!required) return;
+    // No restaurant assigned yet — nothing to check; other guards handle it.
+    if (!restaurantId) return;
+    const restaurant = await this.authRepository.findRestaurantById(restaurantId);
+    if (!restaurant) return;
+    if (!restaurant[required]) throw createHttpError(403, MODULE_DENIED[required]);
+  }
+
+  // Same rule applied when granting a role rather than using one, so the UI
+  // refuses up front instead of minting an account that is rejected at login.
+  // A null restaurant is allowed through on purpose: the Chief Admin creates
+  // staff first and assigns the restaurant in a second step, and that step runs
+  // this check too. The login gate is the backstop either way.
+  private async assertModuleAssignable(role: AdminRole, restaurantId: string | null): Promise<void> {
+    const required = MODULE_BY_ROLE[role];
+    if (!required || !restaurantId) return;
+    const restaurant = await this.authRepository.findRestaurantById(restaurantId);
+    if (!restaurant) throw createHttpError(404, 'Restaurant not found');
+    if (!restaurant[required]) throw createHttpError(403, MODULE_DENIED[required]);
+  }
 
   async register(
     username: string,
@@ -61,6 +102,8 @@ export class AuthService {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw createHttpError(401, 'Invalid username or password');
 
+    await this.assertModuleAccess(user.role, user.restaurantId);
+
     return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { device });
   }
 
@@ -73,6 +116,8 @@ export class AuthService {
 
     const user = await this.authRepository.findById(session.userId);
     if (!user) throw createHttpError(401, 'User not found');
+
+    await this.assertModuleAccess(user.role, user.restaurantId);
 
     return this.issueTokenPair(user.id, user.username, user.role, user.restaurantId, { sessionId });
   }
@@ -137,6 +182,9 @@ export class AuthService {
       if (!restaurantId) throw createHttpError(400, 'Administrator has no restaurant assigned.');
       payload.restaurantId = restaurantId;
     }
+    // A banquet/catering role is only assignable where that module is active —
+    // otherwise the account would be created and then refused at login.
+    await this.assertModuleAssignable(payload.role, payload.restaurantId ?? null);
     const taken = await this.authRepository.findByUsername(payload.username);
     if (taken) throw createHttpError(409, 'Username already taken');
     const passwordHash = await bcrypt.hash(payload.password, 12);
@@ -241,6 +289,7 @@ export class AuthService {
     }
     const target = await this.authRepository.findById(targetId);
     if (!target) throw createHttpError(404, 'User not found');
+    await this.assertModuleAssignable(newRole, target.restaurantId);
 
     return this.authRepository.updateRole(targetId, newRole);
   }
@@ -261,6 +310,9 @@ export class AuthService {
       const restaurant = await this.authRepository.findRestaurantById(restaurantId);
       if (!restaurant) throw createHttpError(404, 'Restaurant not found');
     }
+    // The pairing only becomes real here, so this is where a banquet/catering
+    // role gets checked against the restaurant it is being moved to.
+    await this.assertModuleAssignable(target.role, restaurantId);
     return this.authRepository.updateRestaurant(targetId, restaurantId);
   }
 

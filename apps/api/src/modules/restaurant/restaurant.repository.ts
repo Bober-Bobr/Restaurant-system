@@ -16,8 +16,12 @@ export class RestaurantRepository {
     });
   }
 
+  // Powers the public catering site (v-menu.uz/<slug>), which resolves a
+  // restaurant by slugifying these names. Restaurants without the catering
+  // module are omitted, so their public site simply does not resolve.
   async listAllPublic() {
     return prisma.restaurant.findMany({
+      where: { moduleCatering: true },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -58,7 +62,7 @@ export class RestaurantRepository {
     return prisma.restaurant.create({ data: { ...data, name, ownerId } });
   }
 
-  async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string; backgroundImageUrl?: string | null; tabletAccentColor?: string | null; tabletBgColor?: string | null; tabletParticles?: string | null; tabletParticlesColor?: string | null; tabletParticlesImageUrl?: string | null; tabletTrailTemplate?: string | null; tabletTrailColor?: string | null; tabletTrailImageUrl?: string | null }) {
+  async update(id: string, data: { name?: string; address?: string; phone?: string | null; email?: string | null; history?: string | null; logoUrl?: string; backgroundImageUrl?: string | null; tabletAccentColor?: string | null; tabletBgColor?: string | null; tabletParticles?: string | null; tabletParticlesColor?: string | null; tabletParticlesImageUrl?: string | null; tabletTrailTemplate?: string | null; tabletTrailColor?: string | null; tabletTrailImageUrl?: string | null; moduleBanquet?: boolean; moduleCatering?: boolean; moduleAddons?: boolean }) {
     return prisma.restaurant.update({ where: { id }, data });
   }
 

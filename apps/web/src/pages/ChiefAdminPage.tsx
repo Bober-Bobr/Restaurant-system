@@ -5,7 +5,7 @@ import { authService, type AdminUser } from '../services/auth.service';
 import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { DevicesPanel } from '../components/DevicesPanel';
 import { companyService, type CompanyWithDetails } from '../services/company.service';
-import { restaurantService } from '../services/restaurant.service';
+import { restaurantService, type Restaurant } from '../services/restaurant.service';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -23,6 +23,17 @@ const formatError = (error: unknown): string => {
 
 type Tab = 'companies' | 'users' | 'devices';
 
+// The paid modules a restaurant can be entitled to. The switches are the billing
+// record: turning one off blocks the matching roles at login and hides the
+// product, so nothing is left half-accessible.
+type ModuleKey = 'moduleBanquet' | 'moduleCatering' | 'moduleAddons';
+
+const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
+  { key: 'moduleBanquet', label: 'Banquets', hint: 'Banquet staff roles + banquet.v-menu.uz/<slug>' },
+  { key: 'moduleCatering', label: 'Food service site', hint: 'Public site at v-menu.uz/<slug> + Food Admin' },
+  { key: 'moduleAddons', label: 'Additional services', hint: 'Reserved for the upcoming add-on product' },
+];
+
 export const ChiefAdminPage = () => {
   const username = useAuthStore((s) => s.username);
   const logout = useAuthStore((s) => s.logout);
@@ -37,6 +48,13 @@ export const ChiefAdminPage = () => {
     queryKey: ['cad-users'],
     queryFn: () => authService.listUsers(),
   });
+  // Flat list of every restaurant — the source of truth for the module switches,
+  // and the only way restaurants with no company are reachable at all (the
+  // company tree above cannot show them).
+  const restaurantsQuery = useQuery<Restaurant[]>({
+    queryKey: ['cad-restaurants'],
+    queryFn: () => restaurantService.list(),
+  });
 
   const companies: CompanyWithDetails[] = companiesQuery.data ?? [];
   const users: AdminUser[] = usersQuery.data ?? [];
@@ -49,7 +67,22 @@ export const ChiefAdminPage = () => {
 
   const deleteRestaurant = useMutation({
     mutationFn: (id: string) => restaurantService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-companies'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cad-companies'] });
+      queryClient.invalidateQueries({ queryKey: ['cad-restaurants'] });
+    },
+  });
+
+  // ── Module permissions ────────────────────────────────────────────────────
+  const [moduleError, setModuleError] = useState<string | null>(null);
+  const setModule = useMutation({
+    mutationFn: ({ id, key, value }: { id: string; key: ModuleKey; value: boolean }) =>
+      restaurantService.update(id, { [key]: value }),
+    onSuccess: () => {
+      setModuleError(null);
+      queryClient.invalidateQueries({ queryKey: ['cad-restaurants'] });
+    },
+    onError: (e) => setModuleError(formatError(e)),
   });
 
   // ── Inline name editing (company + restaurant) ────────────────────────────
@@ -70,6 +103,7 @@ export const ChiefAdminPage = () => {
     onSuccess: () => {
       setEditingRestaurantId(null);
       queryClient.invalidateQueries({ queryKey: ['cad-companies'] });
+      queryClient.invalidateQueries({ queryKey: ['cad-restaurants'] });
     },
   });
 
@@ -125,6 +159,11 @@ export const ChiefAdminPage = () => {
 
   // Collect all restaurant IDs that belong to a company
   const assignedRestaurantIds = new Set(companies.flatMap((c) => c.restaurants.map((r) => r.id)));
+
+  const restaurantsById = new Map((restaurantsQuery.data ?? []).map((r) => [r.id, r]));
+  // Restaurants with no company never appear in the tree above, so they get
+  // their own section — otherwise their modules could not be granted at all.
+  const unassignedRestaurants = (restaurantsQuery.data ?? []).filter((r) => !assignedRestaurantIds.has(r.id));
 
   // Every restaurant (for the restaurant-manager assignment dropdown).
   const allRestaurants = companies.flatMap((c) =>
@@ -257,7 +296,8 @@ export const ChiefAdminPage = () => {
                     ) : (
                       <div style={{ display: 'grid', gap: 8 }}>
                         {company.restaurants.map((r) => (
-                          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
+                          <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {r.logoUrl && (
                               <img src={getPhotoUrl(r.logoUrl)} alt={r.name || company.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />
                             )}
@@ -301,6 +341,12 @@ export const ChiefAdminPage = () => {
                               </>
                             )}
                           </div>
+                          <ModuleSwitches
+                            restaurant={restaurantsById.get(r.id)}
+                            busy={setModule.isPending}
+                            onToggle={(key, value) => setModule.mutate({ id: r.id, key, value })}
+                          />
+                          </div>
                         ))}
                       </div>
                     )}
@@ -310,6 +356,34 @@ export const ChiefAdminPage = () => {
 
               {companies.length === 0 && !companiesQuery.isLoading && (
                 <p style={{ color: 'rgba(226,232,240,0.45)' }}>No companies registered yet.</p>
+              )}
+
+              {unassignedRestaurants.length > 0 && (
+                <div className="adm-card tablet-fade-up" style={{ overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 18px', background: 'rgba(15,23,42,0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Restaurants without a company</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>
+                      Not listed under any company above — their modules are managed here.
+                    </p>
+                  </div>
+                  <div style={{ padding: '10px 16px 14px', display: 'grid', gap: 8 }}>
+                    {unassignedRestaurants.map((r) => (
+                      <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
+                        {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
+                        <ModuleSwitches
+                          restaurant={r}
+                          busy={setModule.isPending}
+                          onToggle={(key, value) => setModule.mutate({ id: r.id, key, value })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {moduleError && (
+                <p style={{ color: '#fca5a5', fontSize: 13, margin: 0 }}>{moduleError}</p>
               )}
             </div>
           </>
@@ -441,6 +515,52 @@ export const ChiefAdminPage = () => {
     </div>
   );
 };
+
+// One row of module switches for a restaurant. `restaurant` is undefined while
+// the flat list is still loading, which is why the switches render disabled
+// rather than defaulting to "off" — showing a paid module as revoked, even for a
+// moment, is worse than showing nothing.
+const ModuleSwitches = ({ restaurant, busy, onToggle }: {
+  restaurant?: Restaurant;
+  busy: boolean;
+  onToggle: (key: ModuleKey, value: boolean) => void;
+}) => (
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+    {MODULES.map((m) => {
+      const on = !!restaurant?.[m.key];
+      return (
+        <button
+          key={m.key}
+          type="button"
+          title={m.hint}
+          disabled={!restaurant || busy}
+          onClick={() => restaurant && onToggle(m.key, !on)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7,
+            padding: '5px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 600,
+            cursor: restaurant && !busy ? 'pointer' : 'default',
+            background: on ? 'rgba(34,197,94,0.14)' : 'rgba(15,23,42,0.6)',
+            color: on ? '#86efac' : 'rgba(226,232,240,0.5)',
+            border: `1px solid ${on ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.1)'}`,
+            opacity: restaurant ? 1 : 0.5,
+            transition: 'all 0.18s',
+          }}
+        >
+          <span style={{
+            width: 22, height: 12, borderRadius: 999, flexShrink: 0, position: 'relative',
+            background: on ? '#22c55e' : 'rgba(148,163,184,0.35)', transition: 'background 0.18s',
+          }}>
+            <span style={{
+              position: 'absolute', top: 2, left: on ? 12 : 2,
+              width: 8, height: 8, borderRadius: '50%', background: '#fff', transition: 'left 0.18s',
+            }} />
+          </span>
+          {m.label}
+        </button>
+      );
+    })}
+  </div>
+);
 
 const inputStyle: React.CSSProperties = {
   padding: '8px 12px', height: 40, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6,

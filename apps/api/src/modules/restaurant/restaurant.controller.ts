@@ -1,10 +1,20 @@
 import type { Request, Response } from 'express';
 import { AdminRole } from '@prisma/client';
 import { RestaurantRepository } from './restaurant.repository.js';
-import { createRestaurantSchema, updateRestaurantSchema } from './restaurant.schema.js';
+import { createRestaurantSchema, updateRestaurantSchema, MODULE_FIELDS } from './restaurant.schema.js';
 import { RestaurantService } from './restaurant.service.js';
 
 const service = new RestaurantService(new RestaurantRepository());
+
+// Module entitlements are billing state: only the platform superadmin may set
+// them. Everyone else's payload has them removed rather than rejected, so an
+// OWNER saving a restaurant form that happens to echo them back still works.
+function stripModules<T extends Record<string, unknown>>(data: T, role: AdminRole): T {
+  if (role === AdminRole.CHIEF_ADMIN) return data;
+  const clean = { ...data };
+  for (const field of MODULE_FIELDS) delete clean[field];
+  return clean;
+}
 
 export class RestaurantController {
   async list(request: Request, response: Response) {
@@ -32,14 +42,14 @@ export class RestaurantController {
   }
 
   async create(request: Request, response: Response) {
-    const data = createRestaurantSchema.parse(request.body);
+    const data = stripModules(createRestaurantSchema.parse(request.body), request.admin!.role);
     const restaurant = await service.create(request.admin!.id, data);
     response.status(201).json(restaurant);
   }
 
   async update(request: Request, response: Response) {
-    const data = updateRestaurantSchema.parse(request.body);
     const admin = request.admin!;
+    const data = stripModules(updateRestaurantSchema.parse(request.body), admin.role);
     const restaurant = (admin.role === AdminRole.CHIEF_ADMIN || admin.role === AdminRole.MANAGER)
       ? await service.updateAsChief(String(request.params.id), data)
       : await service.update(admin.id, String(request.params.id), data);
