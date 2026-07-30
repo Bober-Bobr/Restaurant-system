@@ -62,6 +62,15 @@ export const LoginPage = () => {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
         _rid: '', _rn: '', _exp: String(data.expiresIn),
       });
+    } else if (isRootDomain() && data.role === 'PERFORMER') {
+      // Performers have no restaurant, so without this branch they would fall
+      // through to the local navigate below, and App.tsx would then bounce them
+      // to performer.v-menu.uz WITHOUT the token — a different origin, so a
+      // different localStorage, so straight back to /login, forever.
+      window.location.href = buildSubdomainUrl('performer', {
+        _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
+        _rid: '', _rn: '', _exp: String(data.expiresIn),
+      });
     } else if (isRootDomain() && data.role === 'OWNER') {
       window.location.href = buildSubdomainUrl('cabinet', {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,
