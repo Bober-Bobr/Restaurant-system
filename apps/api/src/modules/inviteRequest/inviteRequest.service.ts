@@ -20,7 +20,7 @@ export class InviteRequestService {
         eventDate,
         eventTime: input.eventTime.trim(),
         menu: input.menu?.trim() || null,
-        photoUrl: input.photoUrl?.trim() || null,
+        photoUrls: (input.photoUrls ?? []).map((u) => u.trim()).filter(Boolean),
         dressCode: input.dressCode?.trim() || null,
         restaurantId: input.restaurantId?.trim() || null,
         eventNumber: input.eventNumber ?? null,

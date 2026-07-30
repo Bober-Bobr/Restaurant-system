@@ -19,6 +19,9 @@ function defaultNameCount(eventType: string): number {
   return eventType === 'WEDDING' ? 2 : 1;
 }
 
+// Matches the server's per-request cap in inviteRequest.schema.ts.
+const MAX_PHOTOS = 10;
+
 // ── Additional Services ─────────────────────────────────────────────────────
 // A standalone product, separate from the banquet section's "Extra services"
 // (the priced add-ons attached to an event). It is reached two ways:
@@ -28,9 +31,7 @@ function defaultNameCount(eventType: string): number {
 //   2. From the booking-confirmed screen on the tablet Summary page, when the
 //      restaurant HAS the addons module.
 //
-// The contents are still to be specified; everything below the header is a
-// deliberate placeholder so the entry points, routing and gating can ship and
-// be verified now.
+// Sections stack below the header. The first is Invitations; more will follow.
 
 function PageBackground() {
   return (
@@ -83,7 +84,7 @@ function InvitationSection({ t, prefill }: {
   const [eventTime, setEventTime] = useState(prefill.eventTime ?? '');
   const [menu, setMenu] = useState(prefill.menu ?? '');
   const [dressCode, setDressCode] = useState('');
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,14 +101,18 @@ function InvitationSection({ t, prefill }: {
   };
 
   const filledNames = names.map((n) => n.trim()).filter(Boolean);
-  const canSubmit = filledNames.length > 0 && phone.trim() && restaurantName.trim() && eventDate && eventTime && !busy;
+  const canSubmit = filledNames.length > 0 && phone.trim() && restaurantName.trim() && eventDate && eventTime && !busy && !uploading;
 
-  const pickPhoto = async (file: File | undefined) => {
-    if (!file) return;
+  // Uploads whatever was picked, trimmed to the remaining slots so the request
+  // can never exceed the server's cap of 10.
+  const pickPhotos = async (fileList: FileList | null) => {
+    const files = Array.from(fileList ?? []).slice(0, MAX_PHOTOS - photoUrls.length);
+    if (files.length === 0) return;
     setUploading(true);
     setError(null);
     try {
-      setPhotoUrl(await inviteRequestService.uploadPhoto(file));
+      const uploaded = await inviteRequestService.uploadPhotos(files);
+      setPhotoUrls((prev) => [...prev, ...uploaded].slice(0, MAX_PHOTOS));
     } catch {
       setError(t('addon_inv_photo_error'));
     } finally {
@@ -130,7 +135,7 @@ function InvitationSection({ t, prefill }: {
         eventTime,
         menu: menu.trim() || null,
         dressCode: dressCode.trim() || null,
-        photoUrl,
+        photoUrls,
         restaurantId: prefill.restaurantId ?? null,
         eventNumber: prefill.eventNumber ?? null,
       });
@@ -156,7 +161,7 @@ function InvitationSection({ t, prefill }: {
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>{t('addon_inv_sent')}</p>
         <button
           type="button"
-          onClick={() => { setSent(false); setNames(Array(defaultNameCount(eventType)).fill('')); setCardNumber(''); setMenu(''); setDressCode(''); setPhotoUrl(null); }}
+          onClick={() => { setSent(false); setNames(Array(defaultNameCount(eventType)).fill('')); setCardNumber(''); setMenu(''); setDressCode(''); setPhotoUrls([]); }}
           className="inline-flex w-full items-center justify-center rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
           style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}
         >
@@ -256,28 +261,44 @@ function InvitationSection({ t, prefill }: {
       </div>
 
       <div className="grid gap-1.5">
-        <label className="rg-label">{t('addon_inv_photo')}{optional}</label>
-        {photoUrl ? (
-          <div className="flex items-center gap-3">
-            <img src={getPhotoUrl(photoUrl)} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10 }} />
-            <button
-              type="button"
-              onClick={() => setPhotoUrl(null)}
-              className="rounded-xl px-3 py-1.5 text-sm"
-              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.15)' }}
-            >
-              ×
-            </button>
+        <label className="rg-label">
+          {t('addon_inv_photos')}{optional}
+          {photoUrls.length > 0 && ` · ${photoUrls.length}/${MAX_PHOTOS}`}
+        </label>
+        {photoUrls.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {photoUrls.map((url) => (
+              <div key={url} style={{ position: 'relative' }}>
+                <img src={getPhotoUrl(url)} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrls(photoUrls.filter((u) => u !== url))}
+                  aria-label="remove"
+                  style={{
+                    position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%',
+                    background: 'rgba(0,0,0,0.75)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)',
+                    fontSize: 13, lineHeight: 1, cursor: 'pointer',
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
-        ) : (
+        )}
+        {photoUrls.length < MAX_PHOTOS && (
           <input
             className="rg-input"
             type="file"
             accept="image/*"
+            multiple
             disabled={uploading}
-            onChange={(e) => void pickPhoto(e.target.files?.[0])}
+            // Clearing the value lets the same file be picked again after a
+            // removal — otherwise the change event never fires a second time.
+            onChange={(e) => { void pickPhotos(e.target.files); e.target.value = ''; }}
           />
         )}
+        {uploading && <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('addon_inv_uploading')}</span>}
       </div>
 
       {error && <p className="text-sm" style={{ color: '#fca5a5' }}>{error}</p>}

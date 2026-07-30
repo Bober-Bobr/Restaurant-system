@@ -148,25 +148,19 @@ function ViLayout() {
         background: 'color-mix(in srgb, var(--vi-card) 82%, transparent)',
         backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--vi-border)',
       }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <NavLink to="/" style={{ textDecoration: 'none', color: 'inherit' }}><ViLogo /></NavLink>
+        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <NavLink to="/" style={{ textDecoration: 'none', color: 'inherit', flexShrink: 0 }}><ViLogo /></NavLink>
 
-          <nav style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <nav className="vi-tabs">
             {tabs.map((tab) => (
               <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => `vi-tab${isActive ? ' active' : ''}`}>
                 <span>{tab.icon}</span>{tab.label}
-                {!!tab.badge && (
-                  <span style={{
-                    marginLeft: 6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
-                    background: 'var(--vi-accent)', color: '#fff', fontSize: 11, fontWeight: 800,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{tab.badge}</span>
-                )}
+                {!!tab.badge && <span className="vi-tab-badge">{tab.badge}</span>}
               </NavLink>
             ))}
           </nav>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <select className="vi-select" style={{ width: 'auto', padding: '8px 10px', fontSize: 13 }} value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
               <option value="ru">RU</option>
               <option value="uz">UZ</option>

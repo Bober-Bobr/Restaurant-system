@@ -672,7 +672,9 @@ model InviteRequest {
   menu           String?
   // Reserved — performers are not collected yet, spec pending.
   performers     String?
-  photoUrl       String?
+  // JSON array of upload URLs. Plural from the start of real use: the honoree
+  // usually has several photos for the designers to choose from.
+  photoUrls      Json     @default("[]")
   dressCode      String?
   // Provenance when the order came from a confirmed banquet event rather than
   // from the standalone (banquet-disabled) page.

@@ -13,7 +13,9 @@ export const createInviteRequestSchema = z.object({
   eventDate: z.string().min(4).max(40),
   eventTime: z.string().min(1).max(20),
   menu: z.string().max(4000).optional().nullable(),
-  photoUrl: z.string().max(500).optional().nullable(),
+  // Several reference photos; capped so a public endpoint cannot be used to
+  // stuff an unbounded array into the row.
+  photoUrls: z.array(z.string().max(500)).max(10).optional(),
   dressCode: z.string().max(500).optional().nullable(),
   // Provenance, when the form was opened from a confirmed banquet event.
   restaurantId: z.string().max(60).optional().nullable(),

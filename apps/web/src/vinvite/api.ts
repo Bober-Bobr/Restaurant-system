@@ -148,7 +148,7 @@ export type InviteRequest = {
   eventTime: string;
   menu: string | null;
   performers: string | null;
-  photoUrl: string | null;
+  photoUrls: string[];
   dressCode: string | null;
   restaurantId: string | null;
   eventNumber: number | null;

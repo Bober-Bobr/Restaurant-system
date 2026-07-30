@@ -116,11 +116,36 @@
 .vi-label { display: block; font-size: 12px; font-weight: 600; color: var(--vi-muted); margin: 0 0 6px; letter-spacing: 0.02em; }
 
 /* ── Nav tabs ── */
+/* The header nav is one row that scrolls sideways when it runs out of space.
+   It used to wrap, which broke the bar apart: tabs spilled onto a second line
+   and the language/theme/avatar cluster (margin-left:auto) was pushed down with
+   them. Scrolling keeps the bar a single row at any width. */
+.vi-tabs {
+  display: flex; gap: 4px;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; overflow-y: hidden;
+  /* Stops a sideways flick from also dragging the page on iOS. */
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.vi-tabs::-webkit-scrollbar { display: none; }
+
 .vi-tab {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 15px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
   color: var(--vi-muted); text-decoration: none; border: 1px solid transparent;
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  /* Never let a tab squash or break its label when the row is tight. */
+  flex-shrink: 0; white-space: nowrap;
+}
+
+/* Unread counter on a tab (Notifications). */
+.vi-tab-badge {
+  margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; background: var(--vi-accent); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .vi-tab:hover { color: var(--vi-accent); background: var(--vi-accent-soft); }
 .vi-tab.active { color: var(--vi-accent); background: var(--vi-accent-soft); border-color: var(--vi-ring); }

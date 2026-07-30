@@ -12,7 +12,7 @@ export type InviteRequestPayload = {
   eventDate: string;
   eventTime: string;
   menu?: string | null;
-  photoUrl?: string | null;
+  photoUrls?: string[];
   dressCode?: string | null;
   restaurantId?: string | null;
   eventNumber?: number | null;
@@ -25,10 +25,11 @@ export const inviteRequestService = {
     const { data } = await axios.post(`${apiRoot()}/public/invite-requests`, payload);
     return data;
   },
-  async uploadPhoto(file: File): Promise<string> {
+  // Uploads a batch in one request and returns the URLs in the same order.
+  async uploadPhotos(files: File[]): Promise<string[]> {
     const form = new FormData();
-    form.append('file', file);
-    const { data } = await axios.post<{ url: string }>(`${apiRoot()}/public/invite-request-photo`, form);
-    return data.url;
+    for (const file of files) form.append('file', file);
+    const { data } = await axios.post<{ urls: string[] }>(`${apiRoot()}/public/invite-request-photo`, form);
+    return data.urls ?? [];
   },
 };

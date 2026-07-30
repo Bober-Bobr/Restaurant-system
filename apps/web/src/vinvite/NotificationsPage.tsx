@@ -70,12 +70,19 @@ function RequestCard({ request, onToggleRead, onDelete, busy }: {
 
       <Field label={t('nt_menu')} value={request.menu} />
 
-      {request.photoUrl && (
+      {request.photoUrls?.length > 0 && (
         <div style={{ display: 'grid', gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--vi-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('nt_photo')}</span>
-          <a href={getPhotoUrl(request.photoUrl)} target="_blank" rel="noreferrer">
-            <img src={getPhotoUrl(request.photoUrl)} alt="" style={{ maxWidth: 160, borderRadius: 10, display: 'block' }} />
-          </a>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--vi-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {t('nt_photos')} · {request.photoUrls.length}
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {request.photoUrls.map((url) => (
+              // Opens full size in a new tab — the designers work from these.
+              <a key={url} href={getPhotoUrl(url)} target="_blank" rel="noreferrer">
+                <img src={getPhotoUrl(url)} alt="" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
+              </a>
+            ))}
+          </div>
         </div>
       )}
 
