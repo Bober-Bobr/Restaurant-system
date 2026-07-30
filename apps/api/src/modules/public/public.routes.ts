@@ -16,6 +16,8 @@ import { ReviewController } from '../review/review.controller.js';
 import { NfcPlaqueController } from '../nfcPlaque/nfcPlaque.controller.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
 import { isAllowedImage } from '../../utils/imageUpload.js';
+import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
+import { createInviteRequestSchema } from '../inviteRequest/inviteRequest.schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reviewPhotoUpload = multer({
@@ -48,6 +50,7 @@ const hallRepository = new HallRepository();
 const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 const extraServiceRepository = new ExtraServiceRepository();
+const inviteRequestService = new InviteRequestService();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
 // Flyer "form" block → call-back request for the manager.
@@ -82,6 +85,31 @@ router.post('/review-photo', reviewPhotoUpload.single('file'), async (req, res, 
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     await fs.writeFile(path.join(dir, filename), req.file.buffer);
     res.json({ url: `/uploads/reviews/${filename}` });
+  } catch (err) { next(err); }
+});
+
+// ── Invitation orders from the Additional Services page ──────────────────────
+// Unauthenticated by design: the page is reachable by a restaurant's guest,
+// including on a banquet.v-menu.uz/<slug> host with no banquet module. The
+// order lands on the v-invite.uz system administrator's Notifications page.
+router.post('/invite-requests', async (request, response, next) => {
+  try {
+    const data = createInviteRequestSchema.parse(request.body);
+    response.status(201).json(await inviteRequestService.create(data));
+  } catch (error) { next(error); }
+});
+
+// The order's optional photo. Uploaded before the order is submitted, exactly
+// like the public review-photo flow above.
+router.post('/invite-request-photo', reviewPhotoUpload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) { res.status(400).json({ message: 'No file provided' }); return; }
+    const dir = path.resolve(__dirname, '..', '..', '..', 'uploads', 'invite-requests');
+    await fs.mkdir(dir, { recursive: true });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    await fs.writeFile(path.join(dir, filename), req.file.buffer);
+    res.json({ url: `/uploads/invite-requests/${filename}` });
   } catch (err) { next(err); }
 });
 

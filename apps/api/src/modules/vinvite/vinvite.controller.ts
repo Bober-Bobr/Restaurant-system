@@ -10,6 +10,7 @@ import {
   VInviteTemplateOverrideService, type DeviceInfo,
 } from './vinvite.service.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
+import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
 import { platformContactSchema } from '../platformContact/platformContact.schema.js';
 import { prisma } from '../../db/prisma.js';
 
@@ -18,6 +19,18 @@ const projectService = new VInviteProjectService();
 const templateService = new VInviteTemplateService();
 const overrideService = new VInviteTemplateOverrideService();
 const platformContactService = new PlatformContactService();
+const inviteRequestService = new InviteRequestService();
+
+// Invitation orders are studio-wide operational data, not any one user's, so
+// every endpoint that touches them is SYSTEM_ADMIN-only — enforced here on the
+// server, never merely by hiding the tab.
+async function requireSystemAdmin(request: Request): Promise<void> {
+  const user = await prisma.inviteUser.findUnique({
+    where: { id: request.inviteUser!.id },
+    select: { role: true },
+  });
+  if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
+}
 
 function deviceInfo(request: Request): DeviceInfo {
   return {
@@ -223,6 +236,29 @@ export class VInviteController {
     if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
     const payload = platformContactSchema.parse(request.body);
     response.json(await platformContactService.upsert('vinvite', payload));
+  }
+
+  // ── Invitation orders (Notifications page) ─────────────────────────────────
+  async listInviteRequests(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    response.json(await inviteRequestService.list());
+  }
+
+  async inviteRequestUnreadCount(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    response.json({ count: await inviteRequestService.unreadCount() });
+  }
+
+  async setInviteRequestRead(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    const isRead = request.body?.isRead !== false;
+    response.json(await inviteRequestService.setRead(String(request.params.id), isRead));
+  }
+
+  async removeInviteRequest(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    await inviteRequestService.remove(String(request.params.id));
+    response.status(204).send();
   }
 
   async publicRsvp(request: Request, response: Response) {

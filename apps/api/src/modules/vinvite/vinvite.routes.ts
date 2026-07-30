@@ -40,6 +40,14 @@ router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.s
 router.get('/platform-contact', inviteAuthMiddleware, controller.getPlatformContact.bind(controller));
 router.put('/platform-contact', inviteAuthMiddleware, controller.savePlatformContact.bind(controller));
 
+// Invitation orders placed from a restaurant's Additional Services page. The
+// submit side is public (see /api/public/invite-requests); everything here is
+// SYSTEM_ADMIN-only, checked inside each controller method.
+router.get('/invite-requests', inviteAuthMiddleware, controller.listInviteRequests.bind(controller));
+router.get('/invite-requests/unread-count', inviteAuthMiddleware, controller.inviteRequestUnreadCount.bind(controller));
+router.patch('/invite-requests/:id/read', inviteAuthMiddleware, controller.setInviteRequestRead.bind(controller));
+router.delete('/invite-requests/:id', inviteAuthMiddleware, controller.removeInviteRequest.bind(controller));
+
 router.get('/templates', inviteAuthMiddleware, controller.listTemplates.bind(controller));
 router.post('/templates', inviteAuthMiddleware, controller.createTemplate.bind(controller));
 router.get('/templates/:id', inviteAuthMiddleware, controller.getTemplate.bind(controller));

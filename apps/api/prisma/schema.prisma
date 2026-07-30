@@ -648,6 +648,44 @@ model InvitationRequest {
   @@index([invitationId])
 }
 
+// ── Invitation order placed from the Additional Services page ────────────────
+// A restaurant's guest fills this in (unauthenticated) and it lands on the
+// v-invite.uz SYSTEM_ADMIN's Notifications page, where the studio builds the
+// invitation by hand. Distinct from `InvitationRequest` above, which is a lead
+// captured by a flyer's form block.
+model InviteRequest {
+  id             String   @id @default(cuid())
+  // Honoree name(s) — a wedding has two, a birthday one, so this is a JSON
+  // array of strings rather than fixed columns.
+  names          Json     @default("[]")
+  // Free string, not the EventType enum: this crosses into the v-invite world,
+  // which has no reason to be pinned to the banquet product's enum.
+  eventType      String
+  phone          String
+  // Where guests can send money gifts. Optional.
+  cardNumber     String?
+  restaurantName String
+  // Captured as separate controls, and the time is often approximate, so it
+  // stays a plain string rather than being folded into the DateTime.
+  eventDate      DateTime
+  eventTime      String
+  menu           String?
+  // Reserved — performers are not collected yet, spec pending.
+  performers     String?
+  photoUrl       String?
+  dressCode      String?
+  // Provenance when the order came from a confirmed banquet event rather than
+  // from the standalone (banquet-disabled) page.
+  restaurantId   String?
+  eventNumber    Int?
+  // Notifications-page state on the v-invite side.
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([isRead])
+}
+
 // ── Standalone guest invitation (wedding-style, not tied to a restaurant/event) ──
 // Created by a MANAGER; rendered publicly on <slug>.invitation.v-menu.uz.
 model GuestInvitation {

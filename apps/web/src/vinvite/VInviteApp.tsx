@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
@@ -12,6 +13,7 @@ import { ViTemplatesPage } from './TemplatesPage';
 import { ViTemplateDesignerPage } from './TemplateDesignerPage';
 import { ViDevicesPage } from './DevicesPage';
 import { ViProfilePage } from './ProfilePage';
+import { ViNotificationsPage } from './NotificationsPage';
 import { PublicVInvitePage } from './PublicVInvitePage';
 import './vinvite.css';
 
@@ -56,6 +58,7 @@ export const VInviteApp = () => {
             <Route element={<ViLayout />}>
               <Route path="/" element={<ViDashboardPage />} />
               <Route path="/templates" element={<ViTemplatesPage />} />
+              <Route path="/notifications" element={<ViNotificationsPage />} />
               <Route path="/devices" element={<ViDevicesPage />} />
               <Route path="/profile" element={<ViProfilePage />} />
             </Route>
@@ -118,9 +121,22 @@ function ViLayout() {
     navigate('/login');
   };
 
-  const tabs: { to: string; label: string; icon: string; end?: boolean }[] = [
+  const isSystemAdmin = user?.role === 'SYSTEM_ADMIN';
+
+  // Unread invitation orders, for the badge on the Notifications tab. Only a
+  // SYSTEM_ADMIN may call this, so it stays disabled for everyone else.
+  const unreadQuery = useQuery({
+    queryKey: ['vi-invite-requests-unread'],
+    queryFn: () => vinviteService.inviteRequestUnreadCount(),
+    enabled: isSystemAdmin,
+    refetchInterval: 60_000,
+  });
+  const unread = unreadQuery.data ?? 0;
+
+  const tabs: { to: string; label: string; icon: string; end?: boolean; badge?: number }[] = [
     { to: '/', label: t('invitations'), icon: '💌', end: true },
     { to: '/templates', label: t('templates'), icon: '🎨' },
+    ...(isSystemAdmin ? [{ to: '/notifications', label: t('notifications'), icon: '🔔', badge: unread }] : []),
     { to: '/devices', label: t('devices'), icon: '📱' },
     { to: '/profile', label: t('profile'), icon: '👤' },
   ];
@@ -139,6 +155,13 @@ function ViLayout() {
             {tabs.map((tab) => (
               <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => `vi-tab${isActive ? ' active' : ''}`}>
                 <span>{tab.icon}</span>{tab.label}
+                {!!tab.badge && (
+                  <span style={{
+                    marginLeft: 6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
+                    background: 'var(--vi-accent)', color: '#fff', fontSize: 11, fontWeight: 800,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{tab.badge}</span>
+                )}
               </NavLink>
             ))}
           </nav>

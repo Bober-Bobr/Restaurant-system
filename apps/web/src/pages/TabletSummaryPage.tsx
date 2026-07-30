@@ -558,6 +558,50 @@ export const TabletSummaryPage = () => {
     }
   };
 
+  // Hand the details already entered here over to the Additional Services page
+  // so the honoree is not asked for the same things twice. The selections come
+  // from the confirmed snapshot rather than live state — `reset()` clears the
+  // tablet store as soon as the event is created.
+  const buildAddonParams = () => {
+    const params = new URLSearchParams();
+    params.set('restaurantId', restaurantId);
+    params.set('eventNumber', String(confirmedEventId));
+    params.set('restaurantName', restaurantName ?? '');
+    if (restaurantLogoUrl) params.set('restaurantLogoUrl', restaurantLogoUrl);
+    if (tabletAccentColor) params.set('accent', tabletAccentColor);
+    if (tabletBgColor) params.set('bg', tabletBgColor);
+
+    params.set('eventType', eventType);
+    // Whose celebration it is — a wedding names two people, so `name` repeats.
+    const honorees = eventType === 'WEDDING'
+      ? [brideName, groomName]
+      : eventType === 'BIRTHDAY'
+        ? [birthdayPersonName]
+        : [honoreePersonName || customerName];
+    for (const n of honorees.map((n) => n.trim()).filter(Boolean)) params.append('name', n);
+
+    if (customerPhone.trim()) params.set('phone', customerPhone.trim());
+    if (eventDate) params.set('eventDate', eventDate);
+    if (eventTime) params.set('eventTime', eventTime);
+
+    const snapshot = confirmedExportSnapshot;
+    if (snapshot) {
+      const lines: string[] = [];
+      if (snapshot.tableCategoryName) lines.push(snapshot.tableCategoryName);
+      for (const dish of snapshot.includedDishes ?? []) {
+        const label = typeof dish === 'string' ? dish : (dish as { name?: string })?.name;
+        if (label) lines.push(label);
+      }
+      const byId = new Map((snapshot.menuItems ?? []).map((m) => [m.id, m.name]));
+      for (const id of Object.keys(snapshot.selectedItems ?? {})) {
+        const label = byId.get(id);
+        if (label) lines.push(label);
+      }
+      if (lines.length) params.set('menu', lines.join('\n'));
+    }
+    return params;
+  };
+
   // ── Success screen ────────────────────────────────────────────────────────
   if (confirmedEventId !== null) {
     return (
@@ -605,14 +649,7 @@ export const TabletSummaryPage = () => {
                   type="button"
                   onClick={() => navigate({
                     pathname: '/tablet/additional-services',
-                    search: new URLSearchParams({
-                      restaurantId,
-                      eventNumber: String(confirmedEventId),
-                      restaurantName: restaurantName ?? '',
-                      ...(restaurantLogoUrl ? { restaurantLogoUrl } : {}),
-                      ...(tabletAccentColor ? { accent: tabletAccentColor } : {}),
-                      ...(tabletBgColor ? { bg: tabletBgColor } : {}),
-                    }).toString(),
+                    search: buildAddonParams().toString(),
                   })}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold transition-all duration-200 hover:shadow-lg"
                   style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}

@@ -135,6 +135,27 @@ export type InviteRsvp = {
   createdAt: string;
 };
 
+// An invitation order placed from a restaurant's Additional Services page.
+// Studio-wide operational data — only a SYSTEM_ADMIN can read or change these.
+export type InviteRequest = {
+  id: string;
+  names: string[];
+  eventType: string;
+  phone: string;
+  cardNumber: string | null;
+  restaurantName: string;
+  eventDate: string;
+  eventTime: string;
+  menu: string | null;
+  performers: string | null;
+  photoUrl: string | null;
+  dressCode: string | null;
+  restaurantId: string | null;
+  eventNumber: number | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export type TelegramLink = {
   id: string;
   chatId: string;
@@ -269,6 +290,24 @@ export const vinviteService = {
   async savePlatformContact(payload: { phone: string; telegram: string; instagram: string }) {
     const { data } = await viHttp.put<{ brand: string; phone: string; telegram: string; instagram: string }>('/platform-contact', payload);
     return data;
+  },
+
+  // Invitation orders → the Notifications page. SYSTEM_ADMIN only; the server
+  // rejects everyone else, so a non-admin never even loads the tab.
+  async listInviteRequests(): Promise<InviteRequest[]> {
+    const { data } = await viHttp.get<InviteRequest[]>('/invite-requests');
+    return data;
+  },
+  async inviteRequestUnreadCount(): Promise<number> {
+    const { data } = await viHttp.get<{ count: number }>('/invite-requests/unread-count');
+    return data.count;
+  },
+  async setInviteRequestRead(id: string, isRead: boolean): Promise<InviteRequest> {
+    const { data } = await viHttp.patch<InviteRequest>(`/invite-requests/${id}/read`, { isRead });
+    return data;
+  },
+  async removeInviteRequest(id: string): Promise<void> {
+    await viHttp.delete(`/invite-requests/${id}`);
   },
 
   // RSVP responses (owner)
