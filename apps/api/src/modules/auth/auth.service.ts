@@ -304,7 +304,11 @@ export class AuthService {
     if (!target) throw createHttpError(404, 'User not found');
     await this.assertModuleAssignable(newRole, target.restaurantId);
 
-    return this.authRepository.updateRole(targetId, newRole);
+    const updated = await this.authRepository.updateRole(targetId, newRole);
+    // Promoting an existing account to performer has to create the profile row
+    // too, or they never show up in the public performers list.
+    await this.authRepository.ensurePerformerProfile(targetId);
+    return updated;
   }
 
   // Chief Admin reassigns which restaurant a staff user is affiliated with.

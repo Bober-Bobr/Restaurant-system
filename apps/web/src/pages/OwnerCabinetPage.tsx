@@ -485,6 +485,7 @@ export const OwnerCabinetPage = () => {
                   <option value="RESTAURANT_MANAGER">{t('restaurant_manager_role')}</option>
                   <option value="EMPLOYEE">{t('employee_role')}</option>
                   <option value="KITCHEN">{t('kitchen_role')}</option>
+                  <option value="PERFORMER">{t('performer_role')}</option>
                 </select>
                 <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
                   <option value="">{t('select_restaurant_dash')}</option>

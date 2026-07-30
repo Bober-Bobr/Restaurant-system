@@ -49,8 +49,30 @@ export class AuthRepository {
 
   async create(username: string, passwordHash: string, role: AdminRole = AdminRole.OWNER, restaurantId?: string) {
     return prisma.adminUser.create({
-      data: { username, passwordHash, role, ...(restaurantId ? { restaurantId } : {}) }
+      data: {
+        username,
+        passwordHash,
+        role,
+        ...(restaurantId ? { restaurantId } : {}),
+        // A performer must have a profile row from the moment the account
+        // exists: the public performers list is driven by PerformerProfile, so
+        // without one they are invisible to guests until they happen to open
+        // their own profile page. Stage name defaults to the username and is
+        // editable straight away.
+        ...(role === AdminRole.PERFORMER ? { performerProfile: { create: { displayName: username } } } : {}),
+      },
     });
+  }
+
+  // Used when an existing account is switched TO the performer role, which is
+  // the other way a performer can come into being.
+  async ensurePerformerProfile(userId: string) {
+    const user = await prisma.adminUser.findUnique({
+      where: { id: userId },
+      select: { username: true, role: true, performerProfile: { select: { id: true } } },
+    });
+    if (!user || user.role !== AdminRole.PERFORMER || user.performerProfile) return;
+    await prisma.performerProfile.create({ data: { userId, displayName: user.username } });
   }
 
   async findRestaurantByName(name: string) {

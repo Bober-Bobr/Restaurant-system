@@ -170,11 +170,31 @@ export class PerformerService {
   // Every visible performer, plus whether they are free on `date`. Busy means a
   // calendar entry that day — accepted bookings are calendar entries too, so
   // one check covers both.
+  //
+  // Driven off AdminUser, NOT PerformerProfile. The role is what makes someone a
+  // performer; the profile is decoration. Querying profiles instead meant an
+  // account whose profile row did not exist yet was invisible to guests, which
+  // is not a state anyone would expect or could diagnose.
   async listPublic(date?: string) {
-    const profiles = await prisma.performerProfile.findMany({
-      where: { isVisible: true, user: { role: AdminRole.PERFORMER } },
-      orderBy: { displayName: 'asc' },
+    const users = await prisma.adminUser.findMany({
+      where: {
+        role: AdminRole.PERFORMER,
+        // A missing profile counts as visible — the switch is opt-out.
+        OR: [{ performerProfile: { isVisible: true } }, { performerProfile: { is: null } }],
+      },
+      select: { id: true, username: true, performerProfile: true },
     });
+
+    const profiles = users
+      .map((u) => ({
+        userId: u.id,
+        displayName: u.performerProfile?.displayName || u.username,
+        craft: u.performerProfile?.craft ?? null,
+        avatarUrl: u.performerProfile?.avatarUrl ?? null,
+        photos: u.performerProfile?.photos ?? [],
+        videos: u.performerProfile?.videos ?? [],
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     let busy = new Set<string>();
     if (date) {
@@ -199,14 +219,24 @@ export class PerformerService {
   }
 
   async getPublic(userId: string) {
-    const profile = await prisma.performerProfile.findUnique({
-      where: { userId },
-      select: {
-        userId: true, displayName: true, craft: true, bio: true,
-        avatarUrl: true, photos: true, videos: true, isVisible: true,
-      },
+    // Same reasoning as listPublic: resolve the performer, then their profile if
+    // one exists, so a profile-less account still opens rather than 404ing.
+    const user = await prisma.adminUser.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, role: true, performerProfile: true },
     });
-    if (!profile || !profile.isVisible) throw createHttpError(404, 'Performer not found');
+    if (!user || user.role !== AdminRole.PERFORMER) throw createHttpError(404, 'Performer not found');
+    if (user.performerProfile && !user.performerProfile.isVisible) throw createHttpError(404, 'Performer not found');
+
+    const profile = {
+      userId: user.id,
+      displayName: user.performerProfile?.displayName || user.username,
+      craft: user.performerProfile?.craft ?? null,
+      bio: user.performerProfile?.bio ?? null,
+      avatarUrl: user.performerProfile?.avatarUrl ?? null,
+      photos: user.performerProfile?.photos ?? [],
+      videos: user.performerProfile?.videos ?? [],
+    };
     // The phone is deliberately absent: guests reach a performer through a
     // booking request, not by calling them directly.
     return {
