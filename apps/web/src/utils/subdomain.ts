@@ -122,6 +122,14 @@ export function isBanquetHost(): boolean {
   return window.location.hostname === `banquet.${ROOT_DOMAIN}`;
 }
 
+// The slug in banquet.v-menu.uz/<slug>. Cosmetic for a signed-in user, but it
+// is the ONLY identifier available to a visitor who is not signed in — the
+// module gate resolves the restaurant from it.
+export function getBanquetSlug(): string | null {
+  if (!isBanquetHost()) return null;
+  return firstPathSegment();
+}
+
 // food-admin.v-menu.uz — the (single, fixed) catering-admin host. The restaurant
 // is identified by the auth token; the path slug is cosmetic.
 export function isFoodAdminHost(): boolean {

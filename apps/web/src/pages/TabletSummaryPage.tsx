@@ -217,6 +217,7 @@ export const TabletSummaryPage = () => {
   const restaurantLogoUrl = usePublicDataStore((s) => s.restaurantLogoUrl);
   const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
   const tabletBgColor     = usePublicDataStore((s) => s.tabletBgColor);
+  const moduleAddons      = usePublicDataStore((s) => s.moduleAddons);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
   const themeStyle = tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties;
@@ -596,6 +597,35 @@ export const TabletSummaryPage = () => {
                 ))}
               </div>
             )}
+            {/* Additional Services — only for restaurants that bought the
+                module. Prominent, above the reset/back controls. */}
+            {moduleAddons && (
+              <div className="w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate({
+                    pathname: '/tablet/additional-services',
+                    search: new URLSearchParams({
+                      restaurantId,
+                      eventNumber: String(confirmedEventId),
+                      restaurantName: restaurantName ?? '',
+                      ...(restaurantLogoUrl ? { restaurantLogoUrl } : {}),
+                      ...(tabletAccentColor ? { accent: tabletAccentColor } : {}),
+                      ...(tabletBgColor ? { bg: tabletBgColor } : {}),
+                    }).toString(),
+                  })}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold transition-all duration-200 hover:shadow-lg"
+                  style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  {t('addon_services_open')}
+                </button>
+              </div>
+            )}
+
             <div className="grid gap-2 w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
               <button
                 type="button"
@@ -607,7 +637,11 @@ export const TabletSummaryPage = () => {
                   navigate('/tablet');
                 }}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
-                style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}
+                // Steps down to an outline when the Additional Services button is
+                // present, so the two do not compete as identical accent blocks.
+                style={moduleAddons
+                  ? { background: 'transparent', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.5)' }
+                  : { background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}
               >
                 {t('start_new_booking')}
               </button>

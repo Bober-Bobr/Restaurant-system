@@ -1,6 +1,19 @@
 import { prisma } from '../../db/prisma.js';
+import { toSubdomainSlug } from '../../utils/slug.js';
 
 export class RestaurantRepository {
+  // Slugs are derived from the name rather than stored, so there is nothing to
+  // index on — resolve by slugifying names. Unlike `listAllPublic` this ignores
+  // the catering module: the caller (the banquet host gate) needs to find a
+  // restaurant precisely in order to learn which modules it does NOT have.
+  async findBySlug(slug: string) {
+    const all = await prisma.restaurant.findMany({
+      orderBy: { createdAt: 'asc' },
+      include: { company: { select: { id: true, name: true, logoUrl: true } } },
+    });
+    return all.find((r) => toSubdomainSlug(r.name) === slug) ?? null;
+  }
+
   async findAllByOwner(ownerId: string) {
     return prisma.restaurant.findMany({
       where: { ownerId },

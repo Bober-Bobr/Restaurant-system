@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
@@ -42,7 +42,9 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { publicRestaurantService } from '../services/publicRestaurant.service';
+import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
 import { VInviteApp } from '../vinvite/VInviteApp';
 import { NfcApp } from '../vconnect/NfcApp';
 import { VConnectLoginPage } from '../vconnect/VConnectLoginPage';
@@ -206,6 +208,7 @@ export const App = () => {
         <Route element={<TabletLayout />}>
           <Route path="/tablet" element={<TabletMenuPage />} />
           <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+            <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -277,6 +280,43 @@ export const App = () => {
     }
   }
 
+  // banquet.v-menu.uz/<slug> — a restaurant without the banquet module gets the
+  // Additional Services page here instead of the admin panel or a login screen
+  // it could never get past. Every host check above is false on this host, so
+  // the gate wraps exactly the role-based routing below.
+  if (isBanquetHost()) {
+    return <BanquetHostGate />;
+  }
+
+  return <RoleRoutes />;
+};
+
+// Resolves the restaurant from the URL slug to decide whether the banquet admin
+// app is available at all. Renders nothing until the answer is known — flashing
+// a login screen and then replacing it would be worse than a blank moment.
+const BanquetHostGate = () => {
+  const slug = getBanquetSlug();
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!slug) { setAllowed(true); return; }
+    let cancelled = false;
+    publicRestaurantService.modulesBySlug(slug).then(
+      (r) => { if (!cancelled) setAllowed(r.moduleBanquet); },
+      // Unknown slug or the API is unreachable: fall back to the normal app
+      // rather than accusing a paying restaurant of not having the module.
+      () => { if (!cancelled) setAllowed(true); },
+    );
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  if (allowed === null) return null;
+  if (!allowed && slug) return <AdditionalServicesBySlug slug={slug} />;
+  return <RoleRoutes />;
+};
+
+// Role-based routing — the tail of the host waterfall above.
+const RoleRoutes = () => {
   // RESTAURANT_MANAGER → expense ledger + devices, not tied to a restaurant.
   const role = useAuthStore((s) => s.role);
   if (role === 'RESTAURANT_MANAGER') {
@@ -327,6 +367,7 @@ export const App = () => {
           <Route element={<TabletLayout />}>
             <Route path="/tablet" element={<TabletMenuPage />} />
             <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+            <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
           </Route>
         )}
         <Route element={<EmployeeLayout />}>
@@ -345,6 +386,7 @@ export const App = () => {
       <Route element={<TabletLayout />}>
         <Route path="/tablet" element={<TabletMenuPage />} />
         <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+            <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
       </Route>
       <Route element={<AdminLayout />}>
         <Route path="/" element={<AdminEventsPage />} />

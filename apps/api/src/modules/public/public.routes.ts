@@ -124,6 +124,35 @@ router.get('/restaurant', async (request, response, next) => {
       tabletTrailTemplate: restaurant.tabletTrailTemplate ?? null,
       tabletTrailColor: restaurant.tabletTrailColor ?? null,
       tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
+      // Which paid products this restaurant has. Public on purpose: the tablet
+      // decides whether to offer the Additional Services button, and that flow
+      // is unauthenticated.
+      moduleBanquet: restaurant.moduleBanquet,
+      moduleCatering: restaurant.moduleCatering,
+      moduleAddons: restaurant.moduleAddons,
+    });
+  } catch (error) { next(error); }
+});
+
+// Resolve a restaurant from its URL slug and report its module entitlements.
+// Powers the banquet-host gate: an unauthenticated visitor at
+// banquet.v-menu.uz/<slug> gets the Additional Services page instead of a login
+// screen when the restaurant has no banquet module. Deliberately exposes
+// nothing beyond identity and the switches.
+router.get('/restaurant-modules', async (request, response, next) => {
+  try {
+    const slug = String(request.query.slug ?? '').trim();
+    if (!slug) { response.status(400).json({ message: 'slug required' }); return; }
+    const restaurant = await restaurantRepository.findBySlug(slug);
+    if (!restaurant) { response.status(404).json({ message: 'Not found' }); return; }
+    const company = (restaurant as any).company as { name: string; logoUrl: string | null } | null;
+    response.json({
+      id: restaurant.id,
+      name: restaurant.name,
+      logoUrl: restaurant.logoUrl ?? company?.logoUrl ?? null,
+      moduleBanquet: restaurant.moduleBanquet,
+      moduleCatering: restaurant.moduleCatering,
+      moduleAddons: restaurant.moduleAddons,
     });
   } catch (error) { next(error); }
 });

@@ -21,6 +21,9 @@ type PublicDataState = {
   tabletTrailTemplate: string | null;
   tabletTrailColor: string | null;
   tabletTrailImageUrl: string | null;
+  // Whether this restaurant bought the Additional Services module — drives the
+  // button on the booking-confirmed screen.
+  moduleAddons: boolean;
   isLoading: boolean;
   error?: string;
   isLoaded: boolean;
@@ -42,12 +45,13 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   tabletTrailTemplate: null,
   tabletTrailColor: null,
   tabletTrailImageUrl: null,
+  moduleAddons: false,
   isLoading: false,
   error: undefined,
   isLoaded: false,
   loadPublicData: async (restaurantId: string) => {
     if (!restaurantId) {
-      set({ menuItems: [], halls: [], tableCategories: [], extraServices: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, isLoaded: true, isLoading: false });
+      set({ menuItems: [], halls: [], tableCategories: [], extraServices: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, moduleAddons: false, isLoaded: true, isLoading: false });
       return;
     }
     if (get().isLoading) return;
@@ -77,6 +81,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
         tabletTrailTemplate: restaurant.tabletTrailTemplate ?? null,
         tabletTrailColor: restaurant.tabletTrailColor ?? null,
         tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
+        moduleAddons: !!restaurant.moduleAddons,
         isLoaded: true
       });
     } catch (error) {
