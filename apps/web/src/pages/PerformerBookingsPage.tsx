@@ -4,8 +4,10 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 
 // Booking requests raised from the Additional Services page. Accepting one adds
-// it to the calendar, which is also what makes the performer show as busy for
-// that date — so accepting is the single action that closes the loop.
+// it to the calendar, which is also what makes a performer or host show as busy
+// for that date — so accepting is the single action that closes the loop. A
+// host's requests carry the event programme, which travels onto the calendar
+// entry when the request is accepted.
 export const PerformerBookingsPage = () => {
   const { locale } = useAdminStore();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
@@ -74,6 +76,21 @@ export const PerformerBookingsPage = () => {
               </div>
 
               {b.note && <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.6)', whiteSpace: 'pre-wrap' }}>{b.note}</p>}
+
+              {/* Hosts only: the running order the client sent. It is what the
+                  request is judged on, so it is given its own panel rather than
+                  being run together with the note. */}
+              {b.program && (
+                <div style={{
+                  display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 8,
+                  background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.25)',
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c9a42c' }}>
+                    {t('pf_program')}
+                  </span>
+                  <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.8)', whiteSpace: 'pre-wrap' }}>{b.program}</p>
+                </div>
+              )}
 
               {b.status === 'PENDING' && (
                 <div style={{ display: 'flex', gap: 8 }}>

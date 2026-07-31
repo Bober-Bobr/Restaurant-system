@@ -4,11 +4,15 @@ import { httpClient } from './http';
 const apiRoot = (): string =>
   (import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api').replace(/\/$/, '');
 
+// Performers and hosts are two roles sharing one profile/calendar/booking
+// system. The kind selects which block the public reads; the signed-in side
+// needs no kind at all, since the token already says which the caller is.
+export type ServiceKind = 'performer' | 'host';
+
 export type PerformerProfile = {
   id: string;
   userId: string;
   displayName: string;
-  craft: string | null;
   bio: string | null;
   phone: string | null;
   avatarUrl: string | null;
@@ -23,6 +27,8 @@ export type PerformerEvent = {
   eventTime: string;
   title: string;
   note: string | null;
+  // The running order. Hosts fill this in; performers leave it null.
+  program: string | null;
   // Set when the entry came from an accepted booking rather than by hand.
   bookingId: string | null;
 };
@@ -36,6 +42,8 @@ export type PerformerBooking = {
   eventTime: string;
   eventType: string | null;
   note: string | null;
+  // Supplied by the client when booking a host; null for a performer.
+  program: string | null;
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   eventNumber: number | null;
   createdAt: string;
@@ -46,9 +54,10 @@ export type PerformerEventInput = {
   eventTime: string;
   title: string;
   note?: string | null;
+  program?: string | null;
 };
 
-// Signed-in performer managing their own profile, calendar and inbox.
+// Signed-in performer or host managing their own profile, calendar and inbox.
 export const performerService = {
   async getProfile() {
     const { data } = await httpClient.get<PerformerProfile>('/performers/me');
@@ -100,7 +109,6 @@ export const performerService = {
 export type PublicPerformer = {
   id: string;
   displayName: string;
-  craft: string | null;
   avatarUrl: string | null;
   photoCount: number;
   videoCount: number;
@@ -112,7 +120,6 @@ export type PublicPerformer = {
 export type PublicPerformerDetail = {
   id: string;
   displayName: string;
-  craft: string | null;
   bio: string | null;
   phone: string | null;
   avatarUrl: string | null;
@@ -129,21 +136,27 @@ export type PerformerBookingPayload = {
   eventTime: string;
   eventType?: string | null;
   note?: string | null;
+  // Required by the server when the target is a host.
+  program?: string | null;
   restaurantId?: string | null;
   eventNumber?: number | null;
 };
 
 export const publicPerformerService = {
-  async list(date?: string) {
+  async list(kind: ServiceKind, date?: string) {
     const { data } = await axios.get<PublicPerformer[]>(`${apiRoot()}/public/performers`, {
-      params: date ? { date } : undefined,
+      params: { kind, ...(date ? { date } : {}) },
     });
     return data;
   },
-  async get(id: string) {
-    const { data } = await axios.get<PublicPerformerDetail>(`${apiRoot()}/public/performers/${id}`);
+  async get(kind: ServiceKind, id: string) {
+    const { data } = await axios.get<PublicPerformerDetail>(`${apiRoot()}/public/performers/${id}`, {
+      params: { kind },
+    });
     return data;
   },
+  // One endpoint for both: the server resolves the target's role and decides
+  // whether the programme was required.
   async book(payload: PerformerBookingPayload) {
     const { data } = await axios.post<{ id: string }>(`${apiRoot()}/public/performer-bookings`, payload);
     return data;

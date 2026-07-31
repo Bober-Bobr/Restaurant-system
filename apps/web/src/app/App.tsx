@@ -178,10 +178,12 @@ export const App = () => {
     }
   }
 
-  // Performer subdomain → the performer workspace.
+  // Performer subdomain → the performer workspace, shared with hosts: the two
+  // roles get the same profile, calendar and booking inbox, so they get the
+  // same app. Which one you are only changes the labels.
   if (isPerformerSubdomain()) {
     const { accessToken, role } = useAuthStore.getState();
-    if (!accessToken || role !== 'PERFORMER') {
+    if (!accessToken || (role !== 'PERFORMER' && role !== 'HOST')) {
       if (window.location.pathname !== '/login') {
         window.location.href = buildAbsoluteUrl('/login');
         return null;
@@ -221,8 +223,8 @@ export const App = () => {
       window.location.href = buildSubdomainBase('manager');
       return null;
     }
-    // PERFORMER → performer.v-menu.uz
-    if (accessToken && role === 'PERFORMER' && window.location.pathname !== '/login') {
+    // PERFORMER / HOST → performer.v-menu.uz
+    if (accessToken && (role === 'PERFORMER' || role === 'HOST') && window.location.pathname !== '/login') {
       window.location.href = buildSubdomainBase('performer');
       return null;
     }

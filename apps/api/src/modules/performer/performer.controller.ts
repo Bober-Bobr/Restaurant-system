@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { PerformerService } from './performer.service.js';
+import { parseKind } from './performer.kind.js';
 import {
   updatePerformerProfileSchema, performerEventSchema, updatePerformerEventSchema,
   createPerformerBookingSchema, bookingDecisionSchema,
@@ -7,9 +8,9 @@ import {
 
 const service = new PerformerService();
 
-// Everything here is scoped to the signed-in performer: the id comes from the
-// token, never from the request, so one performer can never read or change
-// another's calendar or bookings.
+// Everything here is scoped to the signed-in performer or host: the id comes
+// from the token, never from the request, so one account can never read or
+// change another's calendar or bookings.
 export class PerformerController {
   async getMyProfile(request: Request, response: Response) {
     response.json(await service.getOrCreateProfile(request.admin!.id));
@@ -53,13 +54,15 @@ export class PerformerController {
   }
 
   // ── Public ─────────────────────────────────────────────────────────────────
+  // `?kind=host` selects the hosts block; anything else (including a missing
+  // parameter) means performers, which is what callers predating hosts send.
   async listPublic(request: Request, response: Response) {
     const date = typeof request.query.date === 'string' ? request.query.date : undefined;
-    response.json(await service.listPublic(date || undefined));
+    response.json(await service.listPublic(parseKind(request.query.kind), date || undefined));
   }
 
   async getPublic(request: Request, response: Response) {
-    response.json(await service.getPublic(String(request.params.id)));
+    response.json(await service.getPublic(parseKind(request.query.kind), String(request.params.id)));
   }
 
   async createBooking(request: Request, response: Response) {

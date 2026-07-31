@@ -4,6 +4,7 @@ import createHttpError from 'http-errors';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
+import { isServiceRole } from '../performer/performer.kind.js';
 
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
@@ -172,17 +173,17 @@ export class AuthService {
       }
     }
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
-      // A restaurant ADMIN may also create performers, who are platform-wide
-      // and belong to no restaurant. CATERING_ADMIN may not.
+      // A restaurant ADMIN may also create performers and hosts, who are
+      // platform-wide and belong to no restaurant. CATERING_ADMIN may not.
       const allowed: AdminRole[] = caller.role === AdminRole.ADMIN
-        ? [AdminRole.EMPLOYEE, AdminRole.KITCHEN, AdminRole.PERFORMER]
+        ? [AdminRole.EMPLOYEE, AdminRole.KITCHEN, AdminRole.PERFORMER, AdminRole.HOST]
         : [AdminRole.EMPLOYEE, AdminRole.KITCHEN];
       if (!allowed.includes(payload.role)) {
-        throw createHttpError(403, 'Administrators can only create Employee, Kitchen or Performer accounts.');
+        throw createHttpError(403, 'Administrators can only create Employee, Kitchen, Performer or Host accounts.');
       }
-      if (payload.role === AdminRole.PERFORMER) {
-        // Never inherit the creator's restaurant — a performer is not staff of
-        // the venue that happened to sign them up.
+      if (isServiceRole(payload.role)) {
+        // Never inherit the creator's restaurant — a performer or host is not
+        // staff of the venue that happened to sign them up.
         payload.restaurantId = null;
       } else {
         // Force the new employee into the admin's restaurant
@@ -193,8 +194,8 @@ export class AuthService {
         payload.restaurantId = restaurantId;
       }
     }
-    // Performers are never restaurant-scoped, whoever creates them.
-    if (payload.role === AdminRole.PERFORMER) payload.restaurantId = null;
+    // Performers and hosts are never restaurant-scoped, whoever creates them.
+    if (isServiceRole(payload.role)) payload.restaurantId = null;
     // A banquet/catering role is only assignable where that module is active —
     // otherwise the account would be created and then refused at login.
     await this.assertModuleAssignable(payload.role, payload.restaurantId ?? null);
@@ -255,10 +256,10 @@ export class AuthService {
         if (target.role === AdminRole.CHIEF_ADMIN || target.role === AdminRole.OWNER) {
           throw createHttpError(403, 'Owners cannot manage other Owners or Chief Admins.');
         }
-        // Performers belong to no restaurant, so the restaurant check below can
-        // never pass for them. Owners may create performers, so they must be
-        // able to fix a mistyped password afterwards.
-        if (target.role !== AdminRole.PERFORMER) {
+        // Performers and hosts belong to no restaurant, so the restaurant check
+        // below can never pass for them. Owners may create them, so they must
+        // be able to fix a mistyped password afterwards.
+        if (!isServiceRole(target.role)) {
           const ownerRestaurantIds = await this.authRepository.findRestaurantIdsByOwner(caller.id);
           if (!target.restaurantId || !ownerRestaurantIds.includes(target.restaurantId)) {
             throw createHttpError(403, 'Cannot manage users outside your restaurants.');
@@ -267,12 +268,12 @@ export class AuthService {
       }
     } else if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
       if (!isSelf) {
-        // A restaurant ADMIN may also create performers — and so may edit them.
-        // CATERING_ADMIN cannot create them and cannot edit them either.
-        const canEditPerformer = caller.role === AdminRole.ADMIN && target.role === AdminRole.PERFORMER;
+        // A restaurant ADMIN may also create performers and hosts — and so may
+        // edit them. CATERING_ADMIN can do neither.
+        const canEditPerformer = caller.role === AdminRole.ADMIN && isServiceRole(target.role);
         if (!canEditPerformer) {
           if (target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
-            throw createHttpError(403, 'Administrators can only edit Employee, Kitchen or Performer accounts.');
+            throw createHttpError(403, 'Administrators can only edit Employee, Kitchen, Performer or Host accounts.');
           }
           const callerRestId =
             caller.restaurantId ?? (await this.authRepository.findById(caller.id))?.restaurantId ?? null;

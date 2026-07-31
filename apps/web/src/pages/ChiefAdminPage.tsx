@@ -407,6 +407,7 @@ export const ChiefAdminPage = () => {
                   <option value="KITCHEN">KITCHEN</option>
                   <option value="NFC_MAKER">NFC MAKER</option>
                   <option value="PERFORMER">PERFORMER</option>
+                  <option value="HOST">HOST</option>
                 </select>
                 {uRole === 'RESTAURANT_MANAGER' && (
                   <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
@@ -463,6 +464,7 @@ export const ChiefAdminPage = () => {
                       <option value="KITCHEN">KITCHEN</option>
                       <option value="NFC_MAKER">NFC MAKER</option>
                       <option value="PERFORMER">PERFORMER</option>
+                      <option value="HOST">HOST</option>
                     </select>
                     {RESTAURANT_AFFILIATED.includes(u.role) && (
                       <select

@@ -20,7 +20,8 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   EMPLOYEE: 'Employee',
   KITCHEN: 'Kitchen',
   NFC_MAKER: 'NFC Maker',
-  PERFORMER: 'Performer'
+  PERFORMER: 'Performer',
+  HOST: 'Host'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
@@ -33,7 +34,8 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   EMPLOYEE: { background: '#16a34a', color: '#fff' },
   KITCHEN: { background: '#ea580c', color: '#fff' },
   NFC_MAKER: { background: '#c8a97a', color: '#171310' },
-  PERFORMER: { background: '#db2777', color: '#fff' }
+  PERFORMER: { background: '#db2777', color: '#fff' },
+  HOST: { background: '#be185d', color: '#fff' }
 };
 
 const formatError = (error: unknown): string => {
@@ -115,10 +117,16 @@ export const AdminUsersPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
   });
 
-  // OWNER can create ADMIN/CATERING_ADMIN/EMPLOYEE/KITCHEN; ADMIN & CATERING_ADMIN can only create EMPLOYEE/KITCHEN
+  // OWNER can create ADMIN/CATERING_ADMIN/EMPLOYEE/KITCHEN; ADMIN & CATERING_ADMIN
+  // can only create EMPLOYEE/KITCHEN. Performers and hosts belong to no
+  // restaurant and are offered to OWNER and ADMIN but NOT to CATERING_ADMIN,
+  // matching what auth.service actually permits — offering them there produced
+  // a 403 with no explanation.
   const creatableRoles: AdminRole[] = currentRole === 'OWNER'
-    ? ['ADMIN', 'CATERING_ADMIN', 'EMPLOYEE', 'KITCHEN', 'PERFORMER']
-    : ['EMPLOYEE', 'KITCHEN', 'PERFORMER'];
+    ? ['ADMIN', 'CATERING_ADMIN', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
+    : currentRole === 'ADMIN'
+      ? ['EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
+      : ['EMPLOYEE', 'KITCHEN'];
   const requiresRestaurantPicker = currentRole === 'OWNER';
 
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);

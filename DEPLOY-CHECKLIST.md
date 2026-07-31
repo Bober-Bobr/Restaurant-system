@@ -1,11 +1,11 @@
 # What you need to do
 
-Everything built across Parts 1–4 — module permissions, the Additional Services
-page, invitation orders, and performers — exists in the repository but is **not
-running in production**. This document is the full list of what stands between
+Everything built across Parts 1–5 — module permissions, the Additional Services
+page, invitation orders, performers, and hosts — exists in the repository but is
+**not running in production**. This document is the full list of what stands between
 here and live, in the order it has to happen.
 
-There are six pending database migrations, one new host to stand up, one nginx
+There are eight pending database migrations, one new host to stand up, one nginx
 change you would not guess, and four pieces of manual setup afterwards. One of
 those four (Step 8) has no user interface at all, and skipping it silently makes
 an entire feature invisible.
@@ -20,13 +20,14 @@ blocks suggest.
 
 Do this before anything else touches Postgres.
 
-Two of the pending migrations drop columns: `20260730160000_invite_request_photos`
+Three of the pending migrations drop columns: `20260730160000_invite_request_photos`
 removes `InviteRequest.photoUrl` after copying it into the new `photoUrls` array,
-and `20260730180000_performers` removes the unused `InviteRequest.performers`.
-Both act on a table that is almost certainly empty in your production database,
-since the invitation-orders feature has never been live. So the genuine risk here
-is close to zero. That is not the point — the point is that you are about to
-apply six migrations in one batch, and this is the last moment at which taking a
+`20260730180000_performers` removes the unused `InviteRequest.performers`, and
+`20260731140100_host_program_fields` removes `PerformerProfile.craft`. All three
+act on tables that are almost certainly empty in your production database, since
+neither invitation orders nor performers have ever been live. So the genuine risk
+here is close to zero. That is not the point — the point is that you are about to
+apply eight migrations in one batch, and this is the last moment at which taking a
 dump costs you nothing.
 
 Take the dump by running `pg_dump` inside the container. Read the credentials
@@ -73,7 +74,7 @@ git status --short      # must print nothing
 ./deploy.sh
 ```
 
-Watch the output under `==> Running database migrations...`. Six migrations
+Watch the output under `==> Running database migrations...`. Eight migrations
 should apply.
 
 `20260730100000_restaurant_module_permissions` is Part 1. It adds the three
@@ -103,6 +104,15 @@ existing day keeps its computed total) and creates the `ServiceExpense` table fo
 the per-department Additional Services lines. Nothing is dropped and nothing is
 backfilled, so this one is safe to re-run and safe to leave applied if you roll
 the code back.
+
+`20260731140000_admin_role_host` is Part 5. It adds the `HOST` value to the
+`AdminRole` enum and nothing else, alone in its own migration for exactly the
+same reason as `admin_role_performer` above. Do not merge it into the next one.
+
+`20260731140100_host_program_fields` adds `program` to `PerformerBooking` and
+`PerformerEvent` — the host's event running order, nullable so existing
+performer rows are untouched — and drops `PerformerProfile.craft`, the
+"What do you do?" field that is gone from both roles' profiles.
 
 If you also see the older v-connect migrations (`nfc_plaque`,
 `platform_contact`, `platform_contact_instagram`, `extra_services`,
@@ -143,14 +153,22 @@ docker compose exec -T postgres sh -c \
 
 Expect `moduleBanquet`, `moduleCatering` and `moduleAddons`.
 
-Third, confirm the new role exists in the enum. If this is missing, creating a
-performer in Step 10 fails with a raw database error rather than a friendly
+Third, confirm the new roles exist in the enum. If either is missing, creating
+that account in Step 10 fails with a raw database error rather than a friendly
 message:
 
 ```bash
 docker compose exec -T postgres sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT unnest(enum_range(NULL::\"AdminRole\"))"' \
-  | grep -E 'PERFORMER|NFC_MAKER'
+  | grep -E 'PERFORMER|HOST|NFC_MAKER'
+```
+
+While you are here, confirm the host programme columns landed — without them the
+hosts block accepts a booking request and then fails to store the programme:
+
+```bash
+docker compose exec -T postgres sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\d \"PerformerBooking\""' | grep program
 ```
 
 Fourth — and this is the one that protects the customers you already have — check
@@ -392,10 +410,11 @@ attempting to sign in with it at `https://v-connect.uz/login`.
 
 ---
 
-## Step 10 — Create performer accounts
+## Step 10 — Create performer and host accounts
 
-There is no seeded performer, and there should not be — unlike `nfc_maker`, these
-are real people's accounts, and a default one would be a permanently open door.
+There is no seeded performer or host, and there should not be — unlike
+`nfc_maker`, these are real people's accounts, and a default one would be a
+permanently open door.
 
 Three roles can create them. A `CHIEF_ADMIN` does it from `admin.v-menu.uz` under
 the Users tab; an `OWNER` from `cabinet.v-menu.uz`; a restaurant `ADMIN` from
@@ -403,15 +422,21 @@ the Users tab; an `OWNER` from `cabinet.v-menu.uz`; a restaurant `ADMIN` from
 cannot, and that restriction is enforced on the server rather than by hiding the
 option.
 
-Choose the role **Performer**, set a username and password, and save.
+Choose the role **Performer** or **Host**, set a username and password, and
+save. The two are separate roles and appear in separate blocks on the Additional
+Services page, but they get the identical workspace at `performer.v-menu.uz` —
+profile, calendar, booking inbox — so there is nothing extra to set up for a
+host. The one difference the host will notice is that their booking requests
+carry an event programme, and that a programme field appears on their calendar
+entries.
 
-The account will show no restaurant, and that is correct. A performer is not
-staff of the venue that happened to sign them up — they are platform-wide and
-bookable from any restaurant's Additional Services page. The server forces
-`restaurantId` to null for performers no matter who creates them, including when
-a restaurant ADMIN does it, so you cannot get this wrong from the interface.
+The account will show no restaurant, and that is correct. Neither is staff of the
+venue that happened to sign them up — they are platform-wide and bookable from
+any restaurant's Additional Services page. The server forces `restaurantId` to
+null for both roles no matter who creates them, including when a restaurant ADMIN
+does it, so you cannot get this wrong from the interface.
 
-When you hand over the credentials, tell the performer to sign in at
+When you hand over the credentials, tell them to sign in at
 **`https://v-menu.uz/login`** and not at `performer.v-menu.uz`. Sign-in happens
 on the root domain for every role in the system; the login page then forwards
 them to their own host with the session attached.
@@ -463,6 +488,16 @@ matters is the last one: after the performer accepts a booking request, they mus
 read **Busy** for that date in the guest-facing performers list. That is what
 proves the loop closed, because availability is defined as "has a calendar entry
 that day" and accepting a booking is what creates the entry.
+
+**Hosts.** Repeat that same walkthrough with a Host account, and check the three
+things that are specific to hosts. First, the Additional Services page shows a
+**Hosts** block below Performers, listing hosts only — no performer may appear in
+it and no host in the performers block. Second, the booking form will not submit
+without an event programme; clear the field and confirm the button stays
+disabled, then submit through the API without one and confirm it is refused
+server-side rather than only in the browser. Third, accept the request as the
+host and confirm the programme is already filled in on the resulting calendar
+entry, and that editing it there saves.
 
 **No regressions.** Sign in once as each pre-existing role — CHIEF_ADMIN,
 MANAGER, OWNER, RESTAURANT_MANAGER, CATERING_ADMIN and a restaurant ADMIN — and

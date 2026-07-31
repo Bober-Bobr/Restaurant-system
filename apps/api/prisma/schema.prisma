@@ -155,9 +155,14 @@ enum AdminRole {
   KITCHEN
   // v-connect.uz — builds NFC plaques for businesses. Not tied to a restaurant.
   NFC_MAKER
-  // Additional Services — a performer (musician, host, dancer…) with their own
+  // Additional Services — a performer (musician, singer, dancer…) with their own
   // profile, calendar and booking inbox. Not tied to a restaurant.
   PERFORMER
+  // Additional Services — an event host (тамада / boshlovchi). A distinct role
+  // from PERFORMER, listed in its own block, but sharing the profile, calendar
+  // and booking machinery below. The one difference is the event programme,
+  // which a client must supply when booking and a host may record per booking.
+  HOST
 }
 
 model AdminUser {
@@ -676,17 +681,16 @@ model InvitationRequest {
   @@index([invitationId])
 }
 
-// ── Performers (Additional Services) ─────────────────────────────────────────
-// A PERFORMER is an AdminUser with no restaurant. This holds the public-facing
-// profile shown in the Additional Services performers block.
+// ── Performers and hosts (Additional Services) ───────────────────────────────
+// A PERFORMER or a HOST is an AdminUser with no restaurant. These three models
+// are shared by both roles: the profile, calendar and booking flow are the same
+// shape, and `AdminUser.role` is what decides which block a person appears in.
+// Splitting them into parallel tables would mean fixing every future bug twice.
 model PerformerProfile {
   id          String  @id @default(cuid())
   userId      String  @unique
   // Stage name shown to guests; falls back to the username when blank.
   displayName String
-  // What they do — "DJ", "Singer", "Host"… free text, not an enum, because the
-  // list is open-ended and set by whoever creates the account.
-  craft       String?
   bio         String?
   phone       String?
   avatarUrl   String?
@@ -711,6 +715,10 @@ model PerformerEvent {
   eventTime   String
   title       String
   note        String?
+  // The event programme. Hosts run to a running order, so they record it
+  // against the calendar entry; it is carried over from the booking when the
+  // entry was created by accepting one. Null for performers, who have none.
+  program     String?
   bookingId   String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -721,8 +729,9 @@ model PerformerEvent {
   @@index([performerId, eventDate])
 }
 
-// A booking request raised from the Additional Services page. Lands in the
-// performer's Notifications; accepting it creates the PerformerEvent above.
+// A booking request raised from the Additional Services page, for a performer
+// or a host. Lands in their Notifications; accepting it creates the
+// PerformerEvent above.
 model PerformerBooking {
   id             String   @id @default(cuid())
   performerId    String
@@ -733,6 +742,10 @@ model PerformerBooking {
   eventTime      String
   eventType      String?
   note           String?
+  // The running order for the evening. Required by the API when the person
+  // being booked is a HOST — a host cannot judge whether to accept without it —
+  // and always null for a performer, who is not asked for one.
+  program        String?
   // PENDING | ACCEPTED | DECLINED
   status         String   @default("PENDING")
   // Provenance, when raised from a confirmed banquet event.

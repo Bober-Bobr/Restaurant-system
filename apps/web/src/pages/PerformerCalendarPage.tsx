@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { performerService, type PerformerEvent } from '../services/performer.service';
 import { useAdminStore } from '../store/admin.store';
+import { useAuthStore } from '../store/auth.store';
 import { translate } from '../utils/translate';
 
 const MONTH_KEYS = [
@@ -16,7 +17,7 @@ const WEEKDAY_KEYS = [
   'weekday_fri', 'weekday_sat', 'weekday_sun',
 ] as const;
 
-type Draft = { id?: string; eventDate: string; eventTime: string; title: string; note: string };
+type Draft = { id?: string; eventDate: string; eventTime: string; title: string; note: string; program: string };
 type SourceFilter = 'all' | 'manual' | 'booking';
 
 // Entries are stored as UTC midnight, so read the day parts off the ISO string
@@ -29,11 +30,17 @@ function ymd(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// The performer's schedule. Entries are added by hand here, and appear
-// automatically when a booking request is accepted — those carry a bookingId and
-// are shown in a different colour, but are otherwise ordinary entries.
+// The performer's or host's schedule. Entries are added by hand here, and
+// appear automatically when a booking request is accepted — those carry a
+// bookingId and are shown in a different colour, but are otherwise ordinary
+// entries.
+//
+// Hosts additionally record the event programme against an entry. It arrives
+// pre-filled on entries created from a booking, since the client had to supply
+// one to book at all, and is editable from there.
 export const PerformerCalendarPage = () => {
   const { locale } = useAdminStore();
+  const isHost = useAuthStore((state) => state.role) === 'HOST';
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const queryClient = useQueryClient();
 
@@ -108,6 +115,9 @@ export const PerformerCalendarPage = () => {
         eventTime: draft!.eventTime,
         title: draft!.title.trim(),
         note: draft!.note.trim() || null,
+        // Only hosts are shown the field, so only hosts can write it. Sending
+        // it unconditionally would blank a value the moment the role changed.
+        ...(isHost ? { program: draft!.program.trim() || null } : {}),
       };
       return draft!.id
         ? performerService.updateEvent(draft!.id, payload)
@@ -197,7 +207,7 @@ export const PerformerCalendarPage = () => {
           type="button"
           className="adm-btn-primary"
           style={{ marginLeft: 'auto' }}
-          onClick={() => setDraft({ eventDate: ymd(viewYear, viewMonth, Math.min(today.getDate(), daysInMonth)), eventTime: '', title: '', note: '' })}
+          onClick={() => setDraft({ eventDate: ymd(viewYear, viewMonth, Math.min(today.getDate(), daysInMonth)), eventTime: '', title: '', note: '', program: '' })}
         >
           {t('pf_add_event')}
         </button>
@@ -235,6 +245,17 @@ export const PerformerCalendarPage = () => {
             <span style={labelText}>{t('pf_event_note')}</span>
             <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
           </label>
+          {isHost && (
+            <label style={{ display: 'grid', gap: 4 }}>
+              <span style={labelText}>{t('pf_program')}</span>
+              <textarea
+                style={{ ...inputStyle, minHeight: 140, resize: 'vertical' }}
+                placeholder={t('pf_program_hint')}
+                value={draft.program}
+                onChange={(e) => setDraft({ ...draft, program: e.target.value })}
+              />
+            </label>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="adm-btn-primary" disabled={!canSave || saveEvent.isPending} onClick={() => saveEvent.mutate()}>
               {saveEvent.isPending ? t('saving') : t('save')}
@@ -317,7 +338,7 @@ export const PerformerCalendarPage = () => {
               type="button"
               className="adm-btn-primary"
               style={{ marginLeft: 'auto' }}
-              onClick={() => setDraft({ eventDate: openDay, eventTime: '', title: '', note: '' })}
+              onClick={() => setDraft({ eventDate: openDay, eventTime: '', title: '', note: '', program: '' })}
             >
               {t('pf_add_event')}
             </button>
@@ -367,6 +388,17 @@ function EventRow({ ev, t, showDate, onEdit, onDelete, deleting }: {
         </span>
       </div>
       {ev.note && <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.6)', whiteSpace: 'pre-wrap' }}>{ev.note}</p>}
+      {ev.program && (
+        <div style={{
+          display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 8,
+          background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.25)',
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c9a42c' }}>
+            {t('pf_program')}
+          </span>
+          <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.8)', whiteSpace: 'pre-wrap' }}>{ev.program}</p>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={() => onEdit({
@@ -377,6 +409,7 @@ function EventRow({ ev, t, showDate, onEdit, onDelete, deleting }: {
             eventTime: ev.eventTime,
             title: ev.title,
             note: ev.note ?? '',
+            program: ev.program ?? '',
           })}
           style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.07)', color: 'rgba(226,232,240,0.8)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}
         >

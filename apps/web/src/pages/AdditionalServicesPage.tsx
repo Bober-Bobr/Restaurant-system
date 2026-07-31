@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { publicRestaurantService, type PublicRestaurantModules } from '../services/publicRestaurant.service';
 import { inviteRequestService } from '../services/inviteRequest.service';
-import { publicPerformerService, type PublicPerformer, type PublicPerformerDetail } from '../services/performer.service';
+import { publicPerformerService, type PublicPerformer, type PublicPerformerDetail, type ServiceKind } from '../services/performer.service';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { translate, defaultLocale, locales, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -32,7 +32,7 @@ const MAX_PHOTOS = 10;
 //   2. From the booking-confirmed screen on the tablet Summary page, when the
 //      restaurant HAS the addons module.
 //
-// Sections stack below the header: invitations first, then performers.
+// Sections stack below the header: invitations, then performers, then hosts.
 
 function PageBackground() {
   return (
@@ -320,15 +320,44 @@ function InvitationSection({ t, prefill }: {
   );
 }
 
-// ── Section 2: Performers ───────────────────────────────────────────────────
-// Every performer registered on the platform, with their availability for the
-// chosen date. Opening one shows their photos and videos; booking raises a
-// request that lands in that performer's Notifications. Accepting it there
-// creates a calendar entry — which is what makes them show as busy here.
-function PerformersSection({ t, prefill }: {
+// ── Sections 2 & 3: Performers and Hosts ────────────────────────────────────
+// Everyone of the given kind registered on the platform, with their
+// availability for the chosen date. Opening one shows their photos and videos;
+// booking raises a request that lands in their Notifications. Accepting it
+// there creates a calendar entry — which is what makes them show as busy here.
+//
+// Hosts are a distinct role but an identical block, so this renders twice.
+// The one real difference is the event programme: a host is being asked to run
+// the evening, so the client must describe it, the field is required here and
+// the server refuses a host booking without it.
+const COPY: Record<ServiceKind, {
+  icon: string;
+  title: Parameters<typeof translate>[0];
+  intro: Parameters<typeof translate>[0];
+  none: Parameters<typeof translate>[0];
+  booked: Parameters<typeof translate>[0];
+  back: Parameters<typeof translate>[0];
+  note: Parameters<typeof translate>[0];
+}> = {
+  performer: {
+    icon: '\u{1F3A4}',
+    title: 'addon_pf_title', intro: 'addon_pf_intro', none: 'addon_pf_none',
+    booked: 'addon_pf_booked', back: 'addon_pf_back', note: 'addon_pf_note',
+  },
+  host: {
+    icon: '\u{1F399}\uFE0F',
+    title: 'addon_hs_title', intro: 'addon_hs_intro', none: 'addon_hs_none',
+    booked: 'addon_hs_booked', back: 'addon_hs_back', note: 'addon_hs_note',
+  },
+};
+
+function PerformersSection({ t, prefill, kind }: {
   t: (key: Parameters<typeof translate>[0]) => string;
   prefill: InvitationPrefill;
+  kind: ServiceKind;
 }) {
+  const copy = COPY[kind];
+  const isHost = kind === 'host';
   const [date, setDate] = useState(prefill.eventDate ?? '');
   const [performers, setPerformers] = useState<PublicPerformer[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -336,6 +365,7 @@ function PerformersSection({ t, prefill }: {
   const [contactName, setContactName] = useState(prefill.names?.[0] ?? '');
   const [phone, setPhone] = useState(prefill.phone ?? '');
   const [note, setNote] = useState('');
+  const [program, setProgram] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bookedIds, setBookedIds] = useState<string[]>([]);
@@ -343,25 +373,25 @@ function PerformersSection({ t, prefill }: {
   // Re-query whenever the date changes: availability is per-date.
   useEffect(() => {
     let cancelled = false;
-    publicPerformerService.list(date || undefined).then(
+    publicPerformerService.list(kind, date || undefined).then(
       (list) => { if (!cancelled) setPerformers(list); },
       () => { if (!cancelled) setPerformers([]); },
     );
     return () => { cancelled = true; };
-  }, [date]);
+  }, [kind, date]);
 
   useEffect(() => {
     if (!openId) { setDetail(null); return; }
     let cancelled = false;
-    publicPerformerService.get(openId).then(
+    publicPerformerService.get(kind, openId).then(
       (d) => { if (!cancelled) setDetail(d); },
       () => { if (!cancelled) setOpenId(null); },
     );
     return () => { cancelled = true; };
-  }, [openId]);
+  }, [kind, openId]);
 
   const book = async (performerId: string) => {
-    if (!date || !contactName.trim() || !phone.trim() || !prefill.eventTime) return;
+    if (!canBook) return;
     setBusy(true);
     setError(null);
     try {
@@ -371,9 +401,12 @@ function PerformersSection({ t, prefill }: {
         contactName: contactName.trim(),
         phone: phone.trim(),
         eventDate: date,
-        eventTime: prefill.eventTime,
+        eventTime: prefill.eventTime!,
         eventType: prefill.eventType ?? null,
         note: note.trim() || null,
+        // Hosts only. The server enforces this too — the button being
+        // disabled is a courtesy, not the rule.
+        program: isHost ? program.trim() : null,
         restaurantId: prefill.restaurantId ?? null,
         eventNumber: prefill.eventNumber ?? null,
       });
@@ -386,7 +419,8 @@ function PerformersSection({ t, prefill }: {
     }
   };
 
-  const canBook = !!date && !!prefill.eventTime && !!contactName.trim() && !!phone.trim() && !busy;
+  const canBook = !!date && !!prefill.eventTime && !!contactName.trim() && !!phone.trim()
+    && (!isHost || !!program.trim()) && !busy;
 
   // ── Detail view ──
   if (openId && detail) {
@@ -399,7 +433,7 @@ function PerformersSection({ t, prefill }: {
           className="text-sm font-medium"
           style={{ color: 'var(--rg-accent)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
         >
-          ← {t('addon_pf_back')}
+          ← {t(copy.back)}
         </button>
 
         <div className="flex items-center gap-3">
@@ -411,14 +445,7 @@ function PerformersSection({ t, prefill }: {
           </div>
         </div>
 
-        {/* Craft, description and phone — the three things a guest decides on. */}
-        {detail.craft && (
-          <div className="grid gap-1">
-            <span className="rg-label">{t('pf_craft')}</span>
-            <p className="text-sm font-semibold" style={{ color: 'var(--rg-accent)' }}>{detail.craft}</p>
-          </div>
-        )}
-
+        {/* Description and phone — what a guest decides on. */}
         {detail.bio && (
           <div className="grid gap-1">
             <span className="rg-label">{t('pf_bio')}</span>
@@ -457,7 +484,7 @@ function PerformersSection({ t, prefill }: {
         )}
 
         {booked ? (
-          <p className="text-sm" style={{ color: '#86efac' }}>{t('addon_pf_booked')}</p>
+          <p className="text-sm" style={{ color: '#86efac' }}>{t(copy.booked)}</p>
         ) : (
           <>
             <div className="grid gap-1.5">
@@ -468,8 +495,29 @@ function PerformersSection({ t, prefill }: {
               <label className="rg-label">{t('addon_inv_phone')}</label>
               <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
+
+            {/* Hosts only, and required: a host runs to the programme, so the
+                request is not answerable without it. */}
+            {isHost && (
+              <div className="grid gap-1.5">
+                <label className="rg-label">{t('addon_hs_program')}</label>
+                <textarea
+                  className="rg-input"
+                  rows={6}
+                  placeholder={t('addon_hs_program_hint')}
+                  value={program}
+                  onChange={(e) => setProgram(e.target.value)}
+                />
+                {!program.trim() && (
+                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    {t('addon_hs_program_required')}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-1.5">
-              <label className="rg-label">{t('addon_pf_note')} ({t('addon_inv_optional')})</label>
+              <label className="rg-label">{t(copy.note)} ({t('addon_inv_optional')})</label>
               <textarea className="rg-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
             {error && <p className="text-sm" style={{ color: '#fca5a5' }}>{error}</p>}
@@ -496,8 +544,8 @@ function PerformersSection({ t, prefill }: {
   return (
     <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
       <div className="space-y-1">
-        <p className="text-lg font-bold text-white">🎤 {t('addon_pf_title')}</p>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('addon_pf_intro')}</p>
+        <p className="text-lg font-bold text-white">{copy.icon} {t(copy.title)}</p>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t(copy.intro)}</p>
       </div>
 
       <div className="grid gap-1.5">
@@ -506,7 +554,7 @@ function PerformersSection({ t, prefill }: {
       </div>
 
       {performers === null && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>…</p>}
-      {performers?.length === 0 && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('addon_pf_none')}</p>}
+      {performers?.length === 0 && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t(copy.none)}</p>}
 
       <div className="grid gap-2">
         {(performers ?? []).map((p) => (
@@ -517,7 +565,6 @@ function PerformersSection({ t, prefill }: {
               : <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)', flexShrink: 0 }} />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-white">{p.displayName}</p>
-              {p.craft && <p className="truncate text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{p.craft}</p>}
               {/* Availability is only meaningful once a date is chosen. */}
               {p.available !== undefined && (
                 <span className="text-xs font-semibold" style={{ color: p.available ? '#86efac' : '#fca5a5' }}>
@@ -632,7 +679,7 @@ export const AdditionalServicesView = ({
           )}
         </div>
 
-        {/* Sections stack in order: invitations, then performers. */}
+        {/* Sections stack in order: invitations, performers, hosts. */}
         {!unavailable && (
           <>
             <InvitationSection
@@ -640,6 +687,12 @@ export const AdditionalServicesView = ({
               prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
             />
             <PerformersSection
+              kind="performer"
+              t={t}
+              prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
+            />
+            <PerformersSection
+              kind="host"
               t={t}
               prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
             />

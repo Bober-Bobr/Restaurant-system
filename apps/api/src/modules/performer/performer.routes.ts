@@ -12,8 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
 const controller = new PerformerController();
 
-// Performer media lives outside the restaurant-scoped photo service — a
-// performer belongs to no restaurant, so that service has nowhere to put it.
+// Performer and host media lives outside the restaurant-scoped photo service —
+// neither belongs to a restaurant, so that service has nowhere to put it.
 const mediaUpload = multer({
   limits: { fileSize: 60 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
@@ -22,7 +22,9 @@ const mediaUpload = multer({
   },
 });
 
-const performerOnly = requireRole(AdminRole.PERFORMER);
+// Hosts share this whole workspace with performers — same profile, calendar and
+// booking inbox, still scoped to the caller's own id inside every handler.
+const performerOnly = requireRole(AdminRole.PERFORMER, AdminRole.HOST);
 
 router.get('/me', performerOnly, controller.getMyProfile.bind(controller));
 router.patch('/me', performerOnly, controller.updateMyProfile.bind(controller));

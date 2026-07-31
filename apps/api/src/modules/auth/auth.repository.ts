@@ -1,5 +1,6 @@
 import { AdminRole } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
+import { isServiceRole } from '../performer/performer.kind.js';
 
 export class AuthRepository {
   async countAdmins() {
@@ -20,14 +21,14 @@ export class AuthRepository {
     });
     const restaurantIds = restaurants.map((r) => r.id);
     return prisma.adminUser.findMany({
-      // Performers carry no restaurantId — they are a platform-wide pool that
-      // any venue can book — so a restaurant-scoped filter alone hides them
-      // from the very people allowed to create them.
+      // Performers and hosts carry no restaurantId — they are a platform-wide
+      // pool that any venue can book — so a restaurant-scoped filter alone hides
+      // them from the very people allowed to create them.
       where: {
         OR: [
           { id: ownerId },
           { restaurantId: { in: restaurantIds } },
-          { role: AdminRole.PERFORMER },
+          { role: { in: [AdminRole.PERFORMER, AdminRole.HOST] } },
         ],
       },
       select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
@@ -42,12 +43,12 @@ export class AuthRepository {
     });
     if (!restaurant) return [];
     return prisma.adminUser.findMany({
-      // Performers are included for the same reason as in listByOwner.
+      // Performers and hosts are included for the same reason as in listByOwner.
       where: {
         OR: [
           { id: restaurant.ownerId },
           { restaurantId },
-          { role: AdminRole.PERFORMER },
+          { role: { in: [AdminRole.PERFORMER, AdminRole.HOST] } },
         ],
       },
       select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
@@ -70,24 +71,23 @@ export class AuthRepository {
         passwordHash,
         role,
         ...(restaurantId ? { restaurantId } : {}),
-        // A performer must have a profile row from the moment the account
-        // exists: the public performers list is driven by PerformerProfile, so
-        // without one they are invisible to guests until they happen to open
-        // their own profile page. Stage name defaults to the username and is
-        // editable straight away.
-        ...(role === AdminRole.PERFORMER ? { performerProfile: { create: { displayName: username } } } : {}),
+        // A performer or host must have a profile row from the moment the
+        // account exists, so they are never missing from the public block until
+        // they happen to open their own profile page. Stage name defaults to
+        // the username and is editable straight away.
+        ...(isServiceRole(role) ? { performerProfile: { create: { displayName: username } } } : {}),
       },
     });
   }
 
-  // Used when an existing account is switched TO the performer role, which is
-  // the other way a performer can come into being.
+  // Used when an existing account is switched TO the performer or host role,
+  // which is the other way either can come into being.
   async ensurePerformerProfile(userId: string) {
     const user = await prisma.adminUser.findUnique({
       where: { id: userId },
       select: { username: true, role: true, performerProfile: { select: { id: true } } },
     });
-    if (!user || user.role !== AdminRole.PERFORMER || user.performerProfile) return;
+    if (!user || !isServiceRole(user.role) || user.performerProfile) return;
     await prisma.performerProfile.create({ data: { userId, displayName: user.username } });
   }
 

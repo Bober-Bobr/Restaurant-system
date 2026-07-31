@@ -5,8 +5,9 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 
-// The performer's own profile: the avatar, gallery and showreel that guests see
-// in the Additional Services performers block.
+// A performer's or host's own profile: the avatar, gallery and showreel that
+// guests see in the matching Additional Services block. Identical for both
+// roles — the block they land in is decided by the role, not by the profile.
 export const PerformerProfilePage = () => {
   const { locale } = useAdminStore();
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
@@ -27,7 +28,6 @@ export const PerformerProfilePage = () => {
   const save = useMutation({
     mutationFn: () => performerService.updateProfile({
       displayName: draft!.displayName,
-      craft: draft!.craft,
       bio: draft!.bio,
       phone: draft!.phone,
       avatarUrl: draft!.avatarUrl,
@@ -91,11 +91,6 @@ export const PerformerProfilePage = () => {
         <label style={{ display: 'grid', gap: 4 }}>
           <span style={labelText}>{t('pf_display_name')}</span>
           <input style={inputStyle} value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} />
-        </label>
-
-        <label style={{ display: 'grid', gap: 4 }}>
-          <span style={labelText}>{t('pf_craft')}</span>
-          <input style={inputStyle} placeholder={t('pf_craft_hint')} value={draft.craft ?? ''} onChange={(e) => setDraft({ ...draft, craft: e.target.value })} />
         </label>
 
         <label style={{ display: 'grid', gap: 4 }}>

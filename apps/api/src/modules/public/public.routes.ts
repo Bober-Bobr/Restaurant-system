@@ -122,10 +122,17 @@ router.post('/invite-request-photo', reviewPhotoUpload.array('file', 10), async 
   } catch (err) { next(err); }
 });
 
-// ── Performers (Additional Services) ─────────────────────────────────────────
+// ── Performers and hosts (Additional Services) ───────────────────────────────
 // Unauthenticated, like the invitation form above: a restaurant's guest browses
-// performers and raises a booking request without an account. Only public
-// profile fields are returned — never the performer's own phone number.
+// them and raises a booking request without an account. Only public profile
+// fields are returned; the list never carries a phone number, and the detail
+// view carries it deliberately so a guest can call directly.
+//
+// `?kind=host` switches both reads to the hosts block. It is optional and
+// defaults to performers, and the detail view checks that the id's role
+// actually matches, so the two lists can never bleed into each other. Bookings
+// need no kind — the server reads the target's role and requires an event
+// programme when that role is HOST.
 router.get('/performers', performerController.listPublic.bind(performerController));
 router.get('/performers/:id', performerController.getPublic.bind(performerController));
 router.post('/performer-bookings', performerController.createBooking.bind(performerController));

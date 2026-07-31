@@ -23,8 +23,13 @@ const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 // The Performer workspace: profile, calendar, booking inbox and devices. Not
 // tied to any restaurant; created by a Chief Admin, Owner or restaurant Admin.
 // Mirrors RestaurantManagerLayout — same chrome, different nav.
+//
+// Hosts get this same workspace. The two roles differ only in which block of
+// the Additional Services page they appear in and in the event programme, so
+// duplicating the shell would mean maintaining two copies of identical chrome.
 export const PerformerLayout = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const role = useAuthStore((state) => state.role);
   const username = useAuthStore((state) => state.username);
   const logout = useAuthStore((state) => state.logout);
   const { locale, setLocale } = useAdminStore();
@@ -49,6 +54,9 @@ export const PerformerLayout = () => {
     refetchInterval: 60_000,
   });
   const pending = pendingQuery.data ?? 0;
+
+  // The one thing the two roles change in this shell: what they are called.
+  const roleLabel = role === 'HOST' ? t('host_role') : t('performer_role');
 
   const navItems: { to: string; label: string; badge?: number }[] = [
     { to: '/profile', label: t('pf_profile') },
@@ -84,12 +92,12 @@ export const PerformerLayout = () => {
             <img src={networkingLogoSrc} alt="Logo" style={{ height: 44, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>
-                {t('performer_role')}
+                {roleLabel}
               </p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {username}
                 <span className="adm-badge" style={{ background: 'rgba(219,39,119,0.18)', color: '#f9a8d4', border: '1px solid rgba(219,39,119,0.35)' }}>
-                  {t('performer_role')}
+                  {roleLabel}
                 </span>
               </p>
             </div>

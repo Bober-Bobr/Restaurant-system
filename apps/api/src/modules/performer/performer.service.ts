@@ -1,6 +1,7 @@
 import createHttpError from 'http-errors';
 import { AdminRole } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
+import { KIND_ROLE, isServiceRole, type ServiceKind } from './performer.kind.js';
 import type { z } from 'zod';
 import type {
   updatePerformerProfileSchema, performerEventSchema, updatePerformerEventSchema,
@@ -28,11 +29,13 @@ function dayRange(value: string): { gte: Date; lt: Date } {
   return { gte: start, lt: end };
 }
 
+// Performers and hosts share every method here; `kind` only ever selects which
+// role the public queries filter on.
 export class PerformerService {
   // ── Profile ────────────────────────────────────────────────────────────────
 
-  // Every performer has a profile row; it is created on first read rather than
-  // at account creation so accounts made before this feature still work.
+  // Everyone gets a profile row; it is created on first read rather than at
+  // account creation so accounts made before this feature still work.
   async getOrCreateProfile(userId: string) {
     const existing = await prisma.performerProfile.findUnique({ where: { userId } });
     if (existing) return existing;
@@ -49,7 +52,6 @@ export class PerformerService {
       where: { userId },
       data: {
         ...(data.displayName !== undefined ? { displayName: data.displayName.trim() } : {}),
-        ...(data.craft !== undefined ? { craft: data.craft?.trim() || null } : {}),
         ...(data.bio !== undefined ? { bio: data.bio?.trim() || null } : {}),
         ...(data.phone !== undefined ? { phone: data.phone?.trim() || null } : {}),
         ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl?.trim() || null } : {}),
@@ -77,6 +79,7 @@ export class PerformerService {
         eventTime: data.eventTime.trim(),
         title: data.title.trim(),
         note: data.note?.trim() || null,
+        program: data.program?.trim() || null,
       },
     });
   }
@@ -91,6 +94,7 @@ export class PerformerService {
         ...(data.eventTime !== undefined ? { eventTime: data.eventTime.trim() } : {}),
         ...(data.title !== undefined ? { title: data.title.trim() } : {}),
         ...(data.note !== undefined ? { note: data.note?.trim() || null } : {}),
+        ...(data.program !== undefined ? { program: data.program?.trim() || null } : {}),
       },
     });
   }
@@ -115,8 +119,9 @@ export class PerformerService {
   }
 
   // Accepting a booking also puts it in the calendar. Both writes happen in one
-  // transaction so a performer can never end up marked available for a date
-  // they have already agreed to.
+  // transaction so nobody can end up marked available for a date they have
+  // already agreed to. The programme travels with it, so a host opens the
+  // calendar entry and finds the running order the client sent.
   async decideBooking(performerId: string, id: string, status: 'ACCEPTED' | 'DECLINED') {
     const booking = await prisma.performerBooking.findUnique({ where: { id } });
     if (!booking || booking.performerId !== performerId) throw createHttpError(404, 'Booking not found');
@@ -133,6 +138,7 @@ export class PerformerService {
             eventTime: booking.eventTime,
             title: booking.restaurantName,
             note: booking.note,
+            program: booking.program,
           },
         });
       }
@@ -141,16 +147,21 @@ export class PerformerService {
   }
 
   async createBooking(data: BookingInput) {
-    const performer = await prisma.adminUser.findUnique({
+    const target = await prisma.adminUser.findUnique({
       where: { id: data.performerId },
       select: { id: true, role: true },
     });
-    if (!performer || performer.role !== AdminRole.PERFORMER) {
-      throw createHttpError(404, 'Performer not found');
+    if (!target || !isServiceRole(target.role)) throw createHttpError(404, 'Not found');
+    const program = data.program?.trim() || null;
+    // A host is being asked to run the evening; without the programme they have
+    // nothing to judge the request on, so the API refuses rather than letting a
+    // half-filled request land in their inbox.
+    if (target.role === AdminRole.HOST && !program) {
+      throw createHttpError(400, 'An event programme is required when booking a host.');
     }
     return prisma.performerBooking.create({
       data: {
-        performerId: performer.id,
+        performerId: target.id,
         restaurantName: data.restaurantName.trim(),
         contactName: data.contactName.trim(),
         phone: data.phone.trim(),
@@ -158,6 +169,9 @@ export class PerformerService {
         eventTime: data.eventTime.trim(),
         eventType: data.eventType?.trim() || null,
         note: data.note?.trim() || null,
+        // Performers are never asked for one, so it is dropped rather than
+        // stored if a caller sends it anyway.
+        program: target.role === AdminRole.HOST ? program : null,
         restaurantId: data.restaurantId?.trim() || null,
         eventNumber: data.eventNumber ?? null,
       },
@@ -167,18 +181,18 @@ export class PerformerService {
 
   // ── Public listing ─────────────────────────────────────────────────────────
 
-  // Every visible performer, plus whether they are free on `date`. Busy means a
-  // calendar entry that day — accepted bookings are calendar entries too, so
-  // one check covers both.
+  // Everyone of the requested kind who is visible, plus whether they are free on
+  // `date`. Busy means a calendar entry that day — accepted bookings are
+  // calendar entries too, so one check covers both.
   //
   // Driven off AdminUser, NOT PerformerProfile. The role is what makes someone a
-  // performer; the profile is decoration. Querying profiles instead meant an
-  // account whose profile row did not exist yet was invisible to guests, which
-  // is not a state anyone would expect or could diagnose.
-  async listPublic(date?: string) {
+  // performer or a host; the profile is decoration. Querying profiles instead
+  // meant an account whose profile row did not exist yet was invisible to
+  // guests, which is not a state anyone would expect or could diagnose.
+  async listPublic(kind: ServiceKind, date?: string) {
     const users = await prisma.adminUser.findMany({
       where: {
-        role: AdminRole.PERFORMER,
+        role: KIND_ROLE[kind],
         // A missing profile counts as visible — the switch is opt-out.
         OR: [{ performerProfile: { isVisible: true } }, { performerProfile: { is: null } }],
       },
@@ -189,7 +203,6 @@ export class PerformerService {
       .map((u) => ({
         userId: u.id,
         displayName: u.performerProfile?.displayName || u.username,
-        craft: u.performerProfile?.craft ?? null,
         avatarUrl: u.performerProfile?.avatarUrl ?? null,
         photos: u.performerProfile?.photos ?? [],
         videos: u.performerProfile?.videos ?? [],
@@ -208,7 +221,6 @@ export class PerformerService {
     return profiles.map((p) => ({
       id: p.userId,
       displayName: p.displayName,
-      craft: p.craft,
       avatarUrl: p.avatarUrl,
       photoCount: Array.isArray(p.photos) ? p.photos.length : 0,
       videoCount: Array.isArray(p.videos) ? p.videos.length : 0,
@@ -218,38 +230,29 @@ export class PerformerService {
     }));
   }
 
-  async getPublic(userId: string) {
-    // Same reasoning as listPublic: resolve the performer, then their profile if
+  async getPublic(kind: ServiceKind, userId: string) {
+    // Same reasoning as listPublic: resolve the account, then their profile if
     // one exists, so a profile-less account still opens rather than 404ing.
     const user = await prisma.adminUser.findUnique({
       where: { id: userId },
       select: { id: true, username: true, role: true, performerProfile: true },
     });
-    if (!user || user.role !== AdminRole.PERFORMER) throw createHttpError(404, 'Performer not found');
-    if (user.performerProfile && !user.performerProfile.isVisible) throw createHttpError(404, 'Performer not found');
+    // The role must match the kind that was asked for, so a host cannot be
+    // fetched through the performers path and shown in the wrong block.
+    if (!user || user.role !== KIND_ROLE[kind]) throw createHttpError(404, 'Not found');
+    if (user.performerProfile && !user.performerProfile.isVisible) throw createHttpError(404, 'Not found');
 
-    const profile = {
-      userId: user.id,
+    // The phone IS public here, by product decision: guests browsing want to
+    // reach them directly, not only through a booking request. It is shown on
+    // the profile view only, never in the list.
+    return {
+      id: user.id,
       displayName: user.performerProfile?.displayName || user.username,
-      craft: user.performerProfile?.craft ?? null,
       bio: user.performerProfile?.bio ?? null,
       phone: user.performerProfile?.phone ?? null,
       avatarUrl: user.performerProfile?.avatarUrl ?? null,
       photos: user.performerProfile?.photos ?? [],
       videos: user.performerProfile?.videos ?? [],
-    };
-    // The phone IS public here, by product decision: guests browsing performers
-    // want to reach them directly, not only through a booking request. It is
-    // shown on the profile view only, never in the list.
-    return {
-      id: profile.userId,
-      displayName: profile.displayName,
-      craft: profile.craft,
-      bio: profile.bio,
-      phone: profile.phone,
-      avatarUrl: profile.avatarUrl,
-      photos: profile.photos,
-      videos: profile.videos,
     };
   }
 }

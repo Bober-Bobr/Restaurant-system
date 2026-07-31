@@ -81,8 +81,8 @@ protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);
 protectedApi.use('/companies', companyRouter);
-// Performers: not tied to a restaurant, so no requireRestaurant. Each route
-// inside is PERFORMER-only and scoped to the caller's own id.
+// Performers and hosts: not tied to a restaurant, so no requireRestaurant. Each
+// route inside is PERFORMER/HOST-only and scoped to the caller's own id.
 protectedApi.use('/performers', performerRouter);
 // Invitations: auth middleware is applied inside the router (it's outside the auto-mounted protected API
 // because routes use roles directly without requireRestaurant).
