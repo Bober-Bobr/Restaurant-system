@@ -39,12 +39,13 @@ export class ExpenseService {
       for (const event of day.events) {
         const src = latest.events.find((e) => e.type === event.type);
         if (!src) continue;
-        if (src.products.length || src.salaries.length || src.additionals.length) {
+        if (src.products.length || src.salaries.length || src.additionals.length || src.services.length) {
           await this.repo.cloneLines(
             event.id,
             src.products.map((p) => ({ name: p.name, unit: p.unit })),
             src.salaries.map((s) => ({ name: s.name })),
-            src.additionals.map((a) => ({ name: a.name }))
+            src.additionals.map((a) => ({ name: a.name })),
+            src.services.map((s) => ({ name: s.name }))
           );
         }
       }
@@ -135,6 +136,19 @@ export class ExpenseService {
   async removeAdditional(managerId: string, id: string) {
     if ((await this.repo.ownerOfAdditional(id)) !== managerId) throw createHttpError(404, 'Additional expense not found');
     await this.repo.deleteAdditional(id);
+  }
+
+  async addService(managerId: string, eventId: string, data: LineData) {
+    await this.requireOwnEvent(managerId, eventId);
+    return this.repo.createService(eventId, data);
+  }
+  async updateService(managerId: string, id: string, data: Partial<LineData>) {
+    if ((await this.repo.ownerOfService(id)) !== managerId) throw createHttpError(404, 'Service expense not found');
+    return this.repo.updateService(id, data);
+  }
+  async removeService(managerId: string, id: string) {
+    if ((await this.repo.ownerOfService(id)) !== managerId) throw createHttpError(404, 'Service expense not found');
+    await this.repo.deleteService(id);
   }
 
   async addExtra(managerId: string, dayId: string, data: LineData) {

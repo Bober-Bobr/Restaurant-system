@@ -8,9 +8,12 @@ type PdfEvent = {
   guestCount: number;
   pricePerGuestSum: number;
   report?: string | null;
+  // When set, this replaces the summed line total everywhere it is reported.
+  manualSpentSum?: number | null;
   products: Line[];
   salaries: { name: string; amountSum: number }[];
   additionals: { name: string; amountSum: number }[];
+  services: { name: string; amountSum: number }[];
 };
 export type PdfDay = {
   date: string;
@@ -25,52 +28,60 @@ const EVENT_ORDER = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'];
 const LABELS: Record<Locale, Record<string, string>> = {
   en: {
     title: 'Expense Ledger', summaryTitle: 'Expenses summary', allocated: 'Allocated funds', budget: 'Budget', products: 'Product expenses',
-    salaries: 'Employee salaries', additional: 'Additional expenses', spent: 'Spent',
+    salaries: 'Employee salaries', additional: 'Additional expenses', services: 'Additional services', spent: 'Spent',
     balance: 'Balance', totalAllocated: 'Total Budget', totalExpenses: 'Total Expenses',
     totalBalance: 'Total Balance', period: 'Period', noData: 'No data for this period.', report: 'Report',
-    dayTotals: 'Day totals', grandTotals: 'Overall totals',
+    dayTotals: 'Day totals', eventTotals: 'Department totals', grandTotals: 'Overall totals', manualNote: 'Total entered manually', computedNote: 'Sum of the lines above',
     booking: 'Booking', guests: 'Guests', pricePerGuest: 'Price per guest', bookingTotal: 'Booking total',
-    extrasTitle: 'Additional expenses', total: 'Total', noExtras: 'No additional expenses.',
+    name: 'Name', amount: 'Amount', date: 'Date', department: 'Department',
+    extrasTitle: 'Additional expenses', total: 'Total', sectionTotal: 'Section total', noExtras: 'No additional expenses.',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Wedding', OTHERS: 'Others'
   },
   ru: {
     title: 'Книга расходов', summaryTitle: 'Сводка расходов', allocated: 'Выделено средств', budget: 'Бюджет', products: 'Расходы на продукты',
-    salaries: 'Зарплаты сотрудников', additional: 'Дополнительные расходы', spent: 'Потрачено',
+    salaries: 'Зарплаты сотрудников', additional: 'Дополнительные расходы', services: 'Дополнительные услуги', spent: 'Потрачено',
     balance: 'Остаток', totalAllocated: 'Итого бюджет', totalExpenses: 'Итого расходы',
     totalBalance: 'Итоговый баланс', period: 'Период', noData: 'Нет данных за этот период.', report: 'Отчёт',
-    dayTotals: 'Итоги дня', grandTotals: 'Общие итоги',
+    dayTotals: 'Итоги дня', eventTotals: 'Итоги отдела', grandTotals: 'Общие итоги', manualNote: 'Сумма введена вручную', computedNote: 'Сумма строк выше',
     booking: 'Бронь', guests: 'Гостей', pricePerGuest: 'Цена за гостя', bookingTotal: 'Итого по брони',
-    extrasTitle: 'Дополнительные расходы', total: 'Итого', noExtras: 'Нет дополнительных расходов.',
+    name: 'Наименование', amount: 'Сумма', date: 'Дата', department: 'Отдел',
+    extrasTitle: 'Дополнительные расходы', total: 'Итого', sectionTotal: 'Итого по разделу', noExtras: 'Нет дополнительных расходов.',
     NAHOR: 'Нахор', FOTIHA: 'Фотиха', TUI: 'Свадьба', OTHERS: 'Прочее'
   },
   uz: {
     title: 'Xarajatlar daftari', summaryTitle: 'Xarajatlar hisoboti', allocated: 'Ajratilgan mablag', budget: 'Byudjet', products: 'Mahsulot xarajatlari',
-    salaries: 'Xodimlar ish haqi', additional: 'Qoshimcha xarajatlar', spent: 'Sarflangan',
+    salaries: 'Xodimlar ish haqi', additional: 'Qoshimcha xarajatlar', services: 'Qoshimcha xizmatlar', spent: 'Sarflangan',
     balance: 'Qoldiq', totalAllocated: 'Jami byudjet', totalExpenses: 'Jami xarajatlar',
     totalBalance: 'Yakuniy balans', period: 'Davr', noData: 'Bu davr uchun malumot yoq.', report: 'Hisobot',
-    dayTotals: 'Kun yakuni', grandTotals: 'Umumiy yakun',
+    dayTotals: 'Kun yakuni', eventTotals: 'Bolim yakuni', grandTotals: 'Umumiy yakun', manualNote: 'Summa qolda kiritilgan', computedNote: 'Yuqoridagi qatorlar yigindisi',
     booking: 'Bron', guests: 'Mehmonlar', pricePerGuest: 'Mehmon narxi', bookingTotal: 'Bron jami',
-    extrasTitle: 'Qoshimcha xarajatlar', total: 'Jami', noExtras: 'Qoshimcha xarajatlar yoq.',
+    name: 'Nomi', amount: 'Summa', date: 'Sana', department: 'Bolim',
+    extrasTitle: 'Qoshimcha xarajatlar', total: 'Jami', sectionTotal: 'Bolim jami', noExtras: 'Qoshimcha xarajatlar yoq.',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Toy', OTHERS: 'Boshqalar'
   }
 };
 
 const fmt = (sum: number) => sum.toLocaleString('ru-RU') + " so'm";
-// Each event's budget is its booking (guests × price per guest); spent is the
-// actual expenses. There is no longer a separate day-level allocation.
+// Each event's budget is its booking (guests × price per guest). There is no
+// separate day-level allocation.
 const bookingTotal = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
 const eventBudget = (e: PdfEvent) => bookingTotal(e);
-const eventSpent = (e: PdfEvent) =>
-  e.products.reduce((s, p) => s + p.amountSum, 0) +
-  e.salaries.reduce((s, p) => s + p.amountSum, 0) +
-  e.additionals.reduce((s, p) => s + p.amountSum, 0);
+const sumLines = (lines: { amountSum: number }[]) => lines.reduce((s, l) => s + l.amountSum, 0);
+const computedSpent = (e: PdfEvent) =>
+  sumLines(e.products) + sumLines(e.salaries) + sumLines(e.additionals) + sumLines(e.services);
+// A manual override replaces the summed total wherever spending is reported, so
+// the day and grand totals agree with the per-event pages.
+const eventSpent = (e: PdfEvent) => (e.manualSpentSum != null ? e.manualSpentSum : computedSpent(e));
 const eventHasData = (e: PdfEvent) =>
-  e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0 ||
-  bookingTotal(e) > 0 || !!e.bookingName?.trim() || !!e.report?.trim();
+  e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0 || e.services.length > 0 ||
+  bookingTotal(e) > 0 || e.manualSpentSum != null || !!e.bookingName?.trim() || !!e.report?.trim();
 const daySpent = (d: PdfDay) => d.events.reduce((s, e) => s + eventSpent(e), 0);
 const dayBudget = (d: PdfDay) => d.events.reduce((s, e) => s + eventBudget(e), 0);
 const dayExtrasTotal = (d: PdfDay) => d.extras.reduce((s, e) => s + e.amountSum, 0);
 const sortedEvents = (d: PdfDay) => [...d.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
+
+const GREEN = '#15803d';
+const RED = '#b91c1c';
 
 function formatDate(date: string, locale: Locale): string {
   const loc = locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : 'en-US';
@@ -82,10 +93,12 @@ function formatDate(date: string, locale: Locale): string {
   }
 }
 
-// A PDFKit document plus the shared drawing helpers and a finalize() promise.
+// A PDFKit document plus the bordered-table helpers shared with the banquet
+// event PDF (apps/api/src/modules/public/pdf.service.ts): same margins, column
+// split, row heights, greys and section bands, so the two files look alike.
 function createDoc(locale: Locale) {
   const L = LABELS[locale] ?? LABELS.en;
-  const doc = new PDFDocument({ margin: 44, size: 'A4', bufferPages: true });
+  const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
   const buffers: Buffer[] = [];
   const finished = new Promise<Buffer>((resolve, reject) => {
     doc.on('data', buffers.push.bind(buffers));
@@ -101,134 +114,227 @@ function createDoc(locale: Locale) {
     R = 'R'; B = 'B';
   } catch { /* keep Helvetica */ }
 
-  const ML = 44;
-  const right = doc.page.width - 44;
-  const contentW = right - ML;
+  const ML = 40;
+  const PH = doc.page.height;
+  const TW = doc.page.width - ML * 2;
+  const COL1 = TW * 0.78;
+  const COL2 = TW * 0.22;
+  const ROW_H = 18;
+  const SECTION_H = 20;
+  const HEADER_H = 22;
+
+  // curY is owned by these helpers. Every one of them calls ensureSpace() before
+  // drawing, so a page break always happens *before* the cell is placed rather
+  // than leaving it half off the page.
+  const state = { y: ML };
+
+  const ensureSpace = (needed: number) => {
+    if (state.y + needed > PH - 50) {
+      doc.addPage();
+      state.y = ML;
+    }
+  };
+
+  const cell = (x: number, y: number, w: number, h: number, text: string, opts: {
+    fontSize?: number; align?: 'left' | 'center' | 'right';
+    bold?: boolean; fillColor?: string; textColor?: string; paddingLeft?: number;
+  } = {}) => {
+    const {
+      fontSize = 9, align = 'left',
+      fillColor = '#ffffff', textColor = '#000000', paddingLeft = 4,
+    } = opts;
+    doc.save();
+    doc.rect(x, y, w, h).fillColor(fillColor).fill();
+    doc.rect(x, y, w, h).lineWidth(0.5).strokeColor('#000000').stroke();
+    doc.fillColor(textColor).font(opts.bold ? B : R, fontSize)
+      .text(text, x + paddingLeft, y + (h - fontSize * 1.1) / 2 + 1, {
+        width: w - paddingLeft * 2, align, lineBreak: false, ellipsis: true,
+      });
+    doc.restore();
+  };
+
+  const tableHeader = (label1: string, label2: string) => {
+    ensureSpace(HEADER_H);
+    cell(ML, state.y, COL1, HEADER_H, label1, { bold: true, fillColor: '#f0f0f0', align: 'center' });
+    cell(ML + COL1, state.y, COL2, HEADER_H, label2, { bold: true, fillColor: '#f0f0f0', align: 'center' });
+    state.y += HEADER_H;
+  };
+
+  // Full-width band naming the section that follows.
+  const sectionRow = (label: string) => {
+    ensureSpace(SECTION_H);
+    cell(ML, state.y, TW, SECTION_H, label, { bold: true, align: 'center', fillColor: '#e8e8e8' });
+    state.y += SECTION_H;
+  };
+
+  const dataRow = (name: string, value: string, shade = false) => {
+    ensureSpace(ROW_H);
+    const fillColor = shade ? '#fafafa' : '#ffffff';
+    cell(ML, state.y, COL1, ROW_H, name, { fillColor });
+    cell(ML + COL1, state.y, COL2, ROW_H, value, { align: 'center', fillColor });
+    state.y += ROW_H;
+  };
+
+  // Bold, slightly taller row closing a section or the document.
+  const totalRow = (label: string, value: string, color = '#000000') => {
+    ensureSpace(ROW_H + 4);
+    cell(ML, state.y, COL1, ROW_H + 4, label, { bold: true, fontSize: 10, fillColor: '#f0f0f0', textColor: color });
+    cell(ML + COL1, state.y, COL2, ROW_H + 4, value, { bold: true, fontSize: 10, align: 'center', fillColor: '#f0f0f0', textColor: color });
+    state.y += ROW_H + 4;
+  };
+
+  // A named section with its own lines and its own closing total. Empty sections
+  // are skipped entirely rather than printing a heading over nothing.
+  const section = (label: string, lines: { label: string; value: number }[], totalLabel: string) => {
+    if (lines.length === 0) return 0;
+    sectionRow(label.toUpperCase());
+    let shade = false;
+    for (const line of lines) {
+      dataRow(line.label, fmt(line.value), shade);
+      shade = !shade;
+    }
+    const total = lines.reduce((s, l) => s + l.value, 0);
+    totalRow(`${totalLabel} — ${label}`, fmt(total));
+    return total;
+  };
+
+  const heading = (title: string, subtitle?: string) => {
+    doc.font(B, 14).fillColor('#000000').text(title, ML, state.y, { width: TW, align: 'center' });
+    state.y += 20;
+    if (subtitle) {
+      doc.font(R, 10).fillColor('#555555').text(subtitle, ML, state.y, { width: TW, align: 'center' });
+      state.y += 16;
+    }
+    state.y += 6;
+  };
+
+  // Two label/value pairs per line, above the table — same block as the banquet PDF.
+  const infoRows = (rows: [string, string, string, string][]) => {
+    const halfW = TW / 2 - 4;
+    for (const [lbl1, val1, lbl2, val2] of rows) {
+      ensureSpace(16);
+      doc.font(B, 8).fillColor('#555').text(lbl1, ML, state.y + 1, { width: 80, lineBreak: false });
+      doc.font(R, 9).fillColor('#000').text(val1, ML + 82, state.y + 1, { width: halfW - 82, lineBreak: false });
+      doc.font(B, 8).fillColor('#555').text(lbl2, ML + halfW + 8, state.y + 1, { width: 80, lineBreak: false });
+      doc.font(R, 9).fillColor('#000').text(val2, ML + halfW + 90, state.y + 1, { width: halfW - 90, lineBreak: false });
+      state.y += 14;
+    }
+    state.y += 8;
+  };
+
+  const note = (label: string, text: string) => {
+    ensureSpace(40);
+    state.y += 10;
+    doc.font(B, 9).fillColor('#444').text(label, ML, state.y, { width: TW });
+    state.y += 13;
+    doc.font(R, 9).fillColor('#333').text(text, ML, state.y, { width: TW });
+    state.y = doc.y + 4;
+  };
+
+  const newPage = () => { doc.addPage(); state.y = ML; };
   const eventLabel = (type: string) => L[type] ?? type;
 
-  const hr = (color = '#cccccc', weight = 1) => {
-    doc.moveTo(ML, doc.y).lineTo(right, doc.y).lineWidth(weight).strokeColor(color).stroke();
-    doc.moveDown(0.5);
+  return {
+    doc, finished, L, R, B, ML, TW, state, eventLabel,
+    ensureSpace, tableHeader, sectionRow, dataRow, totalRow, section, heading, infoRows, note, newPage,
   };
-  const kv = (label: string, value: string, opts: { bold?: boolean; color?: string; labelColor?: string; size?: number } = {}) => {
-    const y = doc.y;
-    const size = opts.size ?? 10;
-    doc.font(opts.bold ? B : R, size).fillColor(opts.labelColor ?? '#222');
-    doc.text(label, ML, y, { width: contentW * 0.62, lineBreak: false });
-    doc.font(opts.bold ? B : R, size).fillColor(opts.color ?? opts.labelColor ?? '#222');
-    doc.text(value, ML, y, { width: contentW, align: 'right', lineBreak: false });
-    doc.moveDown(0.55);
-  };
-  // A flat bulleted "• name … amount" line, photo-style.
-  const bulletRow = (name: string, value: number) => kv(`•  ${name}`, fmt(value));
-
-  return { doc, finished, L, R, B, ML, right, contentW, eventLabel, hr, kv, bulletRow };
 }
 
 type Ctx = ReturnType<typeof createDoc>;
 
-// One event department's full detail on its own page, photo-style: a flat
-// bulleted list of every line, an "Additional expenses" group, then the
-// Spent / Balance footer in red/green.
+// One department's full detail on its own page: booking, then a table with a
+// section per expense type, each closed by its own total, then budget/spent/balance.
 function renderEventDetail(ctx: Ctx, day: PdfDay, ev: PdfEvent, locale: Locale) {
-  const { doc, L, R, B, ML, contentW, eventLabel, hr, kv, bulletRow } = ctx;
-  doc.font(B, 15).fillColor('#111').text(`${formatDate(day.date, locale)}  ·  ${eventLabel(ev.type)}`, ML, 44);
-  doc.moveDown(0.3);
-  hr('#999999', 1.2);
-  doc.moveDown(0.2);
+  const { L, eventLabel, tableHeader, dataRow, totalRow, section, heading, infoRows, note } = ctx;
 
-  // Budget line (booking: guests × price per guest).
-  if (eventBudget(ev) > 0) {
-    const name = ev.bookingName?.trim() || L.booking;
-    kv(`•  ${name}  (${ev.guestCount} × ${fmt(ev.pricePerGuestSum)})`, fmt(eventBudget(ev)));
-  } else if (ev.bookingName?.trim()) {
-    kv(`•  ${ev.bookingName.trim()}`, '');
-  }
+  heading(`${eventLabel(ev.type)}`, formatDate(day.date, locale));
+  infoRows([
+    [`${L.department}:`, eventLabel(ev.type), `${L.date}:`, day.date],
+    [`${L.booking}:`, ev.bookingName?.trim() || '—', `${L.guests}:`, String(ev.guestCount)],
+    [`${L.pricePerGuest}:`, fmt(ev.pricePerGuestSum), `${L.bookingTotal}:`, fmt(bookingTotal(ev))],
+  ]);
 
-  // Expense lines: products (with qty/unit), salaries.
-  for (const p of ev.products) {
-    const label = p.quantity ? `•  ${p.name}  (${p.quantity} ${p.unit ?? ''})`.trimEnd() : `•  ${p.name}`;
-    kv(label, fmt(p.amountSum));
-  }
-  for (const s of ev.salaries) bulletRow(s.name, s.amountSum);
+  tableHeader(L.name, L.amount);
 
-  // Additional expenses group.
-  if (ev.additionals.length) {
-    doc.moveDown(0.4);
-    doc.font(B, 11).fillColor('#222').text(L.additional, ML);
-    doc.moveDown(0.4);
-    for (const a of ev.additionals) bulletRow(a.name, a.amountSum);
-  }
+  section(
+    L.products,
+    ev.products.map((p) => ({
+      label: p.quantity ? `${p.name} (${p.quantity} ${p.unit ?? ''})`.trimEnd() : p.name,
+      value: p.amountSum,
+    })),
+    L.sectionTotal,
+  );
+  section(L.salaries, ev.salaries.map((s) => ({ label: s.name, value: s.amountSum })), L.sectionTotal);
+  section(L.additional, ev.additionals.map((a) => ({ label: a.name, value: a.amountSum })), L.sectionTotal);
+  section(L.services, ev.services.map((s) => ({ label: s.name, value: s.amountSum })), L.sectionTotal);
 
-  // Budget / Spent / Balance footer for this event.
+  // Closing totals for the department.
   const budget = eventBudget(ev);
   const spent = eventSpent(ev);
   const balance = budget - spent;
-  const green = '#15803d';
-  const red = '#b91c1c';
-  doc.moveDown(0.6);
-  hr('#dddddd', 0.8);
-  doc.moveDown(0.1);
-  kv(L.budget, fmt(budget), { bold: true, size: 11 });
-  kv(L.spent, fmt(spent), { bold: true, color: red, labelColor: red, size: 11 });
-  kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? red : green, labelColor: balance < 0 ? red : green, size: 11 });
-
-  if (ev.report?.trim()) {
-    doc.moveDown(0.4);
-    doc.font(B, 10).fillColor('#444').text(L.report, ML);
-    doc.font(R, 9).fillColor('#333').text(ev.report.trim(), ML, doc.y + 2, { width: contentW });
+  ctx.sectionRow(L.eventTotals.toUpperCase());
+  dataRow(L.budget, fmt(budget), false);
+  // When the total was typed in by hand the computed sum is still shown, so the
+  // reader can see what was overridden rather than just a number that disagrees
+  // with the lines above it.
+  if (ev.manualSpentSum != null) {
+    dataRow(`${L.spent} (${L.computedNote.toLowerCase()})`, fmt(computedSpent(ev)), true);
+    totalRow(`${L.spent} — ${L.manualNote}`, fmt(spent), RED);
+  } else {
+    totalRow(L.spent, fmt(spent), RED);
   }
+  totalRow(L.balance, fmt(balance), balance < 0 ? RED : GREEN);
+
+  if (ev.report?.trim()) note(L.report, ev.report.trim());
 }
 
-// Overview page: per-day rows (events with a spend, then allocated/spent/balance)
-// followed by the overall grand totals. Used as the cover page for multi-day PDFs.
+// Overview page: one section per day listing its departments, then grand totals.
 function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: string }, locale: Locale) {
-  const { doc, L, B, R, ML, eventLabel, hr, kv } = ctx;
-  doc.font(B, 20).fillColor('#111').text(L.summaryTitle, ML, 44);
-  doc.font(R, 10).fillColor('#666').text(`${L.period}: ${range.from} — ${range.to}`);
-  doc.moveDown(0.6);
+  const { L, eventLabel, tableHeader, dataRow, totalRow, section, heading } = ctx;
+
+  heading(L.summaryTitle, `${L.period}: ${range.from} — ${range.to}`);
+  tableHeader(L.name, L.amount);
 
   let grandBudget = 0;
   let grandSpent = 0;
-  days.forEach((day) => {
+  for (const day of days) {
     grandBudget += dayBudget(day);
     grandSpent += daySpent(day);
-    if (doc.y > doc.page.height - 150) doc.addPage();
 
-    doc.font(B, 12).fillColor('#111').text(formatDate(day.date, locale), ML);
-    doc.moveDown(0.2);
-    hr('#bbbbbb', 1);
-    for (const ev of sortedEvents(day)) {
-      const s = eventSpent(ev);
-      if (s > 0) kv(`   ${eventLabel(ev.type)}`, fmt(s));
+    const rows = sortedEvents(day)
+      .filter((ev) => eventSpent(ev) > 0)
+      .map((ev) => ({ label: eventLabel(ev.type), value: eventSpent(ev) }));
+    // A day with no spending still deserves a line, otherwise it silently
+    // vanishes from a range export and the totals look wrong.
+    if (rows.length === 0) {
+      ctx.sectionRow(formatDate(day.date, locale).toUpperCase());
+      dataRow(L.noData, fmt(0), false);
+      totalRow(`${L.spent} — ${day.date}`, fmt(0), RED);
+    } else {
+      section(formatDate(day.date, locale), rows, L.spent);
     }
+    dataRow(L.budget, fmt(dayBudget(day)), true);
     const balance = dayBudget(day) - daySpent(day);
-    kv(L.budget, fmt(dayBudget(day)), { bold: true });
-    kv(L.spent, fmt(daySpent(day)), { bold: true, color: '#b91c1c', labelColor: '#b91c1c' });
-    kv(L.balance, fmt(balance), { bold: true, color: balance < 0 ? '#b91c1c' : '#15803d', labelColor: balance < 0 ? '#b91c1c' : '#15803d' });
-    doc.moveDown(0.6);
-  });
+    dataRow(L.balance, fmt(balance), false);
+  }
 
-  if (doc.y > doc.page.height - 150) doc.addPage(); else doc.moveDown(0.4);
-  doc.font(B, 16).fillColor('#111').text(L.grandTotals, ML);
-  doc.moveDown(0.3);
-  hr('#111111', 1.5);
+  ctx.sectionRow(L.grandTotals.toUpperCase());
+  totalRow(L.totalAllocated, fmt(grandBudget));
+  totalRow(L.totalExpenses, fmt(grandSpent), RED);
   const grandBalance = grandBudget - grandSpent;
-  kv(L.totalAllocated, fmt(grandBudget), { bold: true });
-  kv(L.totalExpenses, fmt(grandSpent), { bold: true, color: '#b91c1c', labelColor: '#b91c1c' });
-  kv(L.totalBalance, fmt(grandBalance), { bold: true, color: grandBalance < 0 ? '#b91c1c' : '#15803d', labelColor: grandBalance < 0 ? '#b91c1c' : '#15803d' });
+  totalRow(L.totalBalance, fmt(grandBalance), grandBalance < 0 ? RED : GREEN);
 }
 
-// Single combined PDF for the selected main expenses. Page order: one page per
-// event department for every day (no per-day summary). When more than one day is
-// exported, a final overall summary page closes the document.
+// Single combined PDF for the selected main expenses. One page per event
+// department per day; when more than one day is exported an overall summary page
+// closes the document.
 export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: string }, locale: Locale): Promise<Buffer> {
   const ctx = createDoc(locale);
-  const { doc, L, R, B, ML } = ctx;
+  const { doc, L, R, B, ML, TW, state } = ctx;
 
   if (days.length === 0) {
-    doc.font(B, 20).fillColor('#111').text(L.title, ML, 44);
-    doc.moveDown(1).font(R, 11).fillColor('#666').text(L.noData, ML);
+    doc.font(B, 14).fillColor('#000').text(L.title, ML, state.y, { width: TW, align: 'center' });
+    doc.font(R, 11).fillColor('#666').text(L.noData, ML, state.y + 28, { width: TW, align: 'center' });
     doc.end();
     return ctx.finished;
   }
@@ -236,18 +342,18 @@ export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: s
   // The document opens on a blank first page; reuse it for the first section,
   // then add a fresh page before every subsequent one.
   let started = false;
-  const newPage = () => { if (started) doc.addPage(); started = true; };
+  const nextPage = () => { if (started) ctx.newPage(); started = true; };
 
-  days.forEach((day) => {
+  for (const day of days) {
     for (const ev of sortedEvents(day).filter(eventHasData)) {
-      newPage();
+      nextPage();
       renderEventDetail(ctx, day, ev, locale);
     }
-  });
+  }
 
   if (days.length > 1) {
-    newPage();
-    renderSummaryPage(ctx, days, range, locale); // overall summary across days, last
+    nextPage();
+    renderSummaryPage(ctx, days, range, locale);
   }
 
   doc.end();
@@ -258,46 +364,45 @@ export function generateCombinedPdf(days: PdfDay[], range: { from: string; to: s
 // the main expenses). One page per day; a cover summary page for several days.
 export function generateExtrasPdf(days: PdfDay[], range: { from: string; to: string }, locale: Locale): Promise<Buffer> {
   const ctx = createDoc(locale);
-  const { doc, L, R, B, ML, hr, kv } = ctx;
-
-  doc.font(B, 20).fillColor('#111').text(L.extrasTitle, ML, 44);
-  doc.font(R, 10).fillColor('#666').text(`${L.period}: ${range.from} — ${range.to}`);
-  doc.moveDown(0.6);
+  const { doc, L, R, ML, TW, state, tableHeader, dataRow, totalRow, heading } = ctx;
 
   if (days.length === 0) {
-    doc.font(R, 11).fillColor('#666').text(L.noData, ML);
+    heading(L.extrasTitle, `${L.period}: ${range.from} — ${range.to}`);
+    doc.font(R, 11).fillColor('#666').text(L.noData, ML, state.y, { width: TW, align: 'center' });
     doc.end();
     return ctx.finished;
   }
 
   const multi = days.length > 1;
-  let grand = 0;
 
   if (multi) {
     // Cover summary: per-day totals + grand total.
-    days.forEach((day) => {
+    heading(L.extrasTitle, `${L.period}: ${range.from} — ${range.to}`);
+    tableHeader(L.date, L.amount);
+    let shade = false;
+    let grand = 0;
+    for (const day of days) {
       grand += dayExtrasTotal(day);
-      if (doc.y > doc.page.height - 120) doc.addPage();
-      kv(formatDate(day.date, locale), fmt(dayExtrasTotal(day)));
-    });
-    doc.moveDown(0.3);
-    hr('#111111', 1.5);
-    kv(L.total, fmt(grand), { bold: true, color: '#b45309' });
+      dataRow(formatDate(day.date, locale), fmt(dayExtrasTotal(day)), shade);
+      shade = !shade;
+    }
+    totalRow(L.total, fmt(grand), '#b45309');
   }
 
   days.forEach((day, di) => {
-    if (multi || di > 0) doc.addPage(); else doc.moveDown(0.5);
-    doc.font(B, 14).fillColor('#111').text(`${formatDate(day.date, locale)} — ${L.extrasTitle}`, ML);
-    doc.moveDown(0.2);
-    hr('#999999', 1.2);
+    if (multi || di > 0) ctx.newPage();
+    heading(L.extrasTitle, formatDate(day.date, locale));
+    tableHeader(L.name, L.amount);
     if (day.extras.length === 0) {
-      doc.font(R, 10).fillColor('#666').text(L.noExtras, ML);
+      dataRow(L.noExtras, fmt(0), false);
       return;
     }
-    for (const ex of day.extras) kv(`   • ${ex.name}`, fmt(ex.amountSum));
-    doc.moveDown(0.2);
-    hr('#dddddd', 0.8);
-    kv(L.total, fmt(dayExtrasTotal(day)), { bold: true, color: '#b45309' });
+    let shade = false;
+    for (const ex of day.extras) {
+      dataRow(ex.name, fmt(ex.amountSum), shade);
+      shade = !shade;
+    }
+    totalRow(L.total, fmt(dayExtrasTotal(day)), '#b45309');
   });
 
   doc.end();

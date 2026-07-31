@@ -187,6 +187,16 @@ export type AdditionalExpense = {
   eventId: string;
 };
 
+// Spend on the "Additional Services" product — its own section, separate from
+// AdditionalExpense (which is any unplanned cost).
+export type ServiceExpense = {
+  id: string;
+  name: string;
+  amountSum: number; // whole so'm
+  sortOrder: number;
+  eventId: string;
+};
+
 export type DayEventType = 'NAHOR' | 'FOTIHA' | 'TUI' | 'OTHERS';
 
 export type DayEvent = {
@@ -197,9 +207,12 @@ export type DayEvent = {
   guestCount: number;
   pricePerGuestSum: number; // whole so'm
   report: string | null;
+  // null = spent is the sum of the lines; a number overrides it.
+  manualSpentSum: number | null;
   products: ProductExpense[];
   salaries: SalaryExpense[];
   additionals: AdditionalExpense[];
+  services: ServiceExpense[];
 };
 
 export type DayExtraExpense = {

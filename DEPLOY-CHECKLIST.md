@@ -5,7 +5,7 @@ page, invitation orders, and performers — exists in the repository but is **no
 running in production**. This document is the full list of what stands between
 here and live, in the order it has to happen.
 
-There are five pending database migrations, one new host to stand up, one nginx
+There are six pending database migrations, one new host to stand up, one nginx
 change you would not guess, and four pieces of manual setup afterwards. One of
 those four (Step 8) has no user interface at all, and skipping it silently makes
 an entire feature invisible.
@@ -26,7 +26,7 @@ and `20260730180000_performers` removes the unused `InviteRequest.performers`.
 Both act on a table that is almost certainly empty in your production database,
 since the invitation-orders feature has never been live. So the genuine risk here
 is close to zero. That is not the point — the point is that you are about to
-apply five migrations in one batch, and this is the last moment at which taking a
+apply six migrations in one batch, and this is the last moment at which taking a
 dump costs you nothing.
 
 Take the dump by running `pg_dump` inside the container. Read the credentials
@@ -73,7 +73,7 @@ git status --short      # must print nothing
 ./deploy.sh
 ```
 
-Watch the output under `==> Running database migrations...`. Five migrations
+Watch the output under `==> Running database migrations...`. Six migrations
 should apply.
 
 `20260730100000_restaurant_module_permissions` is Part 1. It adds the three
@@ -96,6 +96,13 @@ not merge it into the next one.
 
 `20260730180000_performers` creates `PerformerProfile`, `PerformerBooking` and
 `PerformerEvent`, and drops the unused `InviteRequest.performers` column.
+
+`20260731100000_expense_services_manual_spent` is the Expense Ledger work. It
+adds the nullable `DayEvent.manualSpentSum` column (NULL everywhere, so every
+existing day keeps its computed total) and creates the `ServiceExpense` table for
+the per-department Additional Services lines. Nothing is dropped and nothing is
+backfilled, so this one is safe to re-run and safe to leave applied if you roll
+the code back.
 
 If you also see the older v-connect migrations (`nfc_plaque`,
 `platform_contact`, `platform_contact_instagram`, `extra_services`,

@@ -36,11 +36,16 @@ const bookingTotal = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
 // Each event's budget is its booking (guests × price per guest). There is no
 // longer a separate day-level allocation — the day budget is the sum of these.
 export const eventBudget = (e: DayEvent) => bookingTotal(e);
-// Spent = the actual expenses (products, salaries, additionals).
-const eventSpent = (e: DayEvent) =>
+// Spent = the actual expenses (products, salaries, additionals, services).
+const computedSpent = (e: DayEvent) =>
   e.products.reduce((s, p) => s + p.amountSum, 0) +
   e.salaries.reduce((s, p) => s + p.amountSum, 0) +
-  e.additionals.reduce((s, p) => s + p.amountSum, 0);
+  e.additionals.reduce((s, p) => s + p.amountSum, 0) +
+  e.services.reduce((s, p) => s + p.amountSum, 0);
+// A hand-entered total wins over the sum of the lines, so the ledger can record
+// what was actually spent when the lines do not (or cannot) add up to it. The
+// day and PDF totals read through here too, so everything stays consistent.
+const eventSpent = (e: DayEvent) => (e.manualSpentSum != null ? e.manualSpentSum : computedSpent(e));
 
 // Sum of every expense line across all of a day's events.
 export const daySpent = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventSpent(e), 0);
@@ -337,14 +342,16 @@ const Total = ({ label, value, color }: { label: string; value: string; color: s
   </div>
 );
 
-// One department's booking, three expense blocks (products / salaries / additionals) and notes.
+// One department's booking, four expense blocks (products / salaries /
+// additionals / services), the manual total override and notes.
 const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChanged: () => void }) => {
   const productsTotal = event.products.reduce((s, p) => s + p.amountSum, 0);
   const salariesTotal = event.salaries.reduce((s, p) => s + p.amountSum, 0);
   const additionalsTotal = event.additionals.reduce((s, p) => s + p.amountSum, 0);
+  const servicesTotal = event.services.reduce((s, p) => s + p.amountSum, 0);
 
   const updateEvent = useMutation({
-    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null }>) =>
+    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualSpentSum: number | null }>) =>
       expenseService.updateEvent(event.id, patch),
     onSuccess: onChanged,
   });
@@ -408,6 +415,23 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
         </div>
       </Block>
 
+      {/* Expenses for the "Additional Services" product (performers,
+          invitations…) — deliberately its own section, not folded into the
+          additional expenses above. */}
+      <Block title={t('extra_services')} total={formatWholeSum(servicesTotal)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {event.services.map((s) => (
+            <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t}
+              onUpdate={(patch) => expenseService.updateService(s.id, patch)}
+              onRemove={() => expenseService.removeService(s.id)} onChanged={onChanged} />
+          ))}
+          <AddLineRow placeholder={t('service_name')}
+            onAdd={(payload) => expenseService.addService(event.id, payload)} onAdded={onChanged} />
+        </div>
+      </Block>
+
+      <ManualSpentField event={event} t={t} onSave={(v) => updateEvent.mutate({ manualSpentSum: v })} />
+
       {/* Per-event notes (separate from the day report). */}
       <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <span style={labelStyle}>{t('event_notes')}</span>
@@ -416,6 +440,50 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
           placeholder={t('event_notes_placeholder')} style={{ resize: 'vertical', minHeight: 56, lineHeight: 1.5 }} />
       </div>
     </>
+  );
+};
+
+// Manual override of the department's spent total, mirroring the manual total on
+// the tablet Summary page: a checkbox that reveals an amount field.
+const ManualSpentField = ({ event, t, onSave }: {
+  event: DayEvent; t: TFn; onSave: (value: number | null) => void;
+}) => {
+  const computed = computedSpent(event);
+  const enabled = event.manualSpentSum != null;
+  const [text, setText] = useState(enabled ? groupDigits(String(event.manualSpentSum)) : '');
+  useEffect(() => {
+    setText(event.manualSpentSum != null ? groupDigits(String(event.manualSpentSum)) : '');
+  }, [event.manualSpentSum]);
+
+  // Ticking the box seeds the override with the current computed total, so the
+  // field opens on the number being replaced rather than on a blank the ledger
+  // would read as zero.
+  const toggle = (checked: boolean) => onSave(checked ? computed : null);
+
+  return (
+    <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+        <input type="checkbox" checked={enabled} onChange={(e) => toggle(e.target.checked)}
+          style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+        <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.8)' }}>{t('edit_amount_manually')}</span>
+      </label>
+      {enabled && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <input className="adm-input" inputMode="numeric" value={text}
+            onChange={(e) => setText(groupDigits(e.target.value))}
+            onBlur={() => {
+              const c = parseWholeSum(text);
+              if (c === null) { setText(groupDigits(String(event.manualSpentSum ?? 0))); return; }
+              if (clampSum(c) !== event.manualSpentSum) onSave(clampSum(c));
+            }}
+            placeholder={t('amount')} style={{ ...rowInput, width: 180, textAlign: 'right' }} />
+          {/* The summed lines stay visible so it is obvious what was replaced. */}
+          <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.45)' }}>
+            {t('amount_spent')}: {formatWholeSum(computed)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 };
 

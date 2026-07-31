@@ -35,6 +35,11 @@ router.post('/events/:eventId/additionals', controller.addAdditional.bind(contro
 router.patch('/additionals/:id', controller.updateAdditional.bind(controller));
 router.delete('/additionals/:id', controller.removeAdditional.bind(controller));
 
+// Per-event "Additional Services" expenses (distinct from /additionals above)
+router.post('/events/:eventId/services', controller.addService.bind(controller));
+router.patch('/services/:id', controller.updateService.bind(controller));
+router.delete('/services/:id', controller.removeService.bind(controller));
+
 // Day-level additional expenses
 router.post('/days/:id/extras', controller.addExtra.bind(controller));
 router.patch('/extras/:id', controller.updateExtra.bind(controller));

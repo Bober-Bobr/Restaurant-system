@@ -21,7 +21,9 @@ export const updateEventSchema = z.object({
   bookingName: z.string().max(120).nullable().optional(),
   guestCount: z.number().int().min(0).max(1_000_000).optional(),
   pricePerGuestSum: sum.optional(),
-  report: z.string().max(5000).nullable().optional()
+  report: z.string().max(5000).nullable().optional(),
+  // Explicit null clears the override; omitting it leaves the current value be.
+  manualSpentSum: sum.nullable().optional()
 });
 
 export const createProductSchema = z.object({

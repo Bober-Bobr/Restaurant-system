@@ -7,7 +7,8 @@ const lineOrder = [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }]
 const eventInclude = {
   products: { orderBy: lineOrder },
   salaries: { orderBy: lineOrder },
-  additionals: { orderBy: lineOrder }
+  additionals: { orderBy: lineOrder },
+  services: { orderBy: lineOrder }
 };
 const dayInclude = {
   events: { include: eventInclude, orderBy: { createdAt: 'asc' as const } },
@@ -24,6 +25,8 @@ export type UpdateEventData = {
   guestCount?: number;
   pricePerGuestSum?: number;
   report?: string | null;
+  // null clears the override and returns to the computed sum.
+  manualSpentSum?: number | null;
 };
 
 export type ProductData = {
@@ -77,11 +80,12 @@ export class ExpenseRepository {
   }
 
   // Copy line *structure* (names/units) into an event, with blank numbers.
-  async cloneLines(eventId: string, products: ProductData[], salaries: LineData[], additionals: LineData[]) {
+  async cloneLines(eventId: string, products: ProductData[], salaries: LineData[], additionals: LineData[], services: LineData[]) {
     const ops = [
       ...products.map((p, i) => prisma.productExpense.create({ data: { name: p.name, unit: p.unit, quantity: 0, amountSum: 0, eventId, sortOrder: i } })),
       ...salaries.map((s, i) => prisma.salaryExpense.create({ data: { name: s.name, amountSum: 0, eventId, sortOrder: i } })),
-      ...additionals.map((a, i) => prisma.additionalExpense.create({ data: { name: a.name, amountSum: 0, eventId, sortOrder: i } }))
+      ...additionals.map((a, i) => prisma.additionalExpense.create({ data: { name: a.name, amountSum: 0, eventId, sortOrder: i } })),
+      ...services.map((s, i) => prisma.serviceExpense.create({ data: { name: s.name, amountSum: 0, eventId, sortOrder: i } }))
     ];
     if (ops.length) await prisma.$transaction(ops);
   }
@@ -119,6 +123,10 @@ export class ExpenseRepository {
     const row = await prisma.additionalExpense.findUnique({ where: { id }, select: { event: { select: { day: { select: { managerId: true } } } } } });
     return row?.event.day.managerId ?? null;
   }
+  async ownerOfService(id: string): Promise<string | null> {
+    const row = await prisma.serviceExpense.findUnique({ where: { id }, select: { event: { select: { day: { select: { managerId: true } } } } } });
+    return row?.event.day.managerId ?? null;
+  }
   async ownerOfExtra(id: string): Promise<string | null> {
     const row = await prisma.dayExtraExpense.findUnique({ where: { id }, select: { day: { select: { managerId: true } } } });
     return row?.day.managerId ?? null;
@@ -152,6 +160,16 @@ export class ExpenseRepository {
   }
   deleteAdditional(id: string) {
     return prisma.additionalExpense.delete({ where: { id } });
+  }
+
+  createService(eventId: string, data: LineData) {
+    return prisma.serviceExpense.create({ data: { ...data, eventId } });
+  }
+  updateService(id: string, data: Partial<LineData>) {
+    return prisma.serviceExpense.update({ where: { id }, data });
+  }
+  deleteService(id: string) {
+    return prisma.serviceExpense.delete({ where: { id } });
   }
 
   // Day-level additional expenses (separate from the per-event lines above).

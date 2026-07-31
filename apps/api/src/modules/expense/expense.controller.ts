@@ -159,6 +159,24 @@ export class ExpenseController {
     response.status(204).send();
   }
 
+  async addService(request: Request, response: Response) {
+    const { eventId } = eventIdSchema.parse(request.params);
+    const payload = createLineSchema.parse(request.body);
+    response.status(201).json(await service.addService(request.admin!.id, eventId, payload));
+  }
+
+  async updateService(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    const payload = updateLineSchema.parse(request.body);
+    response.json(await service.updateService(request.admin!.id, id, payload));
+  }
+
+  async removeService(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    await service.removeService(request.admin!.id, id);
+    response.status(204).send();
+  }
+
   async addExtra(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
     const payload = createLineSchema.parse(request.body);

@@ -231,9 +231,15 @@ model DayEvent {
   guestCount       Int            @default(0)
   pricePerGuestSum Int            @default(0) // whole so'm (not tiyin)
   report           String? // free-text notes for this event/department
+  // Manual override of the spent total. Null means "add the lines up", which is
+  // the normal case; a number wins over the computed sum. Nullable rather than
+  // a 0 default so that "overridden to zero" stays distinguishable from "not
+  // overridden" — mirrors the manual total on the tablet Summary page.
+  manualSpentSum   Int?
   products    ProductExpense[]
   salaries    SalaryExpense[]
   additionals AdditionalExpense[]
+  services    ServiceExpense[]
   createdAt   DateTime            @default(now())
 
   @@unique([dayId, type])
@@ -267,6 +273,22 @@ model SalaryExpense {
 }
 
 model AdditionalExpense {
+  id          String   @id @default(cuid())
+  name        String
+  amountSum   Int      @default(0) // whole so'm (not tiyin)
+  sortOrder   Int      @default(0)
+  eventId     String
+  event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
+}
+
+// What the department spent on the "Additional Services" product (performers,
+// invitations…). Same shape as AdditionalExpense but a SEPARATE section: an
+// "additional expense" is any unplanned cost, whereas these track one specific
+// paid product, and the two are reported and totalled apart.
+model ServiceExpense {
   id          String   @id @default(cuid())
   name        String
   amountSum   Int      @default(0) // whole so'm (not tiyin)

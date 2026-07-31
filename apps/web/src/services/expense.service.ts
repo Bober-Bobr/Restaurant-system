@@ -1,4 +1,4 @@
-import type { AdditionalExpense, DayEvent, DayExtraExpense, ExpenseDay, ProductExpense, SalaryExpense } from '../types/domain';
+import type { AdditionalExpense, DayEvent, DayExtraExpense, ExpenseDay, ProductExpense, SalaryExpense, ServiceExpense } from '../types/domain';
 import { httpClient } from './http';
 
 export const expenseService = {
@@ -30,7 +30,9 @@ export const expenseService = {
 
   async updateEvent(
     id: string,
-    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null }>
+    // manualSpentSum: a number overrides the computed spent total, null clears
+    // the override. Omit the key to leave it untouched.
+    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualSpentSum: number | null }>
   ) {
     const { data } = await httpClient.patch<DayEvent>(`/expenses/events/${id}`, payload);
     return data;
@@ -73,6 +75,19 @@ export const expenseService = {
   },
   async removeAdditional(id: string) {
     await httpClient.delete(`/expenses/additionals/${id}`);
+  },
+
+  // Per-event "Additional Services" lines (distinct from additionals above).
+  async addService(eventId: string, payload: { name: string; amountSum?: number }) {
+    const { data } = await httpClient.post<ServiceExpense>(`/expenses/events/${eventId}/services`, payload);
+    return data;
+  },
+  async updateService(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+    const { data } = await httpClient.patch<ServiceExpense>(`/expenses/services/${id}`, payload);
+    return data;
+  },
+  async removeService(id: string) {
+    await httpClient.delete(`/expenses/services/${id}`);
   },
 
   // Day-level additional expenses (separate from the per-event main expenses).
