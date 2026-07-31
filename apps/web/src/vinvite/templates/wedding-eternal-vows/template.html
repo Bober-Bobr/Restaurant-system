@@ -589,7 +589,11 @@ button,input,textarea{font:inherit;color:inherit}
   stroke-dasharray:283;stroke-dashoffset:283;transition:stroke-dashoffset 1s linear}
 .digits{position:relative;width:100%;height:1.3em;overflow:hidden;
   font-family:var(--display);font-weight:400;font-size:clamp(1.6rem,8vw,2.2rem);line-height:1.3;color:var(--ink)}
-.digits .n{position:absolute;inset:0;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.digits .n{position:absolute;inset:0;display:grid;place-items:center;font-variant-numeric:tabular-nums;
+  transition:opacity .26s var(--vow), transform .26s var(--vow)}
+/* The digit rolls up and out, its replacement is written while it is invisible,
+   and it settles back. One element the whole time — see the note on turn(). */
+.digits .n.turning{opacity:0;transform:translateY(-42%) scale(.94)}
 .dial .unit{font-family:var(--title);font-size:.54rem;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-faint)}
 .until .date-line{
   margin-top:clamp(32px,8vw,44px);font-family:var(--title);font-size:.88rem;
@@ -1660,40 +1664,51 @@ button,input,textarea{font:inherit;color:inherit}
   var CIRC = 283;                                 /* 2·pi·r for r = 45       */
   function pad2(n) { return String(Math.max(0, n)).length < 2 ? '0' + Math.max(0, n) : String(Math.max(0, n)); }
 
-  function turn(face, value) {
+  /* One element per dial for the life of the page, its text swapped while it is
+     invisible. The earlier version appended a fresh span per tick and removed
+     the old one from an animation's onfinish, which broke three ways: the next
+     read of `.n` returned the stale fading span rather than the live one, so the
+     comparison was against the wrong value; onfinish never runs while the tab is
+     backgrounded or the dial is off screen, so the spans piled up; and every
+     survivor is `position:absolute; inset:0`, so the pile rendered on top of
+     itself. Nothing here can accumulate. */
+  var turning = {};
+  function turn(key, face, value) {
     if (!face) return;
-    var now = face.querySelector('.n');
-    if (!now || now.textContent === value) return;
-    /* No Web Animations API outside a browser — swap the text and move on. */
-    if (STILL || typeof now.animate !== 'function') { now.textContent = value; return; }
-
-    var next = document.createElement('span');
-    next.className = 'n';
-    next.textContent = value;
-    face.appendChild(next);
-
-    var curve = 'cubic-bezier(.22,.61,.24,1)';
-    var out = now.animate(
-      [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.12)' }],
-      { duration: 700, easing: curve, fill: 'forwards' }
-    );
-    out.onfinish = function () { if (now.parentNode) now.parentNode.removeChild(now); };
-    next.animate(
-      [{ opacity: 0, transform: 'scale(.86)' }, { opacity: 1, transform: 'scale(1)' }],
-      { duration: 820, easing: curve }
-    );
+    var el = face.querySelector('.n');
+    if (!el || el.textContent === value) return;
+    if (STILL) { el.textContent = value; return; }
+    clearTimeout(turning[key]);
+    el.classList.add('turning');
+    turning[key] = setTimeout(function () {
+      el.textContent = value;
+      el.classList.remove('turning');
+    }, 260);
   }
 
-  function sweep(arc, fraction) {
+  var lastFrac = {};
+  function sweep(key, arc, fraction) {
     if (!arc) return;
-    arc.style.strokeDashoffset = String(CIRC * (1 - Math.max(0, Math.min(1, fraction))));
+    var f = Math.max(0, Math.min(1, fraction));
+    var prev = lastFrac[key];
+    lastFrac[key] = f;
+    /* A unit that has just wrapped (59 → 00 → 59) jumps rather than crawling
+       backwards around the whole ring for a second under the 1s transition. */
+    if (prev != null && f > prev + 0.5) {
+      arc.style.transition = 'none';
+      arc.style.strokeDashoffset = String(CIRC * (1 - f));
+      if (typeof arc.getBoundingClientRect === 'function') arc.getBoundingClientRect();
+      arc.style.transition = '';
+      return;
+    }
+    arc.style.strokeDashoffset = String(CIRC * (1 - f));
   }
 
   var ticker;
   function tick() {
     var left = eventDate().getTime() - Date.now();
     if (left <= 0) {
-      ['d', 'h', 'm', 's'].forEach(function (k) { turn(faces[k], '00'); sweep(arcs[k], 0); });
+      ['d', 'h', 'm', 's'].forEach(function (k) { turn(k, faces[k], '00'); sweep(k, arcs[k], 0); });
       var line = one('#dateLine');
       if (line) line.textContent = t('today');
       clearInterval(ticker);
@@ -1705,13 +1720,13 @@ button,input,textarea{font:inherit;color:inherit}
     var mins = Math.floor(s / 60) % 60;
     var secs = s % 60;
 
-    turn(faces.d, pad2(days)); turn(faces.h, pad2(hrs));
-    turn(faces.m, pad2(mins)); turn(faces.s, pad2(secs));
+    turn('d', faces.d, pad2(days)); turn('h', faces.h, pad2(hrs));
+    turn('m', faces.m, pad2(mins)); turn('s', faces.s, pad2(secs));
 
-    sweep(arcs.d, Math.min(days / 365, 1));
-    sweep(arcs.h, hrs / 24);
-    sweep(arcs.m, mins / 60);
-    sweep(arcs.s, secs / 60);
+    sweep('d', arcs.d, Math.min(days / 365, 1));
+    sweep('h', arcs.h, hrs / 24);
+    sweep('m', arcs.m, mins / 60);
+    sweep('s', arcs.s, secs / 60);
   }
 
   /* ========================================================================
