@@ -130,8 +130,8 @@ export const ExpenseLedgerPage = () => {
         </button>
         <span style={{ color: 'rgba(226,232,240,0.35)', fontSize: 12 }}>{t('or')}</span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={labelStyle}>{t('add_day_for_date')}</span>
-          <input type="date" className="adm-input" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ width: 170 }} />
+          <span style={{ ...fieldLabelStyle, display: 'block' }}>{t('add_day_for_date')}</span>
+          <input type="date" className="adm-input" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ ...fieldSurface, width: 170 }} />
         </label>
         <button type="button" className="adm-btn-ghost" onClick={() => { if (newDate) addDay.mutate(newDate); }}
           disabled={!newDate || addDay.isPending} style={{ fontSize: 13 }}>
@@ -171,7 +171,84 @@ export const ExpenseLedgerPage = () => {
 };
 
 const labelStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: 'rgba(226,232,240,0.6)', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const rowInput: React.CSSProperties = { height: 38 };
+
+// ── Field and heading styling ────────────────────────────────────────────────
+// Deliberately the same visual language as the banquet event form
+// (AdminEventsPage): gold field labels, gold uppercase section headings closed
+// by a fading rule, and inputs given a gold-tinted border so every field reads
+// as a field on this dark background rather than melting into the card.
+const GOLD = '#c9a42c';
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'grid', gap: 6,
+  fontSize: 12.5, fontWeight: 600, letterSpacing: '0.02em',
+  color: GOLD,
+};
+
+// The highlight itself, separated from the row height so multi-line textareas
+// can take the surface without being forced to 38px.
+const fieldSurface: React.CSSProperties = {
+  background: 'rgba(15,23,42,0.78)',
+  borderColor: 'rgba(201,164,44,0.3)',
+};
+
+const rowInput: React.CSSProperties = { ...fieldSurface, height: 38 };
+
+// Section heading: gold, uppercase, with the same fading rule as the banquet
+// form's GroupHeading, plus the section's own total on the right.
+// Column headers for the repeated line rows. The rows use placeholders, which
+// disappear as soon as a value is typed — these keep the columns named.
+const colHeader: React.CSSProperties = {
+  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+  color: 'rgba(201,164,44,0.75)',
+};
+
+// Column widths mirror the row inputs below them exactly, so the labels sit
+// over the fields they name. The trailing spacer stands in for the row's
+// delete / add button.
+const LineHeader = ({ t, nameLabel }: { t: TFn; nameLabel: string }) => (
+  <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '2px 2px 0' }}>
+    <span style={{ ...colHeader, flex: 2, minWidth: 160 }}>{nameLabel}</span>
+    <span style={{ ...colHeader, width: 150, textAlign: 'right' }}>{t('amount')}</span>
+    <span style={{ width: 34, flexShrink: 0 }} />
+  </div>
+);
+
+const ProductHeader = ({ t }: { t: TFn }) => (
+  <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '2px 2px 0', flexWrap: 'wrap' }}>
+    <span style={{ ...colHeader, flex: 2, minWidth: 140 }}>{t('product_name')}</span>
+    <span style={{ ...colHeader, width: 80 }}>{t('quantity')}</span>
+    <span style={{ ...colHeader, width: 78 }}>{t('unit_label')}</span>
+    <span style={{ ...colHeader, width: 150, textAlign: 'right' }}>{t('amount')}</span>
+    <span style={{ width: 34, flexShrink: 0 }} />
+  </div>
+);
+
+const BlockHeading = ({ title, total, tone }: {
+  title: string; total: string; tone: 'revenue' | 'expense';
+}) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+    <span style={{
+      fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
+      color: GOLD, whiteSpace: 'nowrap',
+    }}>
+      {title}
+    </span>
+    <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(201,164,44,0.45), transparent)' }} />
+    {total && (
+      // Revenue and spending are told apart by colour: the two are easy to
+      // confuse on this page, and the section totals are where it shows.
+      <span style={{
+        flexShrink: 0, fontSize: 12.5, fontWeight: 800, padding: '3px 10px', borderRadius: 999,
+        color: tone === 'revenue' ? '#4ade80' : '#fbbf24',
+        background: tone === 'revenue' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)',
+        border: `1px solid ${tone === 'revenue' ? 'rgba(74,222,128,0.32)' : 'rgba(251,191,36,0.32)'}`,
+      }}>
+        {total}
+      </span>
+    )}
+  </div>
+);
 
 const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   const queryClient = useQueryClient();
@@ -223,9 +300,12 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-        {/* Guest revenue of the open department, hand-entered or computed. */}
-        {activeEvent && guestsRevenue(activeEvent) > 0
-          ? <Total label={t('guests_total')} value={formatWholeSum(guestsRevenue(activeEvent))} color="#fbbf24" />
+        {/* The open department's total revenue: guest revenue (hand-entered or
+            guests × price) PLUS the additional services sold. The two parts stay
+            visible as the Booking and Additional services section totals below,
+            so the breakdown is never hidden behind this one number. */}
+        {activeEvent && eventRevenue(activeEvent) > 0
+          ? <Total label={t('total_revenue')} value={formatWholeSum(eventRevenue(activeEvent))} color="#4ade80" />
           : <span />}
         {/* The day-delete button is only available on the department overview. */}
         {!activeEvent
@@ -306,18 +386,16 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-          {/* Shown in the department view too, not just the day overview: the
-              header above carries the guest figure alone, so without this the
-              remaining balance would quietly include the services sold and not
-              reconcile with anything on screen. */}
-          <Total label={t('total_revenue')} value={formatWholeSum(budget)} color="#e2e8f0" />
+          {/* Only on the day overview: with a department open the same figure is
+              already in the header above. */}
+          {!activeEvent && <Total label={t('total_revenue')} value={formatWholeSum(budget)} color="#4ade80" />}
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
           <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
         </div>
 
         {/* End-of-day report */}
         <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-          <span style={labelStyle}>{t('day_report')}</span>
+          <span style={{ ...fieldLabelStyle, display: 'block' }}>{t('day_report')}</span>
           <textarea
             className="adm-input"
             rows={3}
@@ -325,7 +403,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
             onChange={(e) => setReport(e.target.value)}
             onBlur={() => { if ((day.report ?? '') !== report) updateDay.mutate({ report: report || null }); }}
             placeholder={t('day_report_placeholder')}
-            style={{ resize: 'vertical', minHeight: 70, lineHeight: 1.5 }}
+            style={{ ...fieldSurface, resize: 'vertical', minHeight: 70, lineHeight: 1.5 }}
           />
         </div>
       </div>
@@ -333,12 +411,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   );
 };
 
-const Block = ({ title, total, children }: { title: string; total: string; children: React.ReactNode }) => (
+const Block = ({ title, total, tone = 'expense', children }: {
+  title: string; total: string; tone?: 'revenue' | 'expense'; children: React.ReactNode;
+}) => (
   <div>
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{title}</h3>
-      <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(226,232,240,0.7)' }}>{total}</span>
-    </div>
+    <BlockHeading title={title} total={total} tone={tone} />
     {children}
   </div>
 );
@@ -375,27 +452,55 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
 
   return (
     <>
-      {/* Booking: guests × price per guest is this department's guest revenue,
-          shown at the top of the card. The manual override sits directly beneath
-          the figures it replaces. */}
-      <Block title={t('booking')} total={formatWholeSum(guestsRevenue(event))}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input className="adm-input" value={bookingName} onChange={(e) => setBookingName(e.target.value)}
-            onBlur={() => { const v = bookingName.trim(); if (v !== (event.bookingName ?? '')) updateEvent.mutate({ bookingName: v || null }); }}
-            placeholder={t('booking_name')} style={{ ...rowInput, flex: 2, minWidth: 160 }} />
-          <input className="adm-input" inputMode="numeric" value={guests} onChange={(e) => setGuests(e.target.value.replace(/[^\d]/g, ''))}
-            onBlur={() => { const n = Number(guests) || 0; if (n !== event.guestCount) updateEvent.mutate({ guestCount: n }); }}
-            placeholder={t('guest_count')} style={{ ...rowInput, width: 100, textAlign: 'right' }} />
-          <span style={{ color: 'rgba(226,232,240,0.4)' }}>×</span>
-          <input className="adm-input" inputMode="numeric" value={price} onChange={(e) => setPrice(groupDigits(e.target.value))}
-            onBlur={() => { const c = parseWholeSum(price); if (c !== null && clampSum(c) !== event.pricePerGuestSum) updateEvent.mutate({ pricePerGuestSum: clampSum(c) }); }}
-            placeholder={t('price_per_guest')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+      {/* Booking: guests × price per guest is this department's guest revenue.
+          Every field carries its own gold label rather than relying on a
+          placeholder that disappears the moment something is typed. */}
+      <Block title={t('booking')} total={formatWholeSum(guestsRevenue(event))} tone="revenue">
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label style={{ ...fieldLabelStyle, flex: 2, minWidth: 180 }}>
+            {t('booking_name')}
+            <input className="adm-input" value={bookingName} onChange={(e) => setBookingName(e.target.value)}
+              onBlur={() => { const v = bookingName.trim(); if (v !== (event.bookingName ?? '')) updateEvent.mutate({ bookingName: v || null }); }}
+              style={rowInput} />
+          </label>
+          <label style={{ ...fieldLabelStyle, width: 110 }}>
+            {t('guest_count')}
+            <input className="adm-input" inputMode="numeric" value={guests} onChange={(e) => setGuests(e.target.value.replace(/[^\d]/g, ''))}
+              onBlur={() => { const n = Number(guests) || 0; if (n !== event.guestCount) updateEvent.mutate({ guestCount: n }); }}
+              style={{ ...rowInput, textAlign: 'right' }} />
+          </label>
+          <span style={{ color: 'rgba(226,232,240,0.4)', paddingBottom: 10 }}>×</span>
+          <label style={{ ...fieldLabelStyle, width: 160 }}>
+            {t('price_per_guest')}
+            <input className="adm-input" inputMode="numeric" value={price} onChange={(e) => setPrice(groupDigits(e.target.value))}
+              onBlur={() => { const c = parseWholeSum(price); if (c !== null && clampSum(c) !== event.pricePerGuestSum) updateEvent.mutate({ pricePerGuestSum: clampSum(c) }); }}
+              style={{ ...rowInput, textAlign: 'right' }} />
+          </label>
         </div>
         <ManualGuestsField event={event} t={t} onSave={(v) => updateEvent.mutate({ manualGuestsSum: v })} />
       </Block>
 
+      {/* The "Additional Services" product (performers, hosts, invitations…).
+          These are SOLD, so they are revenue: this total is added to the guest
+          revenue above to make the department total, never counted against it.
+          Placed directly after the booking so it is filled in first, before any
+          of the spending sections. */}
+      <Block title={t('services_revenue')} total={formatWholeSum(servicesTotal)} tone="revenue">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <LineHeader t={t} nameLabel={t('service_name')} />
+          {event.services.map((s) => (
+            <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t}
+              onUpdate={(patch) => expenseService.updateService(s.id, patch)}
+              onRemove={() => expenseService.removeService(s.id)} onChanged={onChanged} />
+          ))}
+          <AddLineRow placeholder={t('service_name')}
+            onAdd={(payload) => expenseService.addService(event.id, payload)} onAdded={onChanged} />
+        </div>
+      </Block>
+
       <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ProductHeader t={t} />
           {event.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={onChanged} />)}
           <AddProductRow eventId={event.id} t={t} onAdded={onChanged} />
         </div>
@@ -403,6 +508,7 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
 
       <Block title={t('employee_salaries')} total={formatWholeSum(salariesTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <LineHeader t={t} nameLabel={t('employee_name')} />
           {event.salaries.map((s) => (
             <LineRow key={s.id} line={s} placeholder={t('employee_name')} t={t}
               onUpdate={(patch) => expenseService.updateSalary(s.id, patch)}
@@ -415,6 +521,7 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
 
       <Block title={t('additional_expenses')} total={formatWholeSum(additionalsTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <LineHeader t={t} nameLabel={t('note')} />
           {event.additionals.map((a) => (
             <LineRow key={a.id} line={a} placeholder={t('note')} t={t}
               onUpdate={(patch) => expenseService.updateAdditional(a.id, patch)}
@@ -425,28 +532,12 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
         </div>
       </Block>
 
-      {/* The "Additional Services" product (performers, hosts, invitations…).
-          These are SOLD, so they are revenue: the total below is added to the
-          department's revenue, never counted against it. Its own section, not
-          folded into the additional expenses above. */}
-      <Block title={t('services_revenue')} total={formatWholeSum(servicesTotal)}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {event.services.map((s) => (
-            <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t}
-              onUpdate={(patch) => expenseService.updateService(s.id, patch)}
-              onRemove={() => expenseService.removeService(s.id)} onChanged={onChanged} />
-          ))}
-          <AddLineRow placeholder={t('service_name')}
-            onAdd={(payload) => expenseService.addService(event.id, payload)} onAdded={onChanged} />
-        </div>
-      </Block>
-
       {/* Per-event notes (separate from the day report). */}
       <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <span style={labelStyle}>{t('event_notes')}</span>
+        <span style={{ ...fieldLabelStyle, display: 'block' }}>{t('event_notes')}</span>
         <textarea className="adm-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
           onBlur={() => { if ((event.report ?? '') !== note) updateEvent.mutate({ report: note || null }); }}
-          placeholder={t('event_notes_placeholder')} style={{ resize: 'vertical', minHeight: 56, lineHeight: 1.5 }} />
+          placeholder={t('event_notes_placeholder')} style={{ ...fieldSurface, resize: 'vertical', minHeight: 56, lineHeight: 1.5 }} />
       </div>
     </>
   );
