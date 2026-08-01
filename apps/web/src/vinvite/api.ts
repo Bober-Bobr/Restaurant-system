@@ -178,6 +178,16 @@ export type TemplateOverride = {
   updatedAt?: string;
 };
 
+// System-admin control of how templates are showcased on the promotional site.
+// All three are ordered lists of template ids; see resolveShowcase() for how
+// they turn into what a visitor sees.
+export type PromoShowcase = {
+  coverIds: string[];
+  orderIds: string[];
+  hiddenIds: string[];
+  updatedAt?: string | null;
+};
+
 export type RsvpSubmission = {
   name: string;
   attending: boolean;
@@ -278,6 +288,17 @@ export const vinviteService = {
   },
   async saveTemplateOverride(templateId: string, config: Record<string, unknown>): Promise<TemplateOverride> {
     const { data } = await viHttp.put<TemplateOverride>(`/template-overrides/${templateId}`, { config });
+    return data;
+  },
+
+  // Promotional-site showcase. The GET is public so the landing page can read it
+  // logged out; the PUT is rejected for anyone but a SYSTEM_ADMIN.
+  async getPromoShowcase(): Promise<PromoShowcase> {
+    const { data } = await viHttp.get<PromoShowcase>('/promo-showcase');
+    return data;
+  },
+  async savePromoShowcase(payload: Omit<PromoShowcase, 'updatedAt'>): Promise<PromoShowcase> {
+    const { data } = await viHttp.put<PromoShowcase>('/promo-showcase', payload);
     return data;
   },
 

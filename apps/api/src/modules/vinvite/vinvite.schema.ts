@@ -96,3 +96,13 @@ export const updateTemplateSchema = z.object({
 export const templateOverrideSchema = z.object({
   config: z.record(z.string(), z.any()),
 });
+
+// System-admin control of the promotional site's template showcase. Every list
+// holds template ids; bounds are explicit because this is written from a form.
+const templateIdList = z.array(z.string().min(1).max(80)).max(60);
+
+export const promoShowcaseSchema = z.object({
+  coverIds: templateIdList,
+  orderIds: templateIdList,
+  hiddenIds: templateIdList,
+});

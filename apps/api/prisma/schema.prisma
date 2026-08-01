@@ -933,6 +933,25 @@ model InviteUser {
   templates InviteTemplate[]
 }
 
+// System-admin control over how the built-in templates are presented on the
+// v-invite promotional site: which are featured on the hero cover, in what
+// order the rest are listed, and which are kept off it entirely.
+//
+// One row, keyed by `scope`, so a second promotional surface later needs no
+// migration. Every list holds template ids and is advisory: ids that no longer
+// match a shipped template are ignored at read time, and a template mentioned
+// in none of the lists still appears — otherwise adding a template would make
+// it invisible until an admin happened to re-save this.
+model InvitePromoShowcase {
+  id        String   @id @default(cuid())
+  scope     String   @unique // "landing"
+  coverIds  Json     @default("[]") // ordered ids featured on the hero cover
+  orderIds  Json     @default("[]") // ordered ids for the "our work" grid
+  hiddenIds Json     @default("[]") // ids kept off the promotional site
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // System-admin design override for a built-in rich template: `config` replaces
 // the template's defaultConfig for new invitations, cards and previews.
 model InviteTemplateOverride {

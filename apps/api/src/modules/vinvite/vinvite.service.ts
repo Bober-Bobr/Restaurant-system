@@ -508,3 +508,59 @@ export class VInviteTemplateOverrideService {
     });
   }
 }
+
+// How the built-in templates are presented on the promotional site. Read by
+// logged-out visitors, written only by a SYSTEM_ADMIN.
+const PROMO_SCOPE = 'landing';
+
+export class VInvitePromoShowcaseService {
+  // Absent row means "shipped defaults" — three empty lists, which the web side
+  // resolves to registry order with the first templates on the cover. Returning
+  // this rather than 404ing keeps the landing page free of error handling for
+  // what is simply the initial state.
+  async get() {
+    const row = await prisma.invitePromoShowcase.findUnique({
+      where: { scope: PROMO_SCOPE },
+      select: { coverIds: true, orderIds: true, hiddenIds: true, updatedAt: true },
+    });
+    if (!row) return { coverIds: [], orderIds: [], hiddenIds: [], updatedAt: null };
+    return {
+      coverIds: asIdList(row.coverIds),
+      orderIds: asIdList(row.orderIds),
+      hiddenIds: asIdList(row.hiddenIds),
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async save(
+    userId: string,
+    data: { coverIds: string[]; orderIds: string[]; hiddenIds: string[] },
+  ) {
+    const user = await prisma.inviteUser.findUnique({ where: { id: userId }, select: { role: true } });
+    if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
+
+    // De-duplicate rather than reject: the form can only produce duplicates
+    // through a race, and silently collapsing them is friendlier than a 400 the
+    // admin cannot act on.
+    const clean = {
+      coverIds: unique(data.coverIds),
+      orderIds: unique(data.orderIds),
+      hiddenIds: unique(data.hiddenIds),
+    };
+    await prisma.invitePromoShowcase.upsert({
+      where: { scope: PROMO_SCOPE },
+      create: { scope: PROMO_SCOPE, ...clean },
+      update: clean,
+    });
+    return this.get();
+  }
+}
+
+// The columns are JSON, so anything could be in them; keep only strings.
+function asIdList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function unique(ids: string[]): string[] {
+  return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+}

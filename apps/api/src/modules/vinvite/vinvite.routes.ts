@@ -35,6 +35,11 @@ router.delete('/projects/:id/rsvps/:rsvpId', inviteAuthMiddleware, controller.re
 router.get('/template-overrides', controller.listTemplateOverrides.bind(controller));
 router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.saveTemplateOverride.bind(controller));
 
+// How templates are showcased on the promotional site: public read (the landing
+// page is seen logged out), system-admin write.
+router.get('/promo-showcase', controller.getPromoShowcase.bind(controller));
+router.put('/promo-showcase', inviteAuthMiddleware, controller.savePromoShowcase.bind(controller));
+
 // The studio's own contact block. Any signed-in user may read it (the editor
 // shows a preview); only a SYSTEM_ADMIN may change it.
 router.get('/platform-contact', inviteAuthMiddleware, controller.getPlatformContact.bind(controller));

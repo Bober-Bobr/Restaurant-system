@@ -5,7 +5,7 @@ page, invitation orders, performers, and hosts — exists in the repository but 
 **not running in production**. This document is the full list of what stands between
 here and live, in the order it has to happen.
 
-There are nine pending database migrations, one new host to stand up, one nginx
+There are ten pending database migrations, one new host to stand up, one nginx
 change you would not guess, and four pieces of manual setup afterwards. One of
 those four (Step 8) has no user interface at all, and skipping it silently makes
 an entire feature invisible.
@@ -27,7 +27,7 @@ removes `InviteRequest.photoUrl` after copying it into the new `photoUrls` array
 act on tables that are almost certainly empty in your production database, since
 neither invitation orders nor performers have ever been live. So the genuine risk
 here is close to zero. That is not the point — the point is that you are about to
-apply nine migrations in one batch, and this is the last moment at which taking a
+apply ten migrations in one batch, and this is the last moment at which taking a
 dump costs you nothing.
 
 Take the dump by running `pg_dump` inside the container. Read the credentials
@@ -74,7 +74,7 @@ git status --short      # must print nothing
 ./deploy.sh
 ```
 
-Watch the output under `==> Running database migrations...`. Nine migrations
+Watch the output under `==> Running database migrations...`. Ten migrations
 should apply.
 
 `20260730100000_restaurant_module_permissions` is Part 1. It adds the three
@@ -122,6 +122,12 @@ in survives. Note that the meaning changed: if anyone had used the old field to
 override a *spent* total, that number is now read as guest revenue — worth a
 glance at the ledger after deploying, though in practice the feature has never
 been live.
+
+`20260801100000_invite_promo_showcase` creates the `InvitePromoShowcase` table
+that holds the system administrator's choice of which invitation templates appear
+on the v-invite.uz cover. No row means "shipped defaults", so this one changes
+nothing on its own — the landing page looks exactly as it does today until an
+administrator opens the Templates page and saves a selection.
 
 If you also see the older v-connect migrations (`nfc_plaque`,
 `platform_contact`, `platform_contact_instagram`, `extra_services`,

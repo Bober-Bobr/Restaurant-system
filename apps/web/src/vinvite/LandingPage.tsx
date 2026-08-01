@@ -4,7 +4,8 @@ import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
 import { useViT, type ViKey } from './i18n';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
-import { RICH_TEMPLATES } from './templates';
+import { usePromoShowcase, COVER_SLOTS_DESKTOP, COVER_SLOTS_MOBILE } from './promoShowcase';
+import { useTemplateOverrides } from './templateOverrides';
 import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
 import { LOCALES, type TemplateDefinition } from './templates/types';
@@ -80,6 +81,10 @@ export const ViLandingPage = () => {
   const [stuck, setStuck] = useState(false);
   const [preview, setPreview] = useState<TemplateDefinition | null>(null);
   const isMobile = useMediaQuery('(max-width: 860px)');
+  // Which templates the system administrator has put on the cover and in what
+  // order the rest are listed. Falls back to the shipped order while loading or
+  // if the request fails, so the page is never empty.
+  const { cover, work } = usePromoShowcase();
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -112,8 +117,8 @@ export const ViLandingPage = () => {
       />
 
       <main style={{ flex: 1 }}>
-        <HeroSection t={t} isMobile={isMobile} onCreate={goCreate} onWork={() => scrollTo('work')} />
-        <WorkSection t={t} reveal={reveal} onPreview={setPreview} onCreate={goCreate} />
+        <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onCreate={goCreate} onWork={() => scrollTo('work')} />
+        <WorkSection t={t} templates={work} reveal={reveal} onPreview={setPreview} onCreate={goCreate} />
         <WhySection t={t} reveal={reveal} />
         <FaqSection t={t} reveal={reveal} />
         <FinalCta t={t} reveal={reveal} onCreate={goCreate} />
@@ -292,8 +297,10 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate 
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-function HeroSection({ t, isMobile, onCreate, onWork }: {
-  t: (k: ViKey) => string; isMobile: boolean; onCreate: () => void; onWork: () => void;
+function HeroSection({ t, isMobile, cover, work, onCreate, onWork }: {
+  t: (k: ViKey) => string; isMobile: boolean;
+  cover: TemplateDefinition[]; work: TemplateDefinition[];
+  onCreate: () => void; onWork: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
   const line1 = t('lp_hero_title_1').split(' ');
@@ -310,7 +317,9 @@ function HeroSection({ t, isMobile, onCreate, onWork }: {
   };
 
   const stats: { value: string; label: ViKey }[] = [
-    { value: String(RICH_TEMPLATES.length), label: 'lp_stat_templates' },
+    // Count what a visitor can actually browse, not what ships in the bundle —
+    // a hidden template must not be advertised.
+    { value: String(work.length), label: 'lp_stat_templates' },
     { value: '3', label: 'lp_stat_languages' },
     { value: '5', label: 'lp_stat_minutes' },
   ];
@@ -352,7 +361,7 @@ function HeroSection({ t, isMobile, onCreate, onWork }: {
         </div>
 
         {/* Live template cards, gently drifting */}
-        <HeroArt isMobile={isMobile} />
+        <HeroArt isMobile={isMobile} cover={cover} />
 
         <div className="vi-fade-up vi-lp-hero-stats" style={{ animationDelay: '900ms' }}>
           {stats.map((s) => (
@@ -382,11 +391,19 @@ function HeroSection({ t, isMobile, onCreate, onWork }: {
 
 // Real templates rendered live. Desktop stacks two drifting cards; phones show a
 // single upright card — one iframe instead of two, and no rotation to cut off.
-function HeroArt({ isMobile }: { isMobile: boolean }) {
-  const cards = useMemo(() => RICH_TEMPLATES.slice(0, isMobile ? 1 : 2), [isMobile]);
+function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: TemplateDefinition[] }) {
+  const { effectiveConfig } = useTemplateOverrides();
+  const cards = useMemo(
+    () => cover.slice(0, isMobile ? COVER_SLOTS_MOBILE : COVER_SLOTS_DESKTOP),
+    [cover, isMobile],
+  );
+  // The admin's saved design, not the shipped default — otherwise a template
+  // edited in Design+ looks one way everywhere in the app and another on the
+  // cover that is meant to be selling it.
   const configs = useMemo(
-    () => cards.map((tpl) => resolveAssetUrls(tpl, tpl.defaultConfig as Record<string, unknown>)),
-    [cards],
+    () => cards.map((tpl) => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cards, effectiveConfig],
   );
   if (cards.length === 0) return <div className="vi-lp-hero-art" />;
 
@@ -418,8 +435,9 @@ function HeroArt({ isMobile }: { isMobile: boolean }) {
 
 // ── Our work ─────────────────────────────────────────────────────────────────
 
-function WorkSection({ t, reveal, onPreview, onCreate }: {
+function WorkSection({ t, templates, reveal, onPreview, onCreate }: {
   t: (k: ViKey) => string;
+  templates: TemplateDefinition[];
   reveal: (el: HTMLElement | null) => void;
   onPreview: (tpl: TemplateDefinition) => void;
   onCreate: () => void;
@@ -438,7 +456,7 @@ function WorkSection({ t, reveal, onPreview, onCreate }: {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 26 }}>
-          {RICH_TEMPLATES.map((tpl, i) => (
+          {templates.map((tpl, i) => (
             <WorkCard key={tpl.id} tpl={tpl} t={t} reveal={reveal} delayMs={i * 110} onPreview={() => onPreview(tpl)} />
           ))}
         </div>
@@ -460,7 +478,12 @@ function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
   delayMs: number;
   onPreview: () => void;
 }) {
-  const config = useMemo(() => resolveAssetUrls(tpl, tpl.defaultConfig as Record<string, unknown>), [tpl]);
+  const { effectiveConfig } = useTemplateOverrides();
+  const config = useMemo(
+    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tpl, effectiveConfig],
+  );
 
   return (
     <div ref={reveal} style={{ transitionDelay: `${delayMs}ms` }}>
@@ -656,7 +679,12 @@ function FinalCta({ t, reveal, onCreate }: {
 function PreviewModal({ tpl, t, onClose, onCreate }: {
   tpl: TemplateDefinition; t: (k: ViKey) => string; onClose: () => void; onCreate: () => void;
 }) {
-  const config = useMemo(() => resolveAssetUrls(tpl, tpl.defaultConfig as Record<string, unknown>), [tpl]);
+  const { effectiveConfig } = useTemplateOverrides();
+  const config = useMemo(
+    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tpl, effectiveConfig],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };

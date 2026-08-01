@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { vinviteService } from './api';
 import { useViT, type ViKey } from './i18n';
@@ -8,23 +8,11 @@ import { useVInviteStore } from './store';
 import { RICH_TEMPLATES, TEMPLATE_CATEGORIES } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
+import { PromoShowcaseCard } from './PromoShowcaseCard';
+// Re-exported so existing importers of this module keep working.
+export { useTemplateOverrides } from './templateOverrides';
+import { useTemplateOverrides } from './templateOverrides';
 import { LOCALES, type TemplateDefinition } from './templates/types';
-
-// Admin-saved design override for a template, falling back to its shipped
-// default. All cards/previews/new invitations use the effective config.
-export function useTemplateOverrides() {
-  const query = useQuery({
-    queryKey: ['vi-tpl-overrides'],
-    queryFn: () => vinviteService.listTemplateOverrides(),
-    staleTime: 60_000,
-  });
-  const map = useMemo(() => {
-    const m = new Map<string, Record<string, unknown>>();
-    for (const o of query.data ?? []) m.set(o.templateId, o.config);
-    return m;
-  }, [query.data]);
-  return { effectiveConfig: (tpl: TemplateDefinition) => map.get(tpl.id) ?? tpl.defaultConfig };
-}
 
 // ── Templates: gallery of ready-made animated designs ────────────────────────
 // Users browse first-party templates (no custom-template building anymore),
@@ -77,6 +65,15 @@ export const ViTemplatesPage = () => {
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>{t('templates')}</h1>
         <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--vi-muted)' }}>{t('templates_subtitle')}</p>
       </div>
+
+      {/* Studio-wide control of the promotional site's template showcase. Lives
+          here rather than under Profile because choosing what to feature means
+          looking at the templates, which are on this page. */}
+      {isSystemAdmin && (
+        <div style={{ marginBottom: 22 }}>
+          <PromoShowcaseCard />
+        </div>
+      )}
 
       {/* Category filter */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 22 }}>

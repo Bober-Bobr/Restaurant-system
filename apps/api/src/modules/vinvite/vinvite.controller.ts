@@ -2,12 +2,13 @@ import type { Request, Response } from 'express';
 import {
   createProjectSchema, createTemplateSchema, googleAuthSchema, loginSchema,
   projectSlug, refreshSchema, registerSchema, rsvpSchema, templateOverrideSchema,
+  promoShowcaseSchema,
   updateProfileSchema, updateProjectSchema, updateTemplateSchema,
 } from './vinvite.schema.js';
 import createHttpError from 'http-errors';
 import {
   VInviteAuthService, VInviteProjectService, VInviteTemplateService,
-  VInviteTemplateOverrideService, type DeviceInfo,
+  VInviteTemplateOverrideService, VInvitePromoShowcaseService, type DeviceInfo,
 } from './vinvite.service.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
@@ -18,6 +19,7 @@ const authService = new VInviteAuthService();
 const projectService = new VInviteProjectService();
 const templateService = new VInviteTemplateService();
 const overrideService = new VInviteTemplateOverrideService();
+const promoShowcaseService = new VInvitePromoShowcaseService();
 const platformContactService = new PlatformContactService();
 const inviteRequestService = new InviteRequestService();
 
@@ -218,6 +220,19 @@ export class VInviteController {
       String(request.params.templateId),
       config,
     ));
+  }
+
+  // Promotional-site showcase. The read is public — the landing page is what a
+  // logged-out visitor sees — and the write is SYSTEM_ADMIN-only, enforced in
+  // the service rather than by the route, so it cannot be bypassed by reaching
+  // the method another way.
+  async getPromoShowcase(_request: Request, response: Response) {
+    response.json(await promoShowcaseService.get());
+  }
+
+  async savePromoShowcase(request: Request, response: Response) {
+    const data = promoShowcaseSchema.parse(request.body);
+    response.json(await promoShowcaseService.save(request.inviteUser!.id, data));
   }
 
   // The v-invite contact block shown under the "developed with love" credit on
