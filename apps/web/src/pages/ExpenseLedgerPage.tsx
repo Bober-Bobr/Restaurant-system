@@ -32,25 +32,29 @@ const saveBlob = (blob: Blob, filename: string) => {
   window.URL.revokeObjectURL(url);
 };
 
-const bookingTotal = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
-// Each event's budget is its booking (guests × price per guest). There is no
-// longer a separate day-level allocation — the day budget is the sum of these.
-export const eventBudget = (e: DayEvent) => bookingTotal(e);
-// Spent = the actual expenses (products, salaries, additionals, services).
-const computedSpent = (e: DayEvent) =>
+// ── Revenue ──
+// What a department takes in. Guest revenue is guests × price per guest unless
+// a figure was typed in by hand, which wins outright — the ledger can then
+// record what was actually charged when the multiplication does not describe it.
+const computedGuests = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
+const guestsRevenue = (e: DayEvent) =>
+  (e.manualGuestsSum != null ? e.manualGuestsSum : computedGuests(e));
+// Additional services are SOLD, so they are revenue too and add to the
+// department total. They sit outside the manual override on purpose: typing a
+// guest figure by hand must not silently drop the services sold alongside it.
+const servicesRevenue = (e: DayEvent) => e.services.reduce((s, p) => s + p.amountSum, 0);
+export const eventRevenue = (e: DayEvent) => guestsRevenue(e) + servicesRevenue(e);
+
+// ── Spending ──
+// Products, salaries and additional expenses. Services are revenue, not spend.
+const eventSpent = (e: DayEvent) =>
   e.products.reduce((s, p) => s + p.amountSum, 0) +
   e.salaries.reduce((s, p) => s + p.amountSum, 0) +
-  e.additionals.reduce((s, p) => s + p.amountSum, 0) +
-  e.services.reduce((s, p) => s + p.amountSum, 0);
-// A hand-entered total wins over the sum of the lines, so the ledger can record
-// what was actually spent when the lines do not (or cannot) add up to it. The
-// day and PDF totals read through here too, so everything stays consistent.
-const eventSpent = (e: DayEvent) => (e.manualSpentSum != null ? e.manualSpentSum : computedSpent(e));
+  e.additionals.reduce((s, p) => s + p.amountSum, 0);
 
-// Sum of every expense line across all of a day's events.
+// Day-wide roll-ups. The PDF service mirrors these exactly.
 export const daySpent = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventSpent(e), 0);
-// Day budget = sum of every event's budget.
-export const dayBudget = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventBudget(e), 0);
+export const dayRevenue = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventRevenue(e), 0);
 
 const sortedEvents = (day: ExpenseDay) =>
   [...day.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
@@ -212,16 +216,16 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
 
   // While a department is open its figures are shown on their own; the day-wide
   // totals are only shown on the department overview.
-  const budget = activeEvent ? eventBudget(activeEvent) : dayBudget(day);
+  const budget = activeEvent ? eventRevenue(activeEvent) : dayRevenue(day);
   const spent = activeEvent ? eventSpent(activeEvent) : daySpent(day);
   const remaining = budget - spent;
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-        {/* Budget of the open department (guests × price per guest). */}
-        {activeEvent && bookingTotal(activeEvent) > 0
-          ? <Total label={t('guests_total')} value={formatWholeSum(bookingTotal(activeEvent))} color="#fbbf24" />
+        {/* Guest revenue of the open department, hand-entered or computed. */}
+        {activeEvent && guestsRevenue(activeEvent) > 0
+          ? <Total label={t('guests_total')} value={formatWholeSum(guestsRevenue(activeEvent))} color="#fbbf24" />
           : <span />}
         {/* The day-delete button is only available on the department overview. */}
         {!activeEvent
@@ -255,7 +259,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
               {events.map((ev) => {
                 const evSpent = eventSpent(ev);
-                const evBudget = eventBudget(ev);
+                const evBudget = eventRevenue(ev);
                 const checked = selectedEvents.has(ev.id);
                 return (
                   <div key={ev.id} className="tablet-fade-up"
@@ -302,7 +306,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
-          {!activeEvent && <Total label={t('budget')} value={formatWholeSum(budget)} color="#e2e8f0" />}
+          {/* Shown in the department view too, not just the day overview: the
+              header above carries the guest figure alone, so without this the
+              remaining balance would quietly include the services sold and not
+              reconcile with anything on screen. */}
+          <Total label={t('total_revenue')} value={formatWholeSum(budget)} color="#e2e8f0" />
           <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
           <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
         </div>
@@ -351,7 +359,7 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
   const servicesTotal = event.services.reduce((s, p) => s + p.amountSum, 0);
 
   const updateEvent = useMutation({
-    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualSpentSum: number | null }>) =>
+    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualGuestsSum: number | null }>) =>
       expenseService.updateEvent(event.id, patch),
     onSuccess: onChanged,
   });
@@ -367,9 +375,10 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
 
   return (
     <>
-      {/* Booking: guests × price per guest is added to this department's spent.
-          The total itself is shown at the top, above the allocated funds field. */}
-      <Block title={t('booking')} total="">
+      {/* Booking: guests × price per guest is this department's guest revenue,
+          shown at the top of the card. The manual override sits directly beneath
+          the figures it replaces. */}
+      <Block title={t('booking')} total={formatWholeSum(guestsRevenue(event))}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input className="adm-input" value={bookingName} onChange={(e) => setBookingName(e.target.value)}
             onBlur={() => { const v = bookingName.trim(); if (v !== (event.bookingName ?? '')) updateEvent.mutate({ bookingName: v || null }); }}
@@ -382,6 +391,7 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
             onBlur={() => { const c = parseWholeSum(price); if (c !== null && clampSum(c) !== event.pricePerGuestSum) updateEvent.mutate({ pricePerGuestSum: clampSum(c) }); }}
             placeholder={t('price_per_guest')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
         </div>
+        <ManualGuestsField event={event} t={t} onSave={(v) => updateEvent.mutate({ manualGuestsSum: v })} />
       </Block>
 
       <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
@@ -415,10 +425,11 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
         </div>
       </Block>
 
-      {/* Expenses for the "Additional Services" product (performers,
-          invitations…) — deliberately its own section, not folded into the
-          additional expenses above. */}
-      <Block title={t('extra_services')} total={formatWholeSum(servicesTotal)}>
+      {/* The "Additional Services" product (performers, hosts, invitations…).
+          These are SOLD, so they are revenue: the total below is added to the
+          department's revenue, never counted against it. Its own section, not
+          folded into the additional expenses above. */}
+      <Block title={t('services_revenue')} total={formatWholeSum(servicesTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {event.services.map((s) => (
             <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t}
@@ -429,8 +440,6 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
             onAdd={(payload) => expenseService.addService(event.id, payload)} onAdded={onChanged} />
         </div>
       </Block>
-
-      <ManualSpentField event={event} t={t} onSave={(v) => updateEvent.mutate({ manualSpentSum: v })} />
 
       {/* Per-event notes (separate from the day report). */}
       <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
@@ -443,25 +452,27 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
   );
 };
 
-// Manual override of the department's spent total, mirroring the manual total on
-// the tablet Summary page: a checkbox that reveals an amount field.
-const ManualSpentField = ({ event, t, onSave }: {
+// Manual override of the department's revenue for all guests, mirroring the
+// manual total on the tablet Summary page: a checkbox that reveals an amount
+// field. It replaces guests × price per guest only — additional services are
+// added on top either way, so ticking this never hides them.
+const ManualGuestsField = ({ event, t, onSave }: {
   event: DayEvent; t: TFn; onSave: (value: number | null) => void;
 }) => {
-  const computed = computedSpent(event);
-  const enabled = event.manualSpentSum != null;
-  const [text, setText] = useState(enabled ? groupDigits(String(event.manualSpentSum)) : '');
+  const computed = computedGuests(event);
+  const enabled = event.manualGuestsSum != null;
+  const [text, setText] = useState(enabled ? groupDigits(String(event.manualGuestsSum)) : '');
   useEffect(() => {
-    setText(event.manualSpentSum != null ? groupDigits(String(event.manualSpentSum)) : '');
-  }, [event.manualSpentSum]);
+    setText(event.manualGuestsSum != null ? groupDigits(String(event.manualGuestsSum)) : '');
+  }, [event.manualGuestsSum]);
 
-  // Ticking the box seeds the override with the current computed total, so the
+  // Ticking the box seeds the override with the current computed figure, so the
   // field opens on the number being replaced rather than on a blank the ledger
   // would read as zero.
   const toggle = (checked: boolean) => onSave(checked ? computed : null);
 
   return (
-    <div style={{ display: 'grid', gap: 8, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{ display: 'grid', gap: 8, paddingTop: 12, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
         <input type="checkbox" checked={enabled} onChange={(e) => toggle(e.target.checked)}
           style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
@@ -473,13 +484,13 @@ const ManualSpentField = ({ event, t, onSave }: {
             onChange={(e) => setText(groupDigits(e.target.value))}
             onBlur={() => {
               const c = parseWholeSum(text);
-              if (c === null) { setText(groupDigits(String(event.manualSpentSum ?? 0))); return; }
-              if (clampSum(c) !== event.manualSpentSum) onSave(clampSum(c));
+              if (c === null) { setText(groupDigits(String(event.manualGuestsSum ?? 0))); return; }
+              if (clampSum(c) !== event.manualGuestsSum) onSave(clampSum(c));
             }}
             placeholder={t('amount')} style={{ ...rowInput, width: 180, textAlign: 'right' }} />
-          {/* The summed lines stay visible so it is obvious what was replaced. */}
+          {/* The multiplication stays visible so it is obvious what was replaced. */}
           <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.45)' }}>
-            {t('amount_spent')}: {formatWholeSum(computed)}
+            {t('guests_computed')}: {formatWholeSum(computed)}
           </span>
         </div>
       )}

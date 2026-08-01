@@ -8,8 +8,8 @@ type PdfEvent = {
   guestCount: number;
   pricePerGuestSum: number;
   report?: string | null;
-  // When set, this replaces the summed line total everywhere it is reported.
-  manualSpentSum?: number | null;
+  // When set, this replaces guests x price per guest as the guest revenue.
+  manualGuestsSum?: number | null;
   products: Line[];
   salaries: { name: string; amountSum: number }[];
   additionals: { name: string; amountSum: number }[];
@@ -27,34 +27,37 @@ const EVENT_ORDER = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'];
 
 const LABELS: Record<Locale, Record<string, string>> = {
   en: {
-    title: 'Expense Ledger', summaryTitle: 'Expenses summary', allocated: 'Allocated funds', budget: 'Budget', products: 'Product expenses',
+    title: 'Expense Ledger', summaryTitle: 'Expenses summary', allocated: 'Allocated funds', revenue: 'Revenue', products: 'Product expenses',
     salaries: 'Employee salaries', additional: 'Additional expenses', services: 'Additional services', spent: 'Spent',
-    balance: 'Balance', totalAllocated: 'Total Budget', totalExpenses: 'Total Expenses',
+    balance: 'Balance', totalAllocated: 'Total revenue', totalExpenses: 'Total Expenses',
     totalBalance: 'Total Balance', period: 'Period', noData: 'No data for this period.', report: 'Report',
-    dayTotals: 'Day totals', eventTotals: 'Department totals', grandTotals: 'Overall totals', manualNote: 'Total entered manually', computedNote: 'Sum of the lines above',
-    booking: 'Booking', guests: 'Guests', pricePerGuest: 'Price per guest', bookingTotal: 'Booking total',
+    dayTotals: 'Day totals', eventTotals: 'Department totals', grandTotals: 'Overall totals', manualNote: 'Entered manually', computedNote: 'Guests x price per guest',
+    booking: 'Booking', guests: 'Guests', pricePerGuest: 'Price per guest', guestsRevenue: 'Revenue for all guests',
+    servicesRevenue: 'Additional services (revenue)', totalRevenue: 'Total revenue',
     name: 'Name', amount: 'Amount', date: 'Date', department: 'Department',
     extrasTitle: 'Additional expenses', total: 'Total', sectionTotal: 'Section total', noExtras: 'No additional expenses.',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Wedding', OTHERS: 'Others'
   },
   ru: {
-    title: 'Книга расходов', summaryTitle: 'Сводка расходов', allocated: 'Выделено средств', budget: 'Бюджет', products: 'Расходы на продукты',
+    title: 'Книга расходов', summaryTitle: 'Сводка расходов', allocated: 'Выделено средств', revenue: 'Доход', products: 'Расходы на продукты',
     salaries: 'Зарплаты сотрудников', additional: 'Дополнительные расходы', services: 'Дополнительные услуги', spent: 'Потрачено',
-    balance: 'Остаток', totalAllocated: 'Итого бюджет', totalExpenses: 'Итого расходы',
+    balance: 'Остаток', totalAllocated: 'Итого доход', totalExpenses: 'Итого расходы',
     totalBalance: 'Итоговый баланс', period: 'Период', noData: 'Нет данных за этот период.', report: 'Отчёт',
-    dayTotals: 'Итоги дня', eventTotals: 'Итоги отдела', grandTotals: 'Общие итоги', manualNote: 'Сумма введена вручную', computedNote: 'Сумма строк выше',
-    booking: 'Бронь', guests: 'Гостей', pricePerGuest: 'Цена за гостя', bookingTotal: 'Итого по брони',
+    dayTotals: 'Итоги дня', eventTotals: 'Итоги отдела', grandTotals: 'Общие итоги', manualNote: 'Введено вручную', computedNote: 'Гости x цена за гостя',
+    booking: 'Бронь', guests: 'Гостей', pricePerGuest: 'Цена за гостя', guestsRevenue: 'Доход со всех гостей',
+    servicesRevenue: 'Дополнительные услуги (доход)', totalRevenue: 'Итого доход',
     name: 'Наименование', amount: 'Сумма', date: 'Дата', department: 'Отдел',
     extrasTitle: 'Дополнительные расходы', total: 'Итого', sectionTotal: 'Итого по разделу', noExtras: 'Нет дополнительных расходов.',
     NAHOR: 'Нахор', FOTIHA: 'Фотиха', TUI: 'Свадьба', OTHERS: 'Прочее'
   },
   uz: {
-    title: 'Xarajatlar daftari', summaryTitle: 'Xarajatlar hisoboti', allocated: 'Ajratilgan mablag', budget: 'Byudjet', products: 'Mahsulot xarajatlari',
+    title: 'Xarajatlar daftari', summaryTitle: 'Xarajatlar hisoboti', allocated: 'Ajratilgan mablag', revenue: 'Daromad', products: 'Mahsulot xarajatlari',
     salaries: 'Xodimlar ish haqi', additional: 'Qoshimcha xarajatlar', services: 'Qoshimcha xizmatlar', spent: 'Sarflangan',
-    balance: 'Qoldiq', totalAllocated: 'Jami byudjet', totalExpenses: 'Jami xarajatlar',
+    balance: 'Qoldiq', totalAllocated: 'Jami daromad', totalExpenses: 'Jami xarajatlar',
     totalBalance: 'Yakuniy balans', period: 'Davr', noData: 'Bu davr uchun malumot yoq.', report: 'Hisobot',
-    dayTotals: 'Kun yakuni', eventTotals: 'Bolim yakuni', grandTotals: 'Umumiy yakun', manualNote: 'Summa qolda kiritilgan', computedNote: 'Yuqoridagi qatorlar yigindisi',
-    booking: 'Bron', guests: 'Mehmonlar', pricePerGuest: 'Mehmon narxi', bookingTotal: 'Bron jami',
+    dayTotals: 'Kun yakuni', eventTotals: 'Bolim yakuni', grandTotals: 'Umumiy yakun', manualNote: 'Qolda kiritilgan', computedNote: 'Mehmonlar x mehmon narxi',
+    booking: 'Bron', guests: 'Mehmonlar', pricePerGuest: 'Mehmon narxi', guestsRevenue: 'Barcha mehmonlardan daromad',
+    servicesRevenue: 'Qoshimcha xizmatlar (daromad)', totalRevenue: 'Jami daromad',
     name: 'Nomi', amount: 'Summa', date: 'Sana', department: 'Bolim',
     extrasTitle: 'Qoshimcha xarajatlar', total: 'Jami', sectionTotal: 'Bolim jami', noExtras: 'Qoshimcha xarajatlar yoq.',
     NAHOR: 'Nahor', FOTIHA: 'Fotiha', TUI: 'Toy', OTHERS: 'Boshqalar'
@@ -62,21 +65,30 @@ const LABELS: Record<Locale, Record<string, string>> = {
 };
 
 const fmt = (sum: number) => sum.toLocaleString('ru-RU') + " so'm";
-// Each event's budget is its booking (guests × price per guest). There is no
-// separate day-level allocation.
-const bookingTotal = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
-const eventBudget = (e: PdfEvent) => bookingTotal(e);
 const sumLines = (lines: { amountSum: number }[]) => lines.reduce((s, l) => s + l.amountSum, 0);
-const computedSpent = (e: PdfEvent) =>
-  sumLines(e.products) + sumLines(e.salaries) + sumLines(e.additionals) + sumLines(e.services);
-// A manual override replaces the summed total wherever spending is reported, so
-// the day and grand totals agree with the per-event pages.
-const eventSpent = (e: PdfEvent) => (e.manualSpentSum != null ? e.manualSpentSum : computedSpent(e));
+
+// ── Revenue ──
+// Guest revenue is guests × price per guest, unless a manual figure was entered
+// for the department, which wins outright.
+const computedGuests = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
+const guestsRevenue = (e: PdfEvent) =>
+  (e.manualGuestsSum != null ? e.manualGuestsSum : computedGuests(e));
+// Additional services are SOLD, so they are revenue too and add to the
+// department total. They are deliberately not part of the manual override —
+// overriding the guest figure must not silently drop them.
+const servicesRevenue = (e: PdfEvent) => sumLines(e.services);
+const eventRevenue = (e: PdfEvent) => guestsRevenue(e) + servicesRevenue(e);
+
+// ── Spending ──
+// Products, salaries and additional expenses only. Services are revenue.
+const eventSpent = (e: PdfEvent) =>
+  sumLines(e.products) + sumLines(e.salaries) + sumLines(e.additionals);
+
 const eventHasData = (e: PdfEvent) =>
   e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0 || e.services.length > 0 ||
-  bookingTotal(e) > 0 || e.manualSpentSum != null || !!e.bookingName?.trim() || !!e.report?.trim();
+  computedGuests(e) > 0 || e.manualGuestsSum != null || !!e.bookingName?.trim() || !!e.report?.trim();
 const daySpent = (d: PdfDay) => d.events.reduce((s, e) => s + eventSpent(e), 0);
-const dayBudget = (d: PdfDay) => d.events.reduce((s, e) => s + eventBudget(e), 0);
+const dayRevenue = (d: PdfDay) => d.events.reduce((s, e) => s + eventRevenue(e), 0);
 const dayExtrasTotal = (d: PdfDay) => d.extras.reduce((s, e) => s + e.amountSum, 0);
 const sortedEvents = (d: PdfDay) => [...d.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
 
@@ -251,10 +263,14 @@ function renderEventDetail(ctx: Ctx, day: PdfDay, ev: PdfEvent, locale: Locale) 
   infoRows([
     [`${L.department}:`, eventLabel(ev.type), `${L.date}:`, day.date],
     [`${L.booking}:`, ev.bookingName?.trim() || '—', `${L.guests}:`, String(ev.guestCount)],
-    [`${L.pricePerGuest}:`, fmt(ev.pricePerGuestSum), `${L.bookingTotal}:`, fmt(bookingTotal(ev))],
+    [`${L.pricePerGuest}:`, fmt(ev.pricePerGuestSum), `${L.guestsRevenue}:`, fmt(guestsRevenue(ev))],
   ]);
 
   tableHeader(L.name, L.amount);
+
+  // Revenue side first: additional services are sold, so they belong here and
+  // not among the expense sections below.
+  section(L.services, ev.services.map((s) => ({ label: s.name, value: s.amountSum })), L.sectionTotal);
 
   section(
     L.products,
@@ -266,23 +282,28 @@ function renderEventDetail(ctx: Ctx, day: PdfDay, ev: PdfEvent, locale: Locale) 
   );
   section(L.salaries, ev.salaries.map((s) => ({ label: s.name, value: s.amountSum })), L.sectionTotal);
   section(L.additional, ev.additionals.map((a) => ({ label: a.name, value: a.amountSum })), L.sectionTotal);
-  section(L.services, ev.services.map((s) => ({ label: s.name, value: s.amountSum })), L.sectionTotal);
 
-  // Closing totals for the department.
-  const budget = eventBudget(ev);
+  // Closing totals for the department: the revenue is built up line by line so
+  // the reader can see where the department total came from, then spending and
+  // the balance.
+  const revenue = eventRevenue(ev);
   const spent = eventSpent(ev);
-  const balance = budget - spent;
+  const balance = revenue - spent;
   ctx.sectionRow(L.eventTotals.toUpperCase());
-  dataRow(L.budget, fmt(budget), false);
-  // When the total was typed in by hand the computed sum is still shown, so the
-  // reader can see what was overridden rather than just a number that disagrees
-  // with the lines above it.
-  if (ev.manualSpentSum != null) {
-    dataRow(`${L.spent} (${L.computedNote.toLowerCase()})`, fmt(computedSpent(ev)), true);
-    totalRow(`${L.spent} — ${L.manualNote}`, fmt(spent), RED);
+
+  // When the guest figure was typed in by hand, guests × price is still shown,
+  // so the reader can see what was overridden rather than just a number that
+  // disagrees with the guest count and price above it.
+  if (ev.manualGuestsSum != null) {
+    dataRow(`${L.guestsRevenue} (${L.computedNote.toLowerCase()})`, fmt(computedGuests(ev)), false);
+    dataRow(`${L.guestsRevenue} — ${L.manualNote}`, fmt(guestsRevenue(ev)), true);
   } else {
-    totalRow(L.spent, fmt(spent), RED);
+    dataRow(L.guestsRevenue, fmt(guestsRevenue(ev)), false);
   }
+  // Only worth a line when there is something to add.
+  if (servicesRevenue(ev) > 0) dataRow(L.servicesRevenue, fmt(servicesRevenue(ev)), true);
+  totalRow(L.totalRevenue, fmt(revenue), GREEN);
+  totalRow(L.spent, fmt(spent), RED);
   totalRow(L.balance, fmt(balance), balance < 0 ? RED : GREEN);
 
   if (ev.report?.trim()) note(L.report, ev.report.trim());
@@ -295,10 +316,10 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
   heading(L.summaryTitle, `${L.period}: ${range.from} — ${range.to}`);
   tableHeader(L.name, L.amount);
 
-  let grandBudget = 0;
+  let grandRevenue = 0;
   let grandSpent = 0;
   for (const day of days) {
-    grandBudget += dayBudget(day);
+    grandRevenue += dayRevenue(day);
     grandSpent += daySpent(day);
 
     const rows = sortedEvents(day)
@@ -313,15 +334,15 @@ function renderSummaryPage(ctx: Ctx, days: PdfDay[], range: { from: string; to: 
     } else {
       section(formatDate(day.date, locale), rows, L.spent);
     }
-    dataRow(L.budget, fmt(dayBudget(day)), true);
-    const balance = dayBudget(day) - daySpent(day);
+    dataRow(L.totalRevenue, fmt(dayRevenue(day)), true);
+    const balance = dayRevenue(day) - daySpent(day);
     dataRow(L.balance, fmt(balance), false);
   }
 
   ctx.sectionRow(L.grandTotals.toUpperCase());
-  totalRow(L.totalAllocated, fmt(grandBudget));
+  totalRow(L.totalAllocated, fmt(grandRevenue), GREEN);
   totalRow(L.totalExpenses, fmt(grandSpent), RED);
-  const grandBalance = grandBudget - grandSpent;
+  const grandBalance = grandRevenue - grandSpent;
   totalRow(L.totalBalance, fmt(grandBalance), grandBalance < 0 ? RED : GREEN);
 }
 

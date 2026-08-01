@@ -231,16 +231,18 @@ model DayEvent {
   type        String // NAHOR | FOTIHA | TUI | OTHERS
   dayId       String
   day         ExpenseDay          @relation(fields: [dayId], references: [id], onDelete: Cascade)
-  // Booking: guestCount * pricePerGuestSum is added to this event's spent total.
+  // Booking: guestCount * pricePerGuestSum is this event's guest revenue.
   bookingName      String?
   guestCount       Int            @default(0)
   pricePerGuestSum Int            @default(0) // whole so'm (not tiyin)
   report           String? // free-text notes for this event/department
-  // Manual override of the spent total. Null means "add the lines up", which is
-  // the normal case; a number wins over the computed sum. Nullable rather than
-  // a 0 default so that "overridden to zero" stays distinguishable from "not
-  // overridden" — mirrors the manual total on the tablet Summary page.
-  manualSpentSum   Int?
+  // Manual override of the guest revenue (the "revenue for all guests" figure).
+  // Null means "guests x price per guest", which is the normal case; a number
+  // wins over that product. Nullable rather than a 0 default so that
+  // "overridden to zero" stays distinguishable from "not overridden" — mirrors
+  // the manual total on the tablet Summary page. Additional services are added
+  // on top of this either way, so overriding does not hide them.
+  manualGuestsSum  Int?
   products    ProductExpense[]
   salaries    SalaryExpense[]
   additionals AdditionalExpense[]
@@ -293,6 +295,10 @@ model AdditionalExpense {
 // invitations…). Same shape as AdditionalExpense but a SEPARATE section: an
 // "additional expense" is any unplanned cost, whereas these track one specific
 // paid product, and the two are reported and totalled apart.
+// Additional Services sold for an event (performers, hosts, invitations…).
+// Despite the name — kept so the table does not have to be renamed — these are
+// REVENUE, not spending: the amount is added to the event's total alongside the
+// guest revenue and never counted against it.
 model ServiceExpense {
   id          String   @id @default(cuid())
   name        String

@@ -30,9 +30,9 @@ export const expenseService = {
 
   async updateEvent(
     id: string,
-    // manualSpentSum: a number overrides the computed spent total, null clears
+    // manualGuestsSum: a number overrides guests x price per guest, null clears
     // the override. Omit the key to leave it untouched.
-    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualSpentSum: number | null }>
+    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualGuestsSum: number | null }>
   ) {
     const { data } = await httpClient.patch<DayEvent>(`/expenses/events/${id}`, payload);
     return data;

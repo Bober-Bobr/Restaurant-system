@@ -25,8 +25,8 @@ export type UpdateEventData = {
   guestCount?: number;
   pricePerGuestSum?: number;
   report?: string | null;
-  // null clears the override and returns to the computed sum.
-  manualSpentSum?: number | null;
+  // null clears the override and returns to guests x price per guest.
+  manualGuestsSum?: number | null;
 };
 
 export type ProductData = {

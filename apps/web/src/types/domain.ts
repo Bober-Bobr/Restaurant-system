@@ -207,8 +207,8 @@ export type DayEvent = {
   guestCount: number;
   pricePerGuestSum: number; // whole so'm
   report: string | null;
-  // null = spent is the sum of the lines; a number overrides it.
-  manualSpentSum: number | null;
+  // null = guest revenue is guests x price per guest; a number overrides it.
+  manualGuestsSum: number | null;
   products: ProductExpense[];
   salaries: SalaryExpense[];
   additionals: AdditionalExpense[];

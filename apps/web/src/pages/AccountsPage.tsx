@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { expenseService } from '../services/expense.service';
-import { QUERY_KEY, daySpent, dayBudget } from './ExpenseLedgerPage';
+import { QUERY_KEY, daySpent, dayRevenue } from './ExpenseLedgerPage';
 import type { ExpenseDay } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
@@ -130,7 +130,7 @@ export const AccountsPage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {days.map((day) => {
             const spent = daySpent(day);
-            const budget = dayBudget(day);
+            const budget = dayRevenue(day);
             const balance = budget - spent;
             const isSelected = selected.has(day.id);
             return (
