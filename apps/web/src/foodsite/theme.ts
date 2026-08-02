@@ -2,16 +2,21 @@
 // The food-service site is themed by the restaurant's own colour, reusing the
 // `tabletAccentColor` it already sets for the kiosk rather than adding a column.
 //
-// The luminance floor is the point of this file. The page is near-black, and a
+// The readability guard is the point of this file. The site is near-black, and a
 // restaurant is free to save a near-black brand colour — without a guard that
-// produces an unreadable site that looks like our bug, not their setting. Any
-// accent too dark to read falls back to the platform default.
+// produces an unreadable site that looks like our bug, not their setting.
 
 /** Platform default: electric lime, used when a restaurant has set no colour. */
 export const DEFAULT_ACCENT = '#c6f24e';
 
-/** The page background the accent has to survive against — `--fs-bg`. */
-const PAGE_BG: [number, number, number] = [0x07, 0x09, 0x0a];
+// The surface the accent actually has to survive against. NOT --fs-bg: prices,
+// links and section bars sit on CARDS, and a card is --fs-surface-2 composited
+// over whatever shows through, which is lighter than the page. This is the
+// lightest such surface, so clearing the bar here clears it everywhere.
+const SURFACE_BG: [number, number, number] = [0x22, 0x26, 0x2a];
+
+/** Text placed ON the accent, when the accent is light enough to take it. */
+const INK_DARK = '#040506';
 
 // The WCAG AA bar for normal-size text. Judging the accent by contrast against
 // the actual page background, rather than by a raw luminance threshold, is what
@@ -99,12 +104,14 @@ function toRgb([h, s, l]: [number, number, number]): [number, number, number] {
 }
 
 function makeReadable(rgb: [number, number, number]): [number, number, number] | null {
-  if (contrast(rgb, PAGE_BG) >= MIN_CONTRAST) return rgb;
+  if (contrast(rgb, SURFACE_BG) >= MIN_CONTRAST) return rgb;
   const [h, s, l] = toHsl(rgb);
   if (s < MIN_SATURATION) return null; // no hue worth preserving
-  for (let next = l + 0.04; next <= 0.96; next += 0.04) {
+  // Finer step than the eye can see, so a colour is never lifted further than
+  // it has to be — the point is to keep the restaurant's hue recognisable.
+  for (let next = l + 0.01; next <= 0.97; next += 0.01) {
     const lifted = toRgb([h, s, next]);
-    if (contrast(lifted, PAGE_BG) >= MIN_CONTRAST) return lifted;
+    if (contrast(lifted, SURFACE_BG) >= MIN_CONTRAST) return lifted;
   }
   return null;
 }
@@ -118,7 +125,7 @@ export function resolveAccent(value: string | null | undefined): ResolvedAccent 
   // means an unusual brand colour cannot end up with unreadable text on its
   // buttons and pills.
   const white: [number, number, number] = [255, 255, 255];
-  const accentInk = contrast(rgb, PAGE_BG) >= contrast(rgb, white) ? '#07090a' : '#ffffff';
+  const accentInk = contrast(rgb, SURFACE_BG) >= contrast(rgb, white) ? INK_DARK : '#ffffff';
 
   return {
     accent: `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`,

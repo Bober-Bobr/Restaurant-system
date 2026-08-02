@@ -13,20 +13,28 @@
    work anywhere, but the token values only resolve inside a .fs-root subtree. */
 
 .fs-root {
-  --fs-bg:         #07090a;
-  --fs-bg-2:       #0c1011;
-  --fs-surface:    rgba(255, 255, 255, 0.045);
-  --fs-surface-2:  rgba(255, 255, 255, 0.08);
-  --fs-line:       rgba(255, 255, 255, 0.10);
-  --fs-line-soft:  rgba(255, 255, 255, 0.05);
-  --fs-text:       #f2f5f3;
-  --fs-dim:        rgba(242, 245, 243, 0.60);
-  --fs-faint:      rgba(242, 245, 243, 0.36);
+  --fs-bg:         #040506;
+  --fs-bg-2:       #0a0d0e;
+  /* Card surfaces are a DARK tint, not white-alpha. Over a background photo,
+     white-alpha washes out wherever the photo is bright and the card stops
+     reading as a separate object; a dark, mostly-opaque tint sits in front of
+     anything. */
+  --fs-surface:    rgba(16, 20, 22, 0.82);
+  --fs-surface-2:  rgba(26, 31, 34, 0.92);
+  --fs-line:       rgba(255, 255, 255, 0.14);
+  --fs-line-soft:  rgba(255, 255, 255, 0.07);
+  --fs-text:       #f4f7f5;
+  --fs-dim:        rgba(244, 247, 245, 0.66);
+  --fs-faint:      rgba(244, 247, 245, 0.42);
+  /* Lift. Foreground objects cast onto the darkened backdrop rather than
+     floating flat on it. */
+  --fs-shadow:     0 16px 40px rgba(0, 0, 0, 0.55);
+  --fs-shadow-lg:  0 26px 70px rgba(0, 0, 0, 0.7);
 
   /* Overridden inline per restaurant. */
   --fs-accent:     #c6f24e;
   --fs-accent-rgb: 198, 242, 78;
-  --fs-accent-ink: #07090a;
+  --fs-accent-ink: #040506;
 
   --fs-danger:     #ff6b5a;
   --fs-radius:     16px;
@@ -58,23 +66,39 @@
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────── */
 .fs-card {
+  position: relative;
   background: var(--fs-surface);
   border: 1px solid var(--fs-line);
   border-radius: var(--fs-radius);
-  transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.22, 1, .36, 1);
+  box-shadow: var(--fs-shadow);
+  transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .22s ease;
+}
+
+/* Hairline along the top edge — catches the eye the way a lit edge does and
+   separates the card from the backdrop without another border. */
+.fs-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: var(--fs-radius) var(--fs-radius) 0 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .fs-card-lift:hover {
-  border-color: rgb(var(--fs-accent-rgb) / 0.42);
+  border-color: rgb(var(--fs-accent-rgb) / 0.5);
   background: var(--fs-surface-2);
-  transform: translateY(-3px);
+  transform: translateY(-4px);
+  box-shadow: var(--fs-shadow-lg);
 }
 
 /* Frosted bar — header, sticky rail, floating cart bar. */
 .fs-glass {
-  background: rgba(7, 9, 10, 0.72);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  background: rgba(4, 5, 6, 0.88);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
   border-color: var(--fs-line);
 }
 
@@ -166,7 +190,7 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 11px;
-  background: rgba(0, 0, 0, 0.34);
+  background: rgba(0, 0, 0, 0.46);
   border: 1px solid var(--fs-line);
   color: var(--fs-text);
   font-size: 14.5px;
@@ -259,6 +283,7 @@
   color: var(--fs-dim);
   background: var(--fs-surface);
   border: 1px solid var(--fs-line);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   transition: color .18s ease, background .18s ease, border-color .18s ease;
 }
 .fs-chip:hover { color: var(--fs-text); border-color: rgb(var(--fs-accent-rgb) / 0.4); }
@@ -373,9 +398,9 @@
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(0, 0, 0, 0.66);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   animation: fsFadeIn .22s ease both;
 }
 
@@ -391,6 +416,7 @@
   flex-direction: column;
   background: var(--fs-bg-2);
   border-left: 1px solid var(--fs-line);
+  box-shadow: var(--fs-shadow-lg);
   animation: fsSlideIn .3s cubic-bezier(.22, 1, .36, 1) both;
 }
 
@@ -407,6 +433,7 @@
   background: var(--fs-bg-2);
   border: 1px solid var(--fs-line);
   border-radius: 20px;
+  box-shadow: var(--fs-shadow-lg);
   animation: fsFadeUp .3s cubic-bezier(.22, 1, .36, 1) both;
 }
 
@@ -417,8 +444,9 @@
   right: 12px;
   bottom: 12px;
   z-index: 40;
-  border: 1px solid rgb(var(--fs-accent-rgb) / 0.45);
+  border: 1px solid rgb(var(--fs-accent-rgb) / 0.5);
   border-radius: 14px;
+  box-shadow: var(--fs-shadow-lg), 0 0 26px rgb(var(--fs-accent-rgb) / 0.14);
   animation: fsRiseIn .32s cubic-bezier(.22, 1, .36, 1) both;
 }
 

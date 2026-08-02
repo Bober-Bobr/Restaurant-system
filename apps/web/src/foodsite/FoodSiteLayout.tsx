@@ -42,18 +42,32 @@ export function FoodSiteLayout({
       <FingerTrail accent={accent} />
       <MusicPlayer src="/catering-music.mp3" accent={accent} />
 
+      {/* Base wash, with or without a photo, so the page is never dead flat and
+          foreground cards always have something to sit on. */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        background: 'radial-gradient(130% 85% at 50% -10%, rgb(var(--fs-accent-rgb) / 0.07), transparent 60%)',
+      }} />
+
       {/* The restaurant's own photo, kept in colour — the live site forces it to
-          greyscale — behind a scrim and a soft accent vignette, so it reads as
-          depth rather than a washed-out backdrop. */}
+          greyscale — but pushed well back: darkened, desaturated and slightly
+          defocused, then covered by a scrim and a vignette. It should read as
+          depth behind the menu, never as something competing with it. The 1.08
+          scale hides the soft edges blur leaves on a cover-sized layer. */}
       {bg && (
         <>
           <div style={{
             position: 'fixed', inset: 0, zIndex: 0,
             backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
+            filter: 'brightness(0.38) saturate(0.72) blur(2px)',
+            transform: 'scale(1.08)',
           }} />
           <div style={{
             position: 'fixed', inset: 0, zIndex: 0,
-            background: 'radial-gradient(120% 80% at 50% 0%, rgb(var(--fs-accent-rgb) / 0.10), transparent 62%), rgba(7,9,10,0.86)',
+            background:
+              'radial-gradient(120% 80% at 50% 0%, rgb(var(--fs-accent-rgb) / 0.09), transparent 62%),'
+              + 'radial-gradient(100% 100% at 50% 50%, transparent 30%, rgba(0,0,0,0.55) 100%),'
+              + 'rgba(4,5,6,0.82)',
           }} />
         </>
       )}
