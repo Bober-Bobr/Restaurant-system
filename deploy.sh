@@ -50,6 +50,19 @@ npm run build -w @banquet/api
 echo "==> Clearing Vite build cache..."
 rm -rf apps/web/node_modules/.vite apps/web/dist
 
+# Purge compiled .js shadows left beside the .tsx sources by older builds.
+# Vite resolves .js BEFORE .tsx, so a stale sibling silently shadows real source
+# and the build quietly produces the previous release. tsconfig.json now sets
+# "noEmit": true so nothing new is emitted, but these files are gitignored —
+# a checkout can never remove the ones an earlier build already wrote.
+# Guarded: only delete a .js that still has a .ts/.tsx sibling, so a
+# hand-written .js under src/ would be left alone.
+echo "==> Purging stale compiled .js shadows in apps/web/src..."
+find apps/web/src -name '*.js' -print0 | while IFS= read -r -d '' f; do
+  base="${f%.js}"
+  if [ -f "$base.ts" ] || [ -f "$base.tsx" ]; then rm -f "$f"; fi
+done
+
 echo "==> Building frontend..."
 npm run build -w @banquet/web
 
