@@ -103,19 +103,46 @@ export function SectionHeading({ title, meta }: { title: string; meta?: string }
   );
 }
 
-/** Escape-to-close plus a body scroll lock, for the drawer and the dish sheet. */
-export function useDismissible(open: boolean, onClose: () => void) {
+// Overlays nest — a photo viewer opens on top of the dish sheet, which is on top
+// of the page. A naive per-overlay `body.style.overflow` save/restore breaks
+// there: the inner one restores the value it captured and the page starts
+// scrolling behind the outer one that is still open. So the lock is refcounted
+// and only the outermost overlay actually restores it.
+let scrollLockCount = 0;
+let scrollLockPrevious = '';
+
+function lockBodyScroll() {
+  if (scrollLockCount++ === 0) {
+    scrollLockPrevious = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function unlockBodyScroll() {
+  if (--scrollLockCount <= 0) {
+    scrollLockCount = 0;
+    document.body.style.overflow = scrollLockPrevious;
+  }
+}
+
+/**
+ * Escape-to-close plus a body scroll lock, for drawers and sheets.
+ * `escape` lets an overlay stand down while something is stacked on top of it,
+ * so one Escape closes only the topmost layer rather than the whole stack.
+ */
+export function useDismissible(open: boolean, onClose: () => void, escape = true) {
   useEffect(() => {
     if (!open) return;
+    lockBodyScroll();
+    return unlockBodyScroll;
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !escape) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open, onClose]);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, escape, onClose]);
 }
 
 /** Full-page state used for loading / not-found, inside the themed shell. */

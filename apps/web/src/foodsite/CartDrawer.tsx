@@ -5,6 +5,7 @@ import type { MenuItem } from '../types/domain';
 import { useCartStore } from './cart.store';
 import { useCartLines } from './useCartLines';
 import { CheckoutSheet } from './CheckoutSheet';
+import { Lightbox } from './Lightbox';
 import { DishThumb, Price, Stepper, useDismissible, useT } from './ui';
 
 export function CartDrawer({
@@ -18,7 +19,9 @@ export function CartDrawer({
   const remove = useCartStore((s) => s.remove);
   const clear = useCartStore((s) => s.clear);
   const [checkout, setCheckout] = useState(false);
-  useDismissible(true, onClose);
+  const [zoomed, setZoomed] = useState<{ photoUrl: string; name: string } | null>(null);
+  // Stand down from Escape while a photo is open on top.
+  useDismissible(true, onClose, !zoomed && !checkout);
 
   return (
     <>
@@ -57,9 +60,26 @@ export function CartDrawer({
               display: 'flex', gap: 11, padding: '11px 0',
               borderBottom: '1px solid var(--fs-line-soft)', opacity: outOfStock ? 0.6 : 1,
             }}>
-              <div style={{ width: 62, flexShrink: 0, borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => item.photoUrl && setZoomed({ photoUrl: item.photoUrl, name: dishName(item, locale) })}
+                disabled={!item.photoUrl}
+                aria-label={item.photoUrl ? t('fs_view_photo') : dishName(item, locale)}
+                style={{
+                  position: 'relative', width: 62, height: 62, flexShrink: 0, padding: 0,
+                  borderRadius: 10, overflow: 'hidden', border: 0, background: 'transparent',
+                  cursor: item.photoUrl ? 'zoom-in' : 'default',
+                }}
+              >
                 <DishThumb photoUrl={item.photoUrl} name={dishName(item, locale)} ratio="1 / 1" dimmed={outOfStock} />
-              </div>
+                {item.photoUrl && (
+                  <span aria-hidden style={{
+                    position: 'absolute', right: 3, bottom: 3, fontSize: 10, lineHeight: 1,
+                    padding: '2px 3px', borderRadius: 5,
+                    background: 'rgba(0,0,0,0.6)', color: 'var(--fs-text)',
+                  }}>⤢</span>
+                )}
+              </button>
 
               <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 5 }}>
                 <p style={{
@@ -123,6 +143,10 @@ export function CartDrawer({
 
       {checkout && (
         <CheckoutSheet restaurantId={restaurantId} menuItems={menuItems} onClose={() => setCheckout(false)} />
+      )}
+
+      {zoomed && (
+        <Lightbox photos={[zoomed.photoUrl]} index={0} alt={zoomed.name} onClose={() => setZoomed(null)} />
       )}
     </>
   );

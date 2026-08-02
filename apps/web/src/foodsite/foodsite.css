@@ -417,24 +417,60 @@
   background: var(--fs-bg-2);
   border-left: 1px solid var(--fs-line);
   box-shadow: var(--fs-shadow-lg);
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   animation: fsSlideIn .3s cubic-bezier(.22, 1, .36, 1) both;
 }
 
-/* Centred dish sheet. */
+/* Dish / checkout sheet — rises from the bottom-centre of the screen.
+   Phone-first: a bottom sheet puts the controls under the thumb. Centring is
+   done with auto margins, NOT translateX, so the rise animation only touches
+   translateY and the mobile full-width case needs no separate transform rule. */
 .fs-sheet {
   position: fixed;
   z-index: 61;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(560px, calc(100vw - 28px));
-  max-height: 88vh;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: min(560px, 100vw);
+  max-height: min(92vh, 100dvh - 12px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--fs-bg-2);
   border: 1px solid var(--fs-line);
-  border-radius: 20px;
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
   box-shadow: var(--fs-shadow-lg);
-  animation: fsFadeUp .3s cubic-bezier(.22, 1, .36, 1) both;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: fsRiseIn .32s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* Grab handle. Says "this drags/dismisses from here" and gives the close
+   button something to sit beside on a phone. */
+.fs-grabber {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+/* The sheet's photo runs to the rounded top edge. */
+.fs-sheet > div:first-of-type > img,
+.fs-sheet > div:first-of-type > div {
+  border-radius: 22px 22px 0 0;
+}
+
+/* On a wide screen a full-height sheet looks unanchored; cap it and let the
+   rounded corners read on both sides. */
+@media (min-width: 561px) {
+  .fs-sheet { max-height: 88vh; }
 }
 
 /* Floating cart bar, phone only. */
@@ -484,6 +520,7 @@
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
   .fs-drawer { width: 100vw; border-left: 0; }
+  .fs-sheet  { border-left: 0; border-right: 0; }
   .fs-price  { font-size: 25px; }
   .fs-title  { font-size: 22px; }
 }

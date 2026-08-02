@@ -4,7 +4,8 @@ import { Link, useParams } from 'react-router-dom';
 import { publicHallService } from '../services/publicHall.service';
 import { getPhotoUrl } from '../utils/photoUrl';
 import type { Hall } from '../types/domain';
-import { SectionHeading, useDismissible, useT } from './ui';
+import { Lightbox } from './Lightbox';
+import { SectionHeading, useT } from './ui';
 
 // Combine a hall's single photoUrl + photos array into a unique, ordered list.
 function hallPhotoList(hall: Hall): string[] {
@@ -136,42 +137,4 @@ export function HallDetailPage({ restaurantId }: { restaurantId: string }) {
       )}
     </div>
   );
-}
-
-function Lightbox({
-  photos, index, alt, onIndex, onClose,
-}: {
-  photos: string[]; index: number; alt: string;
-  onIndex: (i: number) => void; onClose: () => void;
-}) {
-  const { t } = useT();
-  useDismissible(true, onClose);
-  const step = (delta: number) => onIndex((index + delta + photos.length) % photos.length);
-
-  return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.94)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-    }}>
-      <button type="button" className="fs-btn fs-btn-icon" aria-label={t('fs_close')} onClick={onClose}
-        style={{ position: 'absolute', top: 18, right: 18 }}>✕</button>
-      {photos.length > 1 && (
-        <button type="button" className="fs-btn fs-btn-icon" aria-label="‹"
-          onClick={(e) => { e.stopPropagation(); step(-1); }} style={navArrow('left')}>‹</button>
-      )}
-      <img src={getPhotoUrl(photos[index])} alt={alt} onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '90%', maxHeight: '88vh', objectFit: 'contain', borderRadius: 10 }} />
-      {photos.length > 1 && (
-        <button type="button" className="fs-btn fs-btn-icon" aria-label="›"
-          onClick={(e) => { e.stopPropagation(); step(1); }} style={navArrow('right')}>›</button>
-      )}
-    </div>
-  );
-}
-
-function navArrow(side: 'left' | 'right'): React.CSSProperties {
-  return {
-    position: 'absolute', [side]: 18, top: '50%', transform: 'translateY(-50%)',
-    width: 48, height: 48, fontSize: 28, lineHeight: 1,
-  };
 }

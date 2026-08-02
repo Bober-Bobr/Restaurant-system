@@ -45,30 +45,35 @@ export function DishCard({ item, onOpen }: { item: MenuItem; onOpen: () => void 
         )}
       </div>
 
-      <div style={{ padding: '13px 14px 15px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <Price tiyin={item.priceCents} />
-            <h3 className="fs-dish-name">{name}</h3>
-          </div>
-
-          {/* Reserve the control's width either way so cards in a row stay aligned. */}
-          <div style={{ flexShrink: 0, minWidth: 34, display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
-            {!outOfStock && (
-              <Stepper
-                qty={qty}
-                label={`${t('fs_add')} — ${name}`}
-                onAdd={() => add(item.id)}
-                onSetQty={(next) => setQty(item.id, next)}
-              />
-            )}
-          </div>
-        </div>
+      {/* The quantity control gets its own row at the foot of the card rather
+          than sharing one with the price. Sharing meant that on a narrow card
+          the 29px price and the ~90px stepper competed for the same line and
+          ran into each other — and the stepper is far wider than the "+" it
+          replaces, so the collision only appeared once a dish was in the cart.
+          `marginTop: auto` pins the row to the bottom, which also lines the
+          controls up across a row of cards of differing text length. */}
+      <div style={{ padding: '13px 14px 14px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+        <Price tiyin={item.priceCents} />
+        <h3 className="fs-dish-name">{name}</h3>
 
         {description && (
           <p className="fs-muted fs-clamp-2" style={{ margin: '2px 0 0', fontSize: 12.5, lineHeight: 1.45 }}>
             {description}
           </p>
+        )}
+
+        {!outOfStock && (
+          <div style={{
+            marginTop: 'auto', paddingTop: 11,
+            display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+          }}>
+            <Stepper
+              qty={qty}
+              label={`${t('fs_add')} — ${name}`}
+              onAdd={() => add(item.id)}
+              onSetQty={(next) => setQty(item.id, next)}
+            />
+          </div>
         )}
       </div>
     </article>
