@@ -159,6 +159,29 @@ export function getCateringSlug(): string | null {
   return seg;
 }
 
+// ── test.v-menu.uz — the next-generation food-service site ───────────────────
+// Runs beside the live catering site at v-menu.uz/<slug> so the overhaul can be
+// reviewed without touching production. Path-based for the same reason as
+// everything else here: the .uz registrar rejects wildcard DNS.
+// `test.v-menu.local` is the local-dev equivalent (needs an /etc/hosts entry;
+// vite.config.ts already allows the .v-menu.local suffix).
+export function isFoodSiteHost(): boolean {
+  const host = window.location.hostname;
+  return host === `test.${ROOT_DOMAIN}` || host === 'test.v-menu.local';
+}
+
+// test.v-menu.uz/<slug> → the restaurant slug, or null at the bare host.
+export function getFoodSiteSlug(): string | null {
+  if (!isFoodSiteHost()) return null;
+  const seg = firstPathSegment();
+  if (!seg || CATERING_RESERVED_PATHS.has(seg)) return null;
+  return seg;
+}
+
+export function buildFoodSiteUrl(slug: string): string {
+  return `https://test.${ROOT_DOMAIN}/${slug}`;
+}
+
 // Router basename: banquet/food-admin admin apps live under /<slug>, so the app's
 // routes (/, /admin/menu …) resolve beneath the cosmetic slug. The public catering
 // site likewise lives under /<slug> so its internal pages (/halls, /reviews …)
@@ -169,6 +192,8 @@ export function routerBasename(): string {
     const seg = firstPathSegment();
     return seg ? `/${seg}` : '';
   }
+  const foodSiteSlug = getFoodSiteSlug();
+  if (foodSiteSlug) return `/${foodSiteSlug}`;
   const cateringSlug = getCateringSlug();
   return cateringSlug ? `/${cateringSlug}` : '';
 }

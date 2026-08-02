@@ -156,11 +156,18 @@ router.get('/restaurants', async (_request, response, next) => {
   } catch (error) { next(error); }
 });
 
+// Accepts EITHER `?restaurantId=` (the tablet, which already knows the id) or
+// `?slug=` (the food-service site, whose only identifier is the URL segment).
+// Resolving by slug here spares that site the id-lookup round trip it would
+// otherwise need before it could fetch anything at all.
 router.get('/restaurant', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');
-    if (!restaurantId) { response.status(400).json({ message: 'restaurantId required' }); return; }
-    const restaurant = await restaurantRepository.findById(restaurantId);
+    const slug = String(request.query.slug ?? '').trim();
+    if (!restaurantId && !slug) { response.status(400).json({ message: 'restaurantId or slug required' }); return; }
+    const restaurant = restaurantId
+      ? await restaurantRepository.findById(restaurantId)
+      : await restaurantRepository.findBySlug(slug);
     if (!restaurant) { response.status(404).json({ message: 'Not found' }); return; }
     const company = (restaurant as any).company as { id: string; name: string; logoUrl: string | null } | null;
     response.json({
@@ -168,6 +175,16 @@ router.get('/restaurant', async (request, response, next) => {
       name: restaurant.name,
       logoUrl: restaurant.logoUrl ?? company?.logoUrl ?? null,
       companyName: company?.name ?? null,
+      // Contact/branding fields the public sites render. Previously only on the
+      // /restaurants list; added here so a site that resolved by slug does not
+      // have to download every restaurant on the platform to get them.
+      address: restaurant.address ?? null,
+      phone: restaurant.phone ?? null,
+      email: restaurant.email ?? null,
+      history: restaurant.history ?? null,
+      backgroundImageUrl: restaurant.backgroundImageUrl ?? null,
+      categoryOrder: parseCategoryOrder(restaurant.categoryOrder),
+      hideSubcategories: restaurant.hideSubcategories ?? false,
       tabletAccentColor: restaurant.tabletAccentColor ?? null,
       tabletBgColor: restaurant.tabletBgColor ?? null,
       tabletParticles: restaurant.tabletParticles ?? null,

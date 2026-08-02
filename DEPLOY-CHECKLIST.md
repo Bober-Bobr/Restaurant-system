@@ -737,7 +737,56 @@ if you want it symmetrical.
 Plaque design templates are **owner-private** to the NFC maker who created them,
 rather than shared across all makers.
 
-`apps/web/tsconfig.json` has no `"noEmit": true`, so every build emits compiled
-`.js` files next to the `.tsx` sources. They are harmless but noisy, and can
-shadow real sources in Vite's resolution order if one goes stale. One line to fix
-whenever you want it.
+~~`apps/web/tsconfig.json` has no `"noEmit": true`~~ — **fixed** while building the
+food-service site. `"noEmit": true` is set and the 163 emitted `.js` shadows under
+`apps/web/src/` were deleted. Nothing under `src/` was hand-written JavaScript; each
+had a `.ts`/`.tsx` sibling.
+
+
+---
+
+## 13. Food-service site — `test.v-menu.uz`
+
+The catering-site overhaul (Phase 1: redesign + cart, ordering not yet built).
+**No database migration** — the only backend change is additive: `GET
+/api/public/restaurant` now accepts `?slug=` as well as `?restaurantId=`, and
+returns the contact/branding fields alongside the theme it already returned.
+
+Three infrastructure steps, in this order:
+
+**DNS.** One A record, `test` on `v-menu.uz`, pointing at the same server as the
+rest. No wildcard — the .uz registrar rejects them. The SOA `minimum` is 86400s,
+so a cached NXDOMAIN can persist a full day: create the record *before* you first
+try the host, not after.
+
+**Nginx.** One block. It needs no `/api` proxy and no `/uploads` alias, because
+`VITE_API_URL` is an absolute origin baked into the bundle and `getPhotoUrl()`
+derives `/uploads` from it — same reasoning as the v-connect hosts:
+
+```nginx
+server {
+    listen 80;
+    server_name test.v-menu.uz;
+
+    root /var/www/restaurant;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+Then `ln -s`, `nginx -t`, `systemctl reload nginx`.
+
+**TLS.** Reissue the v-menu certificate with **every name it already carries plus
+`-d test.v-menu.uz`**. Certbot replaces the SAN list, it does not append — drop a
+name from the command and you drop it from the cert.
+
+Afterwards, `./deploy.sh` as normal. One SPA build serves every host, so there is
+nothing host-specific to deploy. The service worker cache was bumped to
+`vmenu-v5`, so returning visitors pick up the new shell rather than a stale one.
+
+**Verify:** `test.v-menu.uz/<slug>` shows the new dark site with a cart, and
+`v-menu.uz/<slug>` is unchanged. If the second is not true, stop — the two are
+meant to be completely independent.

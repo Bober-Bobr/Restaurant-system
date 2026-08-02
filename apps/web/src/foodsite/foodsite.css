@@ -1,0 +1,470 @@
+/* ── test.v-menu.uz — the food-service ordering site ──────────────────────────
+   Kinetic dark: near-black surfaces, one vivid accent per restaurant, oversized
+   price numerals, glass panels. Deliberately unlike the v-menu gold-on-navy
+   admin, the v-invite cream-on-blue and the v-connect black-and-beige, so the
+   four products never look alike.
+
+   Every colour derives from --fs-accent / --fs-accent-rgb, which FoodSiteLayout
+   overrides inline from the restaurant's saved colour (see theme.ts). Nothing in
+   this sheet hard-codes the accent, so an arbitrary brand hue works untouched.
+
+   Scoped the same way as vconnect.css: one .fs-root that declares the tokens and
+   owns the page background, then flat unnested .fs-* primitives. The primitives
+   work anywhere, but the token values only resolve inside a .fs-root subtree. */
+
+.fs-root {
+  --fs-bg:         #07090a;
+  --fs-bg-2:       #0c1011;
+  --fs-surface:    rgba(255, 255, 255, 0.045);
+  --fs-surface-2:  rgba(255, 255, 255, 0.08);
+  --fs-line:       rgba(255, 255, 255, 0.10);
+  --fs-line-soft:  rgba(255, 255, 255, 0.05);
+  --fs-text:       #f2f5f3;
+  --fs-dim:        rgba(242, 245, 243, 0.60);
+  --fs-faint:      rgba(242, 245, 243, 0.36);
+
+  /* Overridden inline per restaurant. */
+  --fs-accent:     #c6f24e;
+  --fs-accent-rgb: 198, 242, 78;
+  --fs-accent-ink: #07090a;
+
+  --fs-danger:     #ff6b5a;
+  --fs-radius:     16px;
+
+  min-height: 100vh;
+  background: var(--fs-bg);
+  color: var(--fs-text);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Motion ────────────────────────────────────────────────────────────────
+   "Kinetic" must never gate interaction: nothing here delays a dish becoming
+   tappable, and index.css already carries a global prefers-reduced-motion
+   kill-switch that neutralises .reveal. The explicit rule at the bottom of this
+   file covers the fs-* animations it does not know about. */
+@keyframes fsFadeUp  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fsFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fsPop     { 0% { transform: scale(1); } 42% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes fsSlideIn { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes fsRiseIn  { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fsGlow    { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+@keyframes fsShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes fsSpin    { to { transform: rotate(360deg); } }
+
+.fs-fade-up { animation: fsFadeUp .5s cubic-bezier(.22, 1, .36, 1) both; }
+.fs-fade-in { animation: fsFadeIn .4s ease both; }
+.fs-pop     { animation: fsPop .32s cubic-bezier(.34, 1.56, .64, 1); }
+
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
+.fs-card {
+  background: var(--fs-surface);
+  border: 1px solid var(--fs-line);
+  border-radius: var(--fs-radius);
+  transition: border-color .22s ease, background .22s ease, transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.fs-card-lift:hover {
+  border-color: rgb(var(--fs-accent-rgb) / 0.42);
+  background: var(--fs-surface-2);
+  transform: translateY(-3px);
+}
+
+/* Frosted bar — header, sticky rail, floating cart bar. */
+.fs-glass {
+  background: rgba(7, 9, 10, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-color: var(--fs-line);
+}
+
+/* Hairline rule with a soft centre, used under section headings. */
+.fs-rule {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: linear-gradient(90deg, rgb(var(--fs-accent-rgb) / 0.35), var(--fs-line-soft) 55%, transparent);
+}
+
+/* ── Type ─────────────────────────────────────────────────────────────────── */
+.fs-title {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fs-text);
+}
+
+.fs-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--fs-accent);
+}
+
+.fs-section-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--fs-text);
+}
+
+.fs-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fs-faint);
+  margin-bottom: 7px;
+}
+
+.fs-muted { color: var(--fs-dim); }
+
+/* The whole point of the redesign: the price leads the card, the name follows.
+   Tabular figures keep a column of prices optically aligned. */
+.fs-price {
+  display: block;
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--fs-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-price-unit {
+  font-size: 0.44em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgb(var(--fs-accent-rgb) / 0.62);
+  margin-left: 4px;
+}
+
+.fs-dish-name {
+  margin: 3px 0 0;
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.28;
+  color: var(--fs-text);
+}
+
+.fs-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+.fs-input,
+.fs-textarea,
+.fs-select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid var(--fs-line);
+  color: var(--fs-text);
+  font-size: 14.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.fs-input::placeholder,
+.fs-textarea::placeholder { color: var(--fs-faint); }
+
+.fs-input:focus,
+.fs-textarea:focus,
+.fs-select:focus {
+  border-color: var(--fs-accent);
+  box-shadow: 0 0 0 3px rgb(var(--fs-accent-rgb) / 0.18);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.fs-textarea { resize: vertical; min-height: 84px; line-height: 1.55; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.fs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: transform .14s ease, background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
+
+.fs-btn:active:not(:disabled) { transform: scale(.97); }
+.fs-btn:disabled { opacity: .42; cursor: not-allowed; }
+
+.fs-btn-primary {
+  background: var(--fs-accent);
+  color: var(--fs-accent-ink);
+  box-shadow: 0 8px 26px rgb(var(--fs-accent-rgb) / 0.22);
+}
+.fs-btn-primary:hover:not(:disabled) { box-shadow: 0 12px 34px rgb(var(--fs-accent-rgb) / 0.36); }
+
+.fs-btn-ghost {
+  background: transparent;
+  color: var(--fs-text);
+  border-color: var(--fs-line);
+}
+.fs-btn-ghost:hover:not(:disabled) {
+  border-color: var(--fs-accent);
+  color: var(--fs-accent);
+  background: rgb(var(--fs-accent-rgb) / 0.08);
+}
+
+.fs-btn-danger {
+  background: transparent;
+  color: var(--fs-danger);
+  border-color: rgba(255, 107, 90, 0.34);
+}
+.fs-btn-danger:hover:not(:disabled) { background: rgba(255, 107, 90, 0.12); }
+
+.fs-btn-icon {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: transparent;
+  border-color: var(--fs-line);
+  color: var(--fs-text);
+}
+.fs-btn-icon:hover:not(:disabled) { border-color: var(--fs-accent); color: var(--fs-accent); }
+
+/* ── Chips (the sticky category rail) ─────────────────────────────────────── */
+.fs-chip {
+  flex-shrink: 0;
+  padding: 8px 15px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--fs-dim);
+  background: var(--fs-surface);
+  border: 1px solid var(--fs-line);
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.fs-chip:hover { color: var(--fs-text); border-color: rgb(var(--fs-accent-rgb) / 0.4); }
+.fs-chip.is-active {
+  color: var(--fs-accent-ink);
+  background: var(--fs-accent);
+  border-color: var(--fs-accent);
+}
+
+/* ── Pills / badges ───────────────────────────────────────────────────────── */
+.fs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--fs-accent);
+  color: var(--fs-accent-ink);
+}
+
+.fs-pill-muted {
+  background: rgba(0, 0, 0, 0.62);
+  color: var(--fs-text);
+  border: 1px solid var(--fs-line);
+}
+
+/* Cart count on the header button. */
+.fs-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--fs-accent);
+  color: var(--fs-accent-ink);
+  box-shadow: 0 0 0 3px var(--fs-bg);
+}
+
+/* ── Quantity stepper ─────────────────────────────────────────────────────── */
+.fs-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 999px;
+  background: rgb(var(--fs-accent-rgb) / 0.13);
+  border: 1px solid rgb(var(--fs-accent-rgb) / 0.4);
+  overflow: hidden;
+}
+
+.fs-stepper button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--fs-accent);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .16s ease;
+}
+.fs-stepper button:hover { background: rgb(var(--fs-accent-rgb) / 0.18); }
+
+.fs-stepper span {
+  min-width: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--fs-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Round "+" shown before a dish is in the cart. */
+.fs-add {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--fs-accent-rgb) / 0.45);
+  background: rgb(var(--fs-accent-rgb) / 0.12);
+  color: var(--fs-accent);
+  font-size: 19px;
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .18s ease, transform .14s ease;
+}
+.fs-add:hover { background: var(--fs-accent); color: var(--fs-accent-ink); }
+.fs-add:active { transform: scale(.9); }
+
+/* ── Overlays ─────────────────────────────────────────────────────────────── */
+.fs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fsFadeIn .22s ease both;
+}
+
+/* Right-hand sheet on desktop; full-height on a phone via the media query. */
+.fs-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  width: min(430px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--fs-bg-2);
+  border-left: 1px solid var(--fs-line);
+  animation: fsSlideIn .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* Centred dish sheet. */
+.fs-sheet {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 28px));
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--fs-bg-2);
+  border: 1px solid var(--fs-line);
+  border-radius: 20px;
+  animation: fsFadeUp .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* Floating cart bar, phone only. */
+.fs-cartbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  border: 1px solid rgb(var(--fs-accent-rgb) / 0.45);
+  border-radius: 14px;
+  animation: fsRiseIn .32s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.fs-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.fs-scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── Loading ──────────────────────────────────────────────────────────────── */
+.fs-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--fs-surface);
+  border-radius: var(--fs-radius);
+}
+.fs-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: fsShimmer 1.4s ease-in-out infinite;
+}
+
+.fs-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--fs-line);
+  border-top-color: var(--fs-accent);
+  animation: fsSpin .8s linear infinite;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .fs-drawer { width: 100vw; border-left: 0; }
+  .fs-price  { font-size: 25px; }
+  .fs-title  { font-size: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-root *,
+  .fs-root *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

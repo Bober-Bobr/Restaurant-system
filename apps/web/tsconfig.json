@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // Vite compiles the app; `tsc` here only typechecks. Without this the build
+    // emitted a .js next to every .tsx — and Vite resolves .js BEFORE .tsx, so a
+    // stale sibling silently shadowed real source.
+    "noEmit": true
   },
   "include": ["src"]
 }

@@ -27,15 +27,24 @@ export type PublicRestaurantModules = {
   moduleAddons: boolean;
 };
 
+// The full public record: contact/branding fields plus the tablet theme and the
+// module entitlements. Resolvable by id (tablet) or by slug (food-service site).
+export type PublicRestaurantDetail = PublicRestaurantSummary & {
+  tabletAccentColor: string | null; tabletBgColor: string | null;
+  tabletParticles: string | null; tabletParticlesColor: string | null; tabletParticlesImageUrl: string | null;
+  tabletTrailTemplate: string | null; tabletTrailColor: string | null; tabletTrailImageUrl: string | null;
+  moduleBanquet: boolean; moduleCatering: boolean; moduleAddons: boolean;
+};
+
 export const publicRestaurantService = {
-  async get(restaurantId: string): Promise<{
-    id: string; name: string; logoUrl: string | null;
-    tabletAccentColor: string | null; tabletBgColor: string | null;
-    tabletParticles: string | null; tabletParticlesColor: string | null; tabletParticlesImageUrl: string | null;
-    tabletTrailTemplate: string | null; tabletTrailColor: string | null; tabletTrailImageUrl: string | null;
-    moduleBanquet: boolean; moduleCatering: boolean; moduleAddons: boolean;
-  }> {
+  async get(restaurantId: string): Promise<PublicRestaurantDetail> {
     const { data } = await axios.get(`${apiRoot()}/public/restaurant`, { params: { restaurantId } });
+    return data;
+  },
+  // One request resolves slug → the whole record, so the food-service site does
+  // not need an id-lookup round trip before it can render anything.
+  async getBySlug(slug: string): Promise<PublicRestaurantDetail> {
+    const { data } = await axios.get(`${apiRoot()}/public/restaurant`, { params: { slug } });
     return data;
   },
   async modulesBySlug(slug: string): Promise<PublicRestaurantModules> {

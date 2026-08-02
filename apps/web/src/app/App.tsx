@@ -42,7 +42,7 @@ import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, isFoodSiteHost, getFoodSiteSlug, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
 import { PerformerLayout } from './PerformerLayout';
@@ -55,6 +55,7 @@ import { VConnectLoginPage } from '../vconnect/VConnectLoginPage';
 import { PublicPlaquePage } from '../vconnect/PublicPlaquePage';
 import '../vconnect/vconnect.css';
 import { PublicVInvitePage } from '../vinvite/PublicVInvitePage';
+import { FoodSiteApp } from '../foodsite/FoodSiteApp';
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -103,7 +104,16 @@ export const App = () => {
     );
   }
 
-  // Catering subdomain (<restaurant>.v-menu.uz) → public catering site
+  // test.v-menu.uz/<slug> → the next-generation food-service site (Phase 1),
+  // running beside the live catering site below so it can be reviewed without
+  // touching production. The bare host is handled inside FoodSiteApp rather than
+  // falling through — otherwise it would reach the RoleRoutes fallback and show
+  // an admin shell to a stranger.
+  if (isFoodSiteHost()) {
+    return <FoodSiteApp slug={getFoodSiteSlug()} />;
+  }
+
+  // Catering site (v-menu.uz/<slug>) → the live public catering site
   const cateringSlug = getCateringSlug();
   if (cateringSlug) {
     return <CateringSite slug={cateringSlug} />;
