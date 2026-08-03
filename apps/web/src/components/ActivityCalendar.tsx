@@ -19,8 +19,8 @@ export function localDateKey(date: Date): string {
 }
 
 export function ActivityCalendar({
-  days, end = new Date(), weeks = 53, accent = '#c9a42c',
-  weekdayLabels = ['Mon', 'Wed', 'Fri'], monthLabels,
+  days, end = new Date(), weeks = 53, accent = '#ffffff',
+  locale, lessLabel = 'Less', moreLabel = 'More',
   onSelect, selected, emptyLabel = 'No activity',
 }: {
   days: ActivityDay[];
@@ -28,8 +28,10 @@ export function ActivityCalendar({
   end?: Date;
   weeks?: number;
   accent?: string;
-  weekdayLabels?: [string, string, string] | string[];
-  monthLabels?: string[];
+  /** BCP-47 tag used for the month and weekday names. */
+  locale?: string;
+  lessLabel?: string;
+  moreLabel?: string;
   onSelect?: (date: string) => void;
   selected?: string | null;
   emptyLabel?: string;
@@ -87,7 +89,19 @@ export function ActivityCalendar({
     return `color-mix(in srgb, ${accent} ${step * 25}%, rgba(255,255,255,0.07))`;
   };
 
-  const months = monthLabels ?? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Month and weekday names come from Intl rather than a hand-kept table: the
+  // platform already carries three locales and would need a fourth list for
+  // every language added later. Falls back to the browser default if the tag is
+  // unknown, which is better than showing English inside a translated page.
+  const { months, weekdays } = useMemo(() => {
+    const monthFormat = new Intl.DateTimeFormat(locale, { month: 'short' });
+    const weekdayFormat = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    // 2024-01-01 was a Monday, so day-of-month doubles as the ISO weekday index.
+    return {
+      months: Array.from({ length: 12 }, (_, m) => monthFormat.format(new Date(2024, m, 1))),
+      weekdays: Array.from({ length: 7 }, (_, d) => weekdayFormat.format(new Date(2024, 0, 1 + d))),
+    };
+  }, [locale]);
 
   return (
     <div style={{ display: 'grid', gap: 6 }}>
@@ -96,7 +110,7 @@ export function ActivityCalendar({
         <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gap: 3, paddingTop: 16, flexShrink: 0 }}>
           {[0, 1, 2, 3, 4, 5, 6].map((row) => (
             <span key={row} style={{ fontSize: 9, lineHeight: '11px', color: 'rgba(255,255,255,0.42)', height: 11 }}>
-              {row === 0 ? weekdayLabels[0] : row === 2 ? weekdayLabels[1] : row === 4 ? weekdayLabels[2] : ''}
+              {row === 0 || row === 2 || row === 4 ? weekdays[row] : ''}
             </span>
           ))}
         </div>
@@ -135,14 +149,14 @@ export function ActivityCalendar({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-        <span>Less</span>
+        <span>{lessLabel}</span>
         {[0, 1, 2, 3, 4].map((step) => (
           <span key={step} style={{
             width: 11, height: 11, borderRadius: 2,
             background: step === 0 ? 'rgba(255,255,255,0.07)' : `color-mix(in srgb, ${accent} ${step * 25}%, rgba(255,255,255,0.07))`,
           }} />
         ))}
-        <span>More</span>
+        <span>{moreLabel}</span>
       </div>
     </div>
   );

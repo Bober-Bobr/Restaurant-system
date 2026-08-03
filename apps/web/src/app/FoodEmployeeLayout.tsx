@@ -106,7 +106,7 @@ export const FoodEmployeeLayout = () => {
                   {!!badge && badge > 0 && (
                     <span style={{
                       position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18,
-                      padding: '0 5px', borderRadius: 999, background: '#f59e0b', color: '#000',
+                      padding: '0 5px', borderRadius: 999, background: '#fff', color: '#000',
                       fontSize: 11, fontWeight: 800, display: 'inline-flex',
                       alignItems: 'center', justifyContent: 'center',
                     }}>

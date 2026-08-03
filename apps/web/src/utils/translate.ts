@@ -1050,6 +1050,8 @@ const resources = {
     fe_all_tables: 'All tables',
     fe_no_closed_orders: 'No closed orders match these filters.',
     fe_table_short: 'Table',
+    fe_less: 'Less',
+    fe_more: 'More',
   },
   ru: {
     banquet_admin: 'Админ Банкет',
@@ -2085,6 +2087,8 @@ const resources = {
     fe_all_tables: 'Все столы',
     fe_no_closed_orders: 'Нет закрытых заказов по этим фильтрам.',
     fe_table_short: 'Стол',
+    fe_less: 'Меньше',
+    fe_more: 'Больше',
   },
   uz: {
     banquet_admin: 'Banket Maʼmuri',
@@ -3120,6 +3124,8 @@ const resources = {
     fe_all_tables: 'Barcha stollar',
     fe_no_closed_orders: 'Bu filtrlar boyicha yopilgan buyurtmalar yoq.',
     fe_table_short: 'Stol',
+    fe_less: 'Kam',
+    fe_more: 'Kop',
   }
 } as const;
 

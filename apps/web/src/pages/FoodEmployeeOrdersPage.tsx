@@ -163,15 +163,15 @@ function OrderCard({
         padding: 16, display: 'grid', gap: 12,
         // A guest waiting is the one thing on this screen that must not be
         // missed, so a called order is visibly different, not just badged.
-        borderColor: calling ? '#f59e0b' : undefined,
-        boxShadow: calling ? '0 0 0 1px #f59e0b, 0 10px 30px rgba(245,158,11,0.15)' : undefined,
+        borderColor: calling ? '#fff' : undefined,
+        boxShadow: calling ? '0 0 0 1px #fff, 0 10px 30px rgba(255,255,255,0.14)' : undefined,
       }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <span style={{
           fontSize: 20, fontWeight: 800, letterSpacing: '0.14em',
           padding: '4px 10px', borderRadius: 8,
-          background: 'rgba(201,164,44,0.14)', color: '#c9a42c',
+          background: 'rgba(255,255,255,0.12)', color: '#fff',
         }}>
           {order.code}
         </span>
@@ -184,13 +184,15 @@ function OrderCard({
       {calling && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '9px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.14)',
+          padding: '9px 12px', borderRadius: 10, background: '#fff',
         }}>
-          <strong style={{ color: '#f59e0b', fontSize: 14 }}>
+          <strong style={{ color: '#000', fontSize: 14 }}>
             🔔 {t('fe_calling')} · {t('fe_waiting_since', { minutes: waitingMinutes })}
           </strong>
-          <button type="button" className="adm-btn-primary adm-btn-sm" style={{ marginLeft: 'auto' }}
-            onClick={onAcknowledge}>
+          <button type="button" className="adm-btn-sm" style={{
+            marginLeft: 'auto', background: '#000', color: '#fff',
+            border: '1px solid #000', borderRadius: 8, fontWeight: 700, cursor: 'pointer',
+          }} onClick={onAcknowledge}>
             {t('fe_acknowledge')}
           </button>
         </div>
@@ -221,7 +223,7 @@ function OrderCard({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <span className="adm-label" style={{ margin: 0 }}>{t('fe_order_total')}</span>
-        <strong style={{ fontSize: 18, color: '#c9a42c' }}>{formatSum(orderTotalCents(order))}</strong>
+        <strong style={{ fontSize: 18, color: '#fff' }}>{formatSum(orderTotalCents(order))}</strong>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button type="button" className="adm-btn-ghost adm-btn-sm" onClick={onEdit}>
             {t('fe_edit_items')}
@@ -331,7 +333,7 @@ function OrderEditor({
       </label>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <strong style={{ fontSize: 16, color: '#c9a42c' }}>{formatSum(total)}</strong>
+        <strong style={{ fontSize: 16, color: '#fff' }}>{formatSum(total)}</strong>
         <button type="button" className="adm-btn-primary" style={{ marginLeft: 'auto' }}
           disabled={empty || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? '…' : t('fe_save')}
