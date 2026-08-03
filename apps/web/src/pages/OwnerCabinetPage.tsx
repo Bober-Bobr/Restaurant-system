@@ -484,6 +484,7 @@ export const OwnerCabinetPage = () => {
                 <select value={uRole} onChange={(e) => setURole(e.target.value as AdminRole)} style={inputStyle}>
                   <option value="ADMIN">{t('administrator_role')}</option>
                   <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
+                  <option value="CATERING_EMPLOYEE">{t('food_employee_role')}</option>
                   <option value="RESTAURANT_MANAGER">{t('restaurant_manager_role')}</option>
                   <option value="EMPLOYEE">{t('employee_role')}</option>
                   <option value="KITCHEN">{t('kitchen_role')}</option>
@@ -538,6 +539,7 @@ export const OwnerCabinetPage = () => {
                       >
                         <option value="ADMIN">{t('administrator_role')}</option>
                         <option value="CATERING_ADMIN">{t('catering_admin_role')}</option>
+                        <option value="CATERING_EMPLOYEE">{t('food_employee_role')}</option>
                         <option value="RESTAURANT_MANAGER">{t('restaurant_manager_role')}</option>
                         <option value="EMPLOYEE">{t('employee_role')}</option>
                         <option value="KITCHEN">{t('kitchen_role')}</option>

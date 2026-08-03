@@ -116,7 +116,7 @@ export class AuthController {
       response.json([]);
       return;
     }
-    response.json(await authService.listUsersForRestaurant(restaurantId));
+    response.json(await authService.listUsersForRestaurant(restaurantId, admin.role));
   }
 
   async createUserAsChief(request: Request, response: Response) {

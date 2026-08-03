@@ -39,6 +39,22 @@ const MODULE_DENIED: Record<'moduleBanquet' | 'moduleCatering', string> = {
   moduleCatering: 'The catering module is not active for this restaurant. Contact the platform administrator.',
 };
 
+// Food Employees belong to the food-service product and are managed only by the
+// people who run it: the platform Chief Admin, the restaurant's Owner, and the
+// restaurant's Food Admin. A banquet ADMIN neither creates nor sees them.
+//
+// Stated once, enforced on BOTH the create path and the list path — hiding a
+// role from a dropdown is presentation, not a permission.
+const FOOD_EMPLOYEE_MANAGERS: AdminRole[] = [
+  AdminRole.CHIEF_ADMIN,
+  AdminRole.OWNER,
+  AdminRole.CATERING_ADMIN,
+];
+
+export function canManageFoodEmployees(role: AdminRole): boolean {
+  return FOOD_EMPLOYEE_MANAGERS.includes(role);
+}
+
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
@@ -175,14 +191,25 @@ export class AuthService {
         throw createHttpError(400, 'Select a restaurant for the manager.');
       }
     }
+    // Food Employees are the food-service product's own staff.
+    if (payload.role === AdminRole.CATERING_EMPLOYEE && !canManageFoodEmployees(caller.role)) {
+      throw createHttpError(403, 'Only the Owner, Chief Admin or Food Admin can create Food Employee accounts.');
+    }
+
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
       // A restaurant ADMIN may also create performers and hosts, who are
       // platform-wide and belong to no restaurant. CATERING_ADMIN may not.
+      //
+      // The two lists do not overlap on staff: a banquet ADMIN staffs the
+      // banquet side (EMPLOYEE), a Food Admin staffs the food-service side
+      // (CATERING_EMPLOYEE). Neither can create the other's people.
       const allowed: AdminRole[] = caller.role === AdminRole.ADMIN
         ? [AdminRole.EMPLOYEE, AdminRole.KITCHEN, AdminRole.PERFORMER, AdminRole.HOST]
-        : [AdminRole.EMPLOYEE, AdminRole.KITCHEN];
+        : [AdminRole.CATERING_EMPLOYEE, AdminRole.KITCHEN];
       if (!allowed.includes(payload.role)) {
-        throw createHttpError(403, 'Administrators can only create Employee, Kitchen, Performer or Host accounts.');
+        throw createHttpError(403, caller.role === AdminRole.ADMIN
+          ? 'Administrators can only create Employee, Kitchen, Performer or Host accounts.'
+          : 'Food Admins can only create Food Employee or Kitchen accounts.');
       }
       if (isServiceRole(payload.role)) {
         // Never inherit the creator's restaurant — a performer or host is not
@@ -212,8 +239,15 @@ export class AuthService {
     return this.authRepository.listByOwner(ownerId);
   }
 
-  async listUsersForRestaurant(restaurantId: string) {
-    return this.authRepository.listByRestaurant(restaurantId);
+  // `callerRole` decides visibility, not just the restaurant: a banquet ADMIN
+  // shares a restaurant with its Food Employees but has no business managing
+  // them, and a list they cannot act on is a list that invites 403s.
+  async listUsersForRestaurant(restaurantId: string, callerRole?: AdminRole) {
+    const users = await this.authRepository.listByRestaurant(restaurantId);
+    if (callerRole && !canManageFoodEmployees(callerRole)) {
+      return users.filter((user) => user.role !== AdminRole.CATERING_EMPLOYEE);
+    }
+    return users;
   }
 
   async resolveRestaurantId(userId: string, jwtRestaurantId: string | null): Promise<string | null> {

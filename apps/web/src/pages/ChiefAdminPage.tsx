@@ -34,6 +34,13 @@ const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: 'moduleAddons', label: 'Additional services', hint: 'Reserved for the upcoming add-on product' },
 ];
 
+// Roles whose restaurant affiliation is tracked via restaurantId, so the Chief
+// Admin can set it AT CREATION and reassign it later. Owners derive theirs from
+// ownership; chiefs, NFC makers, performers and hosts are platform-wide.
+const RESTAURANT_AFFILIATED: AdminRole[] = [
+  'ADMIN', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'RESTAURANT_MANAGER', 'EMPLOYEE', 'KITCHEN',
+];
+
 export const ChiefAdminPage = () => {
   const username = useAuthStore((s) => s.username);
   const logout = useAuthStore((s) => s.logout);
@@ -122,7 +129,7 @@ export const ChiefAdminPage = () => {
       role: uRole,
       // A restaurant manager is tied to a restaurant so events created there flow
       // into their expense ledger. Other roles get their restaurant elsewhere.
-      restaurantId: uRole === 'RESTAURANT_MANAGER' ? (uRestaurantId || null) : null,
+      restaurantId: RESTAURANT_AFFILIATED.includes(uRole) ? (uRestaurantId || null) : null,
     }),
     onSuccess: () => {
       setUName(''); setUPwd(''); setURole('OWNER'); setURestaurantId(''); setUError(null);
@@ -147,9 +154,6 @@ export const ChiefAdminPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cad-users'] }),
   });
 
-  // Roles whose restaurant affiliation is tracked via restaurantId (so the Chief
-  // Admin can reassign it). Owners derive theirs from ownership; chiefs are global.
-  const RESTAURANT_AFFILIATED: AdminRole[] = ['ADMIN', 'CATERING_ADMIN', 'RESTAURANT_MANAGER', 'EMPLOYEE', 'KITCHEN'];
 
   const handleLogout = async () => {
     try { await authService.logout(); } catch {}
@@ -402,6 +406,7 @@ export const ChiefAdminPage = () => {
                   <option value="OWNER">OWNER</option>
                   <option value="ADMIN">ADMIN</option>
                   <option value="CATERING_ADMIN">FOOD ADMIN</option>
+                  <option value="CATERING_EMPLOYEE">FOOD EMPLOYEE</option>
                   <option value="RESTAURANT_MANAGER">RESTAURANT MANAGER</option>
                   <option value="EMPLOYEE">EMPLOYEE</option>
                   <option value="KITCHEN">KITCHEN</option>
@@ -409,7 +414,7 @@ export const ChiefAdminPage = () => {
                   <option value="PERFORMER">PERFORMER</option>
                   <option value="HOST">HOST</option>
                 </select>
-                {uRole === 'RESTAURANT_MANAGER' && (
+                {RESTAURANT_AFFILIATED.includes(uRole) && (
                   <select value={uRestaurantId} onChange={(e) => setURestaurantId(e.target.value)} style={inputStyle}>
                     <option value="">Assign restaurant…</option>
                     {allRestaurants.map((r) => (

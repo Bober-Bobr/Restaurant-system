@@ -119,16 +119,25 @@ export const AdminUsersPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
   });
 
-  // OWNER can create ADMIN/CATERING_ADMIN/EMPLOYEE/KITCHEN; ADMIN & CATERING_ADMIN
-  // can only create EMPLOYEE/KITCHEN. Performers and hosts belong to no
-  // restaurant and are offered to OWNER and ADMIN but NOT to CATERING_ADMIN,
-  // matching what auth.service actually permits — offering them there produced
-  // a 403 with no explanation.
+  // Mirrors auth.service.createUserAsChief exactly. Offering a role the server
+  // will refuse produces a 403 with no explanation, so these lists are kept in
+  // step with it deliberately.
+  //
+  // The two staff sides do not overlap: a banquet ADMIN staffs the banquet
+  // (EMPLOYEE), a Food Admin staffs the food-service floor (CATERING_EMPLOYEE).
+  // Only the Owner, Chief Admin and Food Admin manage Food Employees at all.
   const creatableRoles: AdminRole[] = currentRole === 'OWNER'
     ? ['ADMIN', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
     : currentRole === 'ADMIN'
       ? ['EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
-      : ['EMPLOYEE', 'KITCHEN'];
+      : ['CATERING_EMPLOYEE', 'KITCHEN'];
+
+  // A banquet ADMIN shares a restaurant with its Food Employees but does not
+  // manage them; the server filters them out of the list too.
+  const canSeeFoodEmployees = currentRole === 'OWNER' || currentRole === 'CHIEF_ADMIN' || currentRole === 'CATERING_ADMIN';
+  const visibleUsers: AdminUser[] = canSeeFoodEmployees
+    ? users
+    : users.filter((user: AdminUser) => user.role !== 'CATERING_EMPLOYEE');
   const requiresRestaurantPicker = currentRole === 'OWNER';
 
   const canSubmit = !!newUsername.trim() && !!newPassword && (!requiresRestaurantPicker || !!effectiveRestaurantId);
@@ -200,7 +209,7 @@ export const AdminUsersPage = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user: AdminUser) => {
+            {visibleUsers.map((user: AdminUser) => {
               const isSelf = user.username === currentUsername;
               const canEditCreds =
                 currentRole === 'OWNER'
@@ -237,6 +246,7 @@ export const AdminUsersPage = () => {
                         >
                           <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
                           <option value="CATERING_ADMIN">{ROLE_LABELS.CATERING_ADMIN}</option>
+                          <option value="CATERING_EMPLOYEE">{ROLE_LABELS.CATERING_EMPLOYEE}</option>
                           <option value="EMPLOYEE">{ROLE_LABELS.EMPLOYEE}</option>
                           <option value="KITCHEN">{ROLE_LABELS.KITCHEN}</option>
                         </select>
