@@ -293,6 +293,105 @@
   border-color: var(--fs-accent);
 }
 
+/* ── Header ───────────────────────────────────────────────────────────────
+   The overflow bug this replaces: every child was a flex item that refused to
+   shrink, so the row's intrinsic width won and the whole PAGE scrolled sideways
+   on a phone. Fixes: the brand may shrink and ellipsise, the nav is its own
+   scroll container with `min-width: 0` (without which a flex item will not
+   shrink below its content), and below 720px the nav drops to its own row so
+   the top row is only ever brand + actions. */
+.fs-header-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fs-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  min-width: 0;      /* lets the name ellipsise instead of forcing the row wide */
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.fs-brand-logo { height: 40px; width: auto; object-fit: contain; flex-shrink: 0; }
+
+.fs-brand-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fs-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-nav {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.fs-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .fs-header-inner { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+  .fs-brand { flex: 1 1 auto; }
+  .fs-brand-logo { height: 32px; }
+  .fs-brand-name { font-size: 14.5px; }
+  .fs-header-actions { margin-left: auto; }
+  /* Own row, full width, scrolling within itself. */
+  .fs-nav { order: 3; flex: 1 1 100%; margin-left: 0; width: 100%; }
+}
+
+/* ── Category rail ────────────────────────────────────────────────────────
+   Arrows are a desktop affordance: a mouse wheel emits only deltaY, so without
+   them (and the wheel translation in useRailScroll) the rail cannot be moved at
+   all with a plain mouse. Touch widths flick it directly and get no arrows,
+   which would only cover chips. */
+/* Arrows are flex ITEMS, not absolutely-positioned overlays: they then take
+   their own space instead of covering the first and last chip, and there are no
+   negative margins that could push the row past the viewport — the same class
+   of bug being fixed in the header above. Hidden arrows are `display: none`, so
+   they cost no space when the rail fits. */
+.fs-rail-wrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.fs-rail { flex: 1; min-width: 0; scroll-behavior: smooth; }
+
+.fs-rail-arrow {
+  display: none;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--fs-text);
+  background: var(--fs-surface-2);
+  border: 1px solid var(--fs-line);
+}
+.fs-rail-arrow:hover { border-color: var(--fs-accent); color: var(--fs-accent); }
+
+@media (min-width: 721px) {
+  .fs-rail-arrow:not([hidden]) { display: inline-flex; }
+}
+
 /* ── Pills / badges ───────────────────────────────────────────────────────── */
 .fs-pill {
   display: inline-flex;
@@ -473,7 +572,8 @@
   .fs-sheet { max-height: 88vh; }
 }
 
-/* Floating cart bar, phone only. */
+/* Floating cart bar. Shown at every width — it is the primary way back to the
+   cart mid-scroll, and the header button is easy to lose track of. */
 .fs-cartbar {
   position: fixed;
   left: 12px;

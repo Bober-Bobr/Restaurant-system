@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 // Loops the given track and tries to autoplay; browsers block autoplay until a
 // user gesture, so it also starts on the first pointer/key interaction. A fixed
 // accent-colored button in the corner lets the visitor toggle playback.
-export function MusicPlayer({ src, accent }: { src: string; accent: string }) {
+// `bottomOffset` lets a page lift the button clear of its own fixed furniture —
+// the food-service site raises it above the floating cart bar. Defaults to the
+// original 18px, so every other caller is unchanged.
+export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; accent: string; bottomOffset?: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -53,11 +56,12 @@ export function MusicPlayer({ src, accent }: { src: string; accent: string }) {
         onClick={toggle}
         aria-label={playing ? 'Pause music' : 'Play music'}
         style={{
-          position: 'fixed', bottom: 18, right: 18, zIndex: 60,
+          position: 'fixed', bottom: bottomOffset, right: 18, zIndex: 60,
           width: 50, height: 50, borderRadius: '50%',
           background: accent, color: '#1a1a1a', border: '2px solid rgba(255,255,255,0.85)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+          transition: 'bottom .28s cubic-bezier(.22, 1, .36, 1)',
         }}
       >
         {playing ? (

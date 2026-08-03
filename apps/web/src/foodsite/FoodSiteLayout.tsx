@@ -32,6 +32,7 @@ export function FoodSiteLayout({
   const revealRef = useScrollReveal<HTMLElement>([location.pathname]);
   const { count, subtotal } = useCartLines(menuItems);
   const [cartOpen, setCartOpen] = useState(false);
+  const cartBarVisible = count > 0 && !cartOpen;
 
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
@@ -40,7 +41,9 @@ export function FoodSiteLayout({
   return (
     <div className="fs-root" style={accentStyle(restaurant?.tabletAccentColor)}>
       <FingerTrail accent={accent} />
-      <MusicPlayer src="/catering-music.mp3" accent={accent} />
+      {/* Raised above the floating cart bar when that is on screen, otherwise
+          the two overlap in the bottom-right corner. */}
+      <MusicPlayer src="/catering-music.mp3" accent={accent} bottomOffset={cartBarVisible ? 82 : 18} />
 
       {/* Base wash, with or without a photo, so the page is never dead flat and
           foreground cards always have something to sit on. */}
@@ -74,21 +77,13 @@ export function FoodSiteLayout({
 
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <header className="fs-glass" style={{ position: 'relative', zIndex: 35, borderBottom: '1px solid var(--fs-line)' }}>
-          <div style={{
-            maxWidth: 1180, margin: '0 auto', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-          }}>
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', minWidth: 0 }}>
-              {logo && <img src={logo} alt="" style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />}
-              <span style={{
-                fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--fs-text)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {restaurant?.name ?? ''}
-              </span>
+          <div className="fs-header-inner">
+            <Link to="/" className="fs-brand">
+              {logo && <img src={logo} alt="" className="fs-brand-logo" />}
+              <span className="fs-brand-name">{restaurant?.name ?? ''}</span>
             </Link>
 
-            <nav className="fs-scroll-x" style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
+            <nav className="fs-scroll-x fs-nav">
               {NAV.map(({ to, key }) => {
                 const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
                 return (
@@ -104,7 +99,7 @@ export function FoodSiteLayout({
               })}
             </nav>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="fs-header-actions">
               <div style={{ display: 'flex', gap: 3 }}>
                 {locales.map((loc) => (
                   <button key={loc} type="button" onClick={() => setLocale(loc)}
@@ -136,7 +131,7 @@ export function FoodSiteLayout({
 
       {/* Floating cart bar. The header button is easy to miss mid-scroll on a
           phone, which is where this site is actually used. */}
-      {count > 0 && !cartOpen && (
+      {cartBarVisible && (
         <button type="button" className="fs-glass fs-cartbar" onClick={() => setCartOpen(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px',

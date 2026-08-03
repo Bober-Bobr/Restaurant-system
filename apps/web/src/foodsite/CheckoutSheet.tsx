@@ -14,9 +14,6 @@ import { Price, useDismissible, useT } from './ui';
 // Phase 2 replaces `onSubmit` and nothing else.
 type OrderDraft = {
   restaurantId: string;
-  tableNumber: string;
-  customerName: string;
-  customerPhone: string;
   comment: string;
   items: { menuItemId: string; quantity: number; unitPriceCents: number }[];
 };
@@ -28,15 +25,12 @@ export function CheckoutSheet({
 }) {
   const { t, locale } = useT();
   const { lines, subtotal } = useCartLines(menuItems);
-  const [tableNumber, setTableNumber] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [comment, setComment] = useState('');
   const [sent, setSent] = useState(false);
   useDismissible(true, onClose);
 
   const payable = lines.filter((l) => !l.outOfStock);
-  const canSubmit = tableNumber.trim().length > 0 && payable.length > 0;
+  const canSubmit = payable.length > 0;
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,9 +40,6 @@ export function CheckoutSheet({
     // and the Phase 2 change is one line.
     const draft: OrderDraft = {
       restaurantId,
-      tableNumber: tableNumber.trim(),
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
       comment: comment.trim(),
       items: payable.map((l) => ({
         menuItemId: l.item.id,
@@ -82,28 +73,11 @@ export function CheckoutSheet({
               <button type="button" className="fs-btn fs-btn-icon" aria-label={t('fs_close')} onClick={onClose}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label>
-                <span className="fs-label">{t('fs_table_number')} *</span>
-                <input className="fs-input" value={tableNumber} required inputMode="numeric"
-                  onChange={(e) => setTableNumber(e.target.value)} />
-              </label>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                <label>
-                  <span className="fs-label">{t('your_name')}</span>
-                  <input className="fs-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-                </label>
-                <label>
-                  <span className="fs-label">{t('phone')}</span>
-                  <input className="fs-input" type="tel" value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)} />
-                </label>
-              </div>
-              <label>
-                <span className="fs-label">{t('fs_comment')}</span>
-                <textarea className="fs-textarea" value={comment} onChange={(e) => setComment(e.target.value)} />
-              </label>
-            </div>
+            <label>
+              <span className="fs-label">{t('fs_comment')}</span>
+              <textarea className="fs-textarea" value={comment} placeholder={t('fs_comment_hint')}
+                onChange={(e) => setComment(e.target.value)} />
+            </label>
 
             <div style={{ display: 'grid', gap: 7, padding: '13px 14px', borderRadius: 12, background: 'var(--fs-surface)' }}>
               {payable.map(({ item, qty, lineTotal }) => (

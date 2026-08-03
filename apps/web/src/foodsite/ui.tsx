@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAdminStore } from '../store/admin.store';
 import { translate, type Locale, type TranslationKey } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -143,6 +143,58 @@ export function useDismissible(open: boolean, onClose: () => void, escape = true
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, escape, onClose]);
+}
+
+/**
+ * Makes a horizontally-scrolling strip usable with a normal mouse wheel, and
+ * reports whether there is more to see in each direction.
+ *
+ * A touch device flicks the rail directly and a trackpad can scroll sideways,
+ * but a plain wheel only produces deltaY — so on a desktop the category rail was
+ * simply immovable. React registers `wheel` passively on the root container, so
+ * preventDefault() there is ignored; this has to be a native non-passive
+ * listener on the element itself.
+ */
+export function useRailScroll(ref: React.RefObject<HTMLElement | null>, deps: unknown[] = []) {
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const measure = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      setOverflow({ left: el.scrollLeft > 2, right: el.scrollLeft < max - 2 });
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      // Leave real horizontal intent (trackpad, shift+wheel) to the browser.
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (el.scrollWidth <= el.clientWidth) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    measure();
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref, ...deps]);
+
+  const nudge = (direction: -1 | 1) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(160, el.clientWidth * 0.7), behavior: 'smooth' });
+  };
+
+  return { overflow, nudge };
 }
 
 /** Full-page state used for loading / not-found, inside the themed shell. */

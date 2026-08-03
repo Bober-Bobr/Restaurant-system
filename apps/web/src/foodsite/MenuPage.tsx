@@ -5,7 +5,7 @@ import type { MenuItem } from '../types/domain';
 import type { PublicRestaurantDetail } from '../services/publicRestaurant.service';
 import { DishCard } from './DishCard';
 import { DishModal } from './DishModal';
-import { SectionHeading, useT } from './ui';
+import { SectionHeading, useRailScroll, useT } from './ui';
 
 // ── The menu ────────────────────────────────────────────────────────────────
 // One continuous scroll with a sticky category rail, replacing the live site's
@@ -67,6 +67,11 @@ export function MenuPage({
     return out;
   }, [searched, restaurant.categoryOrder, restaurant.hideSubcategories, query, locale, t]);
 
+  // Re-measure the rail's overflow when the chip set changes (search filtering
+  // adds and removes categories).
+  const sectionsKey = sections.map((s) => s.id).join('|');
+  const rail = useRailScroll(railRef, [sectionsKey]);
+
   // ── Scroll-spy ──
   // Tracks which section heading last crossed beneath the sticky header. An
   // IntersectionObserver on the sections themselves would fight the rail's own
@@ -120,18 +125,30 @@ export function MenuPage({
           style={{ padding: '9px 13px', fontSize: 14 }}
         />
         {sections.length > 0 && (
-          <div ref={railRef} className="fs-scroll-x" style={{ display: 'flex', gap: 7 }}>
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                data-chip={section.id}
-                className={`fs-chip${activeId === section.id ? ' is-active' : ''}`}
-                onClick={() => jumpTo(section.id)}
-              >
-                {section.title}
-              </button>
-            ))}
+          <div className="fs-rail-wrap">
+            {/* Arrows exist for the mouse: a wheel only emits deltaY, so without
+                them (and the wheel translation in useRailScroll) the rail was
+                immovable on a desktop. Hidden on touch widths, where a flick
+                already works and they would just cover chips. */}
+            <button type="button" className="fs-rail-arrow left" aria-label="‹"
+              hidden={!rail.overflow.left} onClick={() => rail.nudge(-1)}>‹</button>
+
+            <div ref={railRef} className="fs-scroll-x fs-rail" style={{ display: 'flex', gap: 7 }}>
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  data-chip={section.id}
+                  className={`fs-chip${activeId === section.id ? ' is-active' : ''}`}
+                  onClick={() => jumpTo(section.id)}
+                >
+                  {section.title}
+                </button>
+              ))}
+            </div>
+
+            <button type="button" className="fs-rail-arrow right" aria-label="›"
+              hidden={!rail.overflow.right} onClick={() => rail.nudge(1)}>›</button>
           </div>
         )}
       </div>
