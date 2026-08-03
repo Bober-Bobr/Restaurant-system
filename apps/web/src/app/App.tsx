@@ -46,9 +46,9 @@ import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSu
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
 import { PerformerLayout } from './PerformerLayout';
-import { WaiterLayout } from './WaiterLayout';
-import { WaiterOrdersPage } from '../pages/WaiterOrdersPage';
-import { WaiterStatsPage } from '../pages/WaiterStatsPage';
+import { FoodEmployeeLayout } from './FoodEmployeeLayout';
+import { FoodEmployeeOrdersPage } from '../pages/FoodEmployeeOrdersPage';
+import { FoodEmployeeStatsPage } from '../pages/FoodEmployeeStatsPage';
 import { PerformerProfilePage } from '../pages/PerformerProfilePage';
 import { PerformerCalendarPage } from '../pages/PerformerCalendarPage';
 import { PerformerBookingsPage } from '../pages/PerformerBookingsPage';
@@ -246,8 +246,8 @@ export const App = () => {
       window.location.href = buildSubdomainBase('rmanager');
       return null;
     }
-    // CATERING_ADMIN and WAITER → food-admin.v-menu.uz/<slug>
-    if (accessToken && (role === 'CATERING_ADMIN' || role === 'WAITER') && restaurantName && window.location.pathname !== '/login') {
+    // CATERING_ADMIN and CATERING_EMPLOYEE → food-admin.v-menu.uz/<slug>
+    if (accessToken && (role === 'CATERING_ADMIN' || role === 'CATERING_EMPLOYEE') && restaurantName && window.location.pathname !== '/login') {
       window.location.href = buildFoodAdminUrl(toSubdomainSlug(restaurantName));
       return null;
     }
@@ -320,10 +320,10 @@ export const App = () => {
   // Food-admin host (food-admin.v-menu.uz/<slug>) — requires CATERING_ADMIN auth.
   if (isFoodAdminHost()) {
     const { accessToken, role: catRole } = useAuthStore.getState();
-    // Waiters share this host with the catering admin — the food-service product
-    // has one admin host, and adding a second would mean another DNS record,
-    // nginx block and certificate for two screens.
-    if (!accessToken || (catRole !== 'CATERING_ADMIN' && catRole !== 'WAITER')) {
+    // Food employees share this host with the Food Admin — the food-service
+    // product has one admin host, and adding a second would mean another DNS
+    // record, nginx block and certificate for two screens.
+    if (!accessToken || (catRole !== 'CATERING_ADMIN' && catRole !== 'CATERING_EMPLOYEE')) {
       if (window.location.pathname !== '/login') {
         window.location.href = buildAbsoluteUrl('/login');
         return null;
@@ -415,15 +415,16 @@ const RoleRoutes = () => {
     );
   }
 
-  // WAITER → the food-service floor: take orders by code, look after them, close
-  // them. Deliberately only two routes; everything else redirects to Orders.
-  if (role === 'WAITER') {
+  // CATERING_EMPLOYEE (Food Employee) → the food-service floor: take orders by
+  // code, look after them, close them. Deliberately only two routes; everything
+  // else redirects to Orders. The banquet EMPLOYEE role below is untouched.
+  if (role === 'CATERING_EMPLOYEE') {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route element={<WaiterLayout />}>
-          <Route path="/orders" element={<WaiterOrdersPage />} />
-          <Route path="/stats" element={<WaiterStatsPage />} />
+        <Route element={<FoodEmployeeLayout />}>
+          <Route path="/orders" element={<FoodEmployeeOrdersPage />} />
+          <Route path="/stats" element={<FoodEmployeeStatsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/orders" replace />} />
       </Routes>

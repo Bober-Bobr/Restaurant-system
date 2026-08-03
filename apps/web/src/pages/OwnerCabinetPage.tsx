@@ -199,7 +199,7 @@ export const OwnerCabinetPage = () => {
     NFC_MAKER: 'nfc_maker_role',
     PERFORMER: 'performer_role',
     HOST: 'host_role',
-    WAITER: 'waiter_role',
+    CATERING_EMPLOYEE: 'food_employee_role',
   };
 
   return (

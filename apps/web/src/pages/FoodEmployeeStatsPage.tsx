@@ -9,16 +9,16 @@ import { translate, type TranslationKey } from '../utils/translate';
 // It says what is coming rather than showing an empty chart, because an empty
 // chart reads as "you have done nothing" — which for a waiter looking at their
 // own numbers is the wrong message entirely.
-export const WaiterStatsPage = () => {
+export const FoodEmployeeStatsPage = () => {
   const { locale } = useAdminStore();
   const t = (key: TranslationKey) => translate(key, locale);
 
   return (
     <div className="adm-card" style={{ padding: 28, textAlign: 'center', display: 'grid', gap: 10 }}>
       <span style={{ fontSize: 34 }}>📊</span>
-      <h2 className="adm-heading" style={{ margin: 0 }}>{t('wt_statistics')}</h2>
+      <h2 className="adm-heading" style={{ margin: 0 }}>{t('fe_statistics')}</h2>
       <p className="muted-text" style={{ margin: 0, fontSize: 14, lineHeight: 1.6, maxWidth: 380, marginInline: 'auto' }}>
-        {t('wt_stats_soon')}
+        {t('fe_stats_soon')}
       </p>
     </div>
   );

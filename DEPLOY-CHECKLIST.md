@@ -800,7 +800,7 @@ meant to be completely independent.
 
 | Migration | What |
 |---|---|
-| `20260803100000_admin_role_waiter` | `ALTER TYPE "AdminRole" ADD VALUE 'WAITER'` — alone, because Postgres will not let a new enum value be *used* in the transaction that adds it |
+| `20260803100000_admin_role_catering_employee` | `ALTER TYPE "AdminRole" ADD VALUE 'CATERING_EMPLOYEE'` — alone, because Postgres will not let a new enum value be *used* in the transaction that adds it |
 | `20260803100100_orders` | `Order` + `OrderItem`, their indexes, and the **partial unique index** on `(restaurantId, code) WHERE status IN ('PENDING','OPEN')` |
 
 Nothing drops. `./deploy.sh` applies both.
@@ -818,23 +818,27 @@ Expect a line containing `UNIQUE`, `(restaurantId, code)` and `WHERE status`.
 
 ### After deploying
 
-**Create waiter accounts.** In the restaurant's admin → Users, the `WAITER` role
-is now offered alongside `CATERING_ADMIN`. Waiters sign in at
-`v-menu.uz/login` and are redirected to `food-admin.v-menu.uz/<slug>`, landing on
-Orders. **No new host, DNS record or certificate is needed** — they share the
-existing catering-admin host.
+**Create Food Employee accounts.** In the restaurant's admin → Users, the
+**Food Employee** role (`CATERING_EMPLOYEE`) is now offered alongside Food Admin.
+They sign in at `v-menu.uz/login` and are redirected to
+`food-admin.v-menu.uz/<slug>`, landing on Orders. **No new host, DNS record or
+certificate is needed** — they share the existing food-admin host.
 
-**`moduleCatering` gates waiters** exactly as it gates `CATERING_ADMIN`, on login
-*and* on refresh. Revoking the module ends a waiter's session within the
-15-minute access-token window.
+This is a **different role from the banquet `EMPLOYEE`**, which is unchanged and
+still belongs to `moduleBanquet`. Do not swap one for the other when creating
+accounts — the names are similar and the products are not.
+
+**`moduleCatering` gates them** exactly as it gates Food Admin, on login *and* on
+refresh. Revoking the module ends the session within the 15-minute access-token
+window.
 
 ### End-to-end check
 
 1. On `test.v-menu.uz/<slug>`, add dishes → checkout → a three-character code appears.
 2. The cart button and every dish stepper vanish; the menu stays browsable.
-3. As a waiter on `food-admin.v-menu.uz/<slug>`, enter that code + a table number → the order appears with its dishes and comment.
+3. As a Food Employee on `food-admin.v-menu.uz/<slug>`, enter that code + a table number → the order appears with its dishes and comment.
 4. Back on the guest device (within ~10s), the code screen becomes "Order accepted" with a **Call waiter** button.
-5. Press it → the waiter's Orders tab badges within ~5s and the card turns amber. "On my way" clears it.
+5. Press it → their Orders tab badges within ~5s and the card turns amber. "On my way" clears it.
 6. Amend the order (add a dish, edit the comment) → the guest's device reflects it on its next poll.
 7. Close the order → the guest's device unlocks and the cart works again.
 
@@ -843,5 +847,5 @@ existing catering-admin host.
 The rate limiter is **in-memory**, so it is per-process. The API runs as a single
 pm2 process today; scaling to more would need a shared store.
 
-Statistics — the graph, the activity calendar and the per-waiter aggregate — are
+Statistics — the graph, the activity calendar and the per-employee aggregate — are
 the second pass. `/stats` currently says so rather than showing an empty chart.

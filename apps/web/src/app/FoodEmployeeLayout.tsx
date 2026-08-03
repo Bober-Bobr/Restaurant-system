@@ -10,11 +10,11 @@ import { buildAbsoluteUrl } from '../utils/subdomain';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
-// ── The waiter workspace ────────────────────────────────────────────────────
-// Lives on food-admin.v-menu.uz/<slug> beside the catering admin, so it needed
-// no new host, DNS record or certificate. Two tabs and nothing else: this is a
+// ── The food-employee workspace ─────────────────────────────────────────────
+// Lives on food-admin.v-menu.uz/<slug> beside the Food Admin, so it needed no
+// new host, DNS record or certificate. Two tabs and nothing else: this is a
 // phone held by someone crossing a dining room.
-export const WaiterLayout = () => {
+export const FoodEmployeeLayout = () => {
   const accessToken = useAuthStore((s) => s.accessToken);
   const username = useAuthStore((s) => s.username);
   const logout = useAuthStore((s) => s.logout);
@@ -22,7 +22,7 @@ export const WaiterLayout = () => {
   const t = (key: TranslationKey) => translate(key, locale);
   const location = useLocation();
 
-  // The one number a waiter must not miss: guests waiting on them right now.
+  // The one number they must not miss: guests waiting on them right now.
   const alerts = useLiveQuery<number>('waiterAlerts', {
     queryKey: ['wt-alerts'],
     queryFn: () => orderService.alertCount(),
@@ -41,8 +41,8 @@ export const WaiterLayout = () => {
   if (!accessToken) return <Navigate to="/login" replace />;
 
   const nav: { to: string; label: string; badge?: number }[] = [
-    { to: '/orders', label: t('wt_orders'), badge: calling },
-    { to: '/stats', label: t('wt_statistics') },
+    { to: '/orders', label: t('fe_orders'), badge: calling },
+    { to: '/stats', label: t('fe_statistics') },
   ];
 
   return (

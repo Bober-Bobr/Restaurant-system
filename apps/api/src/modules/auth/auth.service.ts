@@ -31,7 +31,7 @@ const MODULE_BY_ROLE: Partial<Record<AdminRole, 'moduleBanquet' | 'moduleCaterin
   [AdminRole.CATERING_ADMIN]: 'moduleCatering',
   // A waiter belongs to the food-service product, so the same entitlement gates
   // them — on login AND on refresh, so revoking the module ends live sessions.
-  [AdminRole.WAITER]: 'moduleCatering',
+  [AdminRole.CATERING_EMPLOYEE]: 'moduleCatering',
 };
 
 const MODULE_DENIED: Record<'moduleBanquet' | 'moduleCatering', string> = {

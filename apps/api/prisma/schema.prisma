@@ -163,10 +163,12 @@ enum AdminRole {
   // and booking machinery below. The one difference is the event programme,
   // which a client must supply when booking and a host may record per booking.
   HOST
-  // Food-service waiter. Restaurant-scoped, signs in at food-admin.v-menu.uz/<slug>
-  // and works only the Orders and Statistics tabs. Gated on moduleCatering, the
-  // same entitlement as CATERING_ADMIN — a waiter belongs to that product.
-  WAITER
+  // Food-service employee — the counterpart to CATERING_ADMIN, working the floor
+  // with guest order codes. Restaurant-scoped, signs in at
+  // food-admin.v-menu.uz/<slug> and sees only the Orders and Statistics tabs.
+  // Gated on moduleCatering, the same entitlement as CATERING_ADMIN.
+  // NOT the banquet EMPLOYEE role, which is a separate product and unchanged.
+  CATERING_EMPLOYEE
 }
 
 model AdminUser {

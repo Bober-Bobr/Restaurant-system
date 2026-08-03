@@ -22,7 +22,7 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   NFC_MAKER: 'NFC Maker',
   PERFORMER: 'Performer',
   HOST: 'Host',
-  WAITER: 'Waiter'
+  CATERING_EMPLOYEE: 'Waiter'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
@@ -37,7 +37,7 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   NFC_MAKER: { background: '#c8a97a', color: '#171310' },
   PERFORMER: { background: '#db2777', color: '#fff' },
   HOST: { background: '#be185d', color: '#fff' },
-  WAITER: { background: '#0d9488', color: '#fff' }
+  CATERING_EMPLOYEE: { background: '#0d9488', color: '#fff' }
 };
 
 const formatError = (error: unknown): string => {
@@ -125,7 +125,7 @@ export const AdminUsersPage = () => {
   // matching what auth.service actually permits — offering them there produced
   // a 403 with no explanation.
   const creatableRoles: AdminRole[] = currentRole === 'OWNER'
-    ? ['ADMIN', 'CATERING_ADMIN', 'WAITER', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
+    ? ['ADMIN', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
     : currentRole === 'ADMIN'
       ? ['EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
       : ['EMPLOYEE', 'KITCHEN'];

@@ -10,12 +10,12 @@ import { formatSum } from '../utils/currency';
 import { dishName } from '../utils/menuI18n';
 import type { MenuItem } from '../types/domain';
 
-// ── The waiter's floor ──────────────────────────────────────────────────────
+// ── The floor ───────────────────────────────────────────────────────────────
 // Two things happen here: take an order by the code a guest is holding up, and
-// look after the orders already taken. Nothing else — a waiter is standing up,
-// holding a phone, usually in a hurry.
+// look after the orders already taken. Nothing else — whoever is using this is
+// standing up, holding a phone, usually in a hurry.
 
-export const WaiterOrdersPage = () => {
+export const FoodEmployeeOrdersPage = () => {
   const { locale } = useAdminStore();
   const t = (k: TranslationKey, p?: Record<string, string | number>) => translate(k, locale, p);
   const restaurantId = useAuthStore((s) => s.restaurantId);
@@ -31,7 +31,7 @@ export const WaiterOrdersPage = () => {
   });
   const orders = ordersQuery.data ?? [];
 
-  // The menu, for amending an order. Public endpoint — a waiter's device sees
+  // The menu, for amending an order. Public endpoint — the staff device sees
   // the same live menu the guest did.
   const { data: menuItems = [] } = useQuery({
     queryKey: ['wt-menu', restaurantId],
@@ -58,9 +58,9 @@ export const WaiterOrdersPage = () => {
       {/* ── Take an order ── */}
       <section className="adm-card" style={{ padding: 18, display: 'grid', gap: 13 }}>
         <div>
-          <h2 className="adm-heading" style={{ margin: 0 }}>{t('wt_take_order')}</h2>
+          <h2 className="adm-heading" style={{ margin: 0 }}>{t('fe_take_order')}</h2>
           <p className="muted-text" style={{ margin: '5px 0 0', fontSize: 13, lineHeight: 1.55 }}>
-            {t('wt_claim_hint')}
+            {t('fe_claim_hint')}
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export const WaiterOrdersPage = () => {
           style={{ display: 'grid', gap: 11, gridTemplateColumns: 'minmax(120px, 1fr) minmax(120px, 1fr)' }}
         >
           <label style={{ display: 'grid', gap: 5 }}>
-            <span className="adm-label">{t('wt_code')}</span>
+            <span className="adm-label">{t('fe_code')}</span>
             <input
               className="adm-input"
               value={code}
@@ -86,7 +86,7 @@ export const WaiterOrdersPage = () => {
             />
           </label>
           <label style={{ display: 'grid', gap: 5 }}>
-            <span className="adm-label">{t('wt_table')}</span>
+            <span className="adm-label">{t('fe_table')}</span>
             <input
               className="adm-input"
               value={table}
@@ -98,13 +98,13 @@ export const WaiterOrdersPage = () => {
           </label>
 
           <button type="submit" className="adm-btn-primary" disabled={!canClaim} style={{ gridColumn: '1 / -1' }}>
-            {claim.isPending ? '…' : t('wt_claim')}
+            {claim.isPending ? '…' : t('fe_claim')}
           </button>
         </form>
 
         {claim.isError && (
           <p style={{ margin: 0, fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>
-            {errorMessage(claim.error) ?? t('wt_claim_failed')}
+            {errorMessage(claim.error) ?? t('fe_claim_failed')}
           </p>
         )}
       </section>
@@ -112,11 +112,11 @@ export const WaiterOrdersPage = () => {
       {/* ── Active orders ── */}
       <section style={{ display: 'grid', gap: 12 }}>
         <h2 className="adm-heading" style={{ margin: 0 }}>
-          {t('wt_active_orders')} {orders.length > 0 && <span className="muted-text">· {orders.length}</span>}
+          {t('fe_active_orders')} {orders.length > 0 && <span className="muted-text">· {orders.length}</span>}
         </h2>
 
         {orders.length === 0 && (
-          <p className="muted-text" style={{ margin: 0, fontSize: 14 }}>{t('wt_no_active_orders')}</p>
+          <p className="muted-text" style={{ margin: 0, fontSize: 14 }}>{t('fe_no_active_orders')}</p>
         )}
 
         {orders.map((order) => (
@@ -130,7 +130,7 @@ export const WaiterOrdersPage = () => {
             onEdit={() => setEditing(editing === order.id ? null : order.id)}
             onEdited={() => { setEditing(null); invalidate(); }}
             onAcknowledge={() => acknowledge.mutate(order.id)}
-            onClose={() => { if (window.confirm(t('wt_close_confirm'))) close.mutate(order.id); }}
+            onClose={() => { if (window.confirm(t('fe_close_confirm'))) close.mutate(order.id); }}
           />
         ))}
       </section>
@@ -175,9 +175,9 @@ function OrderCard({
         }}>
           {order.code}
         </span>
-        <strong style={{ fontSize: 16 }}>{t('wt_table')}: {order.tableNumber ?? '—'}</strong>
+        <strong style={{ fontSize: 16 }}>{t('fe_table')}: {order.tableNumber ?? '—'}</strong>
         <span className="muted-text" style={{ fontSize: 12.5, marginLeft: 'auto' }}>
-          {t('wt_placed')} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {t('fe_placed')} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </header>
 
@@ -187,11 +187,11 @@ function OrderCard({
           padding: '9px 12px', borderRadius: 10, background: 'rgba(245,158,11,0.14)',
         }}>
           <strong style={{ color: '#f59e0b', fontSize: 14 }}>
-            🔔 {t('wt_calling')} · {t('wt_waiting_since', { minutes: waitingMinutes })}
+            🔔 {t('fe_calling')} · {t('fe_waiting_since', { minutes: waitingMinutes })}
           </strong>
           <button type="button" className="adm-btn-primary adm-btn-sm" style={{ marginLeft: 'auto' }}
             onClick={onAcknowledge}>
-            {t('wt_acknowledge')}
+            {t('fe_acknowledge')}
           </button>
         </div>
       )}
@@ -220,14 +220,14 @@ function OrderCard({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span className="adm-label" style={{ margin: 0 }}>{t('wt_order_total')}</span>
+        <span className="adm-label" style={{ margin: 0 }}>{t('fe_order_total')}</span>
         <strong style={{ fontSize: 18, color: '#c9a42c' }}>{formatSum(orderTotalCents(order))}</strong>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button type="button" className="adm-btn-ghost adm-btn-sm" onClick={onEdit}>
-            {t('wt_edit_items')}
+            {t('fe_edit_items')}
           </button>
           <button type="button" className="adm-btn-danger adm-btn-sm" onClick={onClose}>
-            {t('wt_close_order')}
+            {t('fe_close_order')}
           </button>
         </div>
       </div>
@@ -239,7 +239,7 @@ function OrderCard({
   );
 }
 
-// Amending an order: the waiter came back to the table and the guest wants
+// Amending an order: staff came back to the table and the guest wants
 // something else. Quantities are edited in place and the whole line set is sent,
 // which is what the server expects — it re-snapshots prices from the live menu.
 function OrderEditor({
@@ -308,7 +308,7 @@ function OrderEditor({
       ))}
 
       <label style={{ display: 'grid', gap: 5 }}>
-        <span className="adm-label">{t('wt_add_dish')}</span>
+        <span className="adm-label">{t('fe_add_dish')}</span>
         <input className="adm-input" value={search} onChange={(e) => setSearch(e.target.value)} />
       </label>
       {results.length > 0 && (
@@ -325,7 +325,7 @@ function OrderEditor({
       )}
 
       <label style={{ display: 'grid', gap: 5 }}>
-        <span className="adm-label">{t('wt_kitchen_comment')}</span>
+        <span className="adm-label">{t('fe_kitchen_comment')}</span>
         <textarea className="adm-input" value={comment} onChange={(e) => setComment(e.target.value)}
           style={{ minHeight: 70, resize: 'vertical' }} />
       </label>
@@ -334,7 +334,7 @@ function OrderEditor({
         <strong style={{ fontSize: 16, color: '#c9a42c' }}>{formatSum(total)}</strong>
         <button type="button" className="adm-btn-primary" style={{ marginLeft: 'auto' }}
           disabled={empty || save.isPending} onClick={() => save.mutate()}>
-          {save.isPending ? '…' : t('wt_save')}
+          {save.isPending ? '…' : t('fe_save')}
         </button>
       </div>
       {save.isError && (

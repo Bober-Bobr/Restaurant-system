@@ -129,7 +129,7 @@ export class OrderService {
     return prisma.order.update({ where: { id: order.id }, data: { callPendingAt: new Date() } });
   }
 
-  // ── Waiter side (authenticated, restaurant-scoped) ────────────────────────
+  // ── Floor side (authenticated, restaurant-scoped) ─────────────────────────
 
   /**
    * Claim a pending order by its code and attach the table number. The whole
