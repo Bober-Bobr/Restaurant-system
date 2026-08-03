@@ -23,6 +23,13 @@ const router = Router();
 router.get('/mine', floorRoles, orderController.listMine.bind(orderController));
 router.get('/alerts/count', floorRoles, orderController.alertCount.bind(orderController));
 router.post('/claim', floorRoles, orderController.claim.bind(orderController));
+
+// Statistics over CLOSED orders. Read-only, and every one of them is scoped in
+// `scopeFor` — a Food Employee sees their own figures whatever they ask for.
+router.get('/stats', floorRoles, orderController.stats.bind(orderController));
+router.get('/stats/employees', floorRoles, orderController.employeeTotals.bind(orderController));
+router.get('/history', floorRoles, orderController.history.bind(orderController));
+router.get('/tables', floorRoles, orderController.tables.bind(orderController));
 router.patch('/:id', floorRoles, orderController.update.bind(orderController));
 router.post('/:id/acknowledge', floorRoles, orderController.acknowledgeCall.bind(orderController));
 router.post('/:id/close', floorRoles, orderController.close.bind(orderController));

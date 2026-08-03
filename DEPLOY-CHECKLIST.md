@@ -847,5 +847,17 @@ window.
 The rate limiter is **in-memory**, so it is per-process. The API runs as a single
 pm2 process today; scaling to more would need a shared store.
 
-Statistics — the graph, the activity calendar and the per-employee aggregate — are
-the second pass. `/stats` currently says so rather than showing an empty chart.
+**Closed orders are retained for one year**, then purged by a sweep that runs 5
+minutes after API start and every 24h thereafter. Nothing to schedule — no cron
+entry, no systemd timer, and no annual job that a deploy would silently reset.
+`OrderItem` rows cascade with their order. `RETENTION_MS` in
+`apps/api/src/modules/order/order.retention.ts` is the single knob if you want a
+different period.
+
+The sweep logs only when it actually removes something —
+`[orders] retention sweep removed N order(s) closed over a year ago` — so
+`pm2 logs restaurant-api` staying quiet is the expected state for the first year.
+
+**Statistics** (`/stats`) read only CLOSED orders, so the page is empty until
+orders are closed rather than merely placed. A Food Admin sees the whole
+restaurant and a per-employee comparison; a Food Employee sees only their own.

@@ -33,3 +33,17 @@ export const orderIdSchema = z.object({ id: z.string().cuid() });
 export const listOrdersSchema = z.object({
   status: z.enum(['PENDING', 'OPEN', 'CLOSED', 'CANCELLED']).optional(),
 });
+
+// Statistics queries. `from`/`to` are ISO instants computed by the client from
+// the range it is showing; `tzOffsetMinutes` is the viewer's own offset so
+// buckets line up with the days they actually experienced.
+export const statsQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  granularity: z.enum(['day', 'week', 'month', 'year']).optional(),
+  tzOffsetMinutes: z.coerce.number().int().min(-720).max(840).optional(),
+  table: z.string().max(20).optional(),
+  scope: z.enum(['me', 'restaurant']).optional(),
+  take: z.coerce.number().int().min(1).max(200).optional(),
+  skip: z.coerce.number().int().min(0).optional(),
+});

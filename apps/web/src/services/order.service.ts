@@ -98,3 +98,58 @@ export const orderService = {
 export function orderTotalCents(order: WaiterOrder): number {
   return order.items.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
 }
+
+// ── Statistics over closed orders ───────────────────────────────────────────
+
+export type Granularity = 'day' | 'week' | 'month' | 'year';
+export type StatsScope = 'me' | 'restaurant';
+
+export type StatsBucket = { bucket: string; orders: number; revenueCents: number };
+export type EmployeeTotal = { waiterId: string | null; username: string; orders: number; revenueCents: number };
+export type ClosedOrderPage = { items: WaiterOrder[]; total: number };
+
+export type StatsFilters = {
+  from?: Date;
+  to?: Date;
+  granularity?: Granularity;
+  scope?: StatsScope;
+  table?: string;
+  take?: number;
+  skip?: number;
+};
+
+// The server buckets in the VIEWER's local time, so every stats call carries the
+// browser's offset. Without it a restaurant serving past midnight would see a
+// single busy night split across two days.
+function statsParams(filters: StatsFilters): Record<string, string | number> {
+  const params: Record<string, string | number> = {
+    tzOffsetMinutes: -new Date().getTimezoneOffset(),
+  };
+  if (filters.from) params.from = filters.from.toISOString();
+  if (filters.to) params.to = filters.to.toISOString();
+  if (filters.granularity) params.granularity = filters.granularity;
+  if (filters.scope) params.scope = filters.scope;
+  if (filters.table) params.table = filters.table;
+  if (filters.take != null) params.take = filters.take;
+  if (filters.skip != null) params.skip = filters.skip;
+  return params;
+}
+
+export const orderStatsService = {
+  async buckets(filters: StatsFilters): Promise<StatsBucket[]> {
+    const { data } = await httpClient.get('/orders/stats', { params: statsParams(filters) });
+    return data;
+  },
+  async employees(filters: StatsFilters): Promise<EmployeeTotal[]> {
+    const { data } = await httpClient.get('/orders/stats/employees', { params: statsParams(filters) });
+    return data;
+  },
+  async history(filters: StatsFilters): Promise<ClosedOrderPage> {
+    const { data } = await httpClient.get('/orders/history', { params: statsParams(filters) });
+    return data;
+  },
+  async tables(scope?: StatsScope): Promise<string[]> {
+    const { data } = await httpClient.get('/orders/tables', { params: scope ? { scope } : undefined });
+    return data;
+  },
+};

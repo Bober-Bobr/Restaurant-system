@@ -1,6 +1,8 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { publicRestaurantService } from '../services/publicRestaurant.service';
+import { getPhotoUrl } from '../utils/photoUrl';
 import { orderService } from '../services/order.service';
 import { useLiveQuery } from '../services/live';
 import { useAuthStore } from '../store/auth.store';
@@ -17,6 +19,7 @@ const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 export const FoodEmployeeLayout = () => {
   const accessToken = useAuthStore((s) => s.accessToken);
   const username = useAuthStore((s) => s.username);
+  const restaurantId = useAuthStore((s) => s.restaurantId);
   const logout = useAuthStore((s) => s.logout);
   const { locale, setLocale } = useAdminStore();
   const t = (key: TranslationKey) => translate(key, locale);
@@ -29,6 +32,17 @@ export const FoodEmployeeLayout = () => {
     enabled: !!accessToken,
   });
   const calling = alerts.data ?? 0;
+
+  // Read through the PUBLIC endpoint rather than /restaurants: a Food Employee
+  // has no rights on the admin restaurant routes, and this returns exactly the
+  // two fields the header needs.
+  const { data: restaurant } = useQuery({
+    queryKey: ['fe-restaurant', restaurantId],
+    queryFn: () => publicRestaurantService.get(restaurantId!),
+    enabled: !!restaurantId,
+    staleTime: 10 * 60_000,
+  });
+  const logoSrc = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
 
   const logoutMutation = useMutation({
     mutationFn: () => authService.logout(),
@@ -56,7 +70,27 @@ export const FoodEmployeeLayout = () => {
           maxWidth: 760, margin: '0 auto', padding: '10px 14px',
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         }}>
-          <strong style={{ fontSize: 15, letterSpacing: '-0.01em' }}>{username}</strong>
+          {/* Restaurant identity first, then who is signed in — the logo tells a
+              employee at a glance that they are on the right venue's floor. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+            {logoSrc && (
+              <img src={logoSrc} alt="" style={{
+                height: 32, width: 32, flexShrink: 0, objectFit: 'contain',
+                borderRadius: 7, background: 'rgba(255,255,255,0.06)',
+              }} />
+            )}
+            <div style={{ display: 'grid', minWidth: 0 }}>
+              <strong style={{
+                fontSize: 14, letterSpacing: '-0.01em', lineHeight: 1.2,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {restaurant?.name ?? username}
+              </strong>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 }}>
+                {t('food_employee_role')} · {username}
+              </span>
+            </div>
+          </div>
 
           <nav style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
             {nav.map(({ to, label, badge }) => {
