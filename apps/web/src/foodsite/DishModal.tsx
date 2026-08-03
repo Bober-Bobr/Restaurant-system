@@ -9,7 +9,7 @@ import { DishThumb, Price, Stepper, useDismissible, useT } from './ui';
 // surface, and a bottom sheet puts the controls under the thumb rather than
 // under the eyes. On a wide screen it stays bottom-anchored but capped in width
 // and centred, so the two layouts are the same object rather than two designs.
-export function DishModal({ item, onClose }: { item: MenuItem; onClose: () => void }) {
+export function DishModal({ item, onClose, locked = false }: { item: MenuItem; onClose: () => void; locked?: boolean }) {
   const { t, locale } = useT();
   const qty = useCartStore((s) => s.lines[item.id] ?? 0);
   const add = useCartStore((s) => s.add);

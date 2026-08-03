@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { orderController } from '../order/order.controller.js';
+import { rateLimit } from '../../middleware/rateLimit.js';
 import multer from 'multer';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -136,6 +138,32 @@ router.post('/invite-request-photo', reviewPhotoUpload.array('file', 10), async 
 router.get('/performers', performerController.listPublic.bind(performerController));
 router.get('/performers/:id', performerController.getPublic.bind(performerController));
 router.post('/performer-bookings', performerController.createBooking.bind(performerController));
+
+// ── Food-service orders ─────────────────────────────────────────────────────
+// Unauthenticated by necessity: the guest ordering at a table has no account and
+// never will. Identity is the opaque `guestToken` minted at creation and kept in
+// the guest's browser — the three-character code is for reading aloud to a
+// waiter, not for authenticating anything.
+//
+// These are the first public write endpoints that create priced rows, so unlike
+// the older public POSTs they carry a rate limit. Placing is the expensive one;
+// polling and the call button are cheap but still capped so a stuck client
+// cannot spin.
+router.post(
+  '/orders',
+  rateLimit({ name: 'order-place', windowMs: 60_000, max: 8 }),
+  orderController.place.bind(orderController),
+);
+router.get(
+  '/orders/:guestToken',
+  rateLimit({ name: 'order-read', windowMs: 60_000, max: 120 }),
+  orderController.getMine.bind(orderController),
+);
+router.post(
+  '/orders/:guestToken/call-waiter',
+  rateLimit({ name: 'order-call', windowMs: 60_000, max: 20 }),
+  orderController.callWaiter.bind(orderController),
+);
 
 router.get('/restaurants', async (_request, response, next) => {
   try {

@@ -790,3 +790,58 @@ nothing host-specific to deploy. The service worker cache was bumped to
 **Verify:** `test.v-menu.uz/<slug>` shows the new dark site with a cart, and
 `v-menu.uz/<slug>` is unchanged. If the second is not true, stop — the two are
 meant to be completely independent.
+
+
+---
+
+## 14. Stage 2 — ordering (guest → waiter)
+
+**Two new migrations**, on top of everything already listed above:
+
+| Migration | What |
+|---|---|
+| `20260803100000_admin_role_waiter` | `ALTER TYPE "AdminRole" ADD VALUE 'WAITER'` — alone, because Postgres will not let a new enum value be *used* in the transaction that adds it |
+| `20260803100100_orders` | `Order` + `OrderItem`, their indexes, and the **partial unique index** on `(restaurantId, code) WHERE status IN ('PENDING','OPEN')` |
+
+Nothing drops. `./deploy.sh` applies both.
+
+**Verify the partial index landed** — it is the guard against two guests holding
+the same code, and it is the one thing here Prisma cannot express, so it is worth
+confirming rather than assuming:
+
+```bash
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "\d+ \"Order\"" | grep -i 'Order_open_code_key'
+```
+
+Expect a line containing `UNIQUE`, `(restaurantId, code)` and `WHERE status`.
+
+### After deploying
+
+**Create waiter accounts.** In the restaurant's admin → Users, the `WAITER` role
+is now offered alongside `CATERING_ADMIN`. Waiters sign in at
+`v-menu.uz/login` and are redirected to `food-admin.v-menu.uz/<slug>`, landing on
+Orders. **No new host, DNS record or certificate is needed** — they share the
+existing catering-admin host.
+
+**`moduleCatering` gates waiters** exactly as it gates `CATERING_ADMIN`, on login
+*and* on refresh. Revoking the module ends a waiter's session within the
+15-minute access-token window.
+
+### End-to-end check
+
+1. On `test.v-menu.uz/<slug>`, add dishes → checkout → a three-character code appears.
+2. The cart button and every dish stepper vanish; the menu stays browsable.
+3. As a waiter on `food-admin.v-menu.uz/<slug>`, enter that code + a table number → the order appears with its dishes and comment.
+4. Back on the guest device (within ~10s), the code screen becomes "Order accepted" with a **Call waiter** button.
+5. Press it → the waiter's Orders tab badges within ~5s and the card turns amber. "On my way" clears it.
+6. Amend the order (add a dish, edit the comment) → the guest's device reflects it on its next poll.
+7. Close the order → the guest's device unlocks and the cart works again.
+
+### Known limits
+
+The rate limiter is **in-memory**, so it is per-process. The API runs as a single
+pm2 process today; scaling to more would need a shared store.
+
+Statistics — the graph, the activity calendar and the per-waiter aggregate — are
+the second pass. `/stats` currently says so rather than showing an empty chart.

@@ -163,6 +163,10 @@ enum AdminRole {
   // and booking machinery below. The one difference is the event programme,
   // which a client must supply when booking and a host may record per booking.
   HOST
+  // Food-service waiter. Restaurant-scoped, signs in at food-admin.v-menu.uz/<slug>
+  // and works only the Orders and Statistics tabs. Gated on moduleCatering, the
+  // same entitlement as CATERING_ADMIN — a waiter belongs to that product.
+  WAITER
 }
 
 model AdminUser {
@@ -185,6 +189,7 @@ model AdminUser {
   performerProfile PerformerProfile?  @relation("PerformerProfile")
   performerEvents  PerformerEvent[]   @relation("PerformerEvents")
   performerBookings PerformerBooking[] @relation("PerformerBookings")
+  waiterOrders      Order[]            @relation("WaiterOrders")
 
   @@index([restaurantId])
 }
@@ -388,6 +393,7 @@ model Restaurant {
   invitations     Invitation[]
   reviews         Review[]
   extraServices   ExtraService[]
+  orders          Order[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -519,6 +525,7 @@ model MenuItem {
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
   selections       EventMenuSelection[]
+  orderItems       OrderItem[]
   packageCategories TableCategoryMenuItem[]
   restaurant       Restaurant?              @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
   subcategory      MenuSubcategory?         @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
@@ -1099,6 +1106,75 @@ model NfcPlaque {
 //   vconnect → edited by a v-menu CHIEF_ADMIN; a flyer may override it locally
 //              with its own vccontact block.
 //   vinvite  → edited by a v-invite SYSTEM_ADMIN only, and never overridable.
+
+// ── Food-service orders (test.v-menu.uz → waiter) ───────────────────────────
+// The guest builds a cart on the food-service site and places an order without
+// an account. That produces a PENDING order and a short handoff CODE, which the
+// guest reads out to a waiter; the waiter enters the code plus the table number
+// on their own device, and only then does the order become theirs (OPEN).
+//
+// Two identifiers, deliberately different jobs:
+//   `code`       3 characters, shown to the guest, spoken aloud. Short enough to
+//                read across a table, so it is NOT a secret and is only unique
+//                among the orders that can still be claimed (partial unique
+//                index in the migration) — it is reusable once an order closes.
+//   `guestToken` long and random, stored on the guest's device, never displayed.
+//                The only thing proving an anonymous device owns this order, so
+//                every public read/write is keyed on it rather than on the id.
+model Order {
+  id            String    @id @default(cuid())
+  restaurantId  String
+  code          String
+  // PENDING (placed, awaiting a waiter) | OPEN (claimed) | CLOSED | CANCELLED.
+  // A plain String like PerformerBooking.status — new states need no migration.
+  status        String    @default("PENDING")
+  guestToken    String    @unique
+  // Free text from the guest for the kitchen. The waiter may edit it later.
+  comment       String?
+  // Entered by the waiter at claim time; the guest never types it. There is no
+  // Table model — TableCategory is a banquet price package, not a physical table.
+  tableNumber   String?
+  waiterId      String?
+  claimedAt     DateTime?
+  closedAt      DateTime?
+  // Set when the guest presses "call waiter", cleared when the waiter
+  // acknowledges. A timestamp rather than a boolean so the waiter's list can
+  // show how long someone has been waiting.
+  callPendingAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  waiter     AdminUser?  @relation("WaiterOrders", fields: [waiterId], references: [id], onDelete: SetNull)
+  items      OrderItem[]
+
+  @@index([restaurantId, status])
+  @@index([waiterId, status])
+  @@index([waiterId, closedAt])
+  @@index([restaurantId, createdAt])
+}
+
+// A line on an order. Unlike the guest's cart — which stores ids only, so a
+// price the restaurant edits is always reflected — an order SNAPSHOTS the name
+// and price at the moment it was placed. An order is a financial record: what
+// the guest agreed to must not change because the menu was edited afterwards.
+// Mirrors EventMenuSelection.unitPriceCents.
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  // Nullable so deleting a dish never destroys order history; the snapshot below
+  // keeps the line readable regardless.
+  menuItemId     String?
+  nameSnapshot   String
+  unitPriceCents Int
+  quantity       Int
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
 model PlatformContact {
   id        String   @id @default(cuid())
   brand     String   @unique // "vconnect" | "vinvite"

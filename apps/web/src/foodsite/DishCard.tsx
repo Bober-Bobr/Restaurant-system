@@ -6,7 +6,7 @@ import { DishThumb, Price, Stepper, useT } from './ui';
 // ── The dish card ───────────────────────────────────────────────────────────
 // Price first and large, name beneath it — the inversion this redesign is for.
 // The card opens the dish sheet; the stepper on it swallows its own clicks.
-export function DishCard({ item, onOpen }: { item: MenuItem; onOpen: () => void }) {
+export function DishCard({ item, onOpen, locked = false }: { item: MenuItem; onOpen: () => void; locked?: boolean }) {
   const { t, locale } = useT();
   const qty = useCartStore((s) => s.lines[item.id] ?? 0);
   const add = useCartStore((s) => s.add);
@@ -62,7 +62,9 @@ export function DishCard({ item, onOpen }: { item: MenuItem; onOpen: () => void 
           </p>
         )}
 
-        {!outOfStock && (
+        {/* While an order is live the guest orders through their waiter, so the
+            cart controls disappear rather than sitting there doing nothing. */}
+        {!outOfStock && !locked && (
           <div style={{
             marginTop: 'auto', paddingTop: 11,
             display: 'flex', justifyContent: 'flex-end', alignItems: 'center',

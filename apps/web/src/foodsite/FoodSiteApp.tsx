@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useFoodSiteData } from './useFoodSiteData';
+import { useActiveOrder } from './useActiveOrder';
 import { useCartStore } from './cart.store';
 import { FoodSiteLayout } from './FoodSiteLayout';
 import { MenuPage } from './MenuPage';
@@ -21,6 +22,8 @@ export function FoodSiteApp({ slug }: { slug: string | null }) {
   const { t } = useT();
   const { restaurant, menuItems, isLoading, notFound } = useFoodSiteData(slug);
   const setRestaurant = useCartStore((s) => s.setRestaurant);
+  // Drives the code screen, the call-waiter button and the cart lock at once.
+  const { order: activeOrder, locked } = useActiveOrder(restaurant?.id);
 
   // Binds the cart to this restaurant, emptying it if it belonged to another —
   // dishes must not walk from one restaurant's site to the next.
@@ -50,9 +53,9 @@ export function FoodSiteApp({ slug }: { slug: string | null }) {
   }
 
   return (
-    <FoodSiteLayout restaurant={restaurant} menuItems={menuItems}>
+    <FoodSiteLayout restaurant={restaurant} menuItems={menuItems} orderLocked={locked}>
       <Routes>
-        <Route path="/" element={<MenuPage restaurant={restaurant} menuItems={menuItems} />} />
+        <Route path="/" element={<MenuPage restaurant={restaurant} menuItems={menuItems} activeOrder={activeOrder} />} />
         <Route path="/halls" element={<HallsPage restaurantId={restaurant.id} />} />
         <Route path="/halls/:hallId" element={<HallDetailPage restaurantId={restaurant.id} />} />
         <Route path="/reviews" element={<ReviewsPage restaurantId={restaurant.id} />} />

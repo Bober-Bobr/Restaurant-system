@@ -1,22 +1,22 @@
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatSum } from '../utils/currency';
 import { dishName } from '../utils/menuI18n';
 import type { MenuItem } from '../types/domain';
+import { publicOrderService } from '../services/order.service';
+import { useCartStore } from './cart.store';
+import { useOrderSession } from './order.store';
 import { useCartLines } from './useCartLines';
 import { Price, useDismissible, useT } from './ui';
 
 // ── Checkout ────────────────────────────────────────────────────────────────
-// PHASE 1: the form is real, the submit is not. Nothing is sent to the server —
-// there is no orders endpoint yet — and the success screen says so plainly
-// rather than imitating a placed order.
+// Sends the order for real. The body carries ids and quantities only — the
+// server resolves names and prices from the live menu and snapshots them onto
+// the order, so nothing here can name its own price.
 //
-// The draft below is shaped like the eventual POST /api/public/orders body, so
-// Phase 2 replaces `onSubmit` and nothing else.
-type OrderDraft = {
-  restaurantId: string;
-  comment: string;
-  items: { menuItemId: string; quantity: number; unitPriceCents: number }[];
-};
+// On success the cart is emptied and the guest's device token is stored; from
+// that moment the site is in "order in progress" mode and the code takes over
+// the screen (ActiveOrderPanel).
 
 export function CheckoutSheet({
   restaurantId, menuItems, onClose,
@@ -26,29 +26,36 @@ export function CheckoutSheet({
   const { t, locale } = useT();
   const { lines, subtotal } = useCartLines(menuItems);
   const [comment, setComment] = useState('');
-  const [sent, setSent] = useState(false);
+  const queryClient = useQueryClient();
+  const clearCart = useCartStore((s) => s.clear);
+  const startSession = useOrderSession((s) => s.start);
   useDismissible(true, onClose);
 
   const payable = lines.filter((l) => !l.outOfStock);
-  const canSubmit = payable.length > 0;
+
+  const place = useMutation({
+    mutationFn: () => publicOrderService.place({
+      restaurantId,
+      comment: comment.trim() || null,
+      items: payable.map((l) => ({ menuItemId: l.item.id, quantity: l.qty })),
+    }),
+    onSuccess: (order) => {
+      // Order of operations matters: register the session BEFORE clearing the
+      // cart, so there is never a frame where the guest has neither a cart nor
+      // an order and the site looks like it lost their food.
+      startSession(restaurantId, order.guestToken);
+      queryClient.setQueryData(['fs-order', order.guestToken], order);
+      clearCart();
+    },
+  });
+
+  const canSubmit = payable.length > 0 && !place.isPending;
+  const sent = place.isSuccess;
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-
-    // Assembled but deliberately not sent. Kept so the shape is exercised now
-    // and the Phase 2 change is one line.
-    const draft: OrderDraft = {
-      restaurantId,
-      comment: comment.trim(),
-      items: payable.map((l) => ({
-        menuItemId: l.item.id,
-        quantity: l.qty,
-        unitPriceCents: l.item.priceCents,
-      })),
-    };
-    void draft;
-    setSent(true);
+    place.mutate();
   };
 
   return (
@@ -56,11 +63,17 @@ export function CheckoutSheet({
       <div className="fs-backdrop" style={{ zIndex: 70 }} onClick={onClose} />
       <div className="fs-sheet" style={{ zIndex: 71 }} role="dialog" aria-modal="true" aria-label={t('fs_checkout')}>
         {sent ? (
-          <div style={{ padding: '34px 26px 30px', display: 'grid', gap: 12, justifyItems: 'center', textAlign: 'center' }}>
-            <span style={{ fontSize: 42 }}>🧾</span>
-            <h2 className="fs-title" style={{ fontSize: 21 }}>{t('fs_order_stub_title')}</h2>
+          <div style={{ padding: '30px 26px 28px', display: 'grid', gap: 12, justifyItems: 'center', textAlign: 'center' }}>
+            <span className="fs-eyebrow">{t('fs_show_this_code')}</span>
+            <strong style={{
+              fontSize: 'clamp(56px, 20vw, 88px)', fontWeight: 800, lineHeight: 1,
+              letterSpacing: '0.12em', paddingLeft: '0.12em',
+              color: 'var(--fs-accent)', fontVariantNumeric: 'tabular-nums',
+            }}>
+              {place.data?.code}
+            </strong>
             <p className="fs-muted" style={{ margin: 0, fontSize: 14.5, lineHeight: 1.62, maxWidth: 380 }}>
-              {t('fs_order_stub_body')}
+              {t('fs_code_hint')}
             </p>
             <button type="button" className="fs-btn fs-btn-primary" style={{ marginTop: 6 }} onClick={onClose}>
               {t('fs_back_to_menu')}
@@ -94,12 +107,25 @@ export function CheckoutSheet({
               </div>
             </div>
 
+            {place.isError && (
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--fs-danger)', lineHeight: 1.5 }}>
+                {errorMessage(place.error) ?? t('fs_order_failed')}
+              </p>
+            )}
+
             <button type="submit" className="fs-btn fs-btn-primary" disabled={!canSubmit}>
-              {t('fs_send_order')}
+              {place.isPending ? <span className="fs-spinner" /> : t('fs_send_order')}
             </button>
           </form>
         )}
       </div>
     </>
   );
+}
+
+// The server explains *why* an order was refused — a dish sold out, the menu
+// changed — and that is far more useful to a guest than a generic failure.
+function errorMessage(error: unknown): string | null {
+  const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+  return typeof message === 'string' && message.trim() ? message : null;
 }

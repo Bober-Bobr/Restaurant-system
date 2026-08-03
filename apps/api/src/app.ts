@@ -17,6 +17,7 @@ import { publicApiRouter } from './modules/public/public.routes.js';
 import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
+import { orderRouter } from './modules/order/order.routes.js';
 import { nfcPlaqueRouter } from './modules/nfcPlaque/nfcPlaque.routes.js';
 import { performerRouter } from './modules/performer/performer.routes.js';
 import { platformContactRouter } from './modules/platformContact/platformContact.routes.js';
@@ -77,6 +78,9 @@ protectedApi.use('/exports', requireRestaurant, exportRouter);
 protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/extra-services', requireRestaurant, extraServiceRouter);
+// Food-service orders (waiter side). Restaurant-scoped: the claim-by-code
+// lookup is confined to the caller's own restaurant.
+protectedApi.use('/orders', requireRestaurant, orderRouter);
 protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);

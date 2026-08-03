@@ -5,6 +5,8 @@ import type { MenuItem } from '../types/domain';
 import type { PublicRestaurantDetail } from '../services/publicRestaurant.service';
 import { DishCard } from './DishCard';
 import { DishModal } from './DishModal';
+import { ActiveOrderPanel } from './ActiveOrderPanel';
+import type { GuestOrder } from '../services/order.service';
 import { SectionHeading, useRailScroll, useT } from './ui';
 
 // ── The menu ────────────────────────────────────────────────────────────────
@@ -23,10 +25,12 @@ type Section = {
 };
 
 export function MenuPage({
-  restaurant, menuItems,
+  restaurant, menuItems, activeOrder,
 }: {
   restaurant: PublicRestaurantDetail;
   menuItems: MenuItem[];
+  /** Set while the guest has an order in progress; locks the cart controls. */
+  activeOrder?: GuestOrder;
 }) {
   const { t, locale } = useT();
   const [query, setQuery] = useState('');
@@ -108,8 +112,14 @@ export function MenuPage({
     window.scrollTo({ top, behavior: 'smooth' });
   };
 
+  const locked = !!activeOrder;
+
   return (
     <>
+      {/* The order takes over the top of the page: while one is live it is the
+          only thing the guest needs, and the menu below becomes reference. */}
+      {activeOrder && <ActiveOrderPanel order={activeOrder} />}
+
       {/* Sticky rail: search + category chips. */}
       <div className="fs-glass" style={{
         position: 'sticky', top: 0, zIndex: 30, margin: '0 -16px',
@@ -178,7 +188,8 @@ export function MenuPage({
                 gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
               }}>
                 {group.items.map((item) => (
-                  <DishCard key={`${section.id}-${item.id}`} item={item} onOpen={() => setSelected(item)} />
+                  <DishCard key={`${section.id}-${item.id}`} item={item} locked={locked}
+                    onOpen={() => setSelected(item)} />
                 ))}
               </div>
             </div>
@@ -186,7 +197,7 @@ export function MenuPage({
         </section>
       ))}
 
-      {selected && <DishModal item={selected} onClose={() => setSelected(null)} />}
+      {selected && <DishModal item={selected} locked={locked} onClose={() => setSelected(null)} />}
     </>
   );
 }

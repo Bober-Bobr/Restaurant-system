@@ -21,10 +21,12 @@ const NAV = [
 ] as const;
 
 export function FoodSiteLayout({
-  restaurant, menuItems, children,
+  restaurant, menuItems, orderLocked = false, children,
 }: {
   restaurant?: PublicRestaurantDetail;
   menuItems: MenuItem[];
+  /** An order is in progress: the cart is no longer a way to order. */
+  orderLocked?: boolean;
   children: React.ReactNode;
 }) {
   const { t, locale, setLocale } = useT();
@@ -32,7 +34,9 @@ export function FoodSiteLayout({
   const revealRef = useScrollReveal<HTMLElement>([location.pathname]);
   const { count, subtotal } = useCartLines(menuItems);
   const [cartOpen, setCartOpen] = useState(false);
-  const cartBarVisible = count > 0 && !cartOpen;
+  // Once an order is placed the guest orders through their waiter, so every
+  // route into the cart disappears rather than sitting there inert.
+  const cartBarVisible = count > 0 && !cartOpen && !orderLocked;
 
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
@@ -110,11 +114,13 @@ export function FoodSiteLayout({
                 ))}
               </div>
 
-              <button type="button" className="fs-btn fs-btn-icon" aria-label={t('fs_cart')}
-                style={{ position: 'relative' }} onClick={() => setCartOpen(true)}>
-                🛒
-                {count > 0 && <span className="fs-badge">{count}</span>}
-              </button>
+              {!orderLocked && (
+                <button type="button" className="fs-btn fs-btn-icon" aria-label={t('fs_cart')}
+                  style={{ position: 'relative' }} onClick={() => setCartOpen(true)}>
+                  🛒
+                  {count > 0 && <span className="fs-badge">{count}</span>}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -145,7 +151,7 @@ export function FoodSiteLayout({
         </button>
       )}
 
-      {cartOpen && restaurant && (
+      {cartOpen && restaurant && !orderLocked && (
         <CartDrawer restaurantId={restaurant.id} menuItems={menuItems} onClose={() => setCartOpen(false)} />
       )}
     </div>
