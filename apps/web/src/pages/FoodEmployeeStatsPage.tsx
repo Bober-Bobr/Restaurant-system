@@ -14,12 +14,11 @@ import { formatSum } from '../utils/currency';
 // Closed orders are the record: they are kept for a year (order.retention.ts)
 // and everything here reads them. Three layers, coarse to fine:
 //   1. the activity calendar — a rolling year at a glance, ALWAYS shown
-//   2. the bar chart — bucketed by the period below
-//   3. the closed-order list — filtered by period, date and table
-// One period control (day/week/month/year) lives with the closed-order filters
-// and drives both the chart's buckets and the list's window, so the two views
-// can never disagree about what a bar means. Picking a calendar square sets the
-// date, which is the only reason the calendar is interactive.
+//   2. the closed-order list — filtered by period, date and table
+// The filter row carries both controls: the period (day/week/month/year) sets
+// the list's window, and the metric (orders/revenue) sets what the calendar
+// squares are shaded by. Picking a square sets the date, which is the only
+// reason the calendar is interactive.
 
 const GRANULARITIES: Granularity[] = ['day', 'week', 'month', 'year'];
 const RANGES = [30, 90, 365] as const;
@@ -56,11 +55,6 @@ export const FoodEmployeeStatsPage = () => {
     queryFn: () => orderStatsService.buckets({ from: yearFrom, granularity: 'day', scope }),
   });
 
-  const chartQuery = useQuery({
-    queryKey: ['fe-stats-chart', scope, granularity, rangeDays, today],
-    queryFn: () => orderStatsService.buckets({ from: rangeFrom, granularity, scope }),
-  });
-
   const employeesQuery = useQuery({
     queryKey: ['fe-stats-employees', rangeDays, today],
     queryFn: () => orderStatsService.employees({ from: rangeFrom, scope: 'restaurant' }),
@@ -88,20 +82,27 @@ export const FoodEmployeeStatsPage = () => {
     }),
   });
 
+  // Squares shade by whichever metric is selected below, so the calendar answers
+  // "when was I busy?" or "when did I take the most money?" from one control.
   const calendarDays = useMemo(
     () => (yearQuery.data ?? []).map((bucket) => ({
       date: bucket.bucket,
-      value: bucket.orders,
+      value: metric === 'orders' ? bucket.orders : bucket.revenueCents,
       label: `${bucket.bucket} · ${bucket.orders} · ${formatSum(bucket.revenueCents)}`,
     })),
-    [yearQuery.data],
+    [yearQuery.data, metric],
   );
 
-  const buckets = chartQuery.data ?? [];
-  const peak = Math.max(1, ...buckets.map((b) => (metric === 'orders' ? b.orders : b.revenueCents)));
-  const totals = buckets.reduce(
-    (acc, b) => ({ orders: acc.orders + b.orders, revenue: acc.revenue + b.revenueCents }),
-    { orders: 0, revenue: 0 },
+  // ISO dates compare correctly as strings, so the range slice needs no parsing.
+  const rangeFromKey = localDateKey(rangeFrom);
+  const totals = useMemo(
+    () => (yearQuery.data ?? [])
+      .filter((bucket) => bucket.bucket >= rangeFromKey)
+      .reduce(
+        (acc, b) => ({ orders: acc.orders + b.orders, revenue: acc.revenue + b.revenueCents }),
+        { orders: 0, revenue: 0 },
+      ),
+    [yearQuery.data, rangeFromKey],
   );
 
   return (
@@ -131,7 +132,9 @@ export const FoodEmployeeStatsPage = () => {
       <section className="adm-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <h2 className="adm-heading" style={{ margin: 0 }}>{t('fe_activity')}</h2>
-          <span className="muted-text" style={{ fontSize: 12 }}>{t('fe_activity_hint')}</span>
+          <span className="muted-text" style={{ fontSize: 12 }}>
+            {t('fe_shaded_by', { metric: metric === 'orders' ? t('fe_orders') : t('fe_revenue') })}
+          </span>
           {day && (
             <button type="button" className="adm-btn-ghost adm-btn-sm" style={{ marginLeft: 'auto' }}
               onClick={() => setDay(null)}>
@@ -151,38 +154,6 @@ export const FoodEmployeeStatsPage = () => {
               onSelect={(picked) => setDay(picked === day ? null : picked)}
               emptyLabel={t('fe_no_activity')}
             />
-          )}
-      </section>
-
-      {/* ── Chart ── */}
-      <section className="adm-card" style={{ padding: 16, display: 'grid', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Chip active={metric === 'orders'} onClick={() => setMetric('orders')}>{t('fe_orders')}</Chip>
-          <Chip active={metric === 'revenue'} onClick={() => setMetric('revenue')}>{t('fe_revenue')}</Chip>
-        </div>
-
-        {buckets.length === 0
-          ? <p className="muted-text" style={{ margin: 0, fontSize: 14 }}>{t('fe_no_activity')}</p>
-          : (
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160, overflowX: 'auto' }}>
-              {buckets.map((bucket) => {
-                const value = metric === 'orders' ? bucket.orders : bucket.revenueCents;
-                return (
-                  <div
-                    key={bucket.bucket}
-                    title={`${bucket.bucket} · ${bucket.orders} · ${formatSum(bucket.revenueCents)}`}
-                    style={{
-                      flex: '1 0 8px', minWidth: 8,
-                      // A zero bar still gets 2px, so an empty day reads as a gap
-                      // in a series rather than as nothing at all.
-                      height: `${Math.max(2, (value / peak) * 100)}%`,
-                      background: value > 0 ? '#fff' : 'rgba(255,255,255,0.12)',
-                      borderRadius: '3px 3px 0 0',
-                    }}
-                  />
-                );
-              })}
-            </div>
           )}
       </section>
 
@@ -209,16 +180,18 @@ export const FoodEmployeeStatsPage = () => {
           </span>
         </div>
 
-        {/* Period. Also the chart's bucket size, so the two views always agree on
-            what a bar means — one control, not two that can drift apart. With a
-            date picked it becomes the list's window: the day, week, month or
-            year containing that date. */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {/* Period + metric, together. The period sets the list's window — the day,
+            week, month or year containing the selected date — and the metric
+            decides what the activity squares above are shaded by. */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
           {GRANULARITIES.map((g) => (
             <Chip key={g} active={granularity === g} onClick={() => setGranularity(g)}>
               {t(`fe_by_${g}` as TranslationKey)}
             </Chip>
           ))}
+          <span style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.16)', margin: '0 4px' }} />
+          <Chip active={metric === 'orders'} onClick={() => setMetric('orders')}>{t('fe_orders')}</Chip>
+          <Chip active={metric === 'revenue'} onClick={() => setMetric('revenue')}>{t('fe_revenue')}</Chip>
         </div>
 
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
