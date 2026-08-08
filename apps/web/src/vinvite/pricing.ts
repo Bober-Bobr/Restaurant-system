@@ -32,3 +32,18 @@ export function groupByTier<T extends { id: string }>(
   }
   return { buckets, unassigned };
 }
+
+// The administrator may type a handle, an @handle or a full URL into the studio
+// contact fields. Accept all three rather than making them remember which one
+// this particular field wanted — the field has never said.
+export function telegramHref(value: string): string {
+  const raw = value.trim();
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://t.me/${raw.replace(/^@/, '')}`;
+}
+
+export function instagramHref(value: string): string {
+  const raw = value.trim();
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://instagram.com/${raw.replace(/^@/, '')}`;
+}

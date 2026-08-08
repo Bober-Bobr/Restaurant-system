@@ -347,10 +347,10 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
 
           <div className="vi-fade-up vi-lp-hero-cta" style={{ animationDelay: '760ms' }}>
             <button type="button" className="vi-btn vi-btn-primary" onClick={onWork}>
-              {t('lp_cta_primary')} <span style={{ fontSize: 17 }}>→</span>
+              👁 {t('lp_cta_secondary')}
             </button>
             <button type="button" className="vi-btn vi-btn-ghost" onClick={onPricing}>
-              💎 {t('lp_cta_secondary')}
+              💎 {t('lp_nav_pricing')}
             </button>
           </div>
         </div>
@@ -458,7 +458,7 @@ function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
 
         <div ref={reveal} style={{ textAlign: 'center', marginTop: 44 }}>
           <button type="button" className="vi-btn vi-btn-ghost" style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onPricing}>
-            {t('lp_work_cta')} →
+            💎 {t('lp_nav_pricing')} →
           </button>
         </div>
       </div>

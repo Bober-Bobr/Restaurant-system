@@ -4,9 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { vinviteService, TEMPLATE_TIERS, type TemplatePricing, type TemplateTier } from './api';
 import { RICH_TEMPLATES } from './templates';
 import { usePromoShowcase } from './promoShowcase';
-import { groupByTier } from './pricing';
+import { groupByTier, instagramHref, telegramHref } from './pricing';
 import { useViT, type ViKey } from './i18n';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
+import { usePlatformContacts } from '../hooks/usePlatformContacts';
 import { formatSum } from '../utils/currency';
 
 // ── Pricing ─────────────────────────────────────────────────────────────────
@@ -26,8 +27,19 @@ const TIER_ACCENT: Record<TemplateTier, string> = {
 export const ViPricingPage = () => {
   const t = useViT();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const selectedId = params.get('template');
+
+  const choose = (templateId: string | null) => {
+    const next = new URLSearchParams(params);
+    if (templateId) next.set('template', templateId); else next.delete('template');
+    // `replace`: changing your mind five times should not mean five presses of
+    // the browser Back button to leave the page.
+    setParams(next, { replace: true });
+  };
+
+  const contactFor = usePlatformContacts();
+  const contact = contactFor('vinvite');
 
   const { work } = usePromoShowcase();
 
@@ -112,10 +124,26 @@ export const ViPricingPage = () => {
                   </span>
                 )}
               </div>
-              <strong style={{ fontSize: 22, fontWeight: 850, whiteSpace: 'nowrap' }}>
-                {priceLabel(selected.id)}
-              </strong>
+              <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
+                <strong style={{ fontSize: 22, fontWeight: 850, whiteSpace: 'nowrap' }}>
+                  {priceLabel(selected.id)}
+                </strong>
+                <button type="button" className="vi-btn vi-btn-ghost"
+                  style={{ fontSize: 12.5, padding: '6px 12px' }}
+                  onClick={() => choose(null)}>
+                  {t('pricing_change')}
+                </button>
+              </div>
             </div>
+          )}
+
+          {!selected && (
+            <p style={{
+              margin: '0 auto 30px', maxWidth: 520, textAlign: 'center',
+              fontSize: 14, color: 'var(--vi-muted)',
+            }}>
+              {t('pricing_pick_hint')}
+            </p>
           )}
 
           {/* The three tiers. */}
@@ -146,19 +174,28 @@ export const ViPricingPage = () => {
                   ) : (
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 10 }}>
                       {templates.map((tpl) => (
-                        <li key={tpl.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '8px 10px', borderRadius: 10,
-                          background: tpl.id === selectedId ? 'var(--vi-accent-soft)' : 'transparent',
-                        }}>
-                          <span style={{ fontSize: 17 }}>{tpl.cover}</span>
-                          <span style={{
-                            flex: 1, minWidth: 0, fontSize: 14, fontWeight: 650,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {t(tpl.nameKey as ViKey)}
-                          </span>
-                          <strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{priceLabel(tpl.id)}</strong>
+                        <li key={tpl.id}>
+                          <button
+                            type="button"
+                            onClick={() => choose(tpl.id)}
+                            aria-pressed={tpl.id === selectedId}
+                            style={{
+                              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                              padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
+                              font: 'inherit', color: 'inherit', textAlign: 'left',
+                              border: `1px solid ${tpl.id === selectedId ? 'var(--vi-accent)' : 'transparent'}`,
+                              background: tpl.id === selectedId ? 'var(--vi-accent-soft)' : 'transparent',
+                            }}
+                          >
+                            <span style={{ fontSize: 17 }}>{tpl.cover}</span>
+                            <span style={{
+                              flex: 1, minWidth: 0, fontSize: 14, fontWeight: 650,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {t(tpl.nameKey as ViKey)}
+                            </span>
+                            <strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{priceLabel(tpl.id)}</strong>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -175,27 +212,66 @@ export const ViPricingPage = () => {
               </p>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {grouped.unassigned.map((tpl) => (
-                  <span key={tpl.id} className="vi-card" style={{
-                    padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13.5,
-                    border: tpl.id === selectedId ? '1px solid var(--vi-accent)' : undefined,
-                  }}>
+                  <button key={tpl.id} type="button" className="vi-card"
+                    onClick={() => choose(tpl.id)}
+                    aria-pressed={tpl.id === selectedId}
+                    style={{
+                      padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: 8,
+                      fontSize: 13.5, cursor: 'pointer', font: 'inherit', color: 'inherit',
+                      border: `1px solid ${tpl.id === selectedId ? 'var(--vi-accent)' : 'var(--vi-border)'}`,
+                    }}>
                     <span>{tpl.cover}</span>
                     {t(tpl.nameKey as ViKey)}
                     <strong style={{ color: 'var(--vi-muted)' }}>{priceLabel(tpl.id)}</strong>
-                  </span>
+                  </button>
                 ))}
               </div>
             </section>
           )}
 
-          <p style={{
-            margin: '38px auto 0', maxWidth: 560, textAlign: 'center',
-            fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)',
-          }}>
-            {t('pricing_contact')}
-          </p>
+          {/* Contact details, exactly as the system administrator entered them.
+              Rendered only where a value exists — an empty row would advertise a
+              channel the studio does not actually answer. */}
+          <section style={{ margin: '46px auto 0', maxWidth: 560, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
+              {t('pricing_contact')}
+            </p>
+
+            <div style={{
+              marginTop: 18, display: 'flex', gap: 10,
+              flexWrap: 'wrap', justifyContent: 'center',
+            }}>
+              {contact.phone.trim() && (
+                <ContactLink href={`tel:${contact.phone.replace(/\s+/g, '')}`} icon="📞" label={contact.phone} />
+              )}
+              {contact.telegram.trim() && (
+                <ContactLink href={telegramHref(contact.telegram)} icon="✈️" label={contact.telegram} />
+              )}
+              {contact.instagram.trim() && (
+                <ContactLink href={instagramHref(contact.instagram)} icon="📷" label={contact.instagram} />
+              )}
+            </div>
+          </section>
         </div>
       </main>
     </div>
   );
 };
+
+function ContactLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="vi-card"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+        fontSize: 14.5, fontWeight: 650, textDecoration: 'none', color: 'inherit',
+      }}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+    </a>
+  );
+}

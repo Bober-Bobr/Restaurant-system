@@ -297,6 +297,8 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Our work',
     lp_nav_pricing: 'Pricing',
+    pricing_change: 'Change',
+    pricing_pick_hint: 'Choose a template below to see its price.',
     lp_select: 'Select this template',
     lp_why_7_t: 'Every scene choreographed',
     lp_why_7_d: 'Not one animation reused twice. Each template has its own timing, its own easing and its own entrance, worked out scene by scene rather than dropped in from a library.',
@@ -328,7 +330,6 @@ const dict = {
     lp_hero_title_1: 'Invitations your',
     lp_hero_title_2: 'guests will remember',
     lp_hero_sub: 'Living, animated invitations with music, a photo gallery, a countdown and RSVP replies. Ready in minutes — one link is all your guests need.',
-    lp_cta_primary: 'Create an invitation',
     lp_cta_secondary: 'See our work',
     lp_stat_templates: 'Ready-made designs',
     lp_stat_languages: 'Languages',
@@ -340,7 +341,6 @@ const dict = {
     lp_work_sub: 'Every template below is live — not a screenshot. Look around, then make it yours.',
     lp_work_live: 'Live preview',
     lp_work_open: 'Open full screen',
-    lp_work_cta: 'Browse all templates',
 
     lp_why_kicker: 'Why choose us',
     lp_why_title: 'Everything an invitation should be',
@@ -655,6 +655,8 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Наши работы',
     lp_nav_pricing: 'Цены',
+    pricing_change: 'Изменить',
+    pricing_pick_hint: 'Выберите шаблон ниже, чтобы увидеть его цену.',
     lp_select: 'Выбрать этот шаблон',
     lp_why_7_t: 'Каждая сцена выверена',
     lp_why_7_d: 'Ни одна анимация не повторяется дважды. У каждого шаблона свой ритм, своё сглаживание и своё появление, продуманные сцена за сценой, а не взятые из библиотеки.',
@@ -686,7 +688,6 @@ const dict = {
     lp_hero_title_1: 'Приглашения,',
     lp_hero_title_2: 'которые запомнят',
     lp_hero_sub: 'Живые анимированные приглашения с музыкой, галереей фото, таймером и ответами гостей. Готово за минуты — гостям нужна всего одна ссылка.',
-    lp_cta_primary: 'Создать приглашение',
     lp_cta_secondary: 'Смотреть работы',
     lp_stat_templates: 'Готовых дизайна',
     lp_stat_languages: 'Языка',
@@ -698,7 +699,6 @@ const dict = {
     lp_work_sub: 'Каждый шаблон ниже живой, а не скриншот. Посмотрите — и сделайте его своим.',
     lp_work_live: 'Живой просмотр',
     lp_work_open: 'Открыть на весь экран',
-    lp_work_cta: 'Все шаблоны',
 
     lp_why_kicker: 'Почему мы',
     lp_why_title: 'Всё, каким должно быть приглашение',
@@ -1013,6 +1013,8 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Ishlarimiz',
     lp_nav_pricing: 'Narxlar',
+    pricing_change: 'Ozgartirish',
+    pricing_pick_hint: 'Narxini korish uchun quyidan shablon tanlang.',
     lp_select: 'Shu shablonni tanlash',
     lp_why_7_t: 'Har bir sahna puxta ishlangan',
     lp_why_7_d: 'Birorta animatsiya ikki marta takrorlanmaydi. Har bir shablonning oz ritmi, oz silliqligi va oz paydo bolishi bor, kutubxonadan olinmagan, sahnama-sahna oylab chiqilgan.',
@@ -1044,7 +1046,6 @@ const dict = {
     lp_hero_title_1: 'Mehmonlar eslab qoladigan',
     lp_hero_title_2: 'taklifnomalar',
     lp_hero_sub: 'Musiqa, foto galereya, taymer va mehmon javoblari bilan jonli animatsiyali taklifnomalar. Bir necha daqiqada tayyor — mehmonlarga bitta havola kifoya.',
-    lp_cta_primary: 'Taklifnoma yaratish',
     lp_cta_secondary: 'Ishlarni korish',
     lp_stat_templates: 'Tayyor dizayn',
     lp_stat_languages: 'Til',
@@ -1056,7 +1057,6 @@ const dict = {
     lp_work_sub: 'Quyidagi har bir shablon jonli, skrinshot emas. Korib chiqing va ozingizniki qiling.',
     lp_work_live: 'Jonli korinish',
     lp_work_open: 'Toliq ekranda ochish',
-    lp_work_cta: 'Barcha shablonlar',
 
     lp_why_kicker: 'Nega biz',
     lp_why_title: 'Taklifnoma qanday bolishi kerak bolsa, shunday',
