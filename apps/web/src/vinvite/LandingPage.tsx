@@ -22,7 +22,7 @@ const ALL_LOCALES = [...LOCALES];
 // scroll; the whole
 // page degrades gracefully under prefers-reduced-motion (see vinvite.css).
 
-// Reveal-on-scroll: adds `.in` once an element scrolls into view. Elements are
+// Reveal-on-scroll lives in motion.ts. Elements are
 // registered by ref callback, so sections can mount lazily without a re-scan.
 // The observer is built on first use rather than in an effect: ref callbacks
 // fire during commit, before effects run, so an effect-created observer would

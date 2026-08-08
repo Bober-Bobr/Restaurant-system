@@ -238,14 +238,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Scroll reveal: elements lift into place as they enter the viewport ── */
-.vi-lp-reveal {
-  opacity: 0;
-  transform: translateY(34px);
-  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-.vi-lp-reveal.in { opacity: 1; transform: none; }
+/* (The first-generation `.vi-lp-reveal` was replaced by `.vi-r` above.) */
 
 /* ── Aurora: slow drifting colour fields behind the hero ── */
 @keyframes viAurora {
@@ -593,15 +586,23 @@
 /* ── Reveals ──
    One class, four directions. Stagger comes from an inline --d custom property
    so a list can cascade without a rule per child. */
-.vi-r { opacity: 0; will-change: opacity, transform;
+/* The REVEALED state is the default; `.vi-pre` is what hides an element, and it
+   is added imperatively by the observer's ref (never through React's className).
+   That inversion matters: `className` is React-controlled, so any re-render that
+   changes it rewrites the class attribute and drops whatever was added
+   imperatively. With the old polarity that meant losing the "shown" marker and
+   the element stayed invisible for ever, because the observer had already
+   stopped watching it. Now the same accident just skips an animation. */
+.vi-r { will-change: opacity, transform;
   transition: opacity .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms),
-              transform .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms); }
-.vi-r-up    { transform: translateY(40px); }
-.vi-r-left  { transform: translateX(-40px); }
-.vi-r-right { transform: translateX(40px); }
-.vi-r-zoom  { transform: scale(.92); }
-.vi-r-blur  { transform: translateY(26px); filter: blur(10px); }
-.vi-r.in { opacity: 1; transform: none; filter: none; }
+              transform .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms),
+              filter .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms); }
+.vi-r.vi-pre            { opacity: 0; }
+.vi-r.vi-pre.vi-r-up    { transform: translateY(40px); }
+.vi-r.vi-pre.vi-r-left  { transform: translateX(-40px); }
+.vi-r.vi-pre.vi-r-right { transform: translateX(40px); }
+.vi-r.vi-pre.vi-r-zoom  { transform: scale(.92); }
+.vi-r.vi-pre.vi-r-blur  { transform: translateY(26px); filter: blur(10px); }
 
 /* ── Numbered section header ── */
 .vi-lp-sec-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
@@ -611,11 +612,12 @@
 }
 /* Draws itself outward as the header arrives. */
 .vi-lp-sec-rule {
-  height: 1px; flex: 1; transform: scaleX(0); transform-origin: 0 50%;
+  height: 1px; flex: 1; transform: scaleX(1); transform-origin: 0 50%;
   background: linear-gradient(90deg, var(--vi-accent), transparent);
   transition: transform 1.1s cubic-bezier(.22,1,.36,1) .15s;
 }
-.vi-r.in .vi-lp-sec-rule, .in > .vi-lp-sec-head .vi-lp-sec-rule { transform: scaleX(1); }
+/* Drawn-in only while the block is still waiting; same fail-safe polarity. */
+.vi-r.vi-pre .vi-lp-sec-rule { transform: scaleX(0); }
 
 .vi-lp-display {
   margin: 0; font-weight: 850; letter-spacing: -.035em; line-height: 1.05;
@@ -725,9 +727,8 @@
 
 /* ── Respect reduced-motion: keep the layout, drop the movement ── */
 @media (prefers-reduced-motion: reduce) {
-  .vi-lp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
-  .vi-r { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
-  .vi-lp-sec-rule { transform: scaleX(1) !important; transition: none !important; }
+  .vi-r, .vi-r.vi-pre { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+  .vi-lp-sec-rule, .vi-r.vi-pre .vi-lp-sec-rule { transform: scaleX(1) !important; transition: none !important; }
   .vi-lp-aurora, .vi-lp-float, .vi-lp-scroll-dot, .vi-lp-word, .vi-lp-gradient { animation: none !important; }
   .vi-lp-marquee-track, .vi-lp-feature::before, .vi-lp-progress { animation: none !important; }
   /* The progress rail still exists, it just does not slide. */

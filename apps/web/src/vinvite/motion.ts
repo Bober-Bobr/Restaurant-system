@@ -18,6 +18,14 @@ export function prefersReducedMotion(): boolean {
  * One observer for the whole page, and elements register themselves as they
  * mount — so a section that appears later (a filtered list, a lazy route) is
  * picked up without re-scanning the document.
+ *
+ * The marker class is `vi-pre` (= not yet revealed) rather than a "revealed"
+ * one, and it is only ever added and removed HERE. React owns `className`, so a
+ * re-render that changes it — the pricing tiers do exactly this when the
+ * featured tier moves — rewrites the class attribute and drops anything added
+ * imperatively. Marking the *hidden* state means that accident fails safe: the
+ * element is simply shown without its animation, instead of being stranded at
+ * `opacity: 0` with the observer no longer watching it.
  */
 export function useReveal() {
   const observer = useRef<IntersectionObserver | null>(null);
@@ -29,7 +37,7 @@ export function useReveal() {
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          entry.target.classList.add('in');
+          entry.target.classList.remove('vi-pre');
           observer.current?.unobserve(entry.target);
         }
       },
@@ -43,13 +51,13 @@ export function useReveal() {
   return useCallback((el: HTMLElement | null) => {
     if (!el) return;
     // Default to a rise if the caller did not pick a direction, so `ref={reveal}`
-    // alone is enough. Runs during commit, before paint, so nothing flashes.
+    // alone is enough.
     if (!el.classList.contains('vi-r')) el.classList.add('vi-r', 'vi-r-up');
-    // No observer support, or movement declined: show it immediately.
-    if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
-      el.classList.add('in');
-      return;
-    }
+    // No observer support, or movement declined: leave it visible.
+    if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') return;
+    // Hide it now. Ref callbacks run during commit, before paint, so the
+    // element never appears at full opacity first.
+    el.classList.add('vi-pre');
     get()?.observe(el);
   }, []);
 }
