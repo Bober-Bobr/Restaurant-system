@@ -208,8 +208,22 @@
 }
 
 /* Theme-toggle icon spin */
-.vi-theme-toggle { transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
-.vi-theme-toggle:hover { transform: rotate(40deg) scale(1.08); }
+/* Fixed square, icon centred by grid. The button itself no longer rotates —
+   rotating a box with `overflow: hidden` is what clipped the icon; the icon
+   spins inside a stationary button instead. */
+.vi-theme-toggle {
+  width: 40px; height: 40px; padding: 0;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.vi-theme-icon {
+  display: grid; place-items: center;
+  line-height: 0;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vi-theme-toggle:hover .vi-theme-icon { transform: rotate(45deg) scale(1.1); }
+.vi-theme-toggle:active .vi-theme-icon { transform: rotate(45deg) scale(0.94); }
 
 /* Modal overlay */
 .vi-overlay {
@@ -558,11 +572,168 @@
   .vi-lp-stat-label { font-size: 10.5px; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Landing / pricing — 2nd-generation motion and layout.
+
+   The palette is untouched: every colour below resolves to an existing
+   --vi-* token. What changes is structure and movement — directional reveals
+   with stagger, a scroll-progress rail, numbered section headers that draw
+   themselves in, pointer-tilted cards, a marquee, and count-up figures.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Scroll progress: a hairline of accent across the very top ── */
+.vi-lp-progress {
+  position: fixed; inset: 0 auto auto 0; z-index: 60;
+  height: 2px; width: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--vi-accent-strong), var(--vi-accent));
+  will-change: transform;
+}
+
+/* ── Reveals ──
+   One class, four directions. Stagger comes from an inline --d custom property
+   so a list can cascade without a rule per child. */
+.vi-r { opacity: 0; will-change: opacity, transform;
+  transition: opacity .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms),
+              transform .8s cubic-bezier(.22,1,.36,1) var(--d, 0ms); }
+.vi-r-up    { transform: translateY(40px); }
+.vi-r-left  { transform: translateX(-40px); }
+.vi-r-right { transform: translateX(40px); }
+.vi-r-zoom  { transform: scale(.92); }
+.vi-r-blur  { transform: translateY(26px); filter: blur(10px); }
+.vi-r.in { opacity: 1; transform: none; filter: none; }
+
+/* ── Numbered section header ── */
+.vi-lp-sec-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.vi-lp-sec-num {
+  font-size: 12px; font-weight: 800; letter-spacing: .16em;
+  color: var(--vi-accent); font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+/* Draws itself outward as the header arrives. */
+.vi-lp-sec-rule {
+  height: 1px; flex: 1; transform: scaleX(0); transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--vi-accent), transparent);
+  transition: transform 1.1s cubic-bezier(.22,1,.36,1) .15s;
+}
+.vi-r.in .vi-lp-sec-rule, .in > .vi-lp-sec-head .vi-lp-sec-rule { transform: scaleX(1); }
+
+.vi-lp-display {
+  margin: 0; font-weight: 850; letter-spacing: -.035em; line-height: 1.05;
+  font-size: clamp(32px, 5.2vw, 60px);
+}
+
+/* ── Marquee: a slow band of template names under the hero ── */
+.vi-lp-marquee {
+  position: relative; overflow: hidden; padding: 14px 0;
+  border-block: 1px solid var(--vi-border);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.vi-lp-marquee-track {
+  display: flex; width: max-content;
+  animation: viMarquee 38s linear infinite;
+}
+.vi-lp-marquee:hover .vi-lp-marquee-track { animation-play-state: paused; }
+.vi-lp-marquee-item {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-right: 46px;   /* spacing lives here, not in the track's gap — see above */
+  font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--vi-muted); white-space: nowrap;
+}
+.vi-lp-marquee-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--vi-accent); opacity: .55; }
+@keyframes viMarquee { to { transform: translateX(-50%); } }
+
+/* ── Pointer-tilted card ──
+   --rx/--ry are written by the pointer handler; with none set it lies flat. */
+.vi-lp-tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+  transition: transform .5s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .35s ease;
+}
+.vi-lp-tilt:hover { box-shadow: 0 26px 60px var(--vi-ring); border-color: var(--vi-accent); }
+
+/* Light sweeping across a card as the pointer crosses it. */
+.vi-lp-sheenwrap { position: relative; overflow: hidden; }
+.vi-lp-sheenwrap::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%),
+              var(--vi-accent-soft), transparent 62%);
+  opacity: 0; transition: opacity .35s ease;
+}
+.vi-lp-sheenwrap:hover::after { opacity: 1; }
+
+/* ── Bento grid for the feature tiles ── */
+.vi-lp-bento { display: grid; gap: 18px; grid-template-columns: repeat(6, 1fr); }
+.vi-lp-bento > * { grid-column: span 2; }
+.vi-lp-bento > .span-3 { grid-column: span 3; }
+.vi-lp-bento > .span-6 { grid-column: span 6; }
+@media (max-width: 980px) {
+  .vi-lp-bento { grid-template-columns: repeat(4, 1fr); }
+  .vi-lp-bento > *, .vi-lp-bento > .span-3 { grid-column: span 2; }
+  .vi-lp-bento > .span-6 { grid-column: span 4; }
+}
+@media (max-width: 620px) {
+  .vi-lp-bento { grid-template-columns: 1fr; }
+  .vi-lp-bento > *, .vi-lp-bento > .span-3, .vi-lp-bento > .span-6 { grid-column: span 1; }
+}
+
+/* The headline feature tile: a slowly rotating conic ring behind the content. */
+.vi-lp-feature { position: relative; overflow: hidden; }
+.vi-lp-feature::before {
+  content: ''; position: absolute; inset: -60%;
+  background: conic-gradient(from 0deg, transparent, var(--vi-accent-soft), transparent 42%);
+  animation: viSpin 18s linear infinite; opacity: .8; pointer-events: none;
+}
+.vi-lp-feature > * { position: relative; }
+@keyframes viSpin { to { transform: rotate(1turn); } }
+
+/* ── Count-up figures ── */
+.vi-lp-count { font-variant-numeric: tabular-nums; }
+
+/* ── Pricing ── */
+.vi-lp-tier {
+  position: relative; display: flex; flex-direction: column; gap: 14px;
+  padding: 26px 22px; border-radius: 20px;
+  border: 1px solid var(--vi-border); background: var(--vi-card);
+  transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, border-color .3s ease;
+}
+.vi-lp-tier:hover { transform: translateY(-6px); box-shadow: 0 24px 54px var(--vi-ring); }
+.vi-lp-tier.featured { border-color: var(--vi-accent); box-shadow: 0 20px 48px var(--vi-accent-soft); }
+.vi-lp-tier.featured::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(140deg, var(--vi-accent-soft), transparent 55%);
+}
+.vi-lp-tier > * { position: relative; }
+
+.vi-lp-tier-row {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 12px; cursor: pointer;
+  font: inherit; color: inherit; text-align: left;
+  border: 1px solid transparent; background: transparent;
+  transition: background .22s ease, border-color .22s ease, transform .22s ease;
+}
+.vi-lp-tier-row:hover { background: var(--vi-accent-soft); transform: translateX(3px); }
+.vi-lp-tier-row.chosen { border-color: var(--vi-accent); background: var(--vi-accent-soft); }
+
+/* ── Magnetic-feeling primary button ── */
+.vi-lp-cta { position: relative; overflow: hidden; }
+.vi-lp-cta::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120px circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,.35), transparent 60%);
+  opacity: 0; transition: opacity .3s ease;
+}
+.vi-lp-cta:hover::before { opacity: 1; }
+
 /* ── Respect reduced-motion: keep the layout, drop the movement ── */
 @media (prefers-reduced-motion: reduce) {
   .vi-lp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .vi-r { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+  .vi-lp-sec-rule { transform: scaleX(1) !important; transition: none !important; }
   .vi-lp-aurora, .vi-lp-float, .vi-lp-scroll-dot, .vi-lp-word, .vi-lp-gradient { animation: none !important; }
-  .vi-lp-work:hover, .vi-lp-tile:hover { transform: none; }
+  .vi-lp-marquee-track, .vi-lp-feature::before, .vi-lp-progress { animation: none !important; }
+  /* The progress rail still exists, it just does not slide. */
+  .vi-lp-work:hover, .vi-lp-tile:hover, .vi-lp-tier:hover, .vi-lp-tier-row:hover { transform: none; }
+  .vi-lp-tilt { transform: none !important; }
+  .vi-theme-toggle:hover .vi-theme-icon { transform: none; }
   /* The sheet still opens/closes, just without the slide-in choreography. */
   .vi-lp-sheet-link { opacity: 1 !important; transform: none !important; transition-delay: 0ms !important; }
 }

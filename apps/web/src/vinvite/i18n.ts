@@ -360,7 +360,7 @@ const dict = {
 
 
     lp_final_title: 'Ready to invite everyone?',
-    lp_final_sub: 'Create your first invitation today — it takes minutes.',
+    lp_final_sub: 'Choose the design you love and we will have your invitation ready.',
     lp_footer_tag: 'Beautiful digital invitations',
     lp_rights: 'All rights reserved.',
   },
@@ -718,7 +718,7 @@ const dict = {
 
 
     lp_final_title: 'Готовы пригласить всех?',
-    lp_final_sub: 'Создайте первое приглашение сегодня — это займёт минуты.',
+    lp_final_sub: 'Выберите понравившийся дизайн, и мы подготовим ваше приглашение.',
     lp_footer_tag: 'Красивые электронные приглашения',
     lp_rights: 'Все права защищены.',
   },
@@ -1076,7 +1076,7 @@ const dict = {
 
 
     lp_final_title: 'Hammani taklif qilishga tayyormisiz?',
-    lp_final_sub: 'Birinchi taklifnomangizni bugun yarating — bu bir necha daqiqa.',
+    lp_final_sub: 'Yoqqan dizaynni tanlang, taklifnomangizni biz tayyorlaymiz.',
     lp_footer_tag: 'Chiroyli elektron taklifnomalar',
     lp_rights: 'Barcha huquqlar himoyalangan.',
   },

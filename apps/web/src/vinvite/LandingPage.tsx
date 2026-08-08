@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
 import { useViT, type ViKey } from './i18n';
+import { useCountUp, useReveal, useScrollProgress, usePointerTilt } from './motion';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
 import { usePromoShowcase, COVER_SLOTS_DESKTOP, COVER_SLOTS_MOBILE } from './promoShowcase';
 import { useTemplateOverrides } from './templateOverrides';
@@ -25,41 +26,6 @@ const ALL_LOCALES = [...LOCALES];
 // registered by ref callback, so sections can mount lazily without a re-scan.
 // The observer is built on first use rather than in an effect: ref callbacks
 // fire during commit, before effects run, so an effect-created observer would
-// miss every element mounted on the first render and leave the page invisible.
-function useReveal() {
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  const getObserver = () => {
-    if (observerRef.current) return observerRef.current;
-    if (typeof IntersectionObserver === 'undefined') return null;
-    observerRef.current = new IntersectionObserver(
-      (entries, obs) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in');
-            obs.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -60px 0px' },
-    );
-    return observerRef.current;
-  };
-
-  useEffect(() => () => observerRef.current?.disconnect(), []);
-
-  return useCallback((el: HTMLElement | null) => {
-    if (!el) return;
-    el.classList.add('vi-lp-reveal');
-    const observer = getObserver();
-    // Without IntersectionObserver support, show the content immediately.
-    if (observer) observer.observe(el);
-    else el.classList.add('in');
-  }, []);
-}
-
-// Live viewport check. Used to render *fewer* live template iframes on phones
-// rather than merely hiding them with CSS — a hidden iframe still loads.
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(query).matches,
@@ -80,6 +46,7 @@ export const ViLandingPage = () => {
   const locale = useVInviteStore((s) => s.locale);
   const setLocale = useVInviteStore((s) => s.setLocale);
   const reveal = useReveal();
+  const progress = useScrollProgress();
   const [stuck, setStuck] = useState(false);
   const [preview, setPreview] = useState<TemplateDefinition | null>(null);
   const isMobile = useMediaQuery('(max-width: 860px)');
@@ -113,6 +80,8 @@ export const ViLandingPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+      {/* Reading position, as a hairline across the top. */}
+      <div className="vi-lp-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden />
 
       <LandingHeader
         t={t}
@@ -125,6 +94,7 @@ export const ViLandingPage = () => {
 
       <main style={{ flex: 1 }}>
         <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onWork={goWork} onPricing={() => goPricing()} />
+        <TemplateMarquee t={t} templates={work} />
         <WorkSection t={t} templates={work} reveal={reveal} onPreview={setPreview} onPricing={() => goPricing()} />
         <WhySection t={t} reveal={reveal} />
         <FinalCta t={t} reveal={reveal} onPricing={() => goPricing()} />
@@ -290,6 +260,53 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
   );
 }
 
+// ── Shared section furniture ─────────────────────────────────────────────────
+
+// A numbered header whose rule draws itself outward as the block arrives. The
+// number gives the page a spine — a visitor can tell how far through they are
+// without a table of contents.
+function SectionHead({ num, kicker, title, sub, reveal }: {
+  num: string; kicker: string; title: string; sub: string;
+  reveal: (el: HTMLElement | null) => void;
+}) {
+  return (
+    <div ref={reveal} className="vi-r vi-r-up" style={{ maxWidth: 720, margin: '0 auto 46px' }}>
+      <div className="vi-lp-sec-head">
+        <span className="vi-lp-sec-num">{num}</span>
+        <span className="vi-lp-kicker" style={{ margin: 0 }}>{kicker}</span>
+        <span className="vi-lp-sec-rule" />
+      </div>
+      <h2 className="vi-lp-display">{title}</h2>
+      <p style={{ margin: '14px 0 0', fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)', maxWidth: 560 }}>
+        {sub}
+      </p>
+    </div>
+  );
+}
+
+// A slow band of template names between the hero and the gallery. Duplicated
+// once so the loop is seamless — the track translates exactly -50%, which lands
+// the copy precisely where the original started. The copy is aria-hidden so a
+// screen reader hears the list once, not twice.
+function TemplateMarquee({ t, templates }: { t: (k: ViKey) => string; templates: TemplateDefinition[] }) {
+  if (templates.length === 0) return null;
+  const row = (hidden: boolean) => templates.map((tpl) => (
+    <span className="vi-lp-marquee-item" key={`${tpl.id}-${hidden}`} aria-hidden={hidden || undefined}>
+      <span className="vi-lp-marquee-dot" />
+      <span style={{ fontSize: 17 }}>{tpl.cover}</span>
+      {t(tpl.nameKey as ViKey)}
+    </span>
+  ));
+  return (
+    <div className="vi-lp-marquee">
+      <div className="vi-lp-marquee-track">
+        {row(false)}
+        {row(true)}
+      </div>
+    </div>
+  );
+}
+
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
 function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
@@ -311,12 +328,12 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
     );
   };
 
-  const stats: { value: string; label: ViKey }[] = [
+  const stats: { value: number; label: ViKey }[] = [
     // Count what a visitor can actually browse, not what ships in the bundle —
     // a hidden template must not be advertised.
-    { value: String(work.length), label: 'lp_stat_templates' },
-    { value: '3', label: 'lp_stat_languages' },
-    { value: '5', label: 'lp_stat_minutes' },
+    { value: work.length, label: 'lp_stat_templates' },
+    { value: 3, label: 'lp_stat_languages' },
+    { value: 5, label: 'lp_stat_minutes' },
   ];
 
   return (
@@ -359,11 +376,8 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
         <HeroArt isMobile={isMobile} cover={cover} />
 
         <div className="vi-fade-up vi-lp-hero-stats" style={{ animationDelay: '900ms' }}>
-          {stats.map((s) => (
-            <div key={s.label}>
-              <div className="vi-lp-stat-value">{s.value}</div>
-              <div className="vi-lp-stat-label">{t(s.label)}</div>
-            </div>
+          {stats.map((stat) => (
+            <CountStat key={stat.label} value={stat.value} label={t(stat.label)} />
           ))}
         </div>
       </div>
@@ -440,19 +454,15 @@ function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
   return (
     <section id="work" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <div ref={reveal} style={{ textAlign: 'center', maxWidth: 660, margin: '0 auto 46px' }}>
-          <span className="vi-lp-kicker">{t('lp_work_kicker')}</span>
-          <h2 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 830, letterSpacing: '-0.03em' }}>
-            {t('lp_work_title')}
-          </h2>
-          <p style={{ margin: '14px 0 0', fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
-            {t('lp_work_sub')}
-          </p>
-        </div>
+        <SectionHead
+          num="01" kicker={t('lp_work_kicker')} title={t('lp_work_title')}
+          sub={t('lp_work_sub')} reveal={reveal}
+        />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 26 }}>
           {templates.map((tpl, i) => (
-            <WorkCard key={tpl.id} tpl={tpl} t={t} reveal={reveal} delayMs={i * 110} onPreview={() => onPreview(tpl)} />
+            <WorkCard key={tpl.id} tpl={tpl} t={t} reveal={reveal} delayMs={i * 90} index={i}
+              onPreview={() => onPreview(tpl)} />
           ))}
         </div>
 
@@ -466,11 +476,22 @@ function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
   );
 }
 
-function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
+function CountStat({ value, label }: { value: number; label: string }) {
+  const { ref, display } = useCountUp(value);
+  return (
+    <div ref={ref}>
+      <div className="vi-lp-stat-value vi-lp-count">{display}</div>
+      <div className="vi-lp-stat-label">{label}</div>
+    </div>
+  );
+}
+
+function WorkCard({ tpl, t, reveal, delayMs, index, onPreview }: {
   tpl: TemplateDefinition;
   t: (k: ViKey) => string;
   reveal: (el: HTMLElement | null) => void;
   delayMs: number;
+  index: number;
   onPreview: () => void;
 }) {
   const { effectiveConfig } = useTemplateOverrides();
@@ -480,9 +501,11 @@ function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
     [tpl, effectiveConfig],
   );
 
+  const tilt = usePointerTilt(5);
+
   return (
-    <div ref={reveal} style={{ transitionDelay: `${delayMs}ms` }}>
-      <div className="vi-lp-work">
+    <div ref={reveal} className="vi-r vi-r-blur" style={{ ['--d' as string]: `${delayMs}ms` }}>
+      <div className="vi-lp-work vi-lp-tilt" {...tilt}>
         <button
           type="button"
           onClick={onPreview}
@@ -503,6 +526,17 @@ function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
           }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
             {t('lp_work_live')}
+          </span>
+
+          {/* Index, so the gallery reads as a numbered body of work. */}
+          <span style={{
+            position: 'absolute', top: 14, right: 14,
+            fontSize: 11.5, fontWeight: 800, letterSpacing: '0.08em',
+            padding: '5px 10px', borderRadius: 999,
+            background: 'rgba(10,12,20,0.55)', color: '#fff', backdropFilter: 'blur(6px)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {String(index + 1).padStart(2, '0')}
           </span>
 
           <span className="vi-lp-work-veil">
@@ -531,19 +565,20 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
   // The animation tile is the headline claim and spans the full width, because
   // it is what actually distinguishes these invitations from a picture of one —
   // and it is the one thing a static list of bullet points cannot demonstrate.
-  const items: { icon: string; title: ViKey; desc: ViKey; wide?: boolean }[] = [
-    { icon: '✨', title: 'lp_why_1_t', desc: 'lp_why_1_d', wide: true },
-    { icon: '🎬', title: 'lp_why_7_t', desc: 'lp_why_7_d' },
-    { icon: '🎼', title: 'lp_why_8_t', desc: 'lp_why_8_d' },
-    { icon: '🖼', title: 'lp_why_9_t', desc: 'lp_why_9_d' },
-    { icon: '⏳', title: 'lp_why_10_t', desc: 'lp_why_10_d' },
-    { icon: '📱', title: 'lp_why_2_t', desc: 'lp_why_2_d' },
-    { icon: '🌍', title: 'lp_why_3_t', desc: 'lp_why_3_d' },
-    { icon: '💌', title: 'lp_why_4_t', desc: 'lp_why_4_d' },
-    { icon: '🗺', title: 'lp_why_11_t', desc: 'lp_why_11_d' },
-    { icon: '🎨', title: 'lp_why_12_t', desc: 'lp_why_12_d' },
-    { icon: '⚡', title: 'lp_why_5_t', desc: 'lp_why_5_d' },
-    { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d' },
+  // `span` is in sixths of the bento grid: 6 = full row, 3 = half, 2 = third.
+  const items: { icon: string; title: ViKey; desc: ViKey; span: 2 | 3 | 6 }[] = [
+    { icon: '✨', title: 'lp_why_1_t', desc: 'lp_why_1_d', span: 6 },
+    { icon: '🎬', title: 'lp_why_7_t', desc: 'lp_why_7_d', span: 3 },
+    { icon: '🎼', title: 'lp_why_8_t', desc: 'lp_why_8_d', span: 3 },
+    { icon: '🖼', title: 'lp_why_9_t', desc: 'lp_why_9_d', span: 2 },
+    { icon: '⏳', title: 'lp_why_10_t', desc: 'lp_why_10_d', span: 2 },
+    { icon: '📱', title: 'lp_why_2_t', desc: 'lp_why_2_d', span: 2 },
+    { icon: '🌍', title: 'lp_why_3_t', desc: 'lp_why_3_d', span: 2 },
+    { icon: '💌', title: 'lp_why_4_t', desc: 'lp_why_4_d', span: 2 },
+    { icon: '🗺', title: 'lp_why_11_t', desc: 'lp_why_11_d', span: 2 },
+    { icon: '🎨', title: 'lp_why_12_t', desc: 'lp_why_12_d', span: 3 },
+    { icon: '⚡', title: 'lp_why_5_t', desc: 'lp_why_5_d', span: 3 },
+    { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d', span: 2 },
   ];
 
   // The pointer-following glow is decorative; the tile is readable without it.
@@ -559,29 +594,39 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
       <div className="vi-lp-aurora" style={{ width: 560, height: 560, top: '10%', right: -220, background: 'radial-gradient(circle, rgba(167,139,250,0.20), transparent 68%)', animationDelay: '-5s' }} />
 
       <div style={{ position: 'relative', maxWidth: 1180, margin: '0 auto' }}>
-        <div ref={reveal} style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 46px' }}>
-          <span className="vi-lp-kicker">{t('lp_why_kicker')}</span>
-          <h2 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 830, letterSpacing: '-0.03em' }}>
-            {t('lp_why_title')}
-          </h2>
-          <p style={{ margin: '14px 0 0', fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
-            {t('lp_why_sub')}
-          </p>
-        </div>
+        <SectionHead
+          num="02" kicker={t('lp_why_kicker')} title={t('lp_why_title')}
+          sub={t('lp_why_sub')} reveal={reveal}
+        />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 20 }}>
+        {/* Bento: the animation claim takes the full width and carries a slowly
+            rotating ring behind it; the next two take half each; the rest tile.
+            A grid of identical boxes reads as a list — this reads as a page. */}
+        <div className="vi-lp-bento">
           {items.map((item, i) => (
-            <div key={item.title} ref={reveal} style={{
-              transitionDelay: `${i * 60}ms`,
-              // The wide tile only spans columns where there is more than one.
-              gridColumn: item.wide ? '1 / -1' : undefined,
-            }}>
-              <div className="vi-lp-tile" onMouseMove={onMove} style={{ height: '100%' }}>
+            <div
+              key={item.title}
+              ref={reveal}
+              className={`vi-r ${item.span === 6 ? 'vi-r-zoom span-6' : item.span === 3 ? 'vi-r-up span-3' : 'vi-r-up'}`}
+              style={{ ['--d' as string]: `${Math.min(i, 8) * 55}ms` }}
+            >
+              <div
+                className={`vi-lp-tile vi-lp-sheenwrap${item.span === 6 ? ' vi-lp-feature' : ''}`}
+                onMouseMove={onMove}
+                style={{ height: '100%' }}
+              >
                 <span className="vi-lp-tile-icon">{item.icon}</span>
-                <h3 style={{ margin: '18px 0 8px', fontSize: 18, fontWeight: 750, letterSpacing: '-0.015em' }}>
+                <h3 style={{
+                  margin: '18px 0 8px', fontWeight: 780, letterSpacing: '-0.02em',
+                  fontSize: item.span === 6 ? 'clamp(20px, 2.6vw, 27px)' : 18,
+                }}>
                   {t(item.title)}
                 </h3>
-                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.62, color: 'var(--vi-muted)' }}>
+                <p style={{
+                  margin: 0, lineHeight: 1.62, color: 'var(--vi-muted)',
+                  fontSize: item.span === 6 ? 16 : 14.5,
+                  maxWidth: item.span === 6 ? 640 : undefined,
+                }}>
                   {t(item.desc)}
                 </p>
               </div>
@@ -600,7 +645,7 @@ function FinalCta({ t, reveal, onPricing }: {
 }) {
   return (
     <section style={{ padding: '20px 20px 100px' }}>
-      <div ref={reveal} style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <div ref={reveal} className="vi-r vi-r-zoom" style={{ maxWidth: 1180, margin: '0 auto' }}>
         <div style={{
           position: 'relative', overflow: 'hidden', borderRadius: 26, padding: '62px 30px', textAlign: 'center',
           border: '1px solid var(--vi-border)',
@@ -609,7 +654,7 @@ function FinalCta({ t, reveal, onPricing }: {
         }}>
           <div className="vi-lp-aurora" style={{ width: 420, height: 420, top: -190, left: '50%', marginLeft: -210, background: 'radial-gradient(circle, rgba(37,99,235,0.28), transparent 68%)' }} />
           <div style={{ position: 'relative' }}>
-            <h2 style={{ margin: 0, fontSize: 'clamp(26px, 3.6vw, 38px)', fontWeight: 840, letterSpacing: '-0.03em' }}>
+            <h2 className="vi-lp-display" style={{ fontSize: 'clamp(26px, 3.8vw, 42px)' }}>
               {t('lp_final_title')}
             </h2>
             <p style={{ margin: '14px auto 0', maxWidth: 460, fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
@@ -617,8 +662,13 @@ function FinalCta({ t, reveal, onPricing }: {
             </p>
             <button
               type="button"
-              className="vi-btn vi-btn-primary"
+              className="vi-btn vi-btn-primary vi-lp-cta"
               style={{ marginTop: 28, padding: '16px 34px', fontSize: 16, borderRadius: 14 }}
+              onMouseMove={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+                e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+              }}
               onClick={onPricing}
             >
               {t('lp_nav_pricing')} <span style={{ fontSize: 18 }}>→</span>

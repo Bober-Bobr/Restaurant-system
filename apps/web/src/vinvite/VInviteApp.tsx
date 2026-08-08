@@ -102,6 +102,11 @@ export function ViLogo({ size = 34 }: { size?: number }) {
 }
 
 // Sun/moon light-dark toggle with a springy rotation.
+// The icon is drawn, not an emoji. An emoji glyph carries its own font metrics,
+// which differ per platform — inside a fixed-height button with `overflow:
+// hidden` (inherited from .vi-btn, which needs it for the primary sheen) that
+// pushed the glyph above its box and clipped the top off. An SVG sits exactly
+// where it is put, on every device.
 export function ViThemeToggle() {
   const uiTheme = useVInviteStore((s) => s.uiTheme);
   const setUiTheme = useVInviteStore((s) => s.setUiTheme);
@@ -112,10 +117,23 @@ export function ViThemeToggle() {
       type="button"
       className="vi-btn vi-btn-ghost vi-theme-toggle"
       title={dark ? t('theme_light') : t('theme_dark')}
+      aria-label={dark ? t('theme_light') : t('theme_dark')}
       onClick={() => setUiTheme(dark ? 'light' : 'dark')}
-      style={{ padding: '9px 12px', fontSize: 16, lineHeight: 1 }}
     >
-      {dark ? '☀️' : '🌙'}
+      <span className="vi-theme-icon" aria-hidden>
+        {dark ? (
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+            strokeWidth="1.9" strokeLinecap="round">
+            <circle cx="12" cy="12" r="4.2" />
+            <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.5 14.6A8.6 8.6 0 1 1 9.4 3.5a6.9 6.9 0 0 0 11.1 11.1Z" />
+          </svg>
+        )}
+      </span>
     </button>
   );
 }

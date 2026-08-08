@@ -8,6 +8,7 @@ import { groupByTier, instagramHref, telegramHref } from './pricing';
 import { useViT, type ViKey } from './i18n';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
 import { usePlatformContacts } from '../hooks/usePlatformContacts';
+import { useReveal, useScrollProgress, usePointerTilt } from './motion';
 import { formatSum } from '../utils/currency';
 
 // ── Pricing ─────────────────────────────────────────────────────────────────
@@ -40,6 +41,9 @@ export const ViPricingPage = () => {
 
   const contactFor = usePlatformContacts();
   const contact = contactFor('vinvite');
+  const reveal = useReveal();
+  const progress = useScrollProgress();
+  const tilt = usePointerTilt(4);
 
   const { work } = usePromoShowcase();
 
@@ -73,6 +77,8 @@ export const ViPricingPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="vi-lp-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden />
+
       <header className="vi-lp-head stuck">
         <div className="vi-lp-head-bar">
           <button type="button" onClick={() => navigate('/main')}
@@ -92,19 +98,21 @@ export const ViPricingPage = () => {
 
       <main style={{ flex: 1, padding: '46px 20px 90px' }}>
         <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 40px' }}>
-            <span className="vi-lp-kicker">{t('pricing_kicker')}</span>
-            <h1 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 830, letterSpacing: '-0.03em' }}>
-              {t('pricing_title')}
-            </h1>
-            <p style={{ margin: '14px 0 0', fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
+          <div ref={reveal} className="vi-r vi-r-up" style={{ maxWidth: 720, margin: '0 auto 40px' }}>
+            <div className="vi-lp-sec-head">
+              <span className="vi-lp-sec-num">03</span>
+              <span className="vi-lp-kicker" style={{ margin: 0 }}>{t('pricing_kicker')}</span>
+              <span className="vi-lp-sec-rule" />
+            </div>
+            <h1 className="vi-lp-display">{t('pricing_title')}</h1>
+            <p style={{ margin: '14px 0 0', fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)', maxWidth: 560 }}>
               {t('pricing_sub')}
             </p>
           </div>
 
           {/* The chosen template, called out above the tiers. */}
           {selected && (
-            <div className="vi-card vi-pop" style={{
+            <div className="vi-card vi-pop vi-lp-sheenwrap" {...tilt} style={{
               maxWidth: 560, margin: '0 auto 40px', padding: 20,
               display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
               border: '1px solid var(--vi-accent)',
@@ -148,18 +156,28 @@ export const ViPricingPage = () => {
 
           {/* The three tiers. */}
           <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-            {TEMPLATE_TIERS.map((tier) => {
+            {TEMPLATE_TIERS.map((tier, i) => {
               const templates = grouped.buckets[tier];
+              // Premium is called out unless the visitor has already chosen a
+              // template, in which case its own tier is the one to highlight.
+              const featured = selectedPricing?.tier ? selectedPricing.tier === tier : tier === 'PREMIUM';
               return (
-                <section key={tier} className="vi-card" style={{
-                  padding: 22, display: 'flex', flexDirection: 'column', gap: 14,
-                  border: selectedPricing?.tier === tier ? '1px solid var(--vi-accent)' : undefined,
-                }}>
+                <section
+                  key={tier}
+                  ref={reveal}
+                  className={`vi-lp-tier vi-r vi-r-up${featured ? ' featured' : ''}`}
+                  style={{ ['--d' as string]: `${i * 110}ms` }}
+                >
                   <div>
                     <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
                       fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
                       color: TIER_ACCENT[tier],
                     }}>
+                      <span style={{
+                        width: 7, height: 7, borderRadius: 2, transform: 'rotate(45deg)',
+                        background: 'currentColor',
+                      }} />
                       {t(`tier_${tier.toLowerCase()}` as ViKey)}
                     </span>
                     <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
@@ -179,13 +197,7 @@ export const ViPricingPage = () => {
                             type="button"
                             onClick={() => choose(tpl.id)}
                             aria-pressed={tpl.id === selectedId}
-                            style={{
-                              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                              padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
-                              font: 'inherit', color: 'inherit', textAlign: 'left',
-                              border: `1px solid ${tpl.id === selectedId ? 'var(--vi-accent)' : 'transparent'}`,
-                              background: tpl.id === selectedId ? 'var(--vi-accent-soft)' : 'transparent',
-                            }}
+                            className={`vi-lp-tier-row${tpl.id === selectedId ? ' chosen' : ''}`}
                           >
                             <span style={{ fontSize: 17 }}>{tpl.cover}</span>
                             <span style={{
@@ -232,7 +244,7 @@ export const ViPricingPage = () => {
           {/* Contact details, exactly as the system administrator entered them.
               Rendered only where a value exists — an empty row would advertise a
               channel the studio does not actually answer. */}
-          <section style={{ margin: '46px auto 0', maxWidth: 560, textAlign: 'center' }}>
+          <section ref={reveal} className="vi-r vi-r-up" style={{ margin: '46px auto 0', maxWidth: 560, textAlign: 'center' }}>
             <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
               {t('pricing_contact')}
             </p>
