@@ -878,17 +878,21 @@ backfilled, and no existing row changes meaning.
 rather than the marketing page — intended, but worth knowing before the first
 support question.
 
-`main` is now a **reserved slug**, so no invitation can be published there. If a
-project already holds that slug it would be shadowed by the promo route, so check
-before deploying:
+`main` and `pricing` are now **reserved slugs**, so no invitation can be
+published at either. If a project already holds one it would be shadowed by the
+static route, so check before deploying:
 
 ```bash
 docker compose exec -T postgres sh -c \
-  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, name, slug FROM \"InviteProject\" WHERE slug = '"'"'main'"'"';"'
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, name, slug FROM \"InviteProject\" WHERE slug IN ('"'"'main'"'"', '"'"'pricing'"'"');"'
 ```
 
 Expect zero rows. If one comes back, rename it before deploying — it will
 otherwise become unreachable.
+
+The promotional site also **no longer offers sign-in or sign-up**. Existing users
+still sign in at `v-invite.uz` (the root is now the login page); there is simply
+no link to it from the marketing pages.
 
 ### After deploying
 

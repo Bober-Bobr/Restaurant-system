@@ -14,8 +14,9 @@ const RESERVED_SLUGS = new Set([
   'www', 'api', 'admin', 'app', 'login', 'register', 'logout', 'mail',
   'static', 'assets', 'help', 'support', 'uploads',
   'templates', 'devices', 'profile', 'projects', 'invitations', 'settings',
-  // The promotional site. A published invitation at this slug would shadow it.
-  'main',
+  // The promotional site and its pricing page. A published invitation at either
+  // slug would be shadowed by the static route.
+  'main', 'pricing',
 ]);
 
 export type InviteAuthResponse = {

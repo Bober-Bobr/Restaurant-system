@@ -8,6 +8,7 @@ import { vinviteService } from './api';
 import { ViLoginPage } from './LoginPage';
 import { ViLandingPage } from './LandingPage';
 import { ViSettingsPage } from './SettingsPage';
+import { ViPricingPage } from './PricingPage';
 import { ViDashboardPage } from './DashboardPage';
 import { ViEditorPage } from './EditorPage';
 import { ViTemplatesPage } from './TemplatesPage';
@@ -53,6 +54,9 @@ export const VInviteApp = () => {
             /:slug route below — a static segment outranks a dynamic one in
             React Router, and `main` is reserved so no invitation can claim it. */}
         <Route path="/main" element={<ViLandingPage />} />
+        {/* Pricing is part of the public site, reached by choosing a template in
+            a preview. Static, so it outranks /:slug; `pricing` is reserved. */}
+        <Route path="/pricing" element={<ViPricingPage />} />
         {/* Published invitation: v-invite.uz/<slug> (path-based — no wildcard
             DNS available on .uz). Static app routes above/below always win over
             this dynamic segment. */}

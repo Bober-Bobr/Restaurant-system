@@ -15,8 +15,10 @@ import { LOCALES, type TemplateDefinition } from './templates/types';
 const ALL_LOCALES = [...LOCALES];
 
 // ── v-invite.uz/ — public marketing landing ──────────────────────────────────
-// What a logged-out visitor sees: hero → our work (live template previews) →
-// why choose us → FAQ → closing CTA. Everything animates on scroll; the whole
+// What a visitor sees: hero → our work (live template previews) → why us →
+// closing CTA. There is no sign-in or sign-up here — the site sells templates,
+// and choosing one leads to Pricing, not to an account. Everything animates on
+// scroll; the whole
 // page degrades gracefully under prefers-reduced-motion (see vinvite.css).
 
 // Reveal-on-scroll: adds `.in` once an element scrolls into view. Elements are
@@ -93,15 +95,21 @@ export const ViLandingPage = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const goCreate = () => navigate('/login');
+  const goPricing = (templateId?: string) =>
+    navigate(templateId ? `/pricing?template=${encodeURIComponent(templateId)}` : '/pricing');
 
   const scrollTo = (id: string) => {
+    // Nav entries carrying a route navigate instead of scrolling.
+    const item = NAV_ITEMS.find((entry) => entry.id === id);
+    if (item?.to) { navigate(item.to); return; }
     if (id === 'top') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const goWork = () => scrollTo('work');
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
@@ -113,15 +121,13 @@ export const ViLandingPage = () => {
         setLocale={setLocale}
         isMobile={isMobile}
         onNav={scrollTo}
-        onCreate={goCreate}
       />
 
       <main style={{ flex: 1 }}>
-        <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onCreate={goCreate} onWork={() => scrollTo('work')} />
-        <WorkSection t={t} templates={work} reveal={reveal} onPreview={setPreview} onCreate={goCreate} />
+        <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onWork={goWork} onPricing={() => goPricing()} />
+        <WorkSection t={t} templates={work} reveal={reveal} onPreview={setPreview} onPricing={() => goPricing()} />
         <WhySection t={t} reveal={reveal} />
-        <FaqSection t={t} reveal={reveal} />
-        <FinalCta t={t} reveal={reveal} onCreate={goCreate} />
+        <FinalCta t={t} reveal={reveal} onPricing={() => goPricing()} />
       </main>
 
       {/* ── Footer ── */}
@@ -140,7 +146,10 @@ export const ViLandingPage = () => {
         </div>
       </footer>
 
-      {preview && <PreviewModal tpl={preview} t={t} onClose={() => setPreview(null)} onCreate={goCreate} />}
+      {preview && (
+        <PreviewModal tpl={preview} t={t} onClose={() => setPreview(null)}
+          onSelect={() => goPricing(preview.id)} />
+      )}
     </div>
   );
 };
@@ -150,20 +159,20 @@ export const ViLandingPage = () => {
 // Mobile: compact bar (logo + theme + burger); the links, language picker and
 // sign-in move into a sheet that drops down under the bar.
 
-const NAV_ITEMS: { id: string; label: ViKey }[] = [
+// `to` navigates; `id` scrolls to a section on this page.
+const NAV_ITEMS: { id: string; label: ViKey; to?: string }[] = [
   { id: 'work', label: 'lp_nav_work' },
   { id: 'why', label: 'lp_nav_why' },
-  { id: 'faq', label: 'lp_nav_faq' },
+  { id: 'pricing', label: 'lp_nav_pricing', to: '/pricing' },
 ];
 
-function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate }: {
+function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
   t: (k: ViKey) => string;
   stuck: boolean;
   locale: Locale;
   setLocale: (l: Locale) => void;
   isMobile: boolean;
   onNav: (id: string) => void;
-  onCreate: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -232,14 +241,8 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate 
         <div className="vi-lp-head-right">
           <span className="vi-lp-desktop-only">{localeSelect(true)}</span>
           <ViThemeToggle />
-          <button
-            type="button"
-            className="vi-btn vi-btn-ghost vi-lp-desktop-only"
-            style={{ fontSize: 13 }}
-            onClick={onCreate}
-          >
-            {t('lp_signin')}
-          </button>
+
+          {/* No sign-in or sign-up: this site has no self-serve accounts. */}
 
           {/* Burger — mobile only */}
           <button
@@ -279,14 +282,6 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate 
             </nav>
             <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
               {localeSelect(false)}
-              <button
-                type="button"
-                className="vi-btn vi-btn-primary"
-                style={{ width: '100%', padding: '13px', fontSize: 15 }}
-                onClick={() => { setMenuOpen(false); onCreate(); }}
-              >
-                {t('lp_signin')}
-              </button>
             </div>
           </div>
         </>
@@ -297,10 +292,10 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, onCreate 
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-function HeroSection({ t, isMobile, cover, work, onCreate, onWork }: {
+function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
   t: (k: ViKey) => string; isMobile: boolean;
   cover: TemplateDefinition[]; work: TemplateDefinition[];
-  onCreate: () => void; onWork: () => void;
+  onWork: () => void; onPricing: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
   const line1 = t('lp_hero_title_1').split(' ');
@@ -351,11 +346,11 @@ function HeroSection({ t, isMobile, cover, work, onCreate, onWork }: {
           </p>
 
           <div className="vi-fade-up vi-lp-hero-cta" style={{ animationDelay: '760ms' }}>
-            <button type="button" className="vi-btn vi-btn-primary" onClick={onCreate}>
+            <button type="button" className="vi-btn vi-btn-primary" onClick={onWork}>
               {t('lp_cta_primary')} <span style={{ fontSize: 17 }}>→</span>
             </button>
-            <button type="button" className="vi-btn vi-btn-ghost" onClick={onWork}>
-              👁 {t('lp_cta_secondary')}
+            <button type="button" className="vi-btn vi-btn-ghost" onClick={onPricing}>
+              💎 {t('lp_cta_secondary')}
             </button>
           </div>
         </div>
@@ -435,12 +430,12 @@ function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: TemplateDefini
 
 // ── Our work ─────────────────────────────────────────────────────────────────
 
-function WorkSection({ t, templates, reveal, onPreview, onCreate }: {
+function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
   t: (k: ViKey) => string;
   templates: TemplateDefinition[];
   reveal: (el: HTMLElement | null) => void;
   onPreview: (tpl: TemplateDefinition) => void;
-  onCreate: () => void;
+  onPricing: () => void;
 }) {
   return (
     <section id="work" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
@@ -462,7 +457,7 @@ function WorkSection({ t, templates, reveal, onPreview, onCreate }: {
         </div>
 
         <div ref={reveal} style={{ textAlign: 'center', marginTop: 44 }}>
-          <button type="button" className="vi-btn vi-btn-ghost" style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onCreate}>
+          <button type="button" className="vi-btn vi-btn-ghost" style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onPricing}>
             {t('lp_work_cta')} →
           </button>
         </div>
@@ -533,11 +528,20 @@ function WorkCard({ tpl, t, reveal, delayMs, onPreview }: {
 // ── Why choose us ────────────────────────────────────────────────────────────
 
 function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void }) {
-  const items: { icon: string; title: ViKey; desc: ViKey }[] = [
-    { icon: '✨', title: 'lp_why_1_t', desc: 'lp_why_1_d' },
+  // The animation tile is the headline claim and spans the full width, because
+  // it is what actually distinguishes these invitations from a picture of one —
+  // and it is the one thing a static list of bullet points cannot demonstrate.
+  const items: { icon: string; title: ViKey; desc: ViKey; wide?: boolean }[] = [
+    { icon: '✨', title: 'lp_why_1_t', desc: 'lp_why_1_d', wide: true },
+    { icon: '🎬', title: 'lp_why_7_t', desc: 'lp_why_7_d' },
+    { icon: '🎼', title: 'lp_why_8_t', desc: 'lp_why_8_d' },
+    { icon: '🖼', title: 'lp_why_9_t', desc: 'lp_why_9_d' },
+    { icon: '⏳', title: 'lp_why_10_t', desc: 'lp_why_10_d' },
     { icon: '📱', title: 'lp_why_2_t', desc: 'lp_why_2_d' },
     { icon: '🌍', title: 'lp_why_3_t', desc: 'lp_why_3_d' },
     { icon: '💌', title: 'lp_why_4_t', desc: 'lp_why_4_d' },
+    { icon: '🗺', title: 'lp_why_11_t', desc: 'lp_why_11_d' },
+    { icon: '🎨', title: 'lp_why_12_t', desc: 'lp_why_12_d' },
     { icon: '⚡', title: 'lp_why_5_t', desc: 'lp_why_5_d' },
     { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d' },
   ];
@@ -567,7 +571,11 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 20 }}>
           {items.map((item, i) => (
-            <div key={item.title} ref={reveal} style={{ transitionDelay: `${i * 90}ms` }}>
+            <div key={item.title} ref={reveal} style={{
+              transitionDelay: `${i * 60}ms`,
+              // The wide tile only spans columns where there is more than one.
+              gridColumn: item.wide ? '1 / -1' : undefined,
+            }}>
               <div className="vi-lp-tile" onMouseMove={onMove} style={{ height: '100%' }}>
                 <span className="vi-lp-tile-icon">{item.icon}</span>
                 <h3 style={{ margin: '18px 0 8px', fontSize: 18, fontWeight: 750, letterSpacing: '-0.015em' }}>
@@ -585,62 +593,10 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
   );
 }
 
-// ── FAQ ──────────────────────────────────────────────────────────────────────
-
-function FaqSection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void }) {
-  const faqs: { q: ViKey; a: ViKey }[] = [
-    { q: 'lp_faq_1_q', a: 'lp_faq_1_a' },
-    { q: 'lp_faq_2_q', a: 'lp_faq_2_a' },
-    { q: 'lp_faq_3_q', a: 'lp_faq_3_a' },
-    { q: 'lp_faq_4_q', a: 'lp_faq_4_a' },
-    { q: 'lp_faq_5_q', a: 'lp_faq_5_a' },
-    { q: 'lp_faq_6_q', a: 'lp_faq_6_a' },
-  ];
-  // Single-open accordion; the first question starts expanded.
-  const [open, setOpen] = useState(0);
-
-  return (
-    <section id="faq" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
-      <div style={{ maxWidth: 820, margin: '0 auto' }}>
-        <div ref={reveal} style={{ textAlign: 'center', marginBottom: 42 }}>
-          <span className="vi-lp-kicker">{t('lp_faq_kicker')}</span>
-          <h2 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 830, letterSpacing: '-0.03em' }}>
-            {t('lp_faq_title')}
-          </h2>
-        </div>
-
-        <div style={{ display: 'grid', gap: 12 }}>
-          {faqs.map((faq, i) => {
-            const isOpen = open === i;
-            return (
-              <div key={faq.q} ref={reveal} style={{ transitionDelay: `${i * 70}ms` }}>
-                <div className={`vi-lp-faq${isOpen ? ' open' : ''}`}>
-                  <button
-                    type="button"
-                    className="vi-lp-faq-q"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpen(isOpen ? -1 : i)}
-                  >
-                    {t(faq.q)}
-                    <span className="vi-lp-faq-sign" aria-hidden="true" />
-                  </button>
-                  <div className="vi-lp-faq-a">
-                    <div><p>{t(faq.a)}</p></div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ── Closing CTA ──────────────────────────────────────────────────────────────
 
-function FinalCta({ t, reveal, onCreate }: {
-  t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void; onCreate: () => void;
+function FinalCta({ t, reveal, onPricing }: {
+  t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void; onPricing: () => void;
 }) {
   return (
     <section style={{ padding: '20px 20px 100px' }}>
@@ -663,9 +619,9 @@ function FinalCta({ t, reveal, onCreate }: {
               type="button"
               className="vi-btn vi-btn-primary"
               style={{ marginTop: 28, padding: '16px 34px', fontSize: 16, borderRadius: 14 }}
-              onClick={onCreate}
+              onClick={onPricing}
             >
-              {t('lp_cta_primary')} <span style={{ fontSize: 18 }}>→</span>
+              {t('lp_nav_pricing')} <span style={{ fontSize: 18 }}>→</span>
             </button>
           </div>
         </div>
@@ -676,8 +632,8 @@ function FinalCta({ t, reveal, onCreate }: {
 
 // ── Full-screen template preview ─────────────────────────────────────────────
 
-function PreviewModal({ tpl, t, onClose, onCreate }: {
-  tpl: TemplateDefinition; t: (k: ViKey) => string; onClose: () => void; onCreate: () => void;
+function PreviewModal({ tpl, t, onClose, onSelect }: {
+  tpl: TemplateDefinition; t: (k: ViKey) => string; onClose: () => void; onSelect: () => void;
 }) {
   const { effectiveConfig } = useTemplateOverrides();
   const config = useMemo(
@@ -727,9 +683,14 @@ function PreviewModal({ tpl, t, onClose, onCreate }: {
           ✕
         </button>
 
+        {/* Pinned under the preview rather than revealed by scrolling it: the
+            template renders inside a sandboxed iframe on an opaque origin, so
+            the parent cannot observe how far the visitor has scrolled inside it.
+            A button that only appeared after an event we cannot detect would be
+            a button that never appeared. */}
         <div style={{ padding: 12, background: 'var(--vi-card)', borderTop: '1px solid var(--vi-border)' }}>
-          <button type="button" className="vi-btn vi-btn-primary" style={{ width: '100%', padding: '13px' }} onClick={onCreate}>
-            ✨ {t('lp_cta_primary')}
+          <button type="button" className="vi-btn vi-btn-primary" style={{ width: '100%', padding: '13px' }} onClick={onSelect}>
+            {t('lp_select')} <span style={{ fontSize: 17 }}>→</span>
           </button>
         </div>
       </div>
