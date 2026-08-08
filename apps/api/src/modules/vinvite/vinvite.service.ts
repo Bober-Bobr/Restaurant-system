@@ -14,6 +14,8 @@ const RESERVED_SLUGS = new Set([
   'www', 'api', 'admin', 'app', 'login', 'register', 'logout', 'mail',
   'static', 'assets', 'help', 'support', 'uploads',
   'templates', 'devices', 'profile', 'projects', 'invitations', 'settings',
+  // The promotional site. A published invitation at this slug would shadow it.
+  'main',
 ]);
 
 export type InviteAuthResponse = {
@@ -506,6 +508,72 @@ export class VInviteTemplateOverrideService {
       update: { config: config as object },
       select: { templateId: true, config: true, updatedAt: true },
     });
+  }
+}
+
+// ── Template pricing ────────────────────────────────────────────────────────
+// What each built-in template costs, and which tier it sits in. Set by a
+// SYSTEM_ADMIN on the Settings tab; read publicly, because the promotional site
+// will show prices to logged-out visitors.
+
+export const TEMPLATE_TIERS = ['STANDARD', 'PREMIUM', 'LUXURY'] as const;
+export type TemplateTier = (typeof TEMPLATE_TIERS)[number];
+
+export type TemplatePricing = {
+  templateId: string;
+  tier: TemplateTier | null;
+  priceCents: number | null;
+  updatedAt: Date | null;
+};
+
+export class VInviteTemplatePricingService {
+  /**
+   * Every priced template. Templates with no row simply do not appear — the
+   * caller knows the full registry and treats a missing entry as "not priced
+   * yet", which is exactly what an absent row means.
+   */
+  async list(): Promise<TemplatePricing[]> {
+    const rows = await prisma.inviteTemplateOverride.findMany({
+      select: { templateId: true, tier: true, priceCents: true, updatedAt: true },
+    });
+    return rows
+      .filter((row) => row.tier !== null || row.priceCents !== null)
+      .map((row) => ({
+        templateId: row.templateId,
+        tier: (row.tier as TemplateTier | null) ?? null,
+        priceCents: row.priceCents,
+        updatedAt: row.updatedAt,
+      }));
+  }
+
+  /**
+   * Save the whole board in one call. The Settings page edits a table of
+   * templates and saves once, so a batch write keeps the screen and the request
+   * shaped the same — and a half-applied board is not a state anyone wants.
+   *
+   * Upsert per row rather than delete-and-recreate: these rows also carry the
+   * Design+ `config`, which pricing must never clobber.
+   */
+  async save(
+    userId: string,
+    entries: { templateId: string; tier: TemplateTier | null; priceCents: number | null }[],
+  ): Promise<TemplatePricing[]> {
+    const user = await prisma.inviteUser.findUnique({ where: { id: userId }, select: { role: true } });
+    if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
+
+    // Last entry wins if the client somehow sent a template twice.
+    const byTemplate = new Map(entries.map((entry) => [entry.templateId, entry]));
+
+    await prisma.$transaction(
+      [...byTemplate.values()].map((entry) =>
+        prisma.inviteTemplateOverride.upsert({
+          where: { templateId: entry.templateId },
+          create: { templateId: entry.templateId, tier: entry.tier, priceCents: entry.priceCents },
+          update: { tier: entry.tier, priceCents: entry.priceCents },
+        }),
+      ),
+    );
+    return this.list();
   }
 }
 

@@ -861,3 +861,41 @@ The sweep logs only when it actually removes something —
 **Statistics** (`/stats`) read only CLOSED orders, so the page is empty until
 orders are closed rather than merely placed. A Food Admin sees the whole
 restaurant and a per-employee comparison; a Food Employee sees only their own.
+
+
+---
+
+## 15. v-invite — promotional site moved, template pricing added
+
+**One migration**, `20260805100000_invite_template_pricing`: two nullable columns
+(`tier`, `priceCents`) on `InviteTemplateOverride`. Nothing drops, nothing is
+backfilled, and no existing row changes meaning.
+
+### The routing change is user-visible
+
+`v-invite.uz` now opens the **sign-in page**. The promotional site moved to
+`v-invite.uz/main`. Anyone with the bare domain bookmarked lands on sign-in
+rather than the marketing page — intended, but worth knowing before the first
+support question.
+
+`main` is now a **reserved slug**, so no invitation can be published there. If a
+project already holds that slug it would be shadowed by the promo route, so check
+before deploying:
+
+```bash
+docker compose exec -T postgres sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT id, name, slug FROM \"InviteProject\" WHERE slug = '"'"'main'"'"';"'
+```
+
+Expect zero rows. If one comes back, rename it before deploying — it will
+otherwise become unreachable.
+
+### After deploying
+
+A SYSTEM_ADMIN gets a new **Settings** tab (`/settings`) listing every built-in
+template with a tier (Standard / Premium / Luxury) and a price. Prices are typed
+in so'm and stored in tiyin. Leaving a price empty means "not on sale yet", which
+is deliberately different from a price of zero.
+
+Nothing on the promotional site reads these yet — that is the next step. Setting
+them now is safe and changes nothing a visitor sees.

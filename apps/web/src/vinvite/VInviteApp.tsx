@@ -7,6 +7,7 @@ import { useViT } from './i18n';
 import { vinviteService } from './api';
 import { ViLoginPage } from './LoginPage';
 import { ViLandingPage } from './LandingPage';
+import { ViSettingsPage } from './SettingsPage';
 import { ViDashboardPage } from './DashboardPage';
 import { ViEditorPage } from './EditorPage';
 import { ViTemplatesPage } from './TemplatesPage';
@@ -46,6 +47,12 @@ export const VInviteApp = () => {
     <div className="vi-root" data-theme={uiTheme}>
       <Routes>
         <Route path="/login" element={accessToken ? <Navigate to="/" replace /> : <ViLoginPage />} />
+        {/* The promotional site lives at /main. Outside the auth branches on
+            purpose: it is a public marketing page, and a signed-in admin has
+            every reason to open it to check how it looks. Declared BEFORE the
+            /:slug route below — a static segment outranks a dynamic one in
+            React Router, and `main` is reserved so no invitation can claim it. */}
+        <Route path="/main" element={<ViLandingPage />} />
         {/* Published invitation: v-invite.uz/<slug> (path-based — no wildcard
             DNS available on .uz). Static app routes above/below always win over
             this dynamic segment. */}
@@ -61,14 +68,16 @@ export const VInviteApp = () => {
               <Route path="/notifications" element={<ViNotificationsPage />} />
               <Route path="/devices" element={<ViDevicesPage />} />
               <Route path="/profile" element={<ViProfilePage />} />
+              <Route path="/settings" element={<ViSettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
           <>
-            {/* Logged-out visitors land on the marketing page rather than the
-                sign-in form; every other app route still bounces to /login. */}
-            <Route path="/" element={<ViLandingPage />} />
+            {/* v-invite.uz itself is the sign-in page; the marketing site is at
+                /main. Everything else a logged-out visitor asks for bounces to
+                sign-in, as before. */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         )}
@@ -137,6 +146,7 @@ function ViLayout() {
     { to: '/', label: t('invitations'), icon: '💌', end: true },
     { to: '/templates', label: t('templates'), icon: '🎨' },
     ...(isSystemAdmin ? [{ to: '/notifications', label: t('notifications'), icon: '🔔', badge: unread }] : []),
+    ...(isSystemAdmin ? [{ to: '/settings', label: t('settings'), icon: '⚙️' }] : []),
     { to: '/devices', label: t('devices'), icon: '📱' },
     { to: '/profile', label: t('profile'), icon: '👤' },
   ];

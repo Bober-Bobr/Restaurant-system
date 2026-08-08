@@ -106,3 +106,16 @@ export const promoShowcaseSchema = z.object({
   orderIds: templateIdList,
   hiddenIds: templateIdList,
 });
+
+// Template pricing set on the v-invite Settings tab (SYSTEM_ADMIN).
+// `tier` and `priceCents` are both nullable: clearing a template's price is a
+// deliberate action, not the absence of one.
+export const templatePricingSchema = z.object({
+  entries: z.array(z.object({
+    templateId: z.string().min(1).max(80),
+    tier: z.enum(['STANDARD', 'PREMIUM', 'LUXURY']).nullable(),
+    // In tiyin. Capped well above any plausible invitation price so a typo
+    // cannot store a number the UI then has to render.
+    priceCents: z.number().int().min(0).max(1_000_000_00).nullable(),
+  })).max(200),
+});

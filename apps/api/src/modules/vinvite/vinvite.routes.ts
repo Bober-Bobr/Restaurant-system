@@ -37,6 +37,11 @@ router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.s
 
 // How templates are showcased on the promotional site: public read (the landing
 // page is seen logged out), system-admin write.
+// Template pricing: public read (the promotional site shows it), SYSTEM_ADMIN
+// write — the same split as the showcase below.
+router.get('/template-pricing', controller.getTemplatePricing.bind(controller));
+router.put('/template-pricing', inviteAuthMiddleware, controller.saveTemplatePricing.bind(controller));
+
 router.get('/promo-showcase', controller.getPromoShowcase.bind(controller));
 router.put('/promo-showcase', inviteAuthMiddleware, controller.savePromoShowcase.bind(controller));
 

@@ -181,6 +181,18 @@ export type TemplateOverride = {
 // System-admin control of how templates are showcased on the promotional site.
 // All three are ordered lists of template ids; see resolveShowcase() for how
 // they turn into what a visitor sees.
+export const TEMPLATE_TIERS = ['STANDARD', 'PREMIUM', 'LUXURY'] as const;
+export type TemplateTier = (typeof TEMPLATE_TIERS)[number];
+
+/** A template's commercial settings. Absent from the list = never priced. */
+export type TemplatePricing = {
+  templateId: string;
+  tier: TemplateTier | null;
+  /** In tiyin (1/100 so'm), like the rest of the platform. */
+  priceCents: number | null;
+  updatedAt?: string | null;
+};
+
 export type PromoShowcase = {
   coverIds: string[];
   orderIds: string[];
@@ -293,6 +305,14 @@ export const vinviteService = {
 
   // Promotional-site showcase. The GET is public so the landing page can read it
   // logged out; the PUT is rejected for anyone but a SYSTEM_ADMIN.
+  async getTemplatePricing(): Promise<TemplatePricing[]> {
+    const { data } = await viHttp.get<TemplatePricing[]>('/template-pricing');
+    return data;
+  },
+  async saveTemplatePricing(entries: Omit<TemplatePricing, 'updatedAt'>[]): Promise<TemplatePricing[]> {
+    const { data } = await viHttp.put<TemplatePricing[]>('/template-pricing', { entries });
+    return data;
+  },
   async getPromoShowcase(): Promise<PromoShowcase> {
     const { data } = await viHttp.get<PromoShowcase>('/promo-showcase');
     return data;

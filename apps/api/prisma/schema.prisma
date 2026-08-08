@@ -963,10 +963,24 @@ model InvitePromoShowcase {
 
 // System-admin design override for a built-in rich template: `config` replaces
 // the template's defaultConfig for new invitations, cards and previews.
+// SYSTEM_ADMIN settings for one built-in rich template. Templates themselves are
+// code, not rows (see vinvite/templates/index.ts), so this table exists purely to
+// hold what the studio decides ABOUT a template: its saved Design+ config, and
+// its commercial tier and price.
+//
+// One row per template rather than two tables — the key is the same and both
+// halves are edited by the same person on the same screen. Both are nullable, so
+// a template that has never been priced is distinguishable from one priced at
+// zero.
 model InviteTemplateOverride {
   id         String   @id @default(cuid())
   templateId String   @unique
   config     Json     @default("{}")
+  // STANDARD | PREMIUM | LUXURY. A plain String like the other status columns in
+  // this schema, so adding a tier later needs no migration.
+  tier       String?
+  // In tiyin (1/100 so'm), matching the rest of the platform's money columns.
+  priceCents Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

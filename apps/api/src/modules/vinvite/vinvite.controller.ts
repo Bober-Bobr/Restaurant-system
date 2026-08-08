@@ -3,12 +3,14 @@ import {
   createProjectSchema, createTemplateSchema, googleAuthSchema, loginSchema,
   projectSlug, refreshSchema, registerSchema, rsvpSchema, templateOverrideSchema,
   promoShowcaseSchema,
+  templatePricingSchema,
   updateProfileSchema, updateProjectSchema, updateTemplateSchema,
 } from './vinvite.schema.js';
 import createHttpError from 'http-errors';
 import {
   VInviteAuthService, VInviteProjectService, VInviteTemplateService,
-  VInviteTemplateOverrideService, VInvitePromoShowcaseService, type DeviceInfo,
+  VInviteTemplateOverrideService, VInvitePromoShowcaseService,
+  VInviteTemplatePricingService, type DeviceInfo,
 } from './vinvite.service.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
@@ -20,6 +22,7 @@ const projectService = new VInviteProjectService();
 const templateService = new VInviteTemplateService();
 const overrideService = new VInviteTemplateOverrideService();
 const promoShowcaseService = new VInvitePromoShowcaseService();
+const templatePricingService = new VInviteTemplatePricingService();
 const platformContactService = new PlatformContactService();
 const inviteRequestService = new InviteRequestService();
 
@@ -226,6 +229,17 @@ export class VInviteController {
   // logged-out visitor sees — and the write is SYSTEM_ADMIN-only, enforced in
   // the service rather than by the route, so it cannot be bypassed by reaching
   // the method another way.
+  // Public: the promotional site shows prices to logged-out visitors.
+  async getTemplatePricing(_request: Request, response: Response) {
+    response.json(await templatePricingService.list());
+  }
+
+  // SYSTEM_ADMIN only, re-checked in the service rather than trusted from here.
+  async saveTemplatePricing(request: Request, response: Response) {
+    const { entries } = templatePricingSchema.parse(request.body);
+    response.json(await templatePricingService.save(request.inviteUser!.id, entries));
+  }
+
   async getPromoShowcase(_request: Request, response: Response) {
     response.json(await promoShowcaseService.get());
   }
