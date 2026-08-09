@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Invitation</title>
+<!--__CONFIG__-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Pinyon+Script&family=Manrope:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   THE KEEPSAKE — scratch & reveal wedding invitation
+   --------------------------------------------------------------------------
+   Concept : a luxury stationery card whose details are hidden beneath
+             champagne-metallic panels the guest physically scratches away.
+   Motion  : gate (folded card opens) · grid (distinct per-card entrances,
+             scratch-reveal) · secret (light sweep) · details (stagger rise) ·
+             gallery (taped album) · countdown (flip-fade) · RSVP (focus glow).
+   Fonts   : Bodoni Moda (display) · Pinyon Script (script) · Manrope (sans)
+   Build   : MOBILE-FIRST
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. DESIGN TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  /* Papers */
+  --ivory:       #f8f1e7;
+  --warm-white:  #fbf6ee;
+  --cream:       #f3e9d9;
+  --beige:       #ecdfca;
+
+  /* Wines */
+  --wine:        #6d2233;
+  --burgundy:    #7c2e3c;
+  --burgundy-dp: #551829;
+  --rosewood:    #9a4a52;
+
+  /* Metals (scratch coatings) */
+  --champagne:   #e4cfa0;
+  --gold:        #cba96a;
+  --gold-soft:   #d9c188;
+  --rose-gold:   #cf9f88;
+  --bronze:      #a9865a;
+
+  /* Typography */
+  --ink:         #3f2a2a;
+  --ink-soft:    #6b4a48;
+  --mute:        #9a8577;
+
+  --font-display: 'Bodoni Moda', 'Georgia', serif;
+  --font-script:  'Pinyon Script', cursive;
+  --font-sans:    'Manrope', 'Helvetica Neue', sans-serif;
+
+  /* Motion */
+  --ease-lux:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft:   cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* Layout */
+  --edge:        1.35rem;
+  --pad-sec:     4rem;
+  --content-max: 1080px;
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET & BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--ivory);
+  overflow-x: hidden;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The scroll lock is keyed on `html.js`, and that class is only ever added from
+   script — a template whose script never runs leaves a scrollable page rather
+   than a frozen one. The same class gates every "hidden until revealed" rule
+   below, and boot() removes it again if anything throws. */
+html.js body:not(.is-open) {
+  overflow: hidden;
+  height: 100dvh;
+}
+
+img, svg, canvas { display: block; max-width: 100%; }
+button, input, textarea, select { font: inherit; color: inherit; }
+
+::selection { background: rgba(154, 74, 82, 0.28); }
+
+::-webkit-scrollbar { width: 9px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--rose-gold); border-radius: 5px; }
+
+/* Blocks switched off in the builder, and empty tiles/cards. */
+.opt-off, .card-off, .hidden { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   3. SHARED TYPOGRAPHY
+   -------------------------------------------------------------------------- */
+.caps {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.64rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+.script {
+  font-family: var(--font-script);
+  color: var(--rosewood);
+  line-height: 1.1;
+}
+
+.sec-head {
+  max-width: 560px;
+  margin: 0 auto 2.4rem;
+  text-align: center;
+}
+.sec-head .script { display: block; font-size: clamp(2rem, 8vw, 3rem); margin-bottom: 0.1rem; }
+.sec-head h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 6vw, 2.6rem);
+  line-height: 1.24;
+  color: var(--ink);
+}
+.sec-head p {
+  margin-top: 0.8rem;
+  font-style: italic;
+  color: var(--mute);
+  font-size: 0.98rem;
+}
+
+.filigree {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 1rem auto;
+  color: var(--gold);
+}
+.filigree::before, .filigree::after {
+  content: '';
+  height: 1px;
+  width: clamp(34px, 8vw, 66px);
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+.filigree::after { background: linear-gradient(90deg, currentColor, transparent); }
+.filigree svg { width: 16px; height: 16px; }
+
+/* Generic reveal. Hidden state is the class that JS REMOVES nothing from — the
+   observer adds `.in-view`, and every rule below is scoped to `html.js`, so a
+   dead script shows the whole page instead of a blank one. */
+html.js .rise {
+  opacity: 0;
+  transform: translateY(24px);
+  filter: blur(5px);
+  transition:
+    opacity 1.3s var(--ease-lux),
+    transform 1.3s var(--ease-lux),
+    filter 1.3s var(--ease-lux);
+  transition-delay: var(--rise-delay, 0s);
+}
+html.js .rise.in-view,
+html.js .in-view .rise { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+/* --------------------------------------------------------------------------
+   4. AMBIENT PARTICLES
+   -------------------------------------------------------------------------- */
+#dust {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   5. GATE — a folded card that opens
+   ========================================================================== */
+.gate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -8%, rgba(228, 207, 160, 0.4), transparent 60%),
+    radial-gradient(ellipse 120% 60% at 50% 110%, rgba(124, 46, 60, 0.14), transparent 55%),
+    linear-gradient(180deg, var(--warm-white), var(--ivory) 55%, var(--cream));
+}
+html.js .gate { display: flex; }
+.gate.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 1.2s var(--ease-lux), visibility 0s 1.2s;
+  pointer-events: none;
+}
+
+.gate-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.4rem, 4vh, 2.6rem);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.gate-msg { animation: g-fade 1.6s var(--ease-lux) 0.3s both; }
+.gate-msg .script { display: block; font-size: clamp(2.1rem, 8vw, 3.2rem); }
+.gate-msg p {
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: var(--mute);
+  font-size: 1rem;
+}
+@keyframes g-fade {
+  from { opacity: 0; transform: translateY(18px); filter: blur(5px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.gate.opening .gate-msg { opacity: 0; transform: translateY(-12px); transition: opacity 0.6s var(--ease-lux), transform 0.6s var(--ease-lux); }
+
+/* Folded keepsake card — a full front cover that lifts open from the top. */
+.fold {
+  position: relative;
+  width: min(76vw, 320px);
+  aspect-ratio: 0.72;
+  perspective: 1500px;
+  animation: g-float 5.5s var(--ease-soft) infinite alternate, g-fade 1.7s var(--ease-lux) 0.15s both;
+}
+@keyframes g-float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+.gate.opening .fold { animation: g-fade 0s both; }
+
+.fold-body {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 10px;
+  background: linear-gradient(170deg, #fffdf8, var(--warm-white));
+  box-shadow: 0 26px 54px -20px rgba(85, 24, 41, 0.4);
+  overflow: hidden;
+}
+.fold-body::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(203, 169, 106, 0.45);
+  border-radius: 5px;
+}
+.fold-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 8%;
+  text-align: center;
+}
+.fold-inner .mono { width: 46px; height: 46px; color: var(--wine); }
+.fold-inner .script { font-size: clamp(1.4rem, 5vw, 1.9rem); }
+.fold-inner .caps { font-size: 0.54rem; }
+
+/* The front cover — hinged at the top edge, lifts up and back to open. */
+.fold-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  transform: rotateX(0deg);
+  transition: transform 1.35s var(--ease-lux);
+  will-change: transform;
+}
+.gate.opening .fold-cover { transform: rotateX(-166deg); }
+
+.cover-face, .cover-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cover-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 8%;
+  text-align: center;
+  background: linear-gradient(165deg, var(--cream), var(--beige));
+  box-shadow: 0 20px 44px -20px rgba(85, 24, 41, 0.35);
+}
+.cover-face::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(203, 169, 106, 0.55);
+  border-radius: 5px;
+  pointer-events: none;
+}
+.cover-face .mono { width: 52px; height: 52px; color: var(--wine); }
+.cover-face .script { font-size: clamp(1.5rem, 5.6vw, 2.1rem); }
+.cover-face .caps { font-size: 0.56rem; }
+.cover-face .seam { width: 30px; color: var(--gold); margin-top: 0.15rem; }
+.cover-back {
+  transform: rotateX(180deg);
+  background: linear-gradient(180deg, var(--beige), var(--cream));
+}
+.cover-back::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(203, 169, 106, 0.3);
+  border-radius: 5px;
+}
+
+.gate-hint {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: 0.58rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--mute);
+  animation: g-hint 2.6s var(--ease-soft) infinite, g-fade 1.5s var(--ease-lux) 0.7s both;
+}
+@keyframes g-hint { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+.gate.opening .gate-hint { opacity: 0; transition: opacity 0.5s; }
+
+/* ==========================================================================
+   6. BUTTONS
+   ========================================================================== */
+.btn {
+  position: relative;
+  display: inline-block;
+  padding: 0.95rem 2.5rem;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.68rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--warm-white);
+  background: linear-gradient(130deg, var(--burgundy), var(--wine) 60%, var(--burgundy-dp));
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow:
+    0 12px 26px -10px rgba(85, 24, 41, 0.55),
+    inset 0 1px 0 rgba(255, 240, 224, 0.2);
+  transition: transform 0.5s var(--ease-lux), box-shadow 0.5s var(--ease-lux);
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(217, 193, 136, 0.4);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -70%;
+  width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 244, 224, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.9s var(--ease-lux);
+}
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 20px 40px -12px rgba(85, 24, 41, 0.6),
+    0 0 26px rgba(203, 169, 106, 0.3),
+    inset 0 1px 0 rgba(255, 240, 224, 0.2);
+}
+.btn:hover::after { left: 130%; }
+.btn:active { transform: translateY(-1px); }
+.btn[disabled] { opacity: 0.7; pointer-events: none; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--burgundy);
+  border: 1px solid rgba(154, 74, 82, 0.5);
+  box-shadow: none;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.btn-ghost::before, .btn-ghost::after { display: none; }
+.btn-ghost:hover { transform: none; background: rgba(154, 74, 82, 0.07); box-shadow: none; }
+
+/* ==========================================================================
+   7. HERO
+   ========================================================================== */
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+  padding: 4.6rem var(--edge) 3rem;
+  background:
+    radial-gradient(ellipse 120% 55% at 50% -6%, rgba(228, 207, 160, 0.45), transparent 60%),
+    radial-gradient(ellipse 120% 50% at 50% 108%, rgba(124, 46, 60, 0.12), transparent 55%),
+    linear-gradient(180deg, var(--warm-white), var(--ivory) 60%);
+}
+.hero-mono {
+  width: 62px;
+  margin: 0 auto 1.6rem;
+  color: var(--wine);
+}
+/* The hero is above the fold and its entrance IS the intro — the one place a
+   keyframe animation may legitimately start without waiting for a scroll. */
+html.js .hero > .hero-inner > * { opacity: 0; }
+body.is-open .hero-inner > * { animation: g-fade 1.8s var(--ease-lux) forwards; }
+.hero-mono-w  { animation-delay: 0.2s; }
+.hero-kicker  { animation-delay: 0.5s; }
+.hero-names   { animation-delay: 0.85s; }
+.hero-fil     { animation-delay: 1.6s; }
+.hero-date    { animation-delay: 1.85s; }
+.hero-sub     { animation-delay: 2.05s; }
+.hero-cta     { animation-delay: 2.3s; }
+
+.hero-inner { position: relative; max-width: 640px; }
+.hero-kicker { display: block; }
+.hero-names {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.6rem, 11vw, 4.8rem);
+  line-height: 1.12;
+  margin-top: 0.8rem;
+  color: var(--ink);
+}
+.hero-names .amp {
+  display: block;
+  font-family: var(--font-script);
+  font-size: 0.5em;
+  color: var(--rosewood);
+  margin: 0.02em 0;
+}
+.hero-date {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: 0.78rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.hero-sub { margin-top: 0.7rem; font-style: italic; color: var(--mute); font-size: 0.98rem; }
+.hero-cta { margin-top: 2.2rem; }
+.hero-scroll {
+  position: absolute;
+  bottom: 1.4rem; left: 0; right: 0;
+  margin: 0 auto; width: max-content;
+  color: var(--mute);
+}
+html.js .hero-scroll { opacity: 0; }
+body.is-open .hero-scroll { animation: g-fade 1.5s var(--ease-lux) 2.8s forwards; }
+.hero-scroll .caps { font-size: 0.52rem; }
+.hero-scroll i {
+  display: block; width: 1px; height: 30px; margin: 0.4rem auto 0;
+  background: linear-gradient(180deg, var(--gold), transparent);
+  transform-origin: top;
+  animation: sc 2.6s var(--ease-soft) infinite;
+}
+@keyframes sc { 0%,100% { transform: scaleY(0.6); opacity: 0.5; } 50% { transform: scaleY(1); opacity: 1; } }
+
+/* ==========================================================================
+   8. SCRATCH GRID — the heart
+   ========================================================================== */
+.scratch-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge);
+  background: linear-gradient(180deg, var(--ivory), var(--cream) 60%, var(--ivory));
+}
+
+.scratch-grid {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+}
+
+.scard {
+  position: relative;
+  border-radius: 16px;
+  background: linear-gradient(168deg, var(--warm-white), var(--cream));
+  box-shadow:
+    0 16px 34px -18px rgba(85, 24, 41, 0.3),
+    0 4px 12px -6px rgba(85, 24, 41, 0.12);
+  padding: 0.5rem;
+  overflow: hidden;
+}
+/* Distinct entrance per card, cycled by position. Every one of them waits for
+   .in-view, which the observer adds when the card reaches the screen. */
+html.js .scard {
+  opacity: 0;
+  transition:
+    opacity 1.2s var(--ease-lux),
+    transform 1.2s var(--ease-lux);
+}
+html.js .scard:nth-child(7n+1) { transform: translateY(40px); }
+html.js .scard:nth-child(7n+2) { transform: scale(0.9); }
+html.js .scard:nth-child(7n+3) { transform: translateX(-46px); }
+html.js .scard:nth-child(7n+4) { transform: translateX(46px); }
+html.js .scard:nth-child(7n+5) { transform: perspective(900px) rotateX(-38deg); transform-origin: top; }
+html.js .scard:nth-child(7n+6) { transform: rotate(-4deg) scale(0.94); }
+html.js .scard:nth-child(7n+7) { transform: translateY(40px) scale(0.96); }
+html.js .scard.in-view { opacity: 1; transform: none; }
+
+.scard-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.7rem 0.35rem;
+  gap: 0.6rem;
+}
+.scard-no {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.56rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+/* The fallback "reveal" button is always available (keyboard, assistive tech,
+   a browser without canvas) and only disappears once its card is revealed. */
+.revealed .reveal-btn { display: none; }
+
+.scard-stage {
+  position: relative;
+  border-radius: 11px;
+  overflow: hidden;
+  aspect-ratio: 1.9;
+}
+
+.reveal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  text-align: center;
+  padding: 1rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 252, 245, 0.9), transparent 70%),
+    linear-gradient(170deg, var(--warm-white), var(--beige));
+  /* Hidden answers cannot be selected or copied until the coating is gone. */
+  user-select: none; -webkit-user-select: none;
+}
+.revealed .reveal { user-select: text; -webkit-user-select: text; }
+.reveal::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(203, 169, 106, 0.45);
+  border-radius: 7px;
+  pointer-events: none;
+}
+.reveal .r-label {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.56rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+.reveal .r-main {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.25rem, 5.4vw, 1.9rem);
+  line-height: 1.15;
+  color: var(--wine);
+}
+.reveal .r-main.script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 7.4vw, 2.4rem);
+  color: var(--rosewood);
+}
+.reveal .r-sub { font-style: italic; font-size: 0.9rem; color: var(--ink-soft); }
+
+.revealed .reveal { animation: r-settle 0.9s var(--ease-lux) both; }
+@keyframes r-settle { from { transform: scale(0.98); } to { transform: scale(1); } }
+
+.reveal .glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 248, 230, 0.75) 50%, transparent 65%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.revealed .reveal .glow { animation: r-glow 1.1s var(--ease-lux) 0.15s both; }
+@keyframes r-glow { to { transform: translateX(120%); } }
+
+.scard-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  cursor: grab;
+  touch-action: none;              /* scratch, don't scroll, inside the card */
+  transition: opacity 0.6s var(--ease-lux);
+}
+.scard-canvas:active { cursor: grabbing; }
+.revealed .scard-canvas { opacity: 0; pointer-events: none; }
+
+.scard-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  color: rgba(85, 45, 30, 0.72);
+  transition: opacity 0.5s var(--ease-lux);
+}
+.scard-hint .finger { width: 26px; }
+.in-view .scard-hint .finger { animation: scratch-move 2.2s var(--ease-soft) infinite; }
+@keyframes scratch-move {
+  0%, 100% { transform: translateX(-12px) rotate(-8deg); }
+  50%      { transform: translateX(12px) rotate(4deg); }
+}
+.scard-hint span {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.56rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.touched .scard-hint, .revealed .scard-hint { opacity: 0; }
+
+/* ==========================================================================
+   9. SECRET CARD — the emotional reward
+   ========================================================================== */
+.secret-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge);
+  color: var(--warm-white);
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(154, 74, 82, 0.35), transparent 60%),
+    linear-gradient(170deg, var(--wine), var(--burgundy-dp));
+}
+.secret-sec .sec-head h2 { color: var(--warm-white); }
+.secret-sec .sec-head .script { color: var(--gold-soft); }
+.secret-sec .sec-head p { color: rgba(248, 241, 231, 0.7); }
+
+.secret-card {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto;
+  border-radius: 18px;
+  padding: 0.5rem;
+  background: linear-gradient(150deg, rgba(228, 207, 160, 0.25), rgba(207, 159, 136, 0.18));
+  box-shadow: 0 30px 60px -26px rgba(0, 0, 0, 0.5);
+}
+html.js .secret-card { opacity: 0; transform: translateY(34px) scale(0.97); transition: opacity 1.2s var(--ease-lux), transform 1.2s var(--ease-lux); }
+html.js .secret-card.in-view { opacity: 1; transform: none; }
+.secret-card .scard-stage { aspect-ratio: 1.35; }
+.secret-card .reveal {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 250, 240, 0.95), transparent 72%),
+    linear-gradient(165deg, var(--warm-white), var(--beige));
+  gap: 0.5rem;
+}
+.secret-card .reveal .r-main {
+  font-family: var(--font-script);
+  color: var(--wine);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 6.4vw, 2.2rem);
+}
+.secret-card .reveal .r-quote {
+  font-style: italic;
+  font-size: clamp(0.94rem, 3.4vw, 1.08rem);
+  color: var(--ink-soft);
+  max-width: 32ch;
+}
+/* The note appears only AFTER the coating is scratched off — before that it is
+   neither visible nor copyable. */
+.secret-card .reveal .r-main,
+.secret-card .reveal .r-quote {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.7s var(--ease-lux) 0.25s, transform 0.7s var(--ease-lux) 0.25s;
+}
+.secret-card.revealed .reveal .r-main,
+.secret-card.revealed .reveal .r-quote { opacity: 1; transform: none; }
+
+.secret-actions { display: flex; justify-content: center; gap: 0.6rem; margin-top: 0.6rem; flex-wrap: wrap; }
+.secret-actions .btn-ghost { border-color: rgba(228, 207, 160, 0.6); color: var(--gold-soft); }
+.secret-actions .btn-ghost:hover { background: rgba(228, 207, 160, 0.12); }
+.copy-btn { display: none; }
+.secret-card.revealed ~ .secret-actions .copy-btn,
+.secret-actions .copy-btn.on { display: inline-block; }
+
+/* ==========================================================================
+   10. DETAILS
+   ========================================================================== */
+.details-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge);
+  background: var(--ivory);
+}
+.det-grid {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: grid;
+  gap: 0.9rem;
+}
+.det {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem;
+  background: linear-gradient(165deg, var(--warm-white), var(--cream));
+  border: 1px solid rgba(203, 169, 106, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px -16px rgba(85, 24, 41, 0.28);
+  transition: transform 0.6s var(--ease-lux), box-shadow 0.6s var(--ease-lux);
+}
+.det:hover { transform: translateY(-4px); box-shadow: 0 20px 38px -18px rgba(85, 24, 41, 0.38); }
+.det-ic {
+  flex: 0 0 auto; width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--wine);
+  background: radial-gradient(circle at 34% 30%, var(--champagne), var(--gold));
+  box-shadow: inset 0 1px 2px rgba(255, 248, 235, 0.7);
+}
+.det-ic svg { width: 21px; height: 21px; }
+.det h3 {
+  font-family: var(--font-sans); font-weight: 500;
+  font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--bronze); margin-bottom: 0.15rem;
+}
+.det p { font-size: 1rem; color: var(--ink-soft); }
+.det em { display: block; color: var(--mute); font-size: 0.88rem; font-style: italic; }
+.det a { color: var(--burgundy); }
+
+/* ==========================================================================
+   11. GALLERY — taped album
+   ========================================================================== */
+.gallery-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge) calc(var(--pad-sec) * 1.1);
+  background: linear-gradient(180deg, var(--ivory), var(--cream) 50%, var(--ivory));
+  overflow: hidden;
+}
+.album { max-width: 860px; margin: 0 auto; }
+.pic {
+  --tw: -2.6deg;
+  position: relative;
+  width: min(78vw, 300px);
+  background: #fffdf8;
+  padding: 9px 9px 40px;
+  border-radius: 3px;
+  box-shadow: 0 16px 34px -14px rgba(85, 24, 41, 0.4);
+  margin: 0 auto 1.5rem;
+  transform: rotate(var(--tw));
+  cursor: zoom-in;
+  transition: transform 0.8s var(--ease-lux), box-shadow 0.8s var(--ease-lux);
+}
+.pic:nth-child(even) { --tw: 2.4deg; margin-left: auto; margin-right: 4vw; margin-top: -1.8rem; }
+.pic:nth-child(odd)  { margin-left: 4vw; }
+.pic .tape {
+  position: absolute; top: -10px; left: 50%;
+  width: 76px; height: 22px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(207, 159, 136, 0.4);
+  box-shadow: 0 1px 3px rgba(85, 24, 41, 0.15);
+}
+.pic:nth-child(even) .tape { transform: translateX(-50%) rotate(3deg); }
+html.js .pic {
+  opacity: 0;
+  transform: rotate(calc(var(--tw) * 3)) translateY(-24px) scale(1.05);
+  transition: opacity 1s var(--ease-lux) var(--pd, 0s), transform 1.2s var(--ease-lux) var(--pd, 0s);
+}
+html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) scale(1); }
+.pic:hover { transform: rotate(0deg) translateY(-5px) scale(1.02) !important; z-index: 4; }
+.pic-win { aspect-ratio: 1.02; border-radius: 2px; overflow: hidden; background: var(--beige); }
+.pic-win img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease-lux); }
+.pic-win img.broken { display: none; }
+.pic:hover .pic-win img { transform: scale(1.05); }
+.pic-cap {
+  position: absolute; left: 0; right: 0; bottom: 8px;
+  text-align: center;
+  font-family: var(--font-script); font-size: 1.25rem; color: var(--rosewood);
+}
+
+/* Lightbox */
+#lightbox {
+  position: fixed; inset: 0; z-index: 90;
+  display: none; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  background: rgba(31, 12, 18, 0.9);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+#lightbox.open { display: flex; animation: g-fade 0.4s var(--ease-lux) both; }
+#lightbox img { max-width: 100%; max-height: 78vh; border-radius: 6px; box-shadow: 0 30px 70px -30px #000; }
+#lbCap { margin-top: 0.9rem; text-align: center; font-family: var(--font-script); font-size: 1.4rem; color: var(--champagne); }
+#lbClose {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+  background: rgba(251, 246, 238, 0.14); border: 1px solid rgba(228, 207, 160, 0.4);
+  color: var(--warm-white); font-size: 1.1rem; line-height: 1;
+}
+
+/* ==========================================================================
+   12. COUNTDOWN — flip-fade
+   ========================================================================== */
+.count-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge);
+  background: var(--ivory);
+  text-align: center;
+}
+.count-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  max-width: 420px; margin: 0 auto; gap: 0.4rem;
+}
+.count-c { position: relative; padding: 0.4rem 0.2rem; }
+.count-c + .count-c::before {
+  content: ''; position: absolute; left: -1px; top: 20%; bottom: 30%;
+  width: 1px; background: linear-gradient(180deg, transparent, rgba(203, 169, 106, 0.5), transparent);
+}
+.count-c b {
+  display: block; overflow: hidden;
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(1.9rem, 8vw, 3.1rem); line-height: 1.2; color: var(--wine);
+}
+.count-c b span {
+  display: block;
+  transition: transform 0.5s var(--ease-lux), opacity 0.5s var(--ease-lux);
+}
+.count-c b span.flip { transform: translateY(-55%) rotateX(40deg); opacity: 0; }
+.count-c i {
+  font-style: normal; font-family: var(--font-sans); font-weight: 300;
+  font-size: 0.58rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--mute);
+}
+.count-when { margin-top: 1.4rem; }
+.ics-wrap { margin-top: 1.6rem; }
+
+/* ==========================================================================
+   13. RSVP
+   ========================================================================== */
+.rsvp-sec {
+  position: relative;
+  padding: var(--pad-sec) var(--edge);
+  color: var(--warm-white);
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -8%, rgba(154, 74, 82, 0.4), transparent 58%),
+    linear-gradient(170deg, var(--burgundy), var(--burgundy-dp));
+}
+.rsvp-sec .sec-head h2 { color: var(--warm-white); }
+.rsvp-sec .sec-head .script { color: var(--gold-soft); }
+.rsvp-sec .sec-head p { color: rgba(248, 241, 231, 0.72); }
+
+.rsvp-card {
+  max-width: 520px; margin: 0 auto;
+  background: linear-gradient(170deg, var(--warm-white), var(--cream));
+  border-radius: 20px;
+  padding: 1.6rem 1.3rem 1.9rem;
+  box-shadow: 0 30px 60px -28px rgba(0, 0, 0, 0.5);
+  color: var(--ink);
+}
+.rsvp-form { display: grid; gap: 1.05rem; }
+.f label.fl {
+  display: block; font-family: var(--font-sans); font-weight: 400;
+  font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--bronze); margin: 0 0 0.4rem 0.8rem;
+  transition: color 0.5s var(--ease-lux);
+}
+.f:focus-within label.fl { color: var(--wine); }
+.f input[type="text"], .f input[type="number"], .f textarea {
+  width: 100%; min-height: 50px;
+  background: rgba(255, 253, 248, 0.9);
+  border: 1px solid rgba(203, 169, 106, 0.4);
+  border-radius: 13px; padding: 0.85rem 1.05rem;
+  font-family: var(--font-display); font-size: 1.02rem; color: var(--ink);
+  outline: none; resize: vertical;
+  transition: border-color 0.5s var(--ease-lux), box-shadow 0.5s var(--ease-lux);
+}
+.f textarea { min-height: 92px; }
+.f input::placeholder, .f textarea::placeholder { color: var(--mute); font-style: italic; opacity: 0.7; }
+.f input:focus, .f textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(203, 169, 106, 0.16), 0 8px 20px -12px rgba(85, 24, 41, 0.3);
+}
+.f.invalid input { border-color: var(--rosewood); box-shadow: 0 0 0 4px rgba(154, 74, 82, 0.12); }
+
+.attend-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.attend-row label {
+  display: block; cursor: pointer; text-align: center;
+  padding: 0.8rem 0.6rem; border-radius: 13px;
+  border: 1px solid rgba(203, 169, 106, 0.4);
+  background: rgba(255, 253, 248, 0.75);
+  font-size: 0.92rem; color: var(--ink-soft);
+  transition: border-color 0.4s var(--ease-lux), background 0.4s var(--ease-lux), color 0.4s var(--ease-lux);
+}
+.attend-row input { position: absolute; opacity: 0; pointer-events: none; }
+.attend-row label.sel { border-color: var(--wine); background: rgba(109, 34, 51, 0.08); color: var(--wine); }
+
+.rsvp-send { display: flex; justify-content: center; margin-top: 0.4rem; }
+.rsvp-err { margin-top: 0.9rem; text-align: center; font-size: 0.85rem; color: var(--rosewood); display: none; }
+.rsvp-err.show { display: block; }
+.rsvp-done { display: none; text-align: center; padding: 1.4rem 0.6rem 0.4rem; }
+.rsvp-done.show { display: block; animation: g-fade 1.1s var(--ease-lux) both; }
+.rsvp-done .mono { width: 46px; margin: 0 auto 0.9rem; color: var(--wine); animation: r-settle 0.9s var(--ease-lux) 0.2s both; }
+.rsvp-done h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.5rem; }
+.rsvp-done p { font-style: italic; color: var(--mute); margin-top: 0.3rem; }
+
+/* ==========================================================================
+   14. FOOTER + CHROME
+   ========================================================================== */
+.footer {
+  position: relative;
+  padding: 3.2rem var(--edge) 2.4rem;
+  background: linear-gradient(180deg, var(--ivory), var(--cream) 150%);
+  text-align: center;
+}
+.footer .mono { width: 48px; margin: 0 auto 1.1rem; color: var(--wine); opacity: 0.85; }
+/* Ambient breathing waits for the footer to arrive — an infinite animation
+   running from page load is motion nobody is there to see. */
+.footer.in-view .mono { animation: f-breathe 6s var(--ease-soft) infinite alternate; }
+@keyframes f-breathe { from { transform: scale(1); opacity: 0.85; } to { transform: scale(1.06); opacity: 1; } }
+.footer .script { font-size: clamp(1.8rem, 6.6vw, 2.4rem); display: block; }
+.footer .thanks { max-width: 360px; margin: 0.4rem auto 1.5rem; font-style: italic; color: var(--ink-soft); font-size: 0.95rem; }
+.footer .fine {
+  font-family: var(--font-sans); font-weight: 300;
+  font-size: 0.58rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--mute);
+}
+
+#vconnect {
+  position: relative; z-index: 2;
+  display: grid; justify-items: center; gap: 0.45rem;
+  padding: 2.2rem var(--edge) calc(env(safe-area-inset-bottom) + 2rem);
+  background: var(--beige);
+  font-family: var(--font-sans); font-size: 0.54rem;
+  letter-spacing: 0.3em; text-transform: uppercase; color: var(--mute);
+}
+#vconnect img { width: 38px; height: auto; opacity: 0.75; }
+#vcContacts { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.3rem; }
+#vcContacts a {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.28rem 0.6rem; border-radius: 100px;
+  border: 1px solid rgba(169, 134, 90, 0.32); color: var(--bronze); text-decoration: none;
+  letter-spacing: 0.12em; text-transform: none; opacity: 0.85;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+#vcContacts a:hover { opacity: 1; border-color: currentColor; }
+#vcContacts svg { width: 13px; height: 13px; }
+
+#langbar {
+  position: fixed; left: var(--edge); top: calc(env(safe-area-inset-top) + 16px);
+  z-index: 40; display: flex; gap: 0.3rem;
+}
+#langbar button {
+  min-width: 34px; padding: 0.3rem 0.5rem; cursor: pointer; border-radius: 100px;
+  background: rgba(255, 253, 248, 0.72); border: 1px solid rgba(203, 169, 106, 0.45);
+  font-family: var(--font-sans); font-size: 0.54rem; letter-spacing: 0.16em; color: var(--ink-soft);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+#langbar button.active { background: var(--wine); border-color: var(--wine); color: var(--warm-white); }
+
+#music-btn {
+  position: fixed; right: var(--edge); bottom: calc(env(safe-area-inset-bottom) + 20px);
+  z-index: 40; width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(255, 253, 248, 0.8); border: 1px solid rgba(203, 169, 106, 0.5);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 12px 30px -18px rgba(85, 24, 41, 0.8);
+}
+#music-btn .bars { display: flex; align-items: flex-end; gap: 3px; height: 15px; }
+#music-btn .bars > span {
+  width: 3px; height: 6px; background: var(--wine); border-radius: 2px;
+  animation: eq 1s var(--ease-soft) infinite alternate;
+}
+#music-btn .bars > span:nth-child(2) { animation-delay: -0.35s; height: 13px; }
+#music-btn .bars > span:nth-child(3) { animation-delay: -0.7s; height: 9px; }
+#music-btn:not(.playing) .bars > span { animation-play-state: paused; }
+@keyframes eq { from { height: 4px; } to { height: 15px; } }
+
+/* --------------------------------------------------------------------------
+   15. PROGRESSIVE ENHANCEMENT
+   -------------------------------------------------------------------------- */
+@media (min-width: 640px) {
+  .scratch-grid { grid-template-columns: 1fr 1fr; }
+  .det-grid { grid-template-columns: 1fr 1fr; }
+  .rsvp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.05rem; }
+  .pic { width: 300px; }
+}
+@media (min-width: 768px) {
+  :root { --pad-sec: clamp(5.2rem, 12vh, 8rem); }
+  .sec-head { margin-bottom: 3.2rem; }
+  .btn { padding: 1.05rem 3rem; font-size: 0.72rem; }
+  .album { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .pic, .pic:nth-child(odd), .pic:nth-child(even) { margin: 0.6rem -0.8rem; }
+  .pic:nth-child(even) { margin-top: 2.4rem; }
+  .count-row { max-width: 540px; }
+  .rsvp-card { padding: 2.4rem 2.4rem 2.6rem; }
+}
+@media (min-width: 1024px) {
+  .scratch-grid { grid-template-columns: repeat(3, 1fr); }
+  .det-grid { grid-template-columns: repeat(3, 1fr); }
+  .det { flex-direction: column; text-align: center; gap: 0.6rem; padding: 1.8rem 1.4rem; }
+}
+
+/* --------------------------------------------------------------------------
+   16. REDUCED MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+  html.js .rise, html.js .scard, html.js .pic, html.js .secret-card { opacity: 1; transform: none; filter: none; }
+  html.js .hero-inner > *, html.js .hero-scroll { opacity: 1; animation: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="dust" aria-hidden="true"></canvas>
+<div id="langbar" class="hidden" aria-label="Language"></div>
+
+<!-- ======================================================================
+     GATE — a folded keepsake card that opens
+     ====================================================================== -->
+<div class="gate" id="gate">
+  <div class="gate-inner">
+    <div class="gate-msg">
+      <span class="script" data-t="gateTitle">Something beautiful</span>
+      <p data-t="gateSub">is waiting to be revealed</p>
+    </div>
+
+    <div class="fold" id="fold" role="button" tabindex="0" data-t-aria="openInvitation" aria-label="Open the invitation">
+      <div class="fold-body">
+        <div class="fold-inner">
+          <svg class="mono" viewBox="0 0 54 54" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+            <circle cx="27" cy="27" r="24" stroke-opacity="0.4"/>
+            <path d="M16 38 V18 L27 33 L38 18 V38"/>
+            <path d="M20 42 h14" stroke-opacity="0.6"/>
+          </svg>
+          <span class="script" data-bind="coupleLine">&nbsp;</span>
+          <span class="caps" data-t="welcomeYou">welcome you</span>
+        </div>
+      </div>
+      <div class="fold-cover">
+        <div class="cover-face">
+          <svg class="mono" viewBox="0 0 54 54" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+            <circle cx="27" cy="27" r="24" stroke-opacity="0.4"/>
+            <path d="M16 38 V18 L27 33 L38 18 V38"/>
+            <path d="M20 42 h14" stroke-opacity="0.6"/>
+          </svg>
+          <span class="script" data-bind="coupleLine">&nbsp;</span>
+          <span class="caps" data-t="areGettingMarried">are getting married</span>
+          <svg class="seam" viewBox="0 0 30 12" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+            <path d="M2 6 H28 M15 2 l3 4 -3 4 M15 2 l-3 4 3 4" stroke-opacity="0.7"/>
+          </svg>
+        </div>
+        <div class="cover-back"></div>
+      </div>
+    </div>
+
+    <p class="gate-hint" data-t="tapToReveal">Tap to reveal the invitation</p>
+  </div>
+</div>
+
+<!-- ======================================================================
+     HERO
+     ====================================================================== -->
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <span class="hero-mono-w">
+      <svg class="hero-mono" viewBox="0 0 62 62" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+        <circle cx="31" cy="31" r="28" stroke-opacity="0.35"/>
+        <circle cx="31" cy="31" r="23" stroke-opacity="0.2"/>
+        <path d="M19 44 V20 L31 37 L43 20 V44"/>
+        <path d="M23 49 h16" stroke-opacity="0.6"/>
+      </svg>
+    </span>
+    <span class="caps hero-kicker" data-bind="kicker">&nbsp;</span>
+    <h1 class="hero-names">
+      <span data-bind="brideName">&nbsp;</span>
+      <span class="amp">&amp;</span>
+      <span data-bind="groomName">&nbsp;</span>
+    </h1>
+    <div class="filigree hero-fil" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1 C10 5 11 5 15 8 C11 11 10 11 8 15 C6 11 5 11 1 8 C5 5 6 5 8 1 Z" opacity="0.85"/></svg>
+    </div>
+    <p class="hero-date" data-bind="dateLong">&nbsp;</p>
+    <p class="hero-sub" data-bind="heroSub"></p>
+    <div class="hero-cta">
+      <button class="btn" id="startBtn" type="button" data-t="revealTheSecrets">Reveal the secrets</button>
+    </div>
+  </div>
+  <div class="hero-scroll" aria-hidden="true">
+    <span class="caps" data-t="scratchBelow">Scratch below</span>
+    <i></i>
+  </div>
+</header>
+
+<!-- ======================================================================
+     SCRATCH GRID — the details, hidden under a metallic coating
+     ====================================================================== -->
+<section class="scratch-sec" id="scratch" data-opt="scratch">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="hiddenForYou">Hidden for you</span>
+    <h2 data-t="scratchToReveal">Scratch to reveal</h2>
+    <p data-t="scratchLede">Drag your finger across each panel — the details are waiting underneath</p>
+  </div>
+
+  <div class="scratch-grid" id="scratchGrid">
+    <div class="scard observe" data-card="occasion" data-coat="champagne">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card01">Card 01</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="theOccasion">The occasion</span>
+          <span class="r-main script" data-bind="cardOccasionMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardOccasionSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard observe" data-card="day" data-coat="gold">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card02">Card 02</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="theDay">The day</span>
+          <span class="r-main" data-bind="cardDayMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardDaySub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard observe" data-card="place" data-coat="rose">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card03">Card 03</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="thePlace">The place</span>
+          <span class="r-main" data-bind="cardPlaceMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardPlaceSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard observe" data-card="hour" data-coat="silver">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card04">Card 04</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="theHour">The hour</span>
+          <span class="r-main" data-bind="cardHourMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardHourSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard observe" data-card="attire" data-coat="bronze">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card05">Card 05</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="theAttire">The attire</span>
+          <span class="r-main" data-bind="cardAttireMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardAttireSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard observe" data-card="reply" data-coat="champagne">
+      <div class="scard-tag">
+        <span class="scard-no" data-t="card06">Card 06</span>
+        <button class="btn-ghost reveal-btn" type="button" data-t="reveal">Reveal</button>
+      </div>
+      <div class="scard-stage">
+        <div class="reveal">
+          <div class="glow" aria-hidden="true"></div>
+          <span class="r-label" data-t="kindlyReply">Kindly reply</span>
+          <span class="r-main script" data-bind="cardReplyMain">&nbsp;</span>
+          <span class="r-sub" data-bind="cardReplySub"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     SECRET CARD — the emotional reward
+     ====================================================================== -->
+<section class="secret-sec" id="secret" data-opt="secret">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="oneLastSecret">One last secret</span>
+    <h2 data-t="aNoteForYou">A note, just for you</h2>
+    <p data-t="secretLede">Scratch gently — this one is close to our hearts</p>
+  </div>
+
+  <div class="secret-card observe" id="secretCard" data-coat="gold" data-threshold="0.5">
+    <div class="scard-stage">
+      <div class="reveal">
+        <div class="glow" aria-hidden="true"></div>
+        <span class="r-main script" data-bind="secretTitle">&nbsp;</span>
+        <span class="r-quote" data-bind="secretNote"></span>
+      </div>
+    </div>
+  </div>
+  <div class="secret-actions">
+    <button class="btn-ghost reveal-btn" type="button" data-scratch-for="secretCard" data-t="revealTheNote">Reveal the note</button>
+    <button class="btn-ghost copy-btn" id="copyNote" type="button" data-t="copyTheNote">Copy the note</button>
+  </div>
+</section>
+
+<!-- ======================================================================
+     DETAILS — the same particulars, plainly
+     ====================================================================== -->
+<section class="details-sec" id="details" data-opt="details">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="theParticulars">The particulars</span>
+    <h2 data-t="atAGlance">Everything at a glance</h2>
+  </div>
+  <div class="det-grid" id="detGrid">
+    <div class="det rise observe" data-det="date" style="--rise-delay:0s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10 H21 M8 3 v4 M16 3 v4"/></svg></div>
+      <div><h3 data-t="date">Date</h3><p><span data-bind="detDate"></span><em data-bind="detTime"></em></p></div>
+    </div>
+    <div class="det rise observe" data-det="venue" style="--rise-delay:0.1s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21 C7.5 16.5 4.5 13 4.5 9.2 A7.5 7.5 0 0 1 19.5 9.2 C19.5 13 16.5 16.5 12 21 Z"/><circle cx="12" cy="9.4" r="2.5"/></svg></div>
+      <div><h3 data-t="venue">Venue</h3><p><span data-bind="detVenue"></span><em data-bind="detAddress"></em></p>
+        <p><a id="mapLink" href="#" target="_blank" rel="noopener" data-t="openMap">Open map</a></p></div>
+    </div>
+    <div class="det rise observe" data-det="dress" style="--rise-delay:0.2s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3 L12 6 L16 3 L19.5 7 L15.5 9 V20 a1 1 0 0 1 -1 1 H9.5 a1 1 0 0 1 -1 -1 V9 L4.5 7 Z"/></svg></div>
+      <div><h3 data-t="dressCode">Dress code</h3><p><span data-bind="detDress"></span><em data-bind="detDressNote"></em></p></div>
+    </div>
+    <div class="det rise observe" data-det="stay" style="--rise-delay:0.1s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 21 V10 L12 4 L20 10 V21 H14 V15 H10 V21 Z" stroke-linejoin="round"/></svg></div>
+      <div><h3 data-t="stay">Stay</h3><p><span data-bind="detStay"></span><em data-bind="detStayNote"></em></p></div>
+    </div>
+    <div class="det rise observe" data-det="travel" style="--rise-delay:0.2s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16 V7 a2 2 0 0 1 2 -2 h12 a2 2 0 0 1 2 2 v9"/><path d="M3 16 h18 M7 20 h2 M15 20 h2 M8 9 h8"/><circle cx="8" cy="13" r="1"/><circle cx="16" cy="13" r="1"/></svg></div>
+      <div><h3 data-t="travel">Getting there</h3><p><span data-bind="detTravel"></span><em data-bind="detTravelNote"></em></p></div>
+    </div>
+    <div class="det rise observe" data-det="gifts" style="--rise-delay:0.3s">
+      <div class="det-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M4 13 H20 M12 9 V21"/><path d="M12 9 C8.5 9 7.5 4.5 10 4.5 C11.8 4.5 12 7 12 9 C12 7 12.2 4.5 14 4.5 C16.5 4.5 15.5 9 12 9 Z"/></svg></div>
+      <div><h3 data-t="gifts">Gifts</h3><p><span data-bind="detGifts"></span><em data-bind="detGiftsNote"></em></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     GALLERY — taped album
+     ====================================================================== -->
+<section class="gallery-sec" id="gallery" data-opt="gallery">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="ourChapters">Our chapters</span>
+    <h2 data-t="momentsWorthKeeping">Moments worth keeping</h2>
+  </div>
+  <div class="album" id="album"></div>
+</section>
+
+<!-- ======================================================================
+     COUNTDOWN
+     ====================================================================== -->
+<section class="count-sec" id="countdown" data-opt="countdown">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="countingDown">Counting down</span>
+    <h2 data-t="untilWeSayIDo">Until we say I do</h2>
+  </div>
+  <div class="count-row rise observe" id="countRow">
+    <div class="count-c"><b><span data-cd="days">000</span></b><i data-t="days">days</i></div>
+    <div class="count-c"><b><span data-cd="hours">00</span></b><i data-t="hours">hours</i></div>
+    <div class="count-c"><b><span data-cd="minutes">00</span></b><i data-t="minutes">min</i></div>
+    <div class="count-c"><b><span data-cd="seconds">00</span></b><i data-t="seconds">sec</i></div>
+  </div>
+  <p class="caps count-when rise observe" data-bind="countWhen"></p>
+  <div class="ics-wrap rise observe">
+    <button class="btn-ghost" id="icsBtn" type="button" data-t="addToCalendar">Add to calendar</button>
+  </div>
+</section>
+
+<!-- ======================================================================
+     RSVP
+     ====================================================================== -->
+<section class="rsvp-sec" id="rsvp" data-opt="rsvp">
+  <div class="sec-head rise observe">
+    <span class="script" data-t="beThere">Be there</span>
+    <h2 data-t="kindlyRespond">Kindly respond</h2>
+    <p data-bind="rsvpLede"></p>
+  </div>
+  <div class="rsvp-card rise observe">
+    <form class="rsvp-form" id="rsvpForm" novalidate>
+      <div class="f">
+        <label class="fl" for="rsvpName" data-t="fullName">Full name</label>
+        <input type="text" id="rsvpName" autocomplete="name">
+      </div>
+      <div class="f">
+        <label class="fl" data-t="willYouAttend">Will you attend?</label>
+        <div class="attend-row" id="attendRow">
+          <label class="sel"><input type="radio" name="attend" value="yes" checked><span data-t="accept">Joyfully accept</span></label>
+          <label><input type="radio" name="attend" value="no"><span data-t="decline">Regretfully decline</span></label>
+        </div>
+      </div>
+      <div class="f" id="guestField">
+        <label class="fl" for="rsvpGuests" data-t="guestCount">Number of guests</label>
+        <input type="number" id="rsvpGuests" min="1" max="10" value="1">
+      </div>
+      <div class="f">
+        <label class="fl" for="rsvpMsg" data-t="messageLabel">A message</label>
+        <textarea id="rsvpMsg"></textarea>
+      </div>
+      <div class="rsvp-send">
+        <button type="submit" class="btn" id="rsvpSubmit"><span data-t="send">Send response</span></button>
+      </div>
+      <p class="rsvp-err" id="rsvpErr" data-t="sendFailed">Could not send. Please try again.</p>
+    </form>
+    <div class="rsvp-done" id="rsvpSuccess">
+      <svg class="mono" viewBox="0 0 54 54" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="27" cy="27" r="24" stroke-opacity="0.4"/><path d="M16 38 V18 L27 33 L38 18 V38"/><path d="M20 42 h14" stroke-opacity="0.6"/></svg>
+      <h3 data-t="thankYou">Thank you</h3>
+      <p id="successText"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     FOOTER
+     ====================================================================== -->
+<footer class="footer observe">
+  <svg class="mono" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+    <circle cx="24" cy="24" r="21" stroke-opacity="0.35"/><path d="M15 34 V15 L24 28 L33 15 V34"/><path d="M18 38 h12" stroke-opacity="0.6"/>
+  </svg>
+  <span class="script"><span data-t="withLove">With love,</span> <span data-bind="coupleLine"></span></span>
+  <p class="thanks" data-bind="closingWords"></p>
+  <p class="fine" data-bind="dateFine"></p>
+</footer>
+
+<footer id="vconnect">
+  <img id="vconnectLogo" alt="v-invite" width="38" height="45">
+  <span data-t="developedBy">Developed with love by V-INVITE</span>
+  <div id="vcContacts"></div>
+</footer>
+
+<div id="lightbox" role="dialog" aria-modal="true">
+  <button id="lbClose" type="button" data-t-aria="close" aria-label="Close">&#10005;</button>
+  <div>
+    <img id="lbImg" alt="">
+    <p id="lbCap"></p>
+  </div>
+</div>
+
+<button id="music-btn" class="hidden" aria-pressed="false" data-t-aria="music" aria-label="Music">
+  <span class="bars"><span></span><span></span><span></span></span>
+</button>
+<audio id="audio" loop preload="none"></audio>
+
+<script>
+/* ============================================================================
+   THE KEEPSAKE — rich-template contract.
+   Config arrives as window.__CONFIG__ / __LANGS__ / __ORIGIN__ / __CONTACTS__;
+   live edits arrive by postMessage; RSVPs post back to the parent. CSS owns the
+   look and the movement — this script binds the content, opens the card, runs
+   the scratch coating, keeps the clock and takes the reply.
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var CONFIG = window.__CONFIG__ || {};
+  var LANGS = (window.__LANGS__ && window.__LANGS__.length) ? window.__LANGS__ : ['ru'];
+  var lang = LANGS[0];
+  var ORIGIN = window.__ORIGIN__ || '';
+  var ADMIN_EDIT = window.__ADMIN_EDIT__ === true;
+
+  /* ── Built-in UI strings (template chrome — not honoree-editable) ───────── */
+  var UI = {
+    ru: {
+      gateTitle: 'Что-то прекрасное', gateSub: 'ждёт, чтобы его открыли',
+      openInvitation: 'Открыть приглашение', welcomeYou: 'приглашают вас',
+      areGettingMarried: 'скоро поженятся', tapToReveal: 'Нажмите, чтобы открыть',
+      revealTheSecrets: 'Открыть секреты', scratchBelow: 'Стирайте ниже',
+      hiddenForYou: 'Спрятано для вас', scratchToReveal: 'Сотрите и откройте',
+      scratchLede: 'Проведите пальцем по панели — детали ждут под ней',
+      reveal: 'Открыть', revealTheNote: 'Открыть записку', copyTheNote: 'Скопировать',
+      copied: 'Скопировано', selected: 'Выделено — нажмите копировать',
+      card01: 'Карточка 01', card02: 'Карточка 02', card03: 'Карточка 03',
+      card04: 'Карточка 04', card05: 'Карточка 05', card06: 'Карточка 06',
+      scratchHint: 'Сотрите, чтобы открыть',
+      theOccasion: 'Повод', theDay: 'День', thePlace: 'Место', theHour: 'Время',
+      theAttire: 'Дресс-код', kindlyReply: 'Ответьте нам',
+      oneLastSecret: 'Последний секрет', aNoteForYou: 'Записка только для вас',
+      secretLede: 'Стирайте бережно — это самое личное',
+      theParticulars: 'Подробности', atAGlance: 'Всё самое главное',
+      date: 'Дата', venue: 'Место', dressCode: 'Дресс-код', stay: 'Где остановиться',
+      travel: 'Как добраться', gifts: 'Подарки', openMap: 'Открыть карту',
+      ourChapters: 'Наши главы', momentsWorthKeeping: 'Моменты, которые храним',
+      countingDown: 'Считаем дни', untilWeSayIDo: 'До нашего дня',
+      days: 'Дни', hours: 'Часы', minutes: 'Минуты', seconds: 'Секунды',
+      addToCalendar: 'В календарь', wedding: 'Свадьба',
+      beThere: 'Будьте с нами', kindlyRespond: 'Пожалуйста, ответьте',
+      fullName: 'Имя и фамилия', nameRequired: 'Пожалуйста, напишите имя.',
+      willYouAttend: 'Сможете присутствовать?', accept: 'С радостью приду',
+      decline: 'К сожалению, нет', guestCount: 'Количество гостей (включая вас)',
+      messageLabel: 'Пожелание', send: 'Отправить ответ', sending: 'Отправляем…',
+      sendFailed: 'Не удалось отправить. Попробуйте ещё раз.', thankYou: 'Спасибо',
+      savedYes: 'Мы очень рады! Ваш ответ получен.',
+      savedNo: 'Спасибо, что сообщили. Нам будет вас не хватать.',
+      withLove: 'С любовью,', close: 'Закрыть', music: 'Музыка',
+      developedBy: 'Сделано с любовью в V-INVITE'
+    },
+    uz: {
+      gateTitle: 'Gozal bir narsa', gateSub: 'ochilishini kutmoqda',
+      openInvitation: 'Taklifnomani ochish', welcomeYou: 'sizni taklif qilishadi',
+      areGettingMarried: 'turmush qurishmoqda', tapToReveal: 'Ochish uchun bosing',
+      revealTheSecrets: 'Sirlarni ochish', scratchBelow: 'Quyida ishqalang',
+      hiddenForYou: 'Siz uchun yashirilgan', scratchToReveal: 'Ishqalab oching',
+      scratchLede: 'Barmogingizni panel ustidan yuriting — tafsilotlar ostida',
+      reveal: 'Ochish', revealTheNote: 'Xatni ochish', copyTheNote: 'Nusxalash',
+      copied: 'Nusxalandi', selected: 'Belgilandi — nusxalashni bosing',
+      card01: 'Karta 01', card02: 'Karta 02', card03: 'Karta 03',
+      card04: 'Karta 04', card05: 'Karta 05', card06: 'Karta 06',
+      scratchHint: 'Ochish uchun ishqalang',
+      theOccasion: 'Sabab', theDay: 'Kun', thePlace: 'Manzil', theHour: 'Vaqt',
+      theAttire: 'Dress-kod', kindlyReply: 'Javob bering',
+      oneLastSecret: 'Songgi sir', aNoteForYou: 'Faqat siz uchun xat',
+      secretLede: 'Avaylab ishqalang — bu eng samimiysi',
+      theParticulars: 'Tafsilotlar', atAGlance: 'Eng muhimi',
+      date: 'Sana', venue: 'Manzilgoh', dressCode: 'Dress-kod', stay: 'Qayerda qolish',
+      travel: 'Qanday yetib borish', gifts: 'Sovgalar', openMap: 'Xaritani ochish',
+      ourChapters: 'Bizning boblar', momentsWorthKeeping: 'Saqlashga arziydigan lahzalar',
+      countingDown: 'Kunlarni sanaymiz', untilWeSayIDo: 'Bizning kunimizgacha',
+      days: 'Kun', hours: 'Soat', minutes: 'Daqiqa', seconds: 'Soniya',
+      addToCalendar: 'Kalendarga qoshish', wedding: 'Toy',
+      beThere: 'Biz bilan boling', kindlyRespond: 'Iltimos, javob bering',
+      fullName: 'Ism va familiya', nameRequired: 'Iltimos, ismingizni yozing.',
+      willYouAttend: 'Kela olasizmi?', accept: 'Xursandchilik bilan kelaman',
+      decline: 'Afsuski, kela olmayman', guestCount: 'Mehmonlar soni (siz bilan birga)',
+      messageLabel: 'Tilak', send: 'Javob yuborish', sending: 'Yuborilmoqda…',
+      sendFailed: 'Yuborib bolmadi. Yana urinib koring.', thankYou: 'Rahmat',
+      savedYes: 'Juda xursandmiz! Javobingiz qabul qilindi.',
+      savedNo: 'Xabar berganingiz uchun rahmat. Sizni soginamiz.',
+      withLove: 'Mehr bilan,', close: 'Yopish', music: 'Musiqa',
+      developedBy: 'V-INVITE tomonidan mehr bilan yaratilgan'
+    },
+    en: {
+      gateTitle: 'Something beautiful', gateSub: 'is waiting to be revealed',
+      openInvitation: 'Open the invitation', welcomeYou: 'welcome you',
+      areGettingMarried: 'are getting married', tapToReveal: 'Tap to reveal the invitation',
+      revealTheSecrets: 'Reveal the secrets', scratchBelow: 'Scratch below',
+      hiddenForYou: 'Hidden for you', scratchToReveal: 'Scratch to reveal',
+      scratchLede: 'Drag your finger across each panel — the details are waiting underneath',
+      reveal: 'Reveal', revealTheNote: 'Reveal the note', copyTheNote: 'Copy the note',
+      copied: 'Copied', selected: 'Selected — press copy',
+      card01: 'Card 01', card02: 'Card 02', card03: 'Card 03',
+      card04: 'Card 04', card05: 'Card 05', card06: 'Card 06',
+      scratchHint: 'Scratch to reveal',
+      theOccasion: 'The occasion', theDay: 'The day', thePlace: 'The place', theHour: 'The hour',
+      theAttire: 'The attire', kindlyReply: 'Kindly reply',
+      oneLastSecret: 'One last secret', aNoteForYou: 'A note, just for you',
+      secretLede: 'Scratch gently — this one is close to our hearts',
+      theParticulars: 'The particulars', atAGlance: 'Everything at a glance',
+      date: 'Date', venue: 'Venue', dressCode: 'Dress code', stay: 'Stay',
+      travel: 'Getting there', gifts: 'Gifts', openMap: 'Open map',
+      ourChapters: 'Our chapters', momentsWorthKeeping: 'Moments worth keeping',
+      countingDown: 'Counting down', untilWeSayIDo: 'Until we say I do',
+      days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds',
+      addToCalendar: 'Add to calendar', wedding: 'Wedding',
+      beThere: 'Be there', kindlyRespond: 'Kindly respond',
+      fullName: 'Full name', nameRequired: 'Please tell us your name.',
+      willYouAttend: 'Will you attend?', accept: 'Joyfully accept',
+      decline: 'Regretfully decline', guestCount: 'Number of guests (including you)',
+      messageLabel: 'A message', send: 'Send response', sending: 'Sending…',
+      sendFailed: 'Could not send. Please try again.', thankYou: 'Thank you',
+      savedYes: 'We are delighted! Your response has been saved.',
+      savedNo: 'Thank you for letting us know. You will be missed.',
+      withLove: 'With love,', close: 'Close', music: 'Music',
+      developedBy: 'Developed with love by V-INVITE'
+    }
+  };
+
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function t(key) { return (UI[lang] && UI[lang][key]) || UI.ru[key] || key; }
+  function loc(v) {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    return v[lang] || v.ru || v.en || v.uz || '';
+  }
+  function cfg(path, dflt) {
+    var cur = CONFIG, parts = path.split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (cur == null || typeof cur !== 'object') return dflt;
+      cur = cur[parts[i]];
+    }
+    return cur == null ? dflt : cur;
+  }
+
+  /* ── Dates ─────────────────────────────────────────────────────────────── */
+  function eventDate() {
+    var d = new Date(cfg('event.dateISO', '2027-06-12T16:30:00'));
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  function intlLocale() { return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'en' ? 'en-GB' : 'ru-RU'); }
+  function fmtDateLong() {
+    try {
+      return new Intl.DateTimeFormat(intlLocale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(eventDate());
+    } catch (e) { return eventDate().toDateString(); }
+  }
+  function fmtDateShort() {
+    try {
+      return new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(eventDate());
+    } catch (e) { return eventDate().toDateString(); }
+  }
+  function fmtTime() {
+    var d = eventDate(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function fmtDots() {
+    var d = eventDate(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getDate()) + ' · ' + p(d.getMonth() + 1) + ' · ' + d.getFullYear();
+  }
+
+  /* ── Text binding ──────────────────────────────────────────────────────── */
+  function initials() {
+    var b = loc(cfg('couple.bride', '')).trim(), g = loc(cfg('couple.groom', '')).trim();
+    return ((b.charAt(0) || '') + (g.charAt(0) || '')).toUpperCase();
+  }
+
+  function bindTexts() {
+    var bride = loc(cfg('couple.bride', ''));
+    var groom = loc(cfg('couple.groom', ''));
+    var couple = (bride && groom) ? (bride + ' & ' + groom) : (bride || groom);
+    var timeText = loc(cfg('event.timeText', ''));
+
+    var map = {
+      brideName: bride,
+      groomName: groom,
+      coupleLine: couple,
+      kicker: loc(cfg('invite.kicker', '')),
+      heroSub: loc(cfg('invite.sub', '')),
+      dateLong: fmtDateLong(),
+      dateFine: fmtDots(),
+      closingWords: loc(cfg('invite.verse', '')),
+
+      cardOccasionMain: loc(cfg('invite.headline', '')),
+      cardOccasionSub: loc(cfg('invite.sub', '')),
+      cardDayMain: fmtDateShort(),
+      cardDaySub: loc(cfg('event.dateNote', '')),
+      cardPlaceMain: loc(cfg('venue.name', '')),
+      cardPlaceSub: loc(cfg('venue.address', '')),
+      cardHourMain: timeText || fmtTime(),
+      cardHourSub: timeText ? fmtTime() : '',
+      cardAttireMain: loc(cfg('dress.title', '')),
+      cardAttireSub: loc(cfg('dress.note', '')),
+      cardReplyMain: loc(cfg('details.rsvpHeadline', '')),
+      cardReplySub: loc(cfg('details.replyBy', '')),
+
+      detDate: fmtDateShort(),
+      detTime: timeText || fmtTime(),
+      detVenue: loc(cfg('venue.name', '')),
+      detAddress: loc(cfg('venue.address', '')),
+      detDress: loc(cfg('dress.title', '')),
+      detDressNote: loc(cfg('dress.note', '')),
+      detStay: loc(cfg('details.stay', '')),
+      detStayNote: loc(cfg('details.stayNote', '')),
+      detTravel: loc(cfg('details.travel', '')),
+      detTravelNote: loc(cfg('details.travelNote', '')),
+      detGifts: loc(cfg('details.gifts', '')),
+      detGiftsNote: loc(cfg('details.giftsNote', '')),
+
+      countWhen: fmtDateLong() + ' · ' + fmtTime(),
+      rsvpLede: loc(cfg('details.rsvpLede', '')),
+      secretTitle: loc(cfg('secret.title', '')),
+      secretNote: loc(cfg('secret.note', ''))
+    };
+
+    $$('[data-bind]').forEach(function (el) {
+      var v = map[el.getAttribute('data-bind')];
+      if (v != null) el.textContent = v;
+    });
+    $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+    $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
+
+    document.title = couple || 'Invitation';
+    document.documentElement.lang = lang;
+  }
+
+  /* ── Visibility ────────────────────────────────────────────────────────── */
+  /* Sections switched off in the builder, plus cards and detail tiles with
+     nothing in them — an empty tile reads as a mistake, not as restraint. */
+  function applyVisibility() {
+    var hid = cfg('hidden', {}) || {};
+    $$('[data-opt]').forEach(function (el) {
+      el.classList.toggle('opt-off', hid[el.getAttribute('data-opt')] === true);
+    });
+
+    $$('#scratchGrid .scard').forEach(function (card) {
+      var main = $('.r-main', card);
+      card.classList.toggle('card-off', !(main && main.textContent.trim()));
+    });
+
+    var shownTiles = 0;
+    $$('#detGrid .det').forEach(function (tile) {
+      var filled = $$('[data-bind]', tile).some(function (el) { return el.textContent.trim(); });
+      tile.classList.toggle('card-off', !filled);
+      if (filled) shownTiles++;
+    });
+    var details = $('#details');
+    if (details && hid.details !== true) details.classList.toggle('opt-off', shownTiles === 0);
+
+    var mapLink = $('#mapLink');
+    if (mapLink) {
+      var url = cfg('venue.mapUrl', '');
+      if (!url) {
+        var q = loc(cfg('venue.address', '')) || loc(cfg('venue.name', ''));
+        url = q ? 'https://yandex.com/maps/?text=' + encodeURIComponent(q) : '';
+      }
+      mapLink.href = url || '#';
+      mapLink.parentNode.classList.toggle('hidden', !url);
+    }
+
+    var secretCard = $('#secretCard');
+    var hasSecret = !!(secretCard && $('.r-main', secretCard).textContent.trim());
+    var secret = $('#secret');
+    if (secret && hid.secret !== true) secret.classList.toggle('opt-off', !hasSecret);
+  }
+
+  /* ── Reveal-on-scroll ──────────────────────────────────────────────────── */
+  /* Every entrance below is gated on `.in-view`, added when the element reaches
+     the screen. Without IntersectionObserver — or inside the Design+ editor,
+     which needs to see every section at once — everything is shown at once
+     rather than left invisible. */
+  var revObs = null;
+  function initObserver() {
+    var targets = $$('.observe');
+    if (ADMIN_EDIT || reduced || typeof IntersectionObserver === 'undefined') {
+      targets.forEach(function (el) { el.classList.add('in-view'); });
+      return;
+    }
+    revObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in-view');
+        revObs.unobserve(e.target);
+      });
+    }, { threshold: 0.16, rootMargin: '0px 0px -5% 0px' });
+    targets.forEach(function (el) { revObs.observe(el); });
+  }
+  function observe(el) {
+    if (revObs) revObs.observe(el); else el.classList.add('in-view');
+  }
+  function revealEverything() {
+    $$('.observe').forEach(function (el) { el.classList.add('in-view'); });
+  }
+
+  /* ── The gate ──────────────────────────────────────────────────────────── */
+  var gate = $('#gate'), fold = $('#fold');
+  var gateOpened = false, gateTimers = [];
+
+  function finishGate() {
+    gateTimers.forEach(clearTimeout);
+    gateTimers = [];
+    gateOpened = true;
+    if (gate) {
+      gate.classList.add('is-hidden');
+      setTimeout(function () { if (gate.parentNode) gate.parentNode.removeChild(gate); }, 1400);
+    }
+    document.body.classList.add('is-open');
+  }
+
+  function openGate() {
+    if (gateOpened) return;
+    gateOpened = true;
+    startMusic();                       // the tap is the gesture autoplay needs
+    if (reduced || !gate) { finishGate(); return; }
+    gate.classList.add('opening');
+    gateOpened = false;                 // finishGate() sets it for real
+    gateTimers.push(setTimeout(finishGate, 1450));
+  }
+
+  if (gate) gate.addEventListener('click', openGate);
+  if (fold) fold.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGate(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !document.body.classList.contains('is-open')) finishGate();
+  });
+
+  /* ── Ambient gold dust ─────────────────────────────────────────────────── */
+  function initDust() {
+    var canvas = $('#dust');
+    var ctx = (canvas && canvas.getContext) ? canvas.getContext('2d') : null;
+    if (!ctx || reduced) return;
+    var motes = [], w = 0, h = 0, raf = 0;
+    function make() {
+      return {
+        x: Math.random() * w, y: Math.random() * h, r: 0.6 + Math.random() * 1.3,
+        vy: -(0.05 + Math.random() * 0.12), vx: (-0.5 + Math.random()) * 0.06,
+        a: 0.08 + Math.random() * 0.16, tw: Math.random() * 6.28
+      };
+    }
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      var n = Math.min(20, Math.floor(w * h / 42000));
+      motes = [];
+      for (var i = 0; i < n; i++) motes.push(make());
+    }
+    function draw(ts) {
+      ctx.clearRect(0, 0, w, h);
+      var s = (ts || 0) * 0.001;
+      for (var i = 0; i < motes.length; i++) {
+        var m = motes[i];
+        m.x += m.vx; m.y += m.vy;
+        if (m.y < -4) { m.y = h + 4; m.x = Math.random() * w; }
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.r, 0, 6.28);
+        ctx.fillStyle = 'rgba(203,169,106,' + (m.a * (0.6 + 0.4 * Math.sin(m.tw + s))) + ')';
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    raf = requestAnimationFrame(draw);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) cancelAnimationFrame(raf); else raf = requestAnimationFrame(draw);
+    });
+  }
+
+  /* ========================================================================
+     THE SCRATCH COATING — the core interaction
+     A DPR-aware canvas is painted over each card and erased along the finger
+     path; the transparent ratio is sampled while scratching and, past the
+     threshold, the rest of the coating dissolves at once.
+     ==================================================================== */
+
+  /* Canvas is not always there: linkedom (the build's smoke test), a locked-down
+     browser, or a card sitting in a zero-size / hidden section. Every one of
+     those falls back to the plain revealed card rather than to a panel the
+     guest can never get past. */
+  var CANVAS_OK = (function () {
+    try {
+      var c = document.createElement('canvas');
+      return !!(c.getContext && c.getContext('2d'));
+    } catch (e) { return false; }
+  })();
+
+  var METALS = {
+    champagne: ['#efe0bd', '#e4cfa0', '#cbb079'],
+    gold: ['#e6d29a', '#cba96a', '#a9854e'],
+    rose: ['#e7c6b4', '#cf9f88', '#b07d68'],
+    silver: ['#e8e6df', '#cfccc2', '#aeaaa0'],
+    bronze: ['#d3b483', '#a9865a', '#856542']
+  };
+
+  function ScratchCard(card) {
+    var stage = $('.scard-stage', card);
+    var coat = card.getAttribute('data-coat') || 'champagne';
+    var threshold = parseFloat(card.getAttribute('data-threshold')) || 0.58;
+    var brush = 22;
+
+    var canvas = null, ctx = null, dpr = 1, W = 0, H = 0, cssW = 0, cssH = 0;
+    var drawing = false, last = null, revealed = false, pointerId = null, samples = 0;
+
+    function complete() {
+      if (revealed) return;
+      revealed = true;
+      card.classList.add('revealed', 'touched');
+      if (canvas) canvas.style.pointerEvents = 'none';
+      detach();
+      if (card.id === 'secretCard') {
+        var copy = $('#copyNote');
+        if (copy) copy.classList.add('on');
+      }
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+    function star(x, y, s) {
+      ctx.beginPath();
+      for (var i = 0; i < 8; i++) {
+        var ang = (Math.PI / 4) * i;
+        var rad = i % 2 === 0 ? s : s * 0.42;
+        ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawCoating() {
+      var metal = METALS[coat] || METALS.champagne;
+      var g = ctx.createLinearGradient(0, 0, cssW, cssH);
+      g.addColorStop(0, metal[0]); g.addColorStop(0.5, metal[1]); g.addColorStop(1, metal[2]);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      var sheen = ctx.createLinearGradient(0, 0, cssW, 0);
+      sheen.addColorStop(0, 'rgba(255,255,255,0)');
+      sheen.addColorStop(0.45, 'rgba(255,255,255,0.28)');
+      sheen.addColorStop(0.55, 'rgba(255,255,255,0.28)');
+      sheen.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sheen;
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      ctx.strokeStyle = 'rgba(120,90,45,0.14)';
+      ctx.lineWidth = 1;
+      for (var x = -cssH; x < cssW; x += 9) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + cssH, cssH); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(120,90,45,0.35)';
+      ctx.lineWidth = 1.5;
+      roundRect(6, 6, cssW - 12, cssH - 12, 8);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(120,90,45,0.2)';
+      var seed = coat.length * 7;
+      for (var i = 0; i < 10; i++) {
+        star(((i * 53 + seed * 13) % Math.max(1, cssW - 24)) + 12,
+             ((i * 97 + seed * 29) % Math.max(1, cssH - 24)) + 12, 2.6);
+      }
+
+      ctx.fillStyle = 'rgba(120,90,45,0.18)';
+      ctx.font = '500 ' + Math.min(cssH * 0.34, 40) + "px 'Bodoni Moda', serif";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(initials() || '•', cssW / 2, cssH / 2);
+    }
+
+    /* Layout size (offset*) rather than getBoundingClientRect: the card's
+       entrance transform is still running when this first paints, and a scaled
+       rect would size the coating wrong. */
+    function paint() {
+      if (!canvas) return false;
+      cssW = stage.offsetWidth || 0;
+      cssH = stage.offsetHeight || 0;
+      if (!cssW || !cssH) return false;
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      W = canvas.width = Math.round(cssW * dpr);
+      H = canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawCoating();
+      return true;
+    }
+
+    function pos(e) {
+      var r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    function scratchAt(x, y) {
+      if (!ctx) return;
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = brush * 2;
+      ctx.lineCap = ctx.lineJoin = 'round';
+      if (last) { ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(x, y); ctx.stroke(); }
+      ctx.beginPath();
+      ctx.arc(x, y, brush, 0, 6.28);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      last = { x: x, y: y };
+      fleck(x, y);
+    }
+
+    /* Coating flecks are DOM specks flung near the path and then removed —
+       deliberately NOT drawn on the canvas, where they would either re-add
+       coating or leave permanent marks over cleared areas. */
+    var flecks = 0;
+    function fleck(x, y) {
+      if (reduced || flecks > 8 || Math.random() > 0.16) return;
+      flecks++;
+      var f = document.createElement('span');
+      var c3 = (METALS[coat] || METALS.champagne)[2];
+      f.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;' +
+        'width:' + (2 + Math.random() * 2).toFixed(1) + 'px;height:' + (2 + Math.random() * 2).toFixed(1) + 'px;' +
+        'background:' + c3 + ';border-radius:1px;pointer-events:none;z-index:3;opacity:.85;' +
+        'transition:transform .5s cubic-bezier(.22,1,.36,1),opacity .5s cubic-bezier(.22,1,.36,1);';
+      stage.appendChild(f);
+      var dx = (-10 + Math.random() * 20), dy = (8 + Math.random() * 16);
+      requestAnimationFrame(function () {
+        f.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) rotate(' + Math.round(Math.random() * 90) + 'deg)';
+        f.style.opacity = '0';
+      });
+      setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); flecks--; }, 520);
+    }
+
+    /* Stepped alpha sampling — every 8th pixel is plenty to decide "mostly
+       gone", and reading the whole buffer on every pointermove is not. */
+    function progress() {
+      if (!ctx) return 0;
+      try {
+        var data = ctx.getImageData(0, 0, W, H).data;
+        var clear = 0, total = 0;
+        for (var i = 3; i < data.length; i += 32) { total++; if (data[i] < 40) clear++; }
+        return total ? clear / total : 0;
+      } catch (e) { return 0; }
+    }
+
+    function down(e) {
+      if (revealed) return;
+      card.classList.add('touched');
+      if (!ctx && !paint()) { complete(); return; }   // nothing to scratch: just open it
+      drawing = true; last = null; pointerId = e.pointerId;
+      try { canvas.setPointerCapture(pointerId); } catch (err) {}
+      var p = pos(e);
+      scratchAt(p.x, p.y);
+      if (e.preventDefault) e.preventDefault();
+    }
+    function move(e) {
+      if (!drawing || revealed) return;
+      var events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (var i = 0; i < events.length; i++) {
+        var p = pos(events[i]);
+        scratchAt(p.x, p.y);
+      }
+      if (++samples % 6 === 0 && progress() >= threshold) complete();
+      if (e.preventDefault) e.preventDefault();
+    }
+    function up() {
+      if (!drawing) return;
+      drawing = false;
+      try { canvas.releasePointerCapture(pointerId); } catch (err) {}
+      if (!revealed && progress() >= threshold) complete();
+    }
+    function onResize() { if (!revealed) paint(); }
+
+    function attach() {
+      canvas.addEventListener('pointerdown', down);
+      canvas.addEventListener('pointermove', move);
+      canvas.addEventListener('pointerup', up);
+      canvas.addEventListener('pointercancel', up);
+      window.addEventListener('resize', onResize);
+    }
+    function detach() {
+      if (!canvas) return;
+      canvas.removeEventListener('pointerdown', down);
+      canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointerup', up);
+      canvas.removeEventListener('pointercancel', up);
+      window.removeEventListener('resize', onResize);
+    }
+
+    function build() {
+      canvas = document.createElement('canvas');
+      canvas.className = 'scard-canvas';
+      stage.appendChild(canvas);
+
+      var hint = document.createElement('div');
+      hint.className = 'scard-hint';
+      hint.innerHTML =
+        '<svg class="finger" viewBox="0 0 26 30" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+        '<path d="M9 14 V5 a2.5 2.5 0 0 1 5 0 V13"/>' +
+        '<path d="M14 13 V9 a2.2 2.2 0 0 1 4.4 0 V14"/>' +
+        '<path d="M18.4 14 V11 a2 2 0 0 1 4 0 V19 a7 7 0 0 1 -7 7 h-2 a6 6 0 0 1 -5.2 -3 L5 19 a2 2 0 0 1 3.4 -2 L10 19"/>' +
+        '</svg><span>' + t('scratchHint') + '</span>';
+      hint.setAttribute('data-hint', '1');
+      stage.appendChild(hint);
+
+      paint();
+      // Repaint once the webfonts land so the monogram is Bodoni rather than a
+      // fallback serif. Safe: nothing has been scratched yet.
+      if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+        document.fonts.ready.then(function () {
+          if (!revealed && !card.classList.contains('touched') && ctx) drawCoating();
+        });
+      }
+      attach();
+    }
+
+    return {
+      mount: function () {
+        if (!CANVAS_OK || reduced || ADMIN_EDIT) { complete(); return; }
+        build();
+      },
+      /* Called after a config change: a card that was empty (and therefore
+         zero-size) when it mounted has no coating yet. */
+      refresh: function () {
+        if (revealed || !canvas || ctx) return;
+        paint();
+      },
+      relabel: function () {
+        var hint = $('.scard-hint span', stage);
+        if (hint) hint.textContent = t('scratchHint');
+      },
+      reveal: complete
+    };
+  }
+
+  var cards = [];
+  function mountScratch() {
+    $$('#scratchGrid .scard, #secretCard').forEach(function (el) {
+      var card = ScratchCard(el);
+      cards.push(card);
+      card.mount();
+      var btn = el.classList.contains('secret-card')
+        ? $('[data-scratch-for="' + el.id + '"]')
+        : $('.reveal-btn', el);
+      if (btn) btn.addEventListener('click', card.reveal);
+    });
+  }
+  function refreshScratch() {
+    cards.forEach(function (c) { c.refresh(); c.relabel(); });
+  }
+  function revealAllCards() { cards.forEach(function (c) { c.reveal(); }); }
+
+  /* ── Copy the secret note ──────────────────────────────────────────────── */
+  var copyBtn = $('#copyNote');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var card = $('#secretCard');
+    if (!card) return;
+    var main = ($('.r-main', card) || {}).textContent || '';
+    var quote = ($('.r-quote', card) || {}).textContent || '';
+    var text = (main.trim() + '\n\n' + quote.trim()).trim();
+    var restore = function () { setTimeout(function () { copyBtn.textContent = t('copyTheNote'); }, 1800); };
+    var ok = function () { copyBtn.textContent = t('copied'); restore(); };
+    var fallback = function () {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.parentNode.removeChild(ta);
+        ok();
+      } catch (e) { copyBtn.textContent = t('selected'); restore(); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else fallback();
+  });
+
+  /* ── Gallery ───────────────────────────────────────────────────────────── */
+  function galleryItems() {
+    var items = cfg('gallery', []);
+    return Array.isArray(items) ? items.filter(function (g) { return g && g.image; }) : [];
+  }
+  function renderGallery() {
+    var album = $('#album'), section = $('#gallery');
+    if (!album || !section) return;
+    var items = galleryItems();
+    album.innerHTML = '';
+    if (!items.length) { section.classList.add('card-off'); return; }
+    section.classList.remove('card-off');
+    items.forEach(function (g, i) {
+      var fig = document.createElement('figure');
+      fig.className = 'pic observe';
+      fig.style.setProperty('--pd', (i * 0.11).toFixed(2) + 's');
+      var tape = document.createElement('span');
+      tape.className = 'tape';
+      tape.setAttribute('aria-hidden', 'true');
+      var win = document.createElement('div');
+      win.className = 'pic-win';
+      var img = document.createElement('img');
+      img.alt = loc(g.caption) || '';
+      img.onerror = function () { img.classList.add('broken'); };
+      img.src = g.image;
+      win.appendChild(img);
+      var cap = document.createElement('figcaption');
+      cap.className = 'pic-cap';
+      cap.textContent = loc(g.caption) || '';
+      fig.appendChild(tape); fig.appendChild(win); fig.appendChild(cap);
+      fig.addEventListener('click', function () { openLightbox(g.image, loc(g.caption)); });
+      album.appendChild(fig);
+      observe(fig);
+    });
+  }
+
+  /* ── Lightbox ──────────────────────────────────────────────────────────── */
+  var lb = $('#lightbox'), lbImg = $('#lbImg'), lbCap = $('#lbCap');
+  function openLightbox(src, cap) {
+    if (!lb) return;
+    lbImg.src = src;
+    lbImg.alt = cap || '';
+    lbCap.textContent = cap || '';
+    lb.classList.add('open');
+  }
+  function closeLightbox() { if (lb) lb.classList.remove('open'); }
+  if (lb) {
+    $('#lbClose').addEventListener('click', closeLightbox);
+    lb.addEventListener('click', function (e) { if (e.target === lb) closeLightbox(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && lb.classList.contains('open')) closeLightbox();
+    });
+  }
+
+  /* ── Countdown ─────────────────────────────────────────────────────────── */
+  var cdCells = {};
+  $$('[data-cd]').forEach(function (el) { cdCells[el.getAttribute('data-cd')] = el; });
+  function put(el, value, pad) {
+    if (!el) return;
+    var text = String(value);
+    while (text.length < pad) text = '0' + text;
+    if (el.textContent === text) return;
+    if (reduced) { el.textContent = text; return; }
+    el.classList.add('flip');
+    setTimeout(function () { el.textContent = text; el.classList.remove('flip'); }, 230);
+  }
+  function tick() {
+    var left = Math.max(0, eventDate().getTime() - Date.now());
+    var day = Math.floor(left / 86400000); left -= day * 86400000;
+    var hr = Math.floor(left / 3600000); left -= hr * 3600000;
+    var mn = Math.floor(left / 60000); left -= mn * 60000;
+    put(cdCells.days, day, 3);
+    put(cdCells.hours, hr, 2);
+    put(cdCells.minutes, mn, 2);
+    put(cdCells.seconds, Math.floor(left / 1000), 2);
+  }
+
+  /* ── Add to calendar ───────────────────────────────────────────────────── */
+  var icsBtn = $('#icsBtn');
+  if (icsBtn) icsBtn.addEventListener('click', function () {
+    try {
+      var start = eventDate();
+      var end = new Date(start.getTime() + 5 * 3600000);
+      var stamp = function (d) { return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; };
+      var bride = loc(cfg('couple.bride', '')), groom = loc(cfg('couple.groom', ''));
+      var title = ((bride && groom) ? bride + ' & ' + groom : (bride || groom || t('wedding')));
+      var ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//v-invite//EN', 'BEGIN:VEVENT',
+        'UID:' + Date.now() + '@v-invite',
+        'DTSTAMP:' + stamp(new Date()),
+        'DTSTART:' + stamp(start),
+        'DTEND:' + stamp(end),
+        'SUMMARY:' + title + ' — ' + t('wedding'),
+        'LOCATION:' + (loc(cfg('venue.name', '')) + ', ' + loc(cfg('venue.address', ''))).replace(/^,\s*|,\s*$/g, ''),
+        'END:VEVENT', 'END:VCALENDAR'
+      ].join('\r\n');
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+      a.download = 'invitation.ics';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { /* a browser without Blob/URL simply does nothing here */ }
+  });
+
+  /* ── RSVP ──────────────────────────────────────────────────────────────── */
+  var form = $('#rsvpForm'), success = $('#rsvpSuccess'), attendRow = $('#attendRow');
+  var rsvpPending = null;
+
+  function attending() {
+    var field = form && form.attend;
+    if (field && typeof field.value === 'string') return field.value === 'yes';
+    var checked = $('input[name="attend"]', attendRow);
+    return !checked || checked.value === 'yes';
+  }
+
+  if (attendRow) attendRow.addEventListener('change', function (e) {
+    $$('label', attendRow).forEach(function (l) { l.classList.remove('sel'); });
+    var label = e.target.closest ? e.target.closest('label') : null;
+    if (label) label.classList.add('sel');
+    var guestField = $('#guestField');
+    if (guestField) guestField.style.display = attending() ? '' : 'none';
+  });
+
+  if (form) form.addEventListener('submit', function (e) {
+    if (e.preventDefault) e.preventDefault();
+    var nameInput = $('#rsvpName');
+    var field = nameInput.closest ? nameInput.closest('.f') : null;
+    var name = (nameInput.value || '').trim();
+    if (!name) {
+      if (field) field.classList.add('invalid');
+      if (nameInput.focus) nameInput.focus();
+      return;
+    }
+    if (field) field.classList.remove('invalid');
+    $('#rsvpErr').classList.remove('show');
+
+    var yes = attending();
+    var payload = {
+      name: name,
+      attending: yes,
+      guests: yes ? (parseInt($('#rsvpGuests').value, 10) || 1) : 0,
+      message: ($('#rsvpMsg').value || '').trim() || undefined
+    };
+
+    var btn = $('#rsvpSubmit'), label = btn.querySelector('span');
+    btn.disabled = true;
+    label.textContent = t('sending');
+
+    new Promise(function (resolve, reject) {
+      /* If no parent answers within 2.5s (the editor preview does not), treat
+         it as saved rather than showing the guest a failure. */
+      var timer = setTimeout(function () { rsvpPending = null; resolve(); }, 2500);
+      rsvpPending = { resolve: resolve, reject: reject, timer: timer };
+      window.parent.postMessage({ type: 'vinvite:rsvp', payload: payload }, '*');
+    }).then(function () {
+      $('#successText').textContent = yes ? t('savedYes') : t('savedNo');
+      form.style.display = 'none';
+      success.classList.add('show');
+    }, function () {
+      $('#rsvpErr').classList.add('show');
+    }).then(function () {
+      btn.disabled = false;
+      label.textContent = t('send');
+    });
+  });
+
+  /* ── Music ─────────────────────────────────────────────────────────────── */
+  var audio = $('#audio'), musicBtn = $('#music-btn');
+  var musicWired = false, musicRetry = false;
+  var RETRY_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+
+  function startMusic() {
+    if (!audio || !audio.getAttribute('src') || !audio.paused) return;
+    var p = audio.play();
+    if (p && p.catch) p.catch(armMusicRetry);
+  }
+  function armMusicRetry() {
+    if (musicRetry) return;
+    musicRetry = true;
+    var stop = function () { RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); }); };
+    var retry = function () {
+      var p = audio.play();
+      if (p && p.then) p.then(stop); else stop();
+    };
+    RETRY_EVENTS.forEach(function (ev) { window.addEventListener(ev, retry, { passive: true }); });
+  }
+  function renderMusic() {
+    if (!audio || !musicBtn) return;
+    var url = cfg('music.url', '');
+    var hidden = (cfg('hidden', {}) || {}).music === true;
+    if (!url || hidden) {
+      musicBtn.classList.add('hidden');
+      audio.pause && audio.pause();
+      audio.removeAttribute('src');
+      return;
+    }
+    musicBtn.classList.remove('hidden');
+    if (audio.getAttribute('src') !== url) { audio.setAttribute('src', url); audio.preload = 'auto'; }
+    if (musicWired) return;
+    musicWired = true;
+    musicBtn.addEventListener('click', function () {
+      if (audio.paused) { var p = audio.play(); if (p && p.catch) p.catch(function () {}); }
+      else audio.pause();
+    });
+    audio.addEventListener('play', function () { musicBtn.classList.add('playing'); musicBtn.setAttribute('aria-pressed', 'true'); });
+    audio.addEventListener('pause', function () { musicBtn.classList.remove('playing'); musicBtn.setAttribute('aria-pressed', 'false'); });
+  }
+
+  /* ── Language switcher ─────────────────────────────────────────────────── */
+  function renderLangbar() {
+    var bar = $('#langbar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    if (LANGS.length < 2) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    LANGS.forEach(function (l) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = String(l).toUpperCase();
+      b.className = (l === lang) ? 'active' : '';
+      b.addEventListener('click', function () {
+        if (lang === l) return;
+        lang = l;
+        renderAll();
+      });
+      bar.appendChild(b);
+    });
+  }
+
+  /* ── Studio contacts (global, injected by the host) ────────────────────── */
+  var SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+  var SVG_TG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>';
+  var SVG_IG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>';
+
+  function renderPlatformContacts() {
+    var host = $('#vcContacts');
+    if (!host) return;
+    var c = window.__CONTACTS__ || {};
+    host.innerHTML = '';
+    function link(href, label, svg) {
+      var a = document.createElement('a');
+      a.href = href; a.target = '_blank'; a.rel = 'noopener';
+      a.innerHTML = svg + '<span>' + label + '</span>';
+      host.appendChild(a);
+    }
+    var phone = (c.phone || '').trim(), tg = (c.telegram || '').trim(), ig = (c.instagram || '').trim();
+    if (phone) link('tel:' + phone.replace(/[^\d+]/g, ''), phone, SVG_PHONE);
+    if (tg) link(tg.indexOf('http') === 0 ? tg : 'https://t.me/' + tg.replace(/^@/, ''),
+      tg.replace(/^https?:\/\/t\.me\//, '@').replace(/^@?/, '@'), SVG_TG);
+    if (ig) link(ig.indexOf('http') === 0 ? ig : 'https://instagram.com/' + ig.replace(/^@/, ''),
+      ig.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/^@?/, '@'), SVG_IG);
+
+    var logo = $('#vconnectLogo');
+    if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/v-invite-logo.png');
+  }
+
+  /* ── Navigation ────────────────────────────────────────────────────────── */
+  var startBtn = $('#startBtn');
+  if (startBtn) startBtn.addEventListener('click', function () {
+    var target = $('#scratch');
+    if (target && target.scrollIntoView) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  /* ── Host bridge ───────────────────────────────────────────────────────── */
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'vinvite:rsvp-ok' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.resolve(); rsvpPending = null; }
+    if (d.type === 'vinvite:rsvp-err' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.reject(); rsvpPending = null; }
+    if (d.type === 'vinvite:config') {
+      if (d.contacts) window.__CONTACTS__ = d.contacts;
+      CONFIG = d.config || CONFIG;
+      if (d.languages && d.languages.length) {
+        LANGS = d.languages;
+        if (LANGS.indexOf(lang) === -1) lang = LANGS[0];
+      }
+      renderAll();
+      refreshScratch();
+    }
+    /* The editor jumped to a section being edited: the gate must be out of the
+       way, every entrance already played, and the coatings off — otherwise the
+       admin is looking at six blank metal panels. */
+    if (d.type === 'vinvite:focus') {
+      finishGate();
+      revealEverything();
+      revealAllCards();
+    }
+  });
+
+  /* ── Full render (initial + on config / language change) ───────────────── */
+  function renderAll() {
+    renderPlatformContacts();
+    bindTexts();
+    applyVisibility();
+    renderGallery();
+    renderMusic();
+    renderLangbar();
+    tick();
+  }
+
+  /* ── Boot ──────────────────────────────────────────────────────────────── */
+  /* `js` gates the scroll lock and every "hidden until revealed" rule, so it is
+     added first and taken back off if anything below throws — a half-booted
+     page must still be readable and scrollable. */
+  document.documentElement.classList.add('js');
+  try {
+    renderAll();
+    initObserver();
+    mountScratch();
+    initDust();
+    setInterval(tick, 1000);
+    if (reduced) finishGate();
+  } catch (err) {
+    document.documentElement.classList.remove('js');
+    document.body.classList.add('is-open');
+    if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+    if (window.console && console.error) console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
