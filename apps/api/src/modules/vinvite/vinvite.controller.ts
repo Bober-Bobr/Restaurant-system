@@ -244,6 +244,10 @@ export class VInviteController {
     response.json(await promoShowcaseService.get());
   }
 
+  async listPromoWorks(_request: Request, response: Response) {
+    response.json(await promoShowcaseService.listWorks());
+  }
+
   async savePromoShowcase(request: Request, response: Response) {
     const data = promoShowcaseSchema.parse(request.body);
     response.json(await promoShowcaseService.save(request.inviteUser!.id, data));

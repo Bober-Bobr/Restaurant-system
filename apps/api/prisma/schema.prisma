@@ -942,23 +942,27 @@ model InviteUser {
   templates InviteTemplate[]
 }
 
-// System-admin control over how the built-in templates are presented on the
-// v-invite promotional site: which are featured on the hero cover, in what
-// order the rest are listed, and which are kept off it entirely.
+// System-admin control over what the v-invite promotional site shows.
+//
+// "Our work" and the hero cover are REAL published invitations, referenced by
+// slug — the site sells finished work, not the blank templates it was built
+// from. Both lists are opt-in: an invitation belongs to a paying customer, so
+// nothing appears on the marketing site until the administrator deliberately
+// puts it there. `hiddenIds` is the one list that still holds TEMPLATE ids, and
+// it now means "kept off the price list".
 //
 // One row, keyed by `scope`, so a second promotional surface later needs no
-// migration. Every list holds template ids and is advisory: ids that no longer
-// match a shipped template are ignored at read time, and a template mentioned
-// in none of the lists still appears — otherwise adding a template would make
-// it invisible until an admin happened to re-save this.
+// migration. Every list is advisory: an entry that no longer resolves (the
+// invitation was unpublished or deleted, the template was removed from the
+// code) is ignored at read time rather than breaking the page.
 model InvitePromoShowcase {
-  id        String   @id @default(cuid())
-  scope     String   @unique // "landing"
-  coverIds  Json     @default("[]") // ordered ids featured on the hero cover
-  orderIds  Json     @default("[]") // ordered ids for the "our work" grid
-  hiddenIds Json     @default("[]") // ids kept off the promotional site
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  scope      String   @unique // "landing"
+  workSlugs  Json     @default("[]") // ordered slugs of published invitations
+  coverSlugs Json     @default("[]") // ordered slugs featured on the hero cover
+  hiddenIds  Json     @default("[]") // template ids kept off the price list
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // System-admin design override for a built-in rich template: `config` replaces

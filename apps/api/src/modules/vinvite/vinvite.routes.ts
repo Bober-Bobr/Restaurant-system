@@ -42,6 +42,9 @@ router.put('/template-overrides/:templateId', inviteAuthMiddleware, controller.s
 router.get('/template-pricing', controller.getTemplatePricing.bind(controller));
 router.put('/template-pricing', inviteAuthMiddleware, controller.saveTemplatePricing.bind(controller));
 
+// What the promotional site shows: the chosen invitations (public — the landing
+// page is seen logged out) and the settings behind them.
+router.get('/promo-works', controller.listPromoWorks.bind(controller));
 router.get('/promo-showcase', controller.getPromoShowcase.bind(controller));
 router.put('/promo-showcase', inviteAuthMiddleware, controller.savePromoShowcase.bind(controller));
 

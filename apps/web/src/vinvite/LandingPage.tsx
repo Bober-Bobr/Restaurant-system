@@ -8,7 +8,11 @@ import { ViLogo, ViThemeToggle } from './VInviteApp';
 import { usePromoShowcase, COVER_SLOTS_DESKTOP, COVER_SLOTS_MOBILE } from './promoShowcase';
 import { useTemplateOverrides } from './templateOverrides';
 import { RichRenderer } from './templates/RichRenderer';
+import { getTemplate, readRichDesign } from './templates';
 import { resolveAssetUrls } from './templates/utils';
+import { InviteSiteView } from './InviteSiteView';
+import { PreviewShell } from './PreviewShell';
+import type { PromoWork } from './api';
 import { LOCALES, type TemplateDefinition } from './templates/types';
 
 // Stable identity: RichRenderer posts into the iframe whenever `config` or
@@ -16,11 +20,15 @@ import { LOCALES, type TemplateDefinition } from './templates/types';
 const ALL_LOCALES = [...LOCALES];
 
 // ── v-invite.uz/ — public marketing landing ──────────────────────────────────
-// What a visitor sees: hero → our work (live template previews) → why us →
-// closing CTA. There is no sign-in or sign-up here — the site sells templates,
-// and choosing one leads to Pricing, not to an account. Everything animates on
-// scroll; the whole
-// page degrades gracefully under prefers-reduced-motion (see vinvite.css).
+// What a visitor sees: hero → our work → why us → closing CTA. There is no
+// sign-in or sign-up here — the site sells invitations, and choosing a design
+// happens on the Pricing page, not here. Everything animates on scroll; the
+// whole page degrades gracefully under prefers-reduced-motion (see vinvite.css).
+//
+// "Our work" and the cover show REAL published invitations the administrator
+// picked, falling back to the built-in templates until any are chosen — see
+// promoShowcase.ts. Both are rendered live, so this file works in terms of a
+// ShowcaseEntry that hides which of the two it is holding.
 
 // Reveal-on-scroll lives in motion.ts. Elements are
 // registered by ref callback, so sections can mount lazily without a re-scan.
@@ -40,6 +48,49 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
+// ── One thing the gallery can show ───────────────────────────────────────────
+// Either a published invitation or (before any are chosen) a built-in template.
+// Both render live; everything else about a card — its name, its accent dot,
+// its emoji — is normalised here so the layout never branches on the source.
+export type ShowcaseEntry =
+  | { kind: 'work'; id: string; name: string; emoji: string; accent: string; site: PromoWork }
+  | { kind: 'template'; id: string; name: string; emoji: string; accent: string; tpl: TemplateDefinition };
+
+function workEntry(site: PromoWork): ShowcaseEntry {
+  // A rich invitation borrows its template's emoji and accent so the gallery
+  // stays visually varied; a block design has neither, hence the fallbacks.
+  const rich = readRichDesign(site.theme);
+  const tpl = rich ? getTemplate(rich.templateId) : null;
+  return {
+    kind: 'work',
+    id: site.slug,
+    name: site.name,
+    emoji: tpl?.cover ?? '💌',
+    accent: tpl?.accent ?? (site.theme?.accentColor as string | undefined) ?? 'var(--vi-accent)',
+    site,
+  };
+}
+
+function templateEntry(tpl: TemplateDefinition, label: string): ShowcaseEntry {
+  return { kind: 'template', id: tpl.id, name: label, emoji: tpl.cover, accent: tpl.accent, tpl };
+}
+
+// The live preview itself. A template is rendered from its shipped html plus
+// the administrator's Design+ overrides; an invitation is rendered exactly as
+// its guests see it, minus the music and cursor chrome.
+function LivePreview({ entry }: { entry: ShowcaseEntry }) {
+  const { effectiveConfig } = useTemplateOverrides();
+  const config = useMemo(
+    () => (entry.kind === 'template'
+      ? resolveAssetUrls(entry.tpl, effectiveConfig(entry.tpl) as Record<string, unknown>)
+      : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [entry, effectiveConfig],
+  );
+  if (entry.kind === 'work') return <InviteSiteView site={entry.site} chrome={false} />;
+  return <RichRenderer html={entry.tpl.html} config={config!} languages={ALL_LOCALES} interactive />;
+}
+
 export const ViLandingPage = () => {
   const t = useViT();
   const navigate = useNavigate();
@@ -48,12 +99,20 @@ export const ViLandingPage = () => {
   const reveal = useReveal();
   const progress = useScrollProgress();
   const [stuck, setStuck] = useState(false);
-  const [preview, setPreview] = useState<TemplateDefinition | null>(null);
+  const [preview, setPreview] = useState<ShowcaseEntry | null>(null);
   const isMobile = useMediaQuery('(max-width: 860px)');
-  // Which templates the system administrator has put on the cover and in what
-  // order the rest are listed. Falls back to the shipped order while loading or
-  // if the request fails, so the page is never empty.
-  const { cover, work } = usePromoShowcase();
+  // The invitations the administrator chose, or the built-in templates until
+  // they choose any. Falls back to the shipped set while loading or if the
+  // request fails, so the page is never empty.
+  const { items } = usePromoShowcase();
+
+  const { work, cover } = useMemo(() => {
+    if (items.kind === 'works') {
+      return { work: items.works.map(workEntry), cover: items.cover.map(workEntry) };
+    }
+    const entries = items.templates.map((tpl) => templateEntry(tpl, t(tpl.nameKey as ViKey)));
+    return { work: entries, cover: entries };
+  }, [items, t]);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -62,8 +121,7 @@ export const ViLandingPage = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const goPricing = (templateId?: string) =>
-    navigate(templateId ? `/pricing?template=${encodeURIComponent(templateId)}` : '/pricing');
+  const goPricing = () => navigate('/pricing');
 
   const scrollTo = (id: string) => {
     // Nav entries carrying a route navigate instead of scrolling.
@@ -94,8 +152,9 @@ export const ViLandingPage = () => {
 
       <main style={{ flex: 1 }}>
         <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onWork={goWork} onPricing={() => goPricing()} />
-        <TemplateMarquee t={t} templates={work} />
-        <WorkSection t={t} templates={work} reveal={reveal} onPreview={setPreview} onPricing={() => goPricing()} />
+        <NameMarquee entries={work} />
+        <WorkSection t={t} entries={work} live={items.kind === 'works'} reveal={reveal}
+          onPreview={setPreview} onPricing={() => goPricing()} />
         <WhySection t={t} reveal={reveal} />
         <FinalCta t={t} reveal={reveal} onPricing={() => goPricing()} />
       </main>
@@ -116,10 +175,7 @@ export const ViLandingPage = () => {
         </div>
       </footer>
 
-      {preview && (
-        <PreviewModal tpl={preview} t={t} onClose={() => setPreview(null)}
-          onSelect={() => goPricing(preview.id)} />
-      )}
+      {preview && <PreviewModal entry={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 };
@@ -284,17 +340,17 @@ function SectionHead({ num, kicker, title, sub, reveal }: {
   );
 }
 
-// A slow band of template names between the hero and the gallery. Duplicated
-// once so the loop is seamless — the track translates exactly -50%, which lands
-// the copy precisely where the original started. The copy is aria-hidden so a
-// screen reader hears the list once, not twice.
-function TemplateMarquee({ t, templates }: { t: (k: ViKey) => string; templates: TemplateDefinition[] }) {
-  if (templates.length === 0) return null;
-  const row = (hidden: boolean) => templates.map((tpl) => (
-    <span className="vi-lp-marquee-item" key={`${tpl.id}-${hidden}`} aria-hidden={hidden || undefined}>
+// A slow band of names between the hero and the gallery. Duplicated once so the
+// loop is seamless — the track translates exactly -50%, which lands the copy
+// precisely where the original started. The copy is aria-hidden so a screen
+// reader hears the list once, not twice.
+function NameMarquee({ entries }: { entries: ShowcaseEntry[] }) {
+  if (entries.length === 0) return null;
+  const row = (hidden: boolean) => entries.map((entry) => (
+    <span className="vi-lp-marquee-item" key={`${entry.id}-${hidden}`} aria-hidden={hidden || undefined}>
       <span className="vi-lp-marquee-dot" />
-      <span style={{ fontSize: 17 }}>{tpl.cover}</span>
-      {t(tpl.nameKey as ViKey)}
+      <span style={{ fontSize: 17 }}>{entry.emoji}</span>
+      {entry.name}
     </span>
   ));
   return (
@@ -311,7 +367,7 @@ function TemplateMarquee({ t, templates }: { t: (k: ViKey) => string; templates:
 
 function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
   t: (k: ViKey) => string; isMobile: boolean;
-  cover: TemplateDefinition[]; work: TemplateDefinition[];
+  cover: ShowcaseEntry[]; work: ShowcaseEntry[];
   onWork: () => void; onPricing: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
@@ -330,10 +386,9 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
 
   const stats: { value: number; label: ViKey }[] = [
     // Count what a visitor can actually browse, not what ships in the bundle —
-    // a hidden template must not be advertised.
+    // a design kept off the site must not be advertised.
     { value: work.length, label: 'lp_stat_templates' },
     { value: 3, label: 'lp_stat_languages' },
-    { value: 5, label: 'lp_stat_minutes' },
   ];
 
   return (
@@ -398,32 +453,23 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
   );
 }
 
-// Real templates rendered live. Desktop stacks two drifting cards; phones show a
+// Real work rendered live. Desktop stacks two drifting cards; phones show a
 // single upright card — one iframe instead of two, and no rotation to cut off.
-function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: TemplateDefinition[] }) {
-  const { effectiveConfig } = useTemplateOverrides();
+function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: ShowcaseEntry[] }) {
   const cards = useMemo(
     () => cover.slice(0, isMobile ? COVER_SLOTS_MOBILE : COVER_SLOTS_DESKTOP),
     [cover, isMobile],
-  );
-  // The admin's saved design, not the shipped default — otherwise a template
-  // edited in Design+ looks one way everywhere in the app and another on the
-  // cover that is meant to be selling it.
-  const configs = useMemo(
-    () => cards.map((tpl) => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cards, effectiveConfig],
   );
   if (cards.length === 0) return <div className="vi-lp-hero-art" />;
 
   return (
     <div className="vi-lp-hero-art">
-      {cards.map((tpl, i) => {
+      {cards.map((entry, i) => {
         const front = i === cards.length - 1;
         const rot = isMobile ? 0 : front ? 4 : -6;
         return (
           <div
-            key={tpl.id}
+            key={entry.id}
             className={`vi-lp-hero-card vi-pop${isMobile ? '' : ' vi-lp-float'}${front ? ' front' : ' back'}`}
             style={{
               zIndex: front ? 2 : 1,
@@ -432,8 +478,8 @@ function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: TemplateDefini
               animationDelay: isMobile ? '300ms' : `${i * 1.4}s, ${300 + i * 140}ms`,
             }}
           >
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-              <RichRenderer html={tpl.html} config={configs[i]!} languages={ALL_LOCALES} interactive />
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+              <LivePreview entry={entry} />
             </div>
           </div>
         );
@@ -444,11 +490,13 @@ function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: TemplateDefini
 
 // ── Our work ─────────────────────────────────────────────────────────────────
 
-function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
+function WorkSection({ t, entries, live, reveal, onPreview, onPricing }: {
   t: (k: ViKey) => string;
-  templates: TemplateDefinition[];
+  entries: ShowcaseEntry[];
+  /** True once the gallery is showing real invitations rather than templates. */
+  live: boolean;
   reveal: (el: HTMLElement | null) => void;
-  onPreview: (tpl: TemplateDefinition) => void;
+  onPreview: (entry: ShowcaseEntry) => void;
   onPricing: () => void;
 }) {
   return (
@@ -456,13 +504,13 @@ function WorkSection({ t, templates, reveal, onPreview, onPricing }: {
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <SectionHead
           num="01" kicker={t('lp_work_kicker')} title={t('lp_work_title')}
-          sub={t('lp_work_sub')} reveal={reveal}
+          sub={t(live ? 'lp_work_sub' : 'lp_work_sub_templates')} reveal={reveal}
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 26 }}>
-          {templates.map((tpl, i) => (
-            <WorkCard key={tpl.id} tpl={tpl} t={t} reveal={reveal} delayMs={i * 90} index={i}
-              onPreview={() => onPreview(tpl)} />
+          {entries.map((entry, i) => (
+            <WorkCard key={entry.id} entry={entry} t={t} reveal={reveal} delayMs={i * 90} index={i}
+              onPreview={() => onPreview(entry)} />
           ))}
         </div>
 
@@ -486,21 +534,14 @@ function CountStat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function WorkCard({ tpl, t, reveal, delayMs, index, onPreview }: {
-  tpl: TemplateDefinition;
+function WorkCard({ entry, t, reveal, delayMs, index, onPreview }: {
+  entry: ShowcaseEntry;
   t: (k: ViKey) => string;
   reveal: (el: HTMLElement | null) => void;
   delayMs: number;
   index: number;
   onPreview: () => void;
 }) {
-  const { effectiveConfig } = useTemplateOverrides();
-  const config = useMemo(
-    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tpl, effectiveConfig],
-  );
-
   const tilt = usePointerTilt(5);
 
   return (
@@ -515,8 +556,8 @@ function WorkCard({ tpl, t, reveal, delayMs, index, onPreview }: {
             border: 'none', padding: 0, cursor: 'pointer', background: '#0b0f1c', overflow: 'hidden',
           }}
         >
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <LivePreview entry={entry} />
           </div>
 
           <span style={{
@@ -550,9 +591,14 @@ function WorkCard({ tpl, t, reveal, delayMs, index, onPreview }: {
         </button>
 
         <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 11, height: 11, borderRadius: '50%', background: tpl.accent, boxShadow: `0 0 0 3px ${tpl.accent}33`, flexShrink: 0 }} />
-          <span style={{ fontSize: 16, fontWeight: 720 }}>{t(tpl.nameKey as ViKey)}</span>
-          <span style={{ marginLeft: 'auto', fontSize: 20 }}>{tpl.cover}</span>
+          <span style={{ width: 11, height: 11, borderRadius: '50%', background: entry.accent, flexShrink: 0 }} />
+          <span style={{
+            fontSize: 16, fontWeight: 720, minWidth: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {entry.name}
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 20 }}>{entry.emoji}</span>
         </div>
       </div>
     </div>
@@ -577,8 +623,8 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
     { icon: '💌', title: 'lp_why_4_t', desc: 'lp_why_4_d', span: 2 },
     { icon: '🗺', title: 'lp_why_11_t', desc: 'lp_why_11_d', span: 2 },
     { icon: '🎨', title: 'lp_why_12_t', desc: 'lp_why_12_d', span: 3 },
-    { icon: '⚡', title: 'lp_why_5_t', desc: 'lp_why_5_d', span: 3 },
-    { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d', span: 2 },
+    // Half each, so the grid closes on a full row rather than a ragged one.
+    { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d', span: 3 },
   ];
 
   // The pointer-following glow is decorative; the tile is readable without it.
@@ -680,70 +726,16 @@ function FinalCta({ t, reveal, onPricing }: {
   );
 }
 
-// ── Full-screen template preview ─────────────────────────────────────────────
+// ── Full-screen preview ──────────────────────────────────────────────────────
+// Look, don't buy: choosing a design happens on the Pricing page, where the
+// tiers and the prices are. A "select" button here would send a visitor onward
+// having picked an INVITATION — somebody else's finished work, not something
+// they can order.
 
-function PreviewModal({ tpl, t, onClose, onSelect }: {
-  tpl: TemplateDefinition; t: (k: ViKey) => string; onClose: () => void; onSelect: () => void;
-}) {
-  const { effectiveConfig } = useTemplateOverrides();
-  const config = useMemo(
-    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tpl, effectiveConfig],
-  );
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
-
+function PreviewModal({ entry, onClose }: { entry: ShowcaseEntry; onClose: () => void }) {
   return (
-    <div className="vi-overlay" onClick={onClose}>
-      <div
-        className="vi-pop"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 'min(420px, 100%)', height: 'min(860px, 92vh)',
-          borderRadius: 22, overflow: 'hidden', position: 'relative',
-          background: '#0b0f1c', boxShadow: 'var(--vi-shadow-lg)',
-          display: 'flex', flexDirection: 'column',
-        }}
-      >
-        <div style={{ flex: 1, position: 'relative' }}>
-          <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
-        </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          style={{
-            position: 'absolute', top: 12, right: 12, zIndex: 5,
-            width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-            background: 'rgba(10,12,20,0.6)', color: '#fff', fontSize: 18, lineHeight: 1,
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          ✕
-        </button>
-
-        {/* Pinned under the preview rather than revealed by scrolling it: the
-            template renders inside a sandboxed iframe on an opaque origin, so
-            the parent cannot observe how far the visitor has scrolled inside it.
-            A button that only appeared after an event we cannot detect would be
-            a button that never appeared. */}
-        <div style={{ padding: 12, background: 'var(--vi-card)', borderTop: '1px solid var(--vi-border)' }}>
-          <button type="button" className="vi-btn vi-btn-primary" style={{ width: '100%', padding: '13px' }} onClick={onSelect}>
-            {t('lp_select')} <span style={{ fontSize: 17 }}>→</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <PreviewShell onClose={onClose}>
+      <LivePreview entry={entry} />
+    </PreviewShell>
   );
 }

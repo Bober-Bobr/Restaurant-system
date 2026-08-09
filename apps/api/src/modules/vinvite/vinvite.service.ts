@@ -578,24 +578,29 @@ export class VInviteTemplatePricingService {
   }
 }
 
-// How the built-in templates are presented on the promotional site. Read by
-// logged-out visitors, written only by a SYSTEM_ADMIN.
+// What the promotional site shows. Read by logged-out visitors, written only by
+// a SYSTEM_ADMIN.
 const PROMO_SCOPE = 'landing';
 
 export class VInvitePromoShowcaseService {
-  // Absent row means "shipped defaults" — three empty lists, which the web side
-  // resolves to registry order with the first templates on the cover. Returning
-  // this rather than 404ing keeps the landing page free of error handling for
-  // what is simply the initial state.
+  // Absent row means "nothing chosen yet" — empty lists, which the web side
+  // resolves by falling back to the built-in templates. Returning this rather
+  // than 404ing keeps the landing page free of error handling for what is
+  // simply the initial state.
   async get() {
     const row = await prisma.invitePromoShowcase.findUnique({
       where: { scope: PROMO_SCOPE },
-      select: { coverIds: true, orderIds: true, hiddenIds: true, updatedAt: true },
+      select: { workSlugs: true, coverSlugs: true, hiddenIds: true, updatedAt: true },
     });
-    if (!row) return { coverIds: [], orderIds: [], hiddenIds: [], updatedAt: null };
+    if (!row) {
+      return {
+        workSlugs: [] as string[], coverSlugs: [] as string[], hiddenIds: [] as string[],
+        updatedAt: null as Date | null,
+      };
+    }
     return {
-      coverIds: asIdList(row.coverIds),
-      orderIds: asIdList(row.orderIds),
+      workSlugs: asIdList(row.workSlugs),
+      coverSlugs: asIdList(row.coverSlugs),
       hiddenIds: asIdList(row.hiddenIds),
       updatedAt: row.updatedAt,
     };
@@ -603,7 +608,7 @@ export class VInvitePromoShowcaseService {
 
   async save(
     userId: string,
-    data: { coverIds: string[]; orderIds: string[]; hiddenIds: string[] },
+    data: { workSlugs: string[]; coverSlugs: string[]; hiddenIds: string[] },
   ) {
     const user = await prisma.inviteUser.findUnique({ where: { id: userId }, select: { role: true } });
     if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
@@ -612,8 +617,8 @@ export class VInvitePromoShowcaseService {
     // through a race, and silently collapsing them is friendlier than a 400 the
     // admin cannot act on.
     const clean = {
-      coverIds: unique(data.coverIds),
-      orderIds: unique(data.orderIds),
+      workSlugs: unique(data.workSlugs),
+      coverSlugs: unique(data.coverSlugs),
       hiddenIds: unique(data.hiddenIds),
     };
     await prisma.invitePromoShowcase.upsert({
@@ -622,6 +627,37 @@ export class VInvitePromoShowcaseService {
       update: clean,
     });
     return this.get();
+  }
+
+  // The showcased invitations themselves, ready to render. Public: this is what
+  // a logged-out visitor sees on the landing page.
+  //
+  // Only PUBLISHED invitations are returned, and the query is by slug, so an
+  // invitation the owner unpublishes or deletes drops off the marketing site by
+  // itself — the administrator does not have to remember to remove it, and a
+  // customer who takes their invitation down is not still being advertised.
+  async listWorks() {
+    const { workSlugs, coverSlugs } = await this.get();
+    const wanted = unique([...workSlugs, ...coverSlugs]);
+    if (wanted.length === 0) return [];
+
+    const projects = await prisma.inviteProject.findMany({
+      where: { slug: { in: wanted }, isPublished: true },
+      select: { name: true, slug: true, blocks: true, theme: true },
+    });
+
+    const bySlug = new Map(projects.map((p) => [p.slug!, p]));
+    const onCover = new Set(coverSlugs);
+    // The admin's order, then anything starred for the cover that is not in the
+    // work list — a cover pick must never be silently dropped for having been
+    // left out of the grid order. De-duplicated on the way out as well as on
+    // the way in: these are JSON columns, so a slug repeated by a direct edit
+    // would otherwise render the same invitation twice under one React key.
+    const ordered = unique([...workSlugs, ...coverSlugs]);
+    return ordered
+      .map((slug) => bySlug.get(slug))
+      .filter((p): p is NonNullable<typeof p> => !!p)
+      .map((p) => ({ ...p, slug: p.slug!, onCover: onCover.has(p.slug!) }));
   }
 }
 

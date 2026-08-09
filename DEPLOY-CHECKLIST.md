@@ -903,3 +903,47 @@ is deliberately different from a price of zero.
 
 Nothing on the promotional site reads these yet — that is the next step. Setting
 them now is safe and changes nothing a visitor sees.
+
+---
+
+## 16 · Promotional site shows real invitations (`20260809100000_promo_showcase_works`)
+
+**One migration**, on `InvitePromoShowcase`: adds `workSlugs` + `coverSlugs`,
+drops `coverIds` + `orderIds`.
+
+The dropped columns held **template ids**, which cannot be turned into invitation
+slugs — there is no invitation they could point at. Nothing is lost that could
+have been kept: the ordering and cover choices simply have to be made again
+against real invitations.
+
+### Right after deploying, the promo site looks unchanged
+
+That is deliberate, not a failed deploy. With no invitations chosen,
+`/api/vinvite/promo-works` returns nothing and the landing page falls back to
+showing the built-in templates — exactly what it showed before. The section
+subtitle is the only visible difference.
+
+### To switch it over
+
+1. Sign in as the SYSTEM_ADMIN at `v-invite.uz` and **publish** the invitations
+   you want on the marketing site (only published ones can be showcased, and
+   only ones belonging to that account).
+2. Go to **Templates → Promotional site**. Under "Our work", add each one, order
+   them with ↑↓, and star up to two for the cover.
+3. Save. The landing page picks it up without a reload.
+
+Unpublishing or deleting an invitation later removes it from the marketing site
+on its own — there is nothing to remember to clean up here.
+
+### Also in this change
+
+- The **price list** section of the same card replaces the old per-template
+  show/hide list. `hiddenIds` carried over unchanged, so anything previously
+  hidden stays hidden.
+- **`/pricing` is now where a design is chosen**: every row previews live (👁)
+  and can be selected. The "our work" gallery no longer offers "select" — it is
+  showing a customer's finished invitation, which is not on sale.
+- Copy: "Ready in minutes" and "5 minutes to launch" are gone from the cover and
+  from Why us; the guest-responses tile now describes the **Telegram bot** that
+  forwards RSVPs, which is what the product actually does
+  (`InviteTelegramLink` / `InviteProject.telegramCode`).

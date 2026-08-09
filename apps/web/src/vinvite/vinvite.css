@@ -738,3 +738,15 @@
   /* The sheet still opens/closes, just without the slide-in choreography. */
   .vi-lp-sheet-link { opacity: 1 !important; transform: none !important; transition-delay: 0ms !important; }
 }
+
+/* Preview affordance beside a price-list row. Separate from the row itself
+   because a button cannot be nested in a button, and looking at a design is a
+   different intent from choosing it. */
+.vi-lp-tier-eye {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center; cursor: pointer;
+  font-size: 14px; line-height: 1;
+  border: 1px solid var(--vi-border); background: transparent; color: inherit;
+  transition: background .22s ease, border-color .22s ease;
+}
+.vi-lp-tier-eye:hover { background: var(--vi-accent-soft); border-color: var(--vi-accent); }

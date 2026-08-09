@@ -178,9 +178,6 @@ export type TemplateOverride = {
   updatedAt?: string;
 };
 
-// System-admin control of how templates are showcased on the promotional site.
-// All three are ordered lists of template ids; see resolveShowcase() for how
-// they turn into what a visitor sees.
 export const TEMPLATE_TIERS = ['STANDARD', 'PREMIUM', 'LUXURY'] as const;
 export type TemplateTier = (typeof TEMPLATE_TIERS)[number];
 
@@ -193,12 +190,18 @@ export type TemplatePricing = {
   updatedAt?: string | null;
 };
 
+// What the promotional site shows. `workSlugs`/`coverSlugs` are published
+// invitations (the site sells finished work, not blank templates); `hiddenIds`
+// is the one list still holding TEMPLATE ids, kept off the price list.
 export type PromoShowcase = {
-  coverIds: string[];
-  orderIds: string[];
+  workSlugs: string[];
+  coverSlugs: string[];
   hiddenIds: string[];
   updatedAt?: string | null;
 };
+
+/** A showcased invitation, resolved server-side and ready to render. */
+export type PromoWork = PublicInviteSite & { onCover: boolean };
 
 export type RsvpSubmission = {
   name: string;
@@ -311,6 +314,10 @@ export const vinviteService = {
   },
   async saveTemplatePricing(entries: Omit<TemplatePricing, 'updatedAt'>[]): Promise<TemplatePricing[]> {
     const { data } = await viHttp.put<TemplatePricing[]>('/template-pricing', { entries });
+    return data;
+  },
+  async getPromoWorks(): Promise<PromoWork[]> {
+    const { data } = await axios.get<PromoWork[]>(`${API_BASE}/vinvite/promo-works`);
     return data;
   },
   async getPromoShowcase(): Promise<PromoShowcase> {
