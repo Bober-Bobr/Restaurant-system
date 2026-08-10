@@ -11,7 +11,7 @@ import { useViT, type ViKey } from './i18n';
 import { useVInviteStore } from './store';
 import { getTemplate } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
-import { getPath, resolveAssetUrls, setPath } from './templates/utils';
+import { getPath, resolveAssetUrls, setPath, whenMode } from './templates/utils';
 import {
   LOCALES,
   type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle, type AdminTrail,
@@ -482,12 +482,34 @@ function ScheduleEditor({ field, design, setConfig }: {
       {items.map((item, i) => (
         <div key={i} style={itemBox}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input
-              type="time"
-              style={{ ...panelInput, width: 110, colorScheme: 'dark' }}
-              value={item.time}
-              onChange={(e) => update(items.map((it, j) => (j === i ? { ...it, time: e.target.value } : it)))}
-            />
+            {whenMode(item) === 'time' ? (
+              <input
+                type="time"
+                style={{ ...panelInput, width: 110, colorScheme: 'dark' }}
+                value={item.time}
+                onChange={(e) => update(items.map((it, j) => (j === i ? { ...it, time: e.target.value } : it)))}
+              />
+            ) : (
+              <input
+                style={{ ...panelInput, width: 110 }}
+                placeholder={t('fld_year')}
+                value={item.time}
+                onChange={(e) => update(items.map((it, j) => (j === i ? { ...it, time: e.target.value } : it)))}
+              />
+            )}
+            {/* Switching clears the value: a clock time is not a year, and
+                carrying "19:00" into a year field would look like a bug. */}
+            <button
+              type="button"
+              className="adm-btn-ghost"
+              style={{ fontSize: 11, padding: '5px 9px' }}
+              title={whenMode(item) === 'time' ? t('fld_use_year') : t('fld_use_time')}
+              onClick={() => update(items.map((it, j) => (j === i
+                ? { ...it, mode: whenMode(it) === 'time' ? 'text' : 'time', time: '' }
+                : it)))}
+            >
+              {whenMode(item) === 'time' ? '🕐' : '📅'}
+            </button>
             <span style={{ flex: 1 }} />
             <button type="button" className="adm-btn-ghost" style={{ fontSize: 12, padding: '5px 9px' }} disabled={i === 0} onClick={() => move(i, i - 1)}>↑</button>
             <button type="button" className="adm-btn-ghost" style={{ fontSize: 12, padding: '5px 9px' }} disabled={i === items.length - 1} onClick={() => move(i, i + 1)}>↓</button>
@@ -506,7 +528,13 @@ function ScheduleEditor({ field, design, setConfig }: {
           ))}
         </div>
       ))}
-      <button type="button" className="adm-btn-ghost" style={{ fontSize: 13 }} onClick={() => update([...items, { time: '19:00', label: {} }])}>
+      {/* A new entry inherits the last one's kind: a story list goes on
+          producing years, a programme goes on producing clock times. */}
+      <button type="button" className="adm-btn-ghost" style={{ fontSize: 13 }}
+        onClick={() => {
+          const like = items.length ? whenMode(items[items.length - 1]!) : 'time';
+          update([...items, { time: like === 'time' ? '19:00' : '', label: {}, mode: like }]);
+        }}>
         ＋ {t('add_item')}
       </button>
     </div>

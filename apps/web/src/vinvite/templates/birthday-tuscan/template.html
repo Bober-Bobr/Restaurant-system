@@ -752,7 +752,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       </div>
       <h1 class="hero-name" data-bind="honoreeName"></h1>
       <p class="overline hero-invite" data-bind="heroKicker"></p>
-      <p class="hero-sub" data-bind="heroSub"></p>
+      <p class="hero-sub" data-hide-empty data-bind="heroSub"></p>
       <p class="hero-age" data-opt="age" data-bind="ageLabel"></p>
     </div>
 
@@ -779,7 +779,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
         </svg>
       </div>
       <div class="msg-lines">
-        <p class="reveal reveal-d1" data-bind="inviteText"></p>
+        <p class="reveal reveal-d1" data-hide-empty data-bind="inviteText"></p>
       </div>
       <div class="botanical" aria-hidden="true">
         <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="1.3">
@@ -820,19 +820,19 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <h2 class="section-title reveal" data-t="eventDetails">Детали события</h2>
       <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="detail-grid">
-        <div class="detail-item reveal">
+        <div class="detail-item reveal" data-hide-empty>
           <div class="detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
           <div class="detail-text"><h3 data-t="date">Дата</h3><p data-bind="dateLong"></p></div>
         </div>
-        <div class="detail-item reveal reveal-d1">
+        <div class="detail-item reveal reveal-d1" data-hide-empty>
           <div class="detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
           <div class="detail-text"><h3 data-t="time">Время</h3><p data-bind="timeLine"></p></div>
         </div>
-        <div class="detail-item reveal reveal-d2">
+        <div class="detail-item reveal reveal-d2" data-hide-empty>
           <div class="detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
           <div class="detail-text"><h3 data-t="venue">Место</h3><p data-bind="venueName"></p></div>
         </div>
-        <div class="detail-item reveal reveal-d3">
+        <div class="detail-item reveal reveal-d3" data-hide-empty>
           <div class="detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div>
           <div class="detail-text"><h3 data-t="address">Адрес</h3><p data-bind="venueAddress"></p></div>
         </div>
@@ -849,7 +849,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <div class="venue-frame reveal reveal-d2" id="venueFrame">
         <div class="venue-imgwrap" id="venueImgWrap"><img id="venueImg" alt="" /></div>
       </div>
-      <p class="venue-desc reveal reveal-d3" data-bind="venueDesc"></p>
+      <p class="venue-desc reveal reveal-d3" data-hide-empty data-bind="venueDesc"></p>
       <div class="venue-btns reveal reveal-d4">
         <a class="btn btn-gold btn-lg" id="mapBtn" target="_blank" rel="noopener">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
@@ -896,7 +896,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
       <h2 class="section-title reveal reveal-d1" data-bind="dressTitle"></h2>
       <div class="divider reveal reveal-d1" aria-hidden="true"><span class="divider-mono" data-mono></span></div>
       <div class="swatches reveal reveal-d2" id="swatches"></div>
-      <p class="dress-note reveal reveal-d3" data-bind="dressNote"></p>
+      <p class="dress-note reveal reveal-d3" data-hide-empty data-bind="dressNote"></p>
     </div>
   </section>
 
@@ -918,7 +918,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
         </button>
       </div>
 
-      <p class="gifts-text reveal reveal-d2" data-bind="giftsTitle"></p>
+      <p class="gifts-text reveal reveal-d2" data-hide-empty data-bind="giftsTitle"></p>
     </div>
   </section>
 
@@ -989,7 +989,7 @@ img.broken{background:linear-gradient(135deg,var(--sage-soft),var(--champagne));
     <img class="final-mansion empty" id="finalMansion" alt="" aria-hidden="true">
     <div id="particles" aria-hidden="true"></div>
     <div class="final-content">
-      <p class="msg reveal" data-bind="finalMsg"></p>
+      <p class="msg reveal" data-hide-empty data-bind="finalMsg"></p>
       <p class="final-love reveal reveal-d1" data-t="withLove">С любовью</p>
       <p class="final-name reveal reveal-d2" data-bind="honoreeName"></p>
     </div>

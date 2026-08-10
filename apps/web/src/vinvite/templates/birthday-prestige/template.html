@@ -1028,8 +1028,8 @@ a{color:inherit}
       <span class="tag enter e-lift" data-t="theInvitation"></span>
       <h2 class="given enter e-track" data-bind="honoreeName"></h2>
       <p class="forty enter e-veil" data-opt="age"><span data-bind="ageLabel"></span><i></i></p>
-      <p class="note enter e-lift" style="--w:.15s" data-opt="message" data-bind="inviteText"></p>
-      <p class="sign enter e-lift" style="--w:.3s" data-bind="signLine"></p>
+      <p class="note enter e-lift" style="--w:.15s" data-opt="message" data-hide-empty data-bind="inviteText"></p>
+      <p class="sign enter e-lift" style="--w:.3s" data-hide-empty data-bind="signLine"></p>
     </div>
   </section>
 
@@ -1043,21 +1043,21 @@ a{color:inherit}
       </div>
 
       <div class="ledger" data-seq>
-        <div class="row full">
+        <div class="row full" data-hide-empty>
           <span class="k" data-t="dateLbl"></span>
           <span class="v"><span data-bind="dateLong"></span><small data-bind="dateNote"></small></span>
         </div>
-        <div class="row">
+        <div class="row" data-hide-empty>
           <span class="k" data-t="timeLbl"></span>
           <span class="v"><span data-bind="timeShort"></span><small data-bind="timeNote"></small></span>
         </div>
-        <div class="row" id="dressRow" data-opt="dress">
+        <div class="row" id="dressRow" data-opt="dress" data-hide-empty>
           <span class="k" data-t="dressLbl"></span>
           <span class="v"><span data-bind="dressTitle"></span><small data-bind="dressNote"></small>
             <span class="swatches" id="swatches"></span>
           </span>
         </div>
-        <div class="row full" id="venueRow" data-opt="venue">
+        <div class="row full" id="venueRow" data-opt="venue" data-hide-empty>
           <span class="k" data-t="venueLbl"></span>
           <span class="v"><span data-bind="venueName"></span>
             <small data-bind="venueAddress"></small>
@@ -1067,7 +1067,7 @@ a{color:inherit}
             </a>
           </span>
         </div>
-        <div class="row full" id="giftsRow" data-opt="gifts">
+        <div class="row full" id="giftsRow" data-opt="gifts" data-hide-empty>
           <span class="k" data-t="giftsLbl"></span>
           <span class="v"><span data-bind="giftsTitle"></span>
             <span class="giftcard" id="giftcard">
@@ -1124,9 +1124,9 @@ a{color:inherit}
 
       <div class="letter-stage">
         <article class="letter enter e-swing">
-          <p class="mark" data-bind="letterFrom"></p>
+          <p class="mark" data-hide-empty data-bind="letterFrom"></p>
           <p class="body" data-bind="letterText"></p>
-          <p class="from" data-bind="signLine"></p>
+          <p class="from" data-hide-empty data-bind="signLine"></p>
         </article>
       </div>
     </div>
@@ -1147,7 +1147,7 @@ a{color:inherit}
         <div class="dial"><div class="digits" data-t-cd="s"><span class="d">00</span></div><span class="cap" data-t="seconds"></span></div>
       </div>
 
-      <p class="when enter e-lift" style="--w:.2s" data-bind="whenLine"></p>
+      <p class="when enter e-lift" style="--w:.2s" data-hide-empty data-bind="whenLine"></p>
       <button class="ics-btn enter e-lift" id="icsBtn" type="button" data-t="addToCalendar"></button>
     </div>
   </section>

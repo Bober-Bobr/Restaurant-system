@@ -506,7 +506,11 @@ button,input,textarea{font:inherit;color:inherit}
   transition:gap .5s var(--lift),color .4s var(--vow);
 }
 .leaf a:hover{gap:14px;color:var(--bronze)}
-.leaf a{grid-column:2}
+/* The leaf is a two-column grid (symbol | text). The map button sits inside
+   #mapWrap, so it is the WRAPPER that is the grid item — targeting the <a>
+   left the wrapper to auto-place itself into the symbol column, which is what
+   pushed the button left the moment a map link was entered. */
+.leaf > a, .leaf > #mapWrap{grid-column:2}
 .leaf a svg{width:12px;height:12px;fill:currentColor}
 
 /* ---- 06c · THE STORY SO FAR ---- */
@@ -987,13 +991,13 @@ button,input,textarea{font:inherit;color:inherit}
       </div>
 
       <div class="particulars" data-run>
-        <article class="leaf wide arrive a-settle">
+        <article class="leaf wide arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
           <h3 data-t="lblDate">Date</h3>
           <p><span data-bind="dateFull"></span><small data-bind="timeText"></small></p>
         </article>
 
-        <article class="leaf wide arrive a-settle">
+        <article class="leaf wide arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M12 21s7-5.7 7-11a7 7 0 10-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
           <h3 data-t="lblVenue">Venue</h3>
           <p><span data-bind="venueName"></span><small data-bind="venueAddress"></small></p>
@@ -1005,31 +1009,31 @@ button,input,textarea{font:inherit;color:inherit}
           </span>
         </article>
 
-        <article class="leaf arrive a-settle">
+        <article class="leaf arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M7 4l2 3h6l2-3 3 4-3 2v10H7V10L4 8z"/></svg>
           <h3 data-t="lblDress">Dress</h3>
           <p><span data-bind="dress"></span><small data-bind="dressNote"></small></p>
         </article>
 
-        <article class="leaf arrive a-settle">
+        <article class="leaf arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9.5 20v-6h5v6"/></svg>
           <h3 data-t="lblStay">Stay</h3>
           <p><span data-bind="stay"></span><small data-bind="stayNote"></small></p>
         </article>
 
-        <article class="leaf arrive a-settle">
+        <article class="leaf arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M3 16h18M5.5 16V9.5h13V16"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/></svg>
           <h3 data-t="lblTravel">Travel</h3>
           <p><span data-bind="travel"></span><small data-bind="travelNote"></small></p>
         </article>
 
-        <article class="leaf arrive a-settle">
+        <article class="leaf arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M4.5 10h15v10h-15z"/><path d="M3.5 6h17v4h-17zM12 6v14"/><path d="M12 6S10.4 3 8.4 3.7 7.4 6.5 9 6zM12 6s1.6-3 3.6-2.3S16.6 6.5 15 6z"/></svg>
           <h3 data-t="lblGifts">Gifts</h3>
           <p><span data-bind="gifts"></span><small data-bind="giftsNote"></small></p>
         </article>
 
-        <article class="leaf wide arrive a-settle">
+        <article class="leaf wide arrive a-settle" data-hide-empty>
           <svg class="sym" viewBox="0 0 24 24"><path d="M3.5 6h17v12h-17z"/><path d="M3.5 7l8.5 6 8.5-6"/></svg>
           <h3 data-t="lblReply">Reply</h3>
           <p><span data-bind="replyBy"></span><small data-t="replyNote">The form is at the end of this page.</small></p>
@@ -1574,18 +1578,31 @@ button,input,textarea{font:inherit;color:inherit}
     var host = one('#chronicleList');
     var section = one('#chronicle');
     if (!host || !section) return;
-    var items = cfg('schedule', []) || [];
+    /* An entry with neither a moment nor a when is nothing to show — it would
+       render as a bare mark on the thread. Filtering before the length check
+       means clearing every entry hides the section too, rather than leaving a
+       heading over an empty thread. */
+    var all = cfg('schedule', []) || [];
+    var items = [];
+    for (var k = 0; k < all.length; k++) {
+      var entry = all[k];
+      if (!entry) continue;
+      if (String(entry.time || '').trim() || loc(entry.label).trim()) items.push(entry);
+    }
     host.innerHTML = '';
     if (!items.length) { section.classList.add('opt-off'); return; }
     items.forEach(function (item, i) {
-      if (!item) return;
+      var when = String(item.time || '').trim();
       var art = document.createElement('article');
       art.className = 'moment';
       art.innerHTML =
         '<span class="branch" aria-hidden="true"></span>' +
         '<span class="mark"><svg viewBox="0 0 24 24">' + MARKS[i % MARKS.length] + '</svg></span>' +
         '<span class="when"></span><h3></h3>';
-      one('.when', art).textContent = String(item.time || '');
+      one('.when', art).textContent = when;
+      /* The when is free text — a clock time, a year, or nothing at all. An
+         empty one must not leave its line and margin behind. */
+      one('.when', art).style.display = when ? '' : 'none';
       one('h3', art).textContent = loc(item.label);
       host.appendChild(art);
     });

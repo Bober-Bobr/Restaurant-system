@@ -1,5 +1,20 @@
 import { getPhotoUrl } from '../../utils/photoUrl';
-import type { TemplateDefinition } from './types';
+import type { ScheduleItem, TemplateDefinition } from './types';
+
+// The "when" of a schedule entry is a plain string, printed verbatim by the
+// templates — so it can be a clock time ("19:00") or free text ("Spring 2018",
+// "2027"). A programme wants the clock; "Our story" wants years. Which input
+// the builder shows is stored per entry as `mode`.
+//
+// When `mode` is absent the input is inferred from the value, so entries saved
+// before this existed — and every template's shipped defaults — open in the
+// right one. An empty value has nothing to infer from, so it keeps the clock,
+// which is what most schedules are.
+export function whenMode(item: ScheduleItem): 'time' | 'text' {
+  if (item.mode === 'time' || item.mode === 'text') return item.mode;
+  if (!(item.time ?? '').trim()) return 'time';
+  return /^\d{1,2}:\d{2}$/.test(item.time.trim()) ? 'time' : 'text';
+}
 
 // Dot-path helpers for reading/writing template config values immutably.
 export function getPath(obj: unknown, path: string): unknown {

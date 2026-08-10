@@ -1377,7 +1377,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
 
     <div class="separator" aria-hidden="true"><span class="gem"></span></div>
 
-    <p class="invite-message" data-bind="inviteText"></p>
+    <p class="invite-message" data-hide-empty data-bind="inviteText"></p>
   </article>
 </section>
 
@@ -1392,7 +1392,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
   </div>
 
   <div class="details-grid">
-    <div class="detail-card reveal" style="--reveal-delay: 0s">
+    <div class="detail-card reveal" style="--reveal-delay: 0s" data-hide-empty>
       <svg class="detail-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <path d="M10 44 V24 Q10 8 24 8 Q38 8 38 24 V44 Z"/>
         <path d="M16 44 V27 Q16 15 24 15 Q32 15 32 27 V44"/>
@@ -1405,7 +1405,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
       </div>
     </div>
 
-    <div class="detail-card reveal" style="--reveal-delay: 0.12s">
+    <div class="detail-card reveal" style="--reveal-delay: 0.12s" data-hide-empty>
       <svg class="detail-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <rect x="6" y="10" width="36" height="32" rx="3"/>
         <path d="M6 20 H42 M15 6 v8 M33 6 v8"/>
@@ -1415,7 +1415,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
       <p><span data-bind="dateWeekday"></span><br><em data-bind="dateLong"></em></p>
     </div>
 
-    <div class="detail-card reveal" style="--reveal-delay: 0.24s">
+    <div class="detail-card reveal" style="--reveal-delay: 0.24s" data-hide-empty>
       <svg class="detail-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
         <circle cx="24" cy="26" r="16"/>
         <path d="M24 16 v10 l7 5 M18 4 h12"/>

@@ -1145,7 +1145,7 @@ button,input,textarea,select{font:inherit;color:inherit}
       <p class="greet reveal rv-mask" data-t="happyBirthday"></p>
       <h1 class="name" id="welcomeName"></h1>
       <span class="age reveal rv-pop" data-opt="age" data-bind="ageLabel"></span>
-      <p class="msg reveal rv-rise" data-opt="message" data-bind="inviteText"></p>
+      <p class="msg reveal rv-rise" data-opt="message" data-hide-empty data-bind="inviteText"></p>
       <div class="ornament reveal rv-pop" style="margin-top:34px" aria-hidden="true">
         <i></i>
         <svg viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>
@@ -1163,14 +1163,14 @@ button,input,textarea,select{font:inherit;color:inherit}
       </div>
 
       <div class="info-grid" data-stagger>
-        <article class="card feature reveal rv-depth">
+        <article class="card feature reveal rv-depth" data-hide-empty>
           <h3 data-t="saveTheEvening"></h3>
           <div class="big" data-bind="dateLong"></div>
           <div class="rule"><i></i><b data-bind="dateYear"></b><i></i></div>
           <div class="hour" data-bind="timeLine"></div>
         </article>
 
-        <article class="card wide reveal rv-depth" id="venueCard" data-opt="venue">
+        <article class="card wide reveal rv-depth" id="venueCard" data-opt="venue" data-hide-empty>
           <svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
           <h3 data-t="venue"></h3>
           <p>
@@ -1184,14 +1184,14 @@ button,input,textarea,select{font:inherit;color:inherit}
           </a>
         </article>
 
-        <article class="card reveal rv-depth" id="dressCard" data-opt="dress">
+        <article class="card reveal rv-depth" id="dressCard" data-opt="dress" data-hide-empty>
           <svg class="ico" viewBox="0 0 24 24"><path d="M7 4l2 3h6l2-3 3 4-3 2v10H7V10L4 8z"/></svg>
           <h3 data-t="dressCode"></h3>
           <p><span data-bind="dressTitle"></span><small><span data-bind="dressNote"></span></small></p>
           <div class="swatches" id="swatches"></div>
         </article>
 
-        <article class="card reveal rv-depth" id="giftsCard" data-opt="gifts">
+        <article class="card reveal rv-depth" id="giftsCard" data-opt="gifts" data-hide-empty>
           <svg class="ico" viewBox="0 0 24 24"><path d="M4 9h16v11H4z"/><path d="M3 5.5h18V9H3z"/><path d="M12 5.5V20"/><path d="M12 5.5S10.4 2.6 8.4 3.2 7.4 6 9 5.5zM12 5.5s1.6-2.9 3.6-2.3S16.6 6 15 5.5z"/></svg>
           <h3 data-t="gifts"></h3>
           <p><span data-bind="giftsTitle"></span></p>
@@ -1273,7 +1273,7 @@ button,input,textarea,select{font:inherit;color:inherit}
         <div class="cd-unit"><div class="cd-num" id="cd-secs">00</div><span class="cd-label" data-t="seconds"></span></div>
       </div>
 
-      <p class="cd-note reveal rv-rise" data-bind="countWhen"></p>
+      <p class="cd-note reveal rv-rise" data-hide-empty data-bind="countWhen"></p>
       <button class="ics-btn reveal rv-pop" id="icsBtn" type="button" data-t="addToCalendar"></button>
     </div>
   </section>
@@ -1338,7 +1338,7 @@ button,input,textarea,select{font:inherit;color:inherit}
   <div class="layer" id="footerBalloons" aria-hidden="true"></div>
   <div class="wrap" style="position:relative;z-index:2">
     <p class="script reveal rv-mask" data-t="thankYouFor"></p>
-    <p class="reveal rv-rise" data-bind="finalMsg"></p>
+    <p class="reveal rv-rise" data-hide-empty data-bind="finalMsg"></p>
     <p class="sig reveal rv-pop">
       <span data-bind="sigLine1"></span>
       <span data-bind="sigLine2"></span>

@@ -61,7 +61,11 @@ export type TemplateFieldGroup = {
 
 // Localized gallery / schedule item shapes shared across templates.
 export type GalleryItem = { image: string; caption: LocalizedText };
-export type ScheduleItem = { time: string; label: LocalizedText };
+// `time` is printed verbatim by the templates, so it holds either a clock time
+// ("19:00") or free text ("Spring 2018"). `mode` records which input the
+// builder should show; it is advisory and absent on entries saved before it
+// existed, where the editor infers the input from the value instead.
+export type ScheduleItem = { time: string; label: LocalizedText; mode?: 'time' | 'text' };
 export type QuoteItem = { author: string; text: LocalizedText };
 
 // The shape persisted per project (in InviteProject.theme JSON). When

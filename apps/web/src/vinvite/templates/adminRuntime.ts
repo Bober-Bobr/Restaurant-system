@@ -17,6 +17,11 @@
 // Edit mode (window.__ADMIN_EDIT__): elements are draggable; motion-path stops
 // render as numbered draggable markers (the element itself is stop №1) and the
 // path animation is paused unless the host toggles play (adminPlay).
+//
+// It also carries one piece of behaviour that is not about the overlay at all:
+// EMPTY-ITEM PRUNING (see pruneEmpty below). That lives here because this is
+// the only script every template shares, so the rule is written once instead of
+// seven times and applies to templates added later for free.
 
 export const ADMIN_RUNTIME = `(function(){
   var LAYER = (window.__CONFIG__ && window.__CONFIG__.adminLayer) || {};
@@ -504,7 +509,88 @@ export const ADMIN_RUNTIME = `(function(){
     TR.raf = requestAnimationFrame(tickTrail);
   }
 
-  function render(){ renderStyles(); renderElements(); initParticles(); initTrail(); }
+  /* ── Empty-item pruning ─────────────────────────────────────────────────
+     Clearing a field in the builder must make the thing it filled disappear,
+     not leave an empty tile, a dangling label or a gap where a line used to
+     be. Templates opt in per item by marking the container \`data-hide-empty\`;
+     an item is empty when every [data-bind] inside it (and the container
+     itself, if it carries one) has no text.
+
+     Empty [data-bind] descendants are hidden individually as well as the
+     container as a whole — a tile whose heading survives but whose note was
+     deleted should lose the note's line and margin, not keep a blank one.
+
+     Driven by a MutationObserver rather than by hooking each template's
+     render: language switching rewrites the text without any config push, and
+     nothing about that is visible from here. Attributes are deliberately NOT
+     observed, so toggling our own class cannot re-trigger the pass. */
+  /* trim() rather than a regex: this whole runtime lives inside a template
+     literal, where a lone backslash escape would be eaten before it ever
+     reached the browser. trim() also drops the non-breaking spaces templates
+     use as placeholder content, which is exactly what we want treated as
+     empty. */
+  function isBlank(el){
+    return !(el.textContent || '').trim();
+  }
+
+  /* Templates separate a value from its note with a bare <br>. Hiding the note
+     alone would leave the line break behind — the blank line this feature
+     exists to remove — so the <br> beside a hidden value goes with it. */
+  function adjacentBr(el){
+    var dirs = ['previousSibling', 'nextSibling'];
+    for (var d = 0; d < dirs.length; d++) {
+      var n = el[dirs[d]];
+      while (n && n.nodeType === 3 && !(n.nodeValue || '').trim()) n = n[dirs[d]];
+      if (n && n.nodeType === 1 && n.tagName === 'BR') return n;
+    }
+    return null;
+  }
+
+  function pruneEmpty(){
+    var items = document.querySelectorAll('[data-hide-empty]');
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var binds = item.querySelectorAll('[data-bind]');
+      var own = item.hasAttribute('data-bind') ? [item] : [];
+      var all = own.concat(Array.prototype.slice.call(binds));
+      /* Nothing bound inside it: we have no way to judge, so leave it be. */
+      if (!all.length) continue;
+      var filled = false;
+      for (var j = 0; j < all.length; j++) {
+        var blank = isBlank(all[j]);
+        if (all[j] !== item) {
+          all[j].classList.toggle('vi-empty', blank);
+          var br = adjacentBr(all[j]);
+          if (br) br.classList.toggle('vi-empty', blank);
+        }
+        if (!blank) filled = true;
+      }
+      item.classList.toggle('vi-empty', !filled);
+    }
+  }
+
+  var pruneQueued = false;
+  function queuePrune(){
+    /* No rAF (a DOM shim in a test, a very old browser): prune now rather than
+       never. Coalescing is an optimisation, not a requirement. */
+    if (typeof requestAnimationFrame === 'undefined') { pruneEmpty(); return; }
+    if (pruneQueued) return;
+    pruneQueued = true;
+    requestAnimationFrame(function(){ pruneQueued = false; pruneEmpty(); });
+  }
+
+  function watchEmpty(){
+    var css = document.createElement('style');
+    css.textContent = '[data-hide-empty].vi-empty,[data-bind].vi-empty,br.vi-empty{display:none !important}';
+    (document.head || document.documentElement).appendChild(css);
+    pruneEmpty();
+    if (typeof MutationObserver === 'undefined' || !document.body) return;
+    new MutationObserver(queuePrune).observe(document.body, {
+      childList: true, subtree: true, characterData: true,
+    });
+  }
+
+  function render(){ renderStyles(); renderElements(); initParticles(); initTrail(); queuePrune(); }
 
   /* ── Editor focus: jump the preview to the section being edited ──────────
      Only the editor sends this. Every template opens behind an intro that
@@ -552,6 +638,7 @@ export const ADMIN_RUNTIME = `(function(){
     }
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
-  else render();
+  function boot(){ render(); watchEmpty(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();`;
