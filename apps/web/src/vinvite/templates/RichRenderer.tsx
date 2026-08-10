@@ -15,9 +15,10 @@ import { ADMIN_RUNTIME } from './adminRuntime';
 type InMsg =
   | { type: 'vinvite:rsvp'; payload: RsvpPayload }
   | { type: 'vinvite:height'; height: number }
-  | { type: 'vinvite:admin-move'; id: string; x: number; y: number; kf?: number };
+  | { type: 'vinvite:admin-move'; id: string; x: number; y: number; kf?: number }
+  | { type: 'vinvite:admin-select'; id: string | null };
 
-function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string; instagram: string }): string {
+function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string; instagram: string }, adminSelected?: string | null): string {
   // The template runs on the opaque `about:srcdoc` origin, so it can't read the
   // host origin itself. Inject it so templates can resolve their own bundled
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
@@ -28,6 +29,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     window.__ORIGIN__ = ${JSON.stringify(origin)};
     window.__ADMIN_EDIT__ = ${adminEdit ? 'true' : 'false'};
     window.__ADMIN_PLAY__ = ${adminPlay ? 'true' : 'false'};
+    window.__ADMIN_SELECTED__ = ${JSON.stringify(adminSelected ?? null)};
     window.__CONTACTS__ = ${JSON.stringify(contacts ?? { phone: '', telegram: '', instagram: '' })};
   </script>`;
   // The Design+ overlay runtime (system-admin custom elements / palettes)
@@ -43,19 +45,19 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     : withBootstrap + adminScript;
 }
 
-export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, adminEdit, adminPlay, interactive, focusSection }: RichRendererProps) {
+export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, onAdminSelect, adminSelected, adminEdit, adminPlay, interactive, focusSection }: RichRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedRef = useRef(false);
 
   // Built once per mounted template — later prop changes go via postMessage.
-  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts));
+  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected));
   const htmlRef = useRef(html);
   useEffect(() => {
     if (htmlRef.current === html) return;
     // A different template was swapped in — a real reload is required.
     htmlRef.current = html;
     loadedRef.current = false;
-    setDoc(buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts));
+    setDoc(buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html]);
 
@@ -74,19 +76,25 @@ export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdmi
       if (data.type === 'vinvite:admin-move' && onAdminMove) {
         onAdminMove(data.id, data.x, data.y, data.kf);
       }
+      if (data.type === 'vinvite:admin-select' && onAdminSelect) {
+        onAdminSelect(data.id);
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [onRsvp, onAdminMove]);
+  }, [onRsvp, onAdminMove, onAdminSelect]);
 
   // Push the current state into the frame without reloading it (which would
   // replay every animation). The initial values are baked into srcdoc above.
   const pushState = useCallback(() => {
     iframeRef.current?.contentWindow?.postMessage(
-      { type: 'vinvite:config', config, languages, contacts, ...(adminEdit ? { adminPlay: !!adminPlay } : {}) },
+      {
+        type: 'vinvite:config', config, languages, contacts,
+        ...(adminEdit ? { adminPlay: !!adminPlay, adminSelected: adminSelected ?? null } : {}),
+      },
       '*',
     );
-  }, [config, languages, contacts, adminEdit, adminPlay]);
+  }, [config, languages, contacts, adminEdit, adminPlay, adminSelected]);
 
   // `contacts` is fetched asynchronously and usually resolves BEFORE the frame
   // finishes loading, so this effect alone would drop it: it bails while

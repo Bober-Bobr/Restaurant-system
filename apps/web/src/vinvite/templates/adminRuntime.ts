@@ -27,6 +27,16 @@ export const ADMIN_RUNTIME = `(function(){
   var LAYER = (window.__CONFIG__ && window.__CONFIG__.adminLayer) || {};
   var EDIT = window.__ADMIN_EDIT__ === true;
   var PLAY = window.__ADMIN_PLAY__ === true;
+  /* Which overlay element the editor is currently showing settings for. The
+     preview is where an element is picked, so a click here tells the host and
+     the host tells us back — this variable only ever mirrors the editor. */
+  var SELECTED = window.__ADMIN_SELECTED__ || null;
+
+  function selectElement(id){
+    if (!EDIT || SELECTED === id) return;
+    SELECTED = id;
+    window.parent.postMessage({ type: 'vinvite:admin-select', id: id }, '*');
+  }
 
   /* Design+ editing: drag a node to reposition it (the element itself, or one
      of its numbered motion-path markers when kf is set); the new percent
@@ -38,6 +48,9 @@ export const ADMIN_RUNTIME = `(function(){
     wrap.addEventListener('pointerdown', function(down){
       down.preventDefault();
       down.stopPropagation();
+      /* Grabbing something is also choosing it — the editor's settings follow
+         whatever the administrator just put their finger on. */
+      selectElement(el.id);
       var target = kf == null ? el : el.path[kf];
       var fixed = el.anchor === 'fixed' || !el.anchor;
       var anchor = fixed ? null : document.getElementById(el.anchor);
@@ -265,11 +278,28 @@ export const ADMIN_RUNTIME = `(function(){
       if (ws.animation) gated.push(wrap);
       if (ns.animation) gated.push(node);
       gateAnim(wrap, gated, fixed);
-      if (EDIT && !el.cover) {
-        wrap.style.outline = '1px dashed rgba(124,58,237,0.75)';
-        wrap.style.outlineOffset = '2px';
-        makeDraggable(wrap, el);
-        if (el.path) for (var k = 0; k < el.path.length; k++) kfMarker(anchor, el, k, fixed);
+      if (EDIT) {
+        var chosen = el.id === SELECTED;
+        wrap.style.outline = chosen
+          ? '2px solid rgba(167,139,250,0.95)'
+          : '1px dashed rgba(124,58,237,0.55)';
+        wrap.style.outlineOffset = el.cover ? '-2px' : '2px';
+        if (el.cover) {
+          /* A cover fills its section and is not draggable, but it still has to
+             be selectable. It sits at z 0 by default, under the free elements,
+             so this cannot steal their clicks. */
+          wrap.style.pointerEvents = 'auto';
+          wrap.style.cursor = 'pointer';
+          (function(id){
+            wrap.addEventListener('pointerdown', function(ev){
+              ev.stopPropagation();
+              selectElement(id);
+            });
+          })(el.id);
+        } else {
+          makeDraggable(wrap, el);
+          if (el.path) for (var k = 0; k < el.path.length; k++) kfMarker(anchor, el, k, fixed);
+        }
       }
     }
   }
@@ -615,14 +645,28 @@ export const ADMIN_RUNTIME = `(function(){
     }
   }
 
+  /* Scrolls THIS document only.
+     scrollIntoView() walks up every scrollable ancestor — and for a document
+     inside an iframe that walk continues into the parent page, so focusing a
+     section here also yanked the builder around it. The editor wants the
+     preview to move and nothing else, so the offset is measured and applied
+     with window.scrollTo, which cannot reach outside the frame. */
   function focusSection(id){
     var el = id ? document.getElementById(id) : null;
     if (!el) return;
     skipIntro();
     /* one frame for the unlock to take effect before measuring the scroll */
     setTimeout(function(){
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-      catch (e) { el.scrollIntoView(); }
+      var top = 0;
+      try {
+        var rect = el.getBoundingClientRect();
+        var scrolled = window.pageYOffset
+          || (document.documentElement && document.documentElement.scrollTop)
+          || (document.body && document.body.scrollTop) || 0;
+        top = Math.max(0, rect.top + scrolled);
+      } catch (e) { top = el.offsetTop || 0; }
+      try { window.scrollTo({ top: top, behavior: 'smooth' }); }
+      catch (e) { window.scrollTo(0, top); }
     }, 40);
   }
 
@@ -631,6 +675,7 @@ export const ADMIN_RUNTIME = `(function(){
     if (d && typeof d === 'object' && d.type === 'vinvite:config' && d.config) {
       LAYER = d.config.adminLayer || {};
       if (d.adminPlay != null) PLAY = d.adminPlay === true;
+      if (d.adminSelected !== undefined) SELECTED = d.adminSelected;
       render();
     }
     if (d && typeof d === 'object' && d.type === 'vinvite:focus') {

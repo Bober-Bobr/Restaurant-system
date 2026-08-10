@@ -4,6 +4,7 @@ import { FONT_OPTIONS, fontStack } from './fonts';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
 import { PhotoUploadField } from '../components/PhotoUploadField';
+import { NumberField } from '../components/ui/NumberField';
 import { VideoUploadField } from '../components/VideoUploadField';
 import { getPhotoUrl } from '../utils/photoUrl';
 
@@ -367,8 +368,8 @@ export function AnimationControls({ value, onChange, t }: { value?: SectionAnima
         {ANIMATION_TYPES.map((tp) => <option key={tp} value={tp}>{tp}</option>)}
       </select>
       <div style={{ display: 'flex', gap: 8 }}>
-        <Labeled text={t('duration_ms')}><input type="number" min={100} max={4000} step={50} style={input} value={v.durationMs ?? 700} onChange={(e) => onChange({ ...v, durationMs: Number(e.target.value) })} /></Labeled>
-        <Labeled text={t('delay_ms')}><input type="number" min={0} max={4000} step={50} style={input} value={v.delayMs ?? 0} onChange={(e) => onChange({ ...v, delayMs: Number(e.target.value) })} /></Labeled>
+        <Labeled text={t('duration_ms')}><NumberField min={100} max={4000} step={50} style={input} value={v.durationMs ?? 700} onChange={(n) => onChange({ ...v, durationMs: n })} /></Labeled>
+        <Labeled text={t('delay_ms')}><NumberField min={0} max={4000} step={50} style={input} value={v.delayMs ?? 0} onChange={(n) => onChange({ ...v, delayMs: n })} /></Labeled>
       </div>
     </div>
   );

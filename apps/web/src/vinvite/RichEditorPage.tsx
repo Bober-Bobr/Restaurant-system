@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import QRCode from 'qrcode';
 import type { Locale } from '../utils/translate';
+import { NumberField } from '../components/ui/NumberField';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import { AudioUploadField } from '../components/AudioUploadField';
 import { VideoUploadField } from '../components/VideoUploadField';
@@ -70,6 +71,9 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
   // Section the preview should jump to. Driven by whichever group is open and
   // by the section a Design+ control last touched.
   const [focusSection, setFocusSection] = useState<string | undefined>(undefined);
+  // Which Design+ overlay element the panel is showing settings for. Picked by
+  // clicking it in the preview, or set for you when you add a new one.
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
 
   // A template swap invalidates any section id from the previous template.
   useEffect(() => { setFocusSection(undefined); setReloadKey((k) => k + 1); }, [design.templateId]);
@@ -187,6 +191,8 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 open={openGroup === '__admin'}
                 onToggle={() => setOpenGroup(openGroup === '__admin' ? null : '__admin')}
                 onFocusSection={setFocusSection}
+                selectedId={selectedElement}
+                onSelect={setSelectedElement}
               />
             )}
           </div>
@@ -235,6 +241,8 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                 focusSection={focusSection}
                 adminEdit={isSystemAdmin}
                 adminPlay={adminPlay}
+                adminSelected={selectedElement}
+                onAdminSelect={setSelectedElement}
                 onAdminMove={(id, x, y, kf) => {
                   const layer = (design.config.adminLayer as AdminLayer) ?? {};
                   setConfig('adminLayer', {
@@ -607,7 +615,7 @@ const ANIMS: { key: AdminElement['anim']; label: string }[] = [
   { key: 'spin', label: 'Spin' },
 ];
 
-function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocusSection }: {
+function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocusSection, selectedId, onSelect }: {
   template: TemplateDefinition;
   design: RichDesignData;
   setConfig: (path: string, value: unknown) => void;
@@ -615,6 +623,11 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
   onToggle: () => void;
   // Jump the preview to whichever section a control here is acting on.
   onFocusSection: (section: string) => void;
+  // Settings are shown for ONE element at a time — the one picked in the
+  // preview. Listing every element's controls at once made the panel a wall of
+  // sliders with no way to tell which shape on the page each belonged to.
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
 }) {
   const t = useViT();
   const layer: AdminLayer = (design.config.adminLayer as AdminLayer) ?? {};
@@ -635,16 +648,19 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
   const addElement = (type: AdminElement['type']) => {
     const anchor = sections[0] ?? 'fixed';
     focusAnchor(anchor);
+    const id = Math.random().toString(36).slice(2, 9);
     save({
       ...layer,
-      elements: [...elements, {
-        id: Math.random().toString(36).slice(2, 9),
-        type, src: '', anchor,
-        x: 50, y: 50, w: 30, rotate: 0, anim: 'none',
-      }],
+      elements: [...elements, { id, type, src: '', anchor, x: 50, y: 50, w: 30, rotate: 0, anim: 'none' }],
     });
+    // A new element has no image yet, so it renders nothing in the preview and
+    // could not be clicked there — it has to open on its own or it is lost.
+    onSelect(id);
   };
-  const removeElement = (id: string) => save({ ...layer, elements: elements.filter((e) => e.id !== id) });
+  const removeElement = (id: string) => {
+    if (selectedId === id) onSelect(null);
+    save({ ...layer, elements: elements.filter((e) => e.id !== id) });
+  };
 
   const setStyle = (section: string, patch: Partial<AdminSectionStyle>) => {
     onFocusSection(section);
@@ -686,19 +702,54 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
           <div>
             <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_elements')}</div>
             <div style={{ display: 'grid', gap: 10 }}>
-              {elements.map((el) => (
-                <div key={el.id} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+              {elements.length === 0 && (
+                <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>{t('adm_no_elements')}</p>
+              )}
+              {elements.map((el) => {
+                const selected = el.id === selectedId;
+                return (
+                <div key={el.id} style={{
+                  padding: selected ? 12 : '8px 10px', borderRadius: 12,
+                  background: selected ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.3)',
+                  border: `1px solid ${selected ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.08)'}`,
+                  display: 'grid', gap: selected ? 10 : 0,
+                }}>
+                  {/* The row itself is the picker. Clicking it selects the
+                      element and takes the preview to the section it lives in,
+                      which is the same thing clicking it in the preview does. */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 15 }}>{el.type === 'video' ? '🎬' : '🖼'}</span>
+                    <button
+                      type="button"
+                      onClick={() => { onSelect(selected ? null : el.id); if (!selected) focusAnchor(el.anchor); }}
+                      aria-expanded={selected}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0,
+                        padding: 0, background: 'none', border: 'none', cursor: 'pointer',
+                        color: selected ? '#e9d5ff' : '#cbd5f5', font: 'inherit', fontSize: 12.5, textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: 15 }}>{el.type === 'video' ? '🎬' : '🖼'}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        #{el.anchor === 'fixed' ? t('adm_fixed') : el.anchor}
+                        {el.cover ? ` · ${t('adm_cover')}` : ''}
+                        {!el.src ? ` · ${t('adm_no_source')}` : ''}
+                      </span>
+                      <span style={{ marginLeft: 'auto', color: '#a78bfa', fontSize: 11 }}>{selected ? '▲' : '▼'}</span>
+                    </button>
+                    <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => removeElement(el.id)}>{t('delete')}</button>
+                  </div>
+
+                  {selected && (
+                  <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <select value={el.anchor} onChange={(e) => setElement(el.id, { anchor: e.target.value })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
-                      {sections.map((s) => <option key={s} value={s}>#{s}</option>)}
+                      {sections.map((sec) => <option key={sec} value={sec}>#{sec}</option>)}
                       <option value="fixed">{t('adm_fixed')}</option>
                     </select>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#cbd5f5', marginLeft: 'auto' }}>
                       <input type="checkbox" checked={!!el.cover} onChange={(e) => setElement(el.id, { cover: e.target.checked || undefined })} />
                       {t('adm_cover')}
                     </label>
-                    <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => removeElement(el.id)}>{t('delete')}</button>
                   </div>
 
                   {el.type === 'photo' ? (
@@ -732,21 +783,24 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
                     {el.anim && !['none', 'float', 'pulse', 'spin'].includes(el.anim) && (
                       <>
                         <label style={{ fontSize: 11, color: '#94a3b8' }}>s:
-                          <input type="number" min={0.2} max={10} step={0.2} value={num(el.animDur, 1.6)} onChange={(e) => setElement(el.id, { animDur: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+                          <NumberField min={0.2} max={10} step={0.2} value={num(el.animDur, 1.6)} onChange={(n) => setElement(el.id, { animDur: n })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
                         </label>
                         <label style={{ fontSize: 11, color: '#94a3b8' }}>+s:
-                          <input type="number" min={0} max={10} step={0.2} value={num(el.animDelay, 0)} onChange={(e) => setElement(el.id, { animDelay: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+                          <NumberField min={0} max={10} step={0.2} value={num(el.animDelay, 0)} onChange={(n) => setElement(el.id, { animDelay: n })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
                         </label>
                       </>
                     )}
                     <label style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>z:
-                      <input type="number" min={-1} max={99} value={num(el.z, el.cover ? 0 : 5)} onChange={(e) => setElement(el.id, { z: Number(e.target.value) })} style={{ ...panelInput, width: 56, padding: '4px 6px', marginLeft: 4 }} />
+                      <NumberField min={-1} max={99} value={num(el.z, el.cover ? 0 : 5)} onChange={(n) => setElement(el.id, { z: n })} style={{ ...panelInput, width: 56, padding: '4px 6px', marginLeft: 4 }} />
                     </label>
                   </div>
 
                   {!el.cover && <PathEditor el={el} setElement={setElement} />}
+                  </>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 12 }} onClick={() => addElement('photo')}>＋ {t('adm_add_photo')}</button>
@@ -880,20 +934,20 @@ function PathEditor({ el, setElement }: {
                 color: '#fff', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               }}>{i + 2}</span>
               <label style={{ fontSize: 11, color: '#94a3b8' }}>°
-                <input type="number" min={-360} max={360} value={kfNum(p.rotate, el.rotate ?? 0)} onChange={(e) => setKf(i, { rotate: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+                <NumberField min={-360} max={360} value={kfNum(p.rotate, el.rotate ?? 0)} onChange={(n) => setKf(i, { rotate: n })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
               </label>
               <label style={{ fontSize: 11, color: '#94a3b8' }}>×
-                <input type="number" min={0.1} max={5} step={0.1} value={kfNum(p.scale, 1)} onChange={(e) => setKf(i, { scale: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+                <NumberField min={0.1} max={5} step={0.1} value={kfNum(p.scale, 1)} onChange={(n) => setKf(i, { scale: n })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
               </label>
               <label style={{ fontSize: 11, color: '#94a3b8' }}>α
-                <input type="number" min={0} max={1} step={0.05} value={kfNum(p.opacity, 1)} onChange={(e) => setKf(i, { opacity: Number(e.target.value) })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
+                <NumberField min={0} max={1} step={0.05} value={kfNum(p.opacity, 1)} onChange={(n) => setKf(i, { opacity: n })} style={{ ...panelInput, width: 58, padding: '4px 6px', marginLeft: 4 }} />
               </label>
               <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '3px 9px', marginLeft: 'auto' }} onClick={() => removeKf(i)}>✕</button>
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ fontSize: 11, color: '#94a3b8' }}>{t('adm_dur')}:
-              <input type="number" min={0.5} max={60} step={0.5} value={kfNum(el.pathDur, 6)} onChange={(e) => setElement(el.id, { pathDur: Number(e.target.value) })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
+              <NumberField min={0.5} max={60} step={0.5} value={kfNum(el.pathDur, 6)} onChange={(n) => setElement(el.id, { pathDur: n })} style={{ ...panelInput, width: 62, padding: '4px 6px', marginLeft: 4 }} />
             </label>
             <select value={el.pathEase ?? 'ease-in-out'} onChange={(e) => setElement(el.id, { pathEase: e.target.value as AdminElement['pathEase'] })} style={{ ...panelInput, width: 'auto', padding: '5px 8px', fontSize: 12 }}>
               <option value="ease-in-out">ease-in-out</option>

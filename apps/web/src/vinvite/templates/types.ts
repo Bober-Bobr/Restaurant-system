@@ -98,6 +98,11 @@ export type RichRendererProps = {
   // when a motion-path keyframe marker was dragged (index into element.path).
   adminEdit?: boolean;
   onAdminMove?: (id: string, x: number, y: number, kf?: number) => void;
+  // Design+ editing: which overlay element the settings panel is showing.
+  // Selection is made in the PREVIEW (that is where the elements are), so this
+  // travels in, and a click inside the frame reports back out.
+  adminSelected?: string | null;
+  onAdminSelect?: (id: string | null) => void;
   // Design+ editing: play motion-path animations in the editor preview
   // (paused by default so elements stay under the cursor while dragging).
   adminPlay?: boolean;
