@@ -109,8 +109,7 @@ button,input,textarea{font:inherit;color:inherit}
 .arrive.here{opacity:1;transform:none;filter:none;clip-path:inset(0 0 0 0)}
 .a-rise  {transform:translateY(40px) scale(.98);filter:blur(10px)}      /* card    */
 .a-settle{transform:perspective(1300px) rotateY(-9deg) translateY(34px);filter:blur(6px);transform-origin:0 50%}
-.a-iris  {clip-path:circle(0% at 50% 55%)}                              /* gallery */
-.a-iris.here{clip-path:circle(78% at 50% 55%)}
+.a-pin   {transform:translateY(30px) scale(.94);filter:blur(7px)}       /* gallery */
 .a-tide  {clip-path:inset(100% 0 0 0);transform:translateY(20px)}       /* clock   */
 .a-bloom {transform:scale(.94);filter:blur(8px) brightness(1.14)}       /* reply   */
 .a-word  {transform:translateY(22px);filter:blur(5px)}                  /* text    */
@@ -540,40 +539,66 @@ button,input,textarea{font:inherit;color:inherit}
   opacity:0;transform:translateY(12px);transition:all 1s var(--lift) calc(var(--d) + .62s)}
 .moment.here .when,.moment.here h3{opacity:1;transform:none}
 
-/* ---- 06d · THE GALLERY ---- */
-.plates{display:grid;grid-template-columns:repeat(12,1fr);gap:clamp(10px,2.8vw,18px);align-items:start}
-.frame-shot{position:relative;overflow:hidden;background:var(--marble);
-  box-shadow:0 34px 70px -46px rgba(107,90,66,.8)}
-.frame-shot .pic{
-  width:100%;height:100%;
-  background:var(--pic,linear-gradient(160deg,#E8E0D2,#CFC3AE));
-  background-size:cover;background-position:center;
+/* ---- 06d · THE GALLERY — snapshots taped to the wall ---- */
+/* Prints pinned up with strips of tape, not a fixed collage: the old layout
+   hard-coded four slots (grid-column spans plus negative margins tuned to sit
+   against each other), so a fifth photo cycled back onto the first slot's
+   column and the negative margins pulled unrelated rows into one another. This
+   wraps, so any number of photos hangs correctly. */
+.wall{
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;
+  gap:clamp(22px,6vw,40px) clamp(16px,4vw,30px);
+  padding-top:14px;   /* room for the tape, which overhangs the paper */
 }
-/* The slow zoom waits for the plate, like the sway below: an ambient loop that
-   ran from page load would burn on a photo nobody has scrolled to yet. */
-.frame-shot.here .pic{animation:picBreath var(--pb,24s) var(--float) infinite}
-@keyframes picBreath{0%,100%{scale:1}50%{scale:1.06}}
-.frame-shot::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(196deg,rgba(255,248,236,.3),transparent 44%,rgba(107,90,66,.22));
+.snap{
+  position:relative;
+  width:clamp(148px,42vw,208px);
+  padding:10px 10px 34px;
+  background:linear-gradient(168deg,#FFFEFB,var(--pearl));
+  box-shadow:0 18px 34px -22px rgba(107,90,66,.75),0 2px 6px -3px rgba(107,90,66,.4);
+  /* The resting tilt uses the independent `rotate` property, NOT transform:
+     .arrive.here sets transform:none, which would straighten every print the
+     moment it arrived. */
+  rotate:var(--r,-2deg);
+  transition:rotate .7s var(--lift), box-shadow .7s var(--vow);
 }
-.frame-shot figcaption{
-  position:absolute;left:13px;right:13px;bottom:11px;z-index:2;
-  font-family:var(--title);font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;line-height:1.7;
-  color:#FFFDF8;text-shadow:0 2px 10px rgba(70,56,40,.7);
+.snap .shot{
+  display:block;position:relative;overflow:hidden;
+  aspect-ratio:1;
+  background:linear-gradient(160deg,var(--marble),var(--stone));
 }
-.g1{grid-column:1/9;aspect-ratio:4/5}
-.g2{grid-column:8/13;aspect-ratio:3/4;margin-top:18%}
-.g3{grid-column:1/7;aspect-ratio:1;margin-top:-8%}
-.g4{grid-column:6/13;aspect-ratio:5/4;margin-top:4%}
-/* The sway only starts once the plate has arrived — a loop that ran from load
-   would have the frame already displaced when the iris opens on it. */
-.g1.here{animation:sway1 17s var(--float) infinite}
-.g3.here{animation:sway1 21s var(--float) -7s infinite}
-.g2.here{animation:sway2 19s var(--float) -4s infinite}
-.g4.here{animation:sway2 23s var(--float) -11s infinite}
-@keyframes sway1{0%,100%{translate:0 0}50%{translate:0 -11px}}
-@keyframes sway2{0%,100%{translate:0 0}50%{translate:0 10px}}
+.snap img{width:100%;height:100%;object-fit:cover;display:block}
+/* A photo that fails to load leaves the paper and its grain rather than a
+   white hole — and never a caption floating over nothing. */
+.snap.broken img{display:none}
+.snap figcaption{
+  position:absolute;left:10px;right:10px;bottom:9px;
+  font-family:var(--title);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-soft);text-align:center;line-height:1.5;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The tape: a translucent strip over the top edge, its own tilt per print. */
+.snap .tape{
+  position:absolute;top:-11px;left:50%;
+  width:clamp(56px,17vw,78px);height:22px;
+  translate:-50% 0;rotate:var(--tr,-4deg);
+  background:linear-gradient(180deg,rgba(255,253,248,.72),rgba(231,210,164,.5));
+  box-shadow:0 1px 3px rgba(107,90,66,.25);
+  border-left:1px solid rgba(255,255,255,.5);border-right:1px solid rgba(255,255,255,.5);
+}
+.snap .tape::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 2px,transparent 2px 5px);
+}
+@media (hover:hover){
+  .snap:hover{rotate:0deg;box-shadow:0 30px 54px -26px rgba(107,90,66,.85);z-index:3}
+}
+/* Ambient sway and the slow zoom both wait for the print to arrive — a loop
+   running from page load burns on a photo nobody has scrolled to. */
+.snap.here{animation:snapSway var(--sw,19s) var(--float) var(--swd,0s) infinite alternate}
+@keyframes snapSway{from{translate:0 0}to{translate:0 -9px}}
+.snap.here img{animation:picBreath var(--pb,24s) var(--float) infinite}
+@keyframes picBreath{0%,100%{scale:1}50%{scale:1.05}}
 
 /* ---- 06e · THE COUNTDOWN ---- */
 .until{text-align:center;position:relative}
@@ -778,9 +803,7 @@ button,input,textarea{font:inherit;color:inherit}
   .moment:nth-child(even) .branch{right:auto;left:-1px;transform-origin:left;
     background:linear-gradient(90deg,var(--gold),rgba(201,169,106,.2))}
   .moment .mark{margin-top:0}
-  .plates{gap:26px}
-  .g2{margin-top:22%}
-  .g3{margin-top:-4%}
+  .wall{gap:34px 30px}
   .answers{grid-template-columns:1fr 1fr}
   .dial .face{max-width:104px}
 }
@@ -1063,7 +1086,7 @@ button,input,textarea{font:inherit;color:inherit}
         <span class="overline arrive a-word" data-t="galleryOverline">Lately</span>
         <h2 id="galleryTitle" class="arrive a-word" style="--d:.1s" data-t="galleryTitle">Us, Recently</h2>
       </div>
-      <div class="plates" id="plates"></div>
+      <div class="wall" id="plates"></div>
     </div>
   </section>
 
@@ -1611,8 +1634,11 @@ button,input,textarea{font:inherit;color:inherit}
   /* ========================================================================
      06 · THE GALLERY
      ==================================================================== */
-  var PLATE_CLASSES = ['g1', 'g2', 'g3', 'g4'];
-  var PLATE_BREATH = ['22s', '27s', '25s', '30s'];
+  /* Desynced sway and zoom so the wall never pulses in unison, and a tilt that
+     alternates left/right — a whole wall leaning the same way reads as a
+     mistake rather than as prints hung by hand. */
+  var SNAP_SWAY = ['19s', '23s', '17s', '25s'];
+  var SNAP_BREATH = ['22s', '27s', '25s', '30s'];
 
   function renderGallery() {
     var host = one('#plates');
@@ -1622,14 +1648,34 @@ button,input,textarea{font:inherit;color:inherit}
     host.innerHTML = '';
     if (!items.length) { section.classList.add('opt-off'); return; }
     items.forEach(function (item, i) {
-      var fig = document.createElement('figure');
-      fig.className = 'frame-shot arrive a-iris ' + PLATE_CLASSES[i % PLATE_CLASSES.length];
-      fig.style.setProperty('--pb', PLATE_BREATH[i % PLATE_BREATH.length]);
-      fig.style.setProperty('--pic', "url('" + String(item.image).replace(/'/g, "\\'") + "')");
-      var pic = document.createElement('div');
-      pic.className = 'pic';
-      fig.appendChild(pic);
       var caption = loc(item.caption);
+      var fig = document.createElement('figure');
+      fig.className = 'snap arrive a-pin';
+      var lean = (i % 2 ? 1 : -1) * (1.6 + (i % 3) * 1.1);
+      fig.style.setProperty('--r', lean.toFixed(1) + 'deg');
+      fig.style.setProperty('--tr', (-lean * 1.4).toFixed(1) + 'deg');
+      fig.style.setProperty('--sw', SNAP_SWAY[i % SNAP_SWAY.length]);
+      fig.style.setProperty('--swd', (-(i * 2.3)).toFixed(1) + 's');
+      fig.style.setProperty('--pb', SNAP_BREATH[i % SNAP_BREATH.length]);
+
+      var tape = document.createElement('span');
+      tape.className = 'tape';
+      tape.setAttribute('aria-hidden', 'true');
+      fig.appendChild(tape);
+
+      var shot = document.createElement('span');
+      shot.className = 'shot';
+      var img = document.createElement('img');
+      img.alt = caption || '';
+      img.loading = 'lazy';
+      /* A real <img>, not a CSS background: a background cannot report that it
+         failed, so a dead upload used to leave a captioned blank rectangle with
+         nothing to say it was broken. Every other template does this too. */
+      img.onerror = function () { fig.classList.add('broken'); };
+      img.src = String(item.image);
+      shot.appendChild(img);
+      fig.appendChild(shot);
+
       if (caption) {
         var cap = document.createElement('figcaption');
         cap.textContent = caption;

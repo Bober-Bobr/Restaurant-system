@@ -558,7 +558,6 @@ a{color:inherit}
   padding:11px 11px 44px;border-radius:2px;
   box-shadow:0 26px 50px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(198,162,94,.2);
   rotate:var(--r,0deg);
-  animation:floatCard var(--fd,7s) var(--calm) var(--fdel,0s) infinite;
   transition:transform .5s var(--glide), box-shadow .5s var(--calm), rotate .5s var(--glide);
 }
 @media (hover:hover){
@@ -566,7 +565,15 @@ a{color:inherit}
     box-shadow:0 36px 64px -18px rgba(0,0,0,.9), 0 0 0 1px rgba(198,162,94,.45)}
 }
 .polaroid:active{transform:scale(.98)}
+/* The drift starts when the print arrives, not at load: the strip is far down
+   the page and an infinite loop would have been running the whole way there. */
+.polaroid.on{animation:floatCard var(--fd,7s) var(--calm) var(--fdel,0s) infinite}
 @keyframes floatCard{0%,100%{translate:0 0}50%{translate:0 -9px}}
+/* A print whose photo never arrived keeps its frame and its grain rather than
+   showing a flat panel with a caption under it. */
+.polaroid .shot.broken{
+  background:repeating-linear-gradient(135deg,rgba(198,162,94,.10) 0 6px,transparent 6px 12px),var(--graphite);
+}
 .polaroid .shot{
   position:relative;aspect-ratio:1/1.06;overflow:hidden;
   background:var(--graphite) center/cover no-repeat;
@@ -1460,10 +1467,14 @@ all('[data-seq]').forEach(function(g){
 });
 
 /* ── Image loading with graceful fallback ── */
+/* The probe reports failure as well as success: a background image cannot say
+   it is broken, so without the error path a dead upload left an empty print
+   that looked identical to one still loading. */
 function loadBg(el, src){
   if (!src) return;
   var probe = new Image();
-  probe.onload = function(){ el.style.backgroundImage = 'url("' + src + '")'; };
+  probe.onload = function(){ el.style.backgroundImage = 'url("' + src + '")'; el.classList.remove('broken'); };
+  probe.onerror = function(){ el.classList.add('broken'); };
   probe.src = src;
 }
 
