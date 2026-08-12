@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { photoService, type PhotoCategory } from '../../services/photo.service';
 import { useAdminStore } from '../../store/admin.store';
 import { translate } from '../../utils/translate';
 import { getPhotoUrl } from '../../utils/photoUrl';
+import { IMAGE_ACCEPT } from '../../utils/uploadFormats';
 import { Lightbox } from './lightbox';
 
 type PhotoSelectorProps = {
@@ -24,11 +25,34 @@ export const PhotoSelector = ({
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ['photos', category, dishCategory ?? ''],
     queryFn: () => photoService.listPhotos(category, dishCategory)
   });
+
+  // ── Upload from the device, into the library this picker is browsing ───────
+  // The same call the Photos page makes, with the same category and dish
+  // category — so the file lands in the same folder and shows up there without
+  // anything having to be copied or registered a second time. Before this, a
+  // photo could only be added on the Photos page and then hunted for here.
+  const uploadMutation = useMutation({
+    mutationFn: (files: File[]) => photoService.uploadPhotos(category, files, dishCategory),
+    onSuccess: (urls) => {
+      // Every list keyed on this category, whichever dish category it filters.
+      queryClient.invalidateQueries({ queryKey: ['photos', category] });
+      // Uploading from inside a picker is a way of choosing: pick what arrived.
+      if (urls[0]) onPhotoSelect(urls[0]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    },
+  });
+
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+    uploadMutation.mutate(files);
+  };
 
   const deleteMutation = useMutation({
     mutationFn: ({ filename, dishCat }: { filename: string; dishCat?: string }) =>
@@ -66,6 +90,45 @@ export const PhotoSelector = ({
       <div style={{ display: 'grid', gap: 12 }}>
         {placeholder && !selectedPhotoUrl && (
           <p style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)' }}>{placeholder}</p>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadMutation.isPending}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '7px 14px', borderRadius: 8,
+              border: '1px dashed rgba(201,164,44,0.45)',
+              background: 'rgba(201,164,44,0.07)',
+              color: '#c9a42c', fontSize: 13, fontWeight: 600,
+              cursor: uploadMutation.isPending ? 'wait' : 'pointer',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {uploadMutation.isPending ? translate('uploading', locale) : translate('upload_from_device', locale)}
+          </button>
+          <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.4)' }}>
+            {translate('upload_adds_to_photos', locale)}
+          </span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={IMAGE_ACCEPT}
+            onChange={handleUpload}
+            style={{ display: 'none' }}
+          />
+        </div>
+        {uploadMutation.isError && (
+          <p style={{ margin: 0, fontSize: 12, color: '#fca5a5' }}>
+            {uploadMutation.error instanceof Error ? uploadMutation.error.message : translate('failed_load_photos', locale)}
+          </p>
         )}
 
         {selectedPhotoUrl && (

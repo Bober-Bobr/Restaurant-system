@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { formatSumInput, parseSumToTiyin } from '../utils/currency';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { parseSumToTiyin } from '../utils/currency';
 import type { MenuItem, TableCategory, Subcategory, DishI18n } from '../types/domain';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { useExcludedCategories, useHideSubcategories } from '../hooks/useExcludedCategories';
+import { draftOf, patchOf, mayAcceptServerValue, type DishDraft } from './adminMenuDraft';
 
 type MenuCategory = MenuItem['category'];
 
@@ -83,7 +84,6 @@ function quickSort(items: MenuItem[]): MenuItem[] {
 }
 
 const parsePriceToCents = parseSumToTiyin;
-const formatCents = formatSumInput;
 
 // Glowing star marking a bestseller dish.
 function BestsellerStar({ on, size = 18 }: { on: boolean; size?: number }) {
@@ -223,7 +223,13 @@ export const AdminMenuPage = () => {
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <h1 className="adm-title" style={{ margin: 0 }}>{translate('menu_management', locale)}</h1>
+        <div style={{ display: 'grid', gap: 4 }}>
+          <h1 className="adm-title" style={{ margin: 0 }}>{translate('menu_management', locale)}</h1>
+          {/* There is no Save button on the dish rows; say so once, up here. */}
+          <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.45)' }}>
+            {translate('changes_saved_automatically', locale)}
+          </span>
+        </div>
         {/* The create panel is hidden by default; this button reveals it. */}
         <Button type="button" onClick={() => setShowCreate((v) => !v)}>
           {showCreate ? translate('hide_form', locale) : `+ ${translate('create_menu_item', locale)}`}
@@ -348,7 +354,6 @@ export const AdminMenuPage = () => {
                   showTableCategories={showTableCategories}
                   showSubcategories={showSubcategories}
                   onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
-                  isSaving={updateMutation.isPending}
                   onDelete={() => deleteMutation.mutate(item.id)}
                   isDeleting={deleteMutation.isPending && deleteMutation.variables === item.id}
                 />
@@ -384,8 +389,7 @@ export const AdminMenuPage = () => {
                       showTableCategories={showTableCategories}
                       showSubcategories={showSubcategories}
                       onPatch={(patch) => updateMutation.mutate({ menuItemId: item.id, patch })}
-                      isSaving={updateMutation.isPending}
-                      onDelete={() => deleteMutation.mutate(item.id)}
+                          onDelete={() => deleteMutation.mutate(item.id)}
                       isDeleting={deleteMutation.isPending && deleteMutation.variables === item.id}
                     />
                   ))}
@@ -408,10 +412,102 @@ type MenuItemRowProps = {
   showTableCategories: boolean;
   showSubcategories: boolean;
   onPatch: (patch: Partial<MenuItem>) => void;
-  isSaving: boolean;
   onDelete: () => void;
   isDeleting: boolean;
 };
+
+// ── Autosave ────────────────────────────────────────────────────────────────
+// There is no Save button on this page: an edit to a dish is committed on its
+// own. Typing is debounced and a picked value (category, photo) commits at
+// once, because that click is already the decision.
+//
+// Two things make an autosaving row harder than it looks, and both are handled
+// in `useDishDraft`:
+//
+//  · The list refetches after every save, so the row is continuously handed a
+//    fresh `item`. Copying that into the fields unconditionally would overwrite
+//    whatever was typed while the request was in the air — so the copy is
+//    skipped while the row holds unsaved edits.
+//  · A debounce that is still counting when the row goes away (filtering by
+//    category, leaving the page, closing the tab) would drop the edit silently.
+//    Every exit flushes.
+
+const AUTOSAVE_MS = 800;
+
+type SaveStatus = 'idle' | 'saving' | 'saved';
+
+function useDishDraft(item: MenuItem, onPatch: (patch: Partial<MenuItem>) => void) {
+  const [draft, setDraft] = useState<DishDraft>(() => draftOf(item));
+  const [status, setStatus] = useState<SaveStatus>('idle');
+
+  // `draft` also lives in a ref so a fired timer saves what is on screen now,
+  // not what was there when the timer was set.
+  const latest = useRef(draft);
+  latest.current = draft;
+  const itemRef = useRef(item);
+  itemRef.current = item;
+  const dirty = useRef(false);
+  const timer = useRef(0);
+  const settle = useRef(0);
+
+  const flush = useRef(() => {});
+  flush.current = () => {
+    window.clearTimeout(timer.current);
+    if (!dirty.current) return;
+    dirty.current = false;
+    onPatch(patchOf(latest.current, itemRef.current));
+    setStatus('saved');
+    window.clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => setStatus('idle'), 1600);
+  };
+
+  // Server → fields, but never over an edit that has not been saved yet.
+  useEffect(() => {
+    if (!mayAcceptServerValue(dirty.current)) return;
+    setDraft(draftOf(item));
+  }, [item.name, item.category, item.description, item.priceCents, item.photoUrl, item.nameI18n, item.descriptionI18n]);
+
+  // Unmount is an exit like any other: filtering the list by category, or
+  // navigating away, must not throw away what is still on the debounce.
+  useEffect(() => () => { flush.current(); window.clearTimeout(settle.current); }, []);
+
+  // Closing the tab mid-edit. Best-effort — the browser may cut the request
+  // short, but not trying at all guarantees the edit is lost.
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flush.current(); };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, []);
+
+  const edit = (patch: Partial<DishDraft>, immediate = false) => {
+    const next = { ...latest.current, ...patch };
+    latest.current = next;
+    setDraft(next);
+    dirty.current = true;
+    setStatus('saving');
+    window.clearTimeout(timer.current);
+    if (immediate) flush.current();
+    else timer.current = window.setTimeout(() => flush.current(), AUTOSAVE_MS);
+  };
+
+  return { draft, status, edit, flush: () => flush.current() };
+}
+
+// "Saving…" / "Saved", where the Save button used to be. Without it an
+// autosaving form gives no sign that anything was committed.
+function SaveStatusNote({ status, locale }: { status: SaveStatus; locale: 'en' | 'ru' | 'uz' }) {
+  if (status === 'idle') return null;
+  const saved = status === 'saved';
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+      color: saved ? '#4ade80' : 'rgba(226,232,240,0.55)',
+      transition: 'color 0.2s',
+    }}>
+      {saved ? `✓ ${translate('saved', locale)}` : translate('saving', locale)}
+    </span>
+  );
+}
 
 const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>[0] }[] = [
   { value: 'SOUPS', key: 'soups' },
@@ -451,43 +547,12 @@ const CATEGORY_OPTIONS: { value: MenuCategory; key: Parameters<typeof translate>
   { value: 'LIQUEURS', key: 'liqueurs' },
 ];
 
-const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, showSubcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, showSubcategories, onPatch, onDelete, isDeleting }: MenuItemRowProps) => {
   const catSubs = subcategories.filter((s) => s.category === item.category);
-  const [localName, setLocalName] = useState(item.name);
-  const [localCategory, setLocalCategory] = useState<MenuCategory>(item.category);
-  const [localDescription, setLocalDescription] = useState(item.description ?? '');
-  const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
-  const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
-  const [localNameI18n, setLocalNameI18n] = useState<DishI18n>(item.nameI18n ?? {});
-  const [localDescriptionI18n, setLocalDescriptionI18n] = useState<DishI18n>(item.descriptionI18n ?? {});
+  const { draft, status, edit, flush } = useDishDraft(item, onPatch);
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
 
-  useEffect(() => {
-    setLocalName(item.name);
-    setLocalCategory(item.category);
-    setLocalDescription(item.description ?? '');
-    setLocalPrice(formatCents(item.priceCents));
-    setLocalPhotoUrl(item.photoUrl ?? '');
-    setLocalNameI18n(item.nameI18n ?? {});
-    setLocalDescriptionI18n(item.descriptionI18n ?? {});
-  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl, item.nameI18n, item.descriptionI18n]);
-
-  const handleSave = () => {
-    const priceCents = parsePriceToCents(localPrice);
-    onPatch({
-      name: localName.trim(),
-      category: localCategory,
-      description: localDescription.trim() || undefined,
-      nameI18n: cleanI18n(localNameI18n) ?? {},
-      descriptionI18n: cleanI18n(localDescriptionI18n) ?? {},
-      photoUrl: localPhotoUrl.trim() || undefined,
-      ...(priceCents !== null ? { priceCents } : {}),
-      // Clear a now-mismatched subcategory when the dish's category changes.
-      ...(localCategory !== item.category ? { subcategoryId: null } : {}),
-    });
-  };
-
-  const photoSrc = getPhotoUrl(localPhotoUrl) ?? null;
+  const photoSrc = getPhotoUrl(draft.photoUrl) ?? null;
 
   return (
     <div className="adm-card p-4 space-y-3">
@@ -504,23 +569,23 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
               </div>
           }
         </button>
-        <Input value={localName} onChange={(e) => setLocalName(e.target.value)}
+        <Input value={draft.name} onChange={(e) => edit({ name: e.target.value })} onBlur={flush}
           className="flex-1 text-sm" placeholder={translate('name', locale)} />
       </div>
 
       {showPhotoSelector && (
         <PhotoSelector
           category="menu"
-          dishCategory={localCategory.toLowerCase()}
-          selectedPhotoUrl={localPhotoUrl || undefined}
-          onPhotoSelect={(url) => { setLocalPhotoUrl(url || ''); setShowPhotoSelector(false); }}
+          dishCategory={draft.category.toLowerCase()}
+          selectedPhotoUrl={draft.photoUrl || undefined}
+          onPhotoSelect={(url) => { edit({ photoUrl: url || '' }, true); setShowPhotoSelector(false); }}
         />
       )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <p className="adm-label text-xs">{translate('category', locale)}</p>
-          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuCategory)}>
+          <Select value={draft.category} onChange={(e) => edit({ category: e.target.value as MenuCategory }, true)}>
             {CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
             ))}
@@ -528,7 +593,7 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
         </div>
         <div className="space-y-1">
           <p className="adm-label text-xs">{translate('price', locale)}</p>
-          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="text-sm" />
+          <Input value={draft.price} onChange={(e) => edit({ price: e.target.value })} onBlur={flush} className="text-sm" />
         </div>
       </div>
 
@@ -545,15 +610,15 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
 
       <div className="space-y-1">
         <p className="adm-label text-xs">{translate('description', locale)}</p>
-        <Input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)}
+        <Input value={draft.description} onChange={(e) => edit({ description: e.target.value })} onBlur={flush}
           className="text-sm" placeholder="—" />
       </div>
 
       <DishTranslations
         locale={locale}
-        nameI18n={localNameI18n}
-        descriptionI18n={localDescriptionI18n}
-        onChange={({ nameI18n: n, descriptionI18n: d }) => { setLocalNameI18n(n); setLocalDescriptionI18n(d); }}
+        nameI18n={draft.nameI18n}
+        descriptionI18n={draft.descriptionI18n}
+        onChange={({ nameI18n: n, descriptionI18n: d }) => edit({ nameI18n: n, descriptionI18n: d })}
       />
 
       {showTableCategories && assignedTableCategories.length > 0 && (
@@ -568,17 +633,18 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
       )}
 
       <div className="flex gap-2 flex-wrap">
+        {/* Toggles commit on click — they are not part of the draft, so they
+            stay live even while a debounced text edit is still counting. */}
         <button
           type="button"
           onClick={() => onPatch({ isBestseller: !item.isBestseller })}
-          disabled={isSaving}
           aria-pressed={!!item.isBestseller}
           className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
           style={{
             background: item.isBestseller ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
             border: `1px solid ${item.isBestseller ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.1)'}`,
             color: item.isBestseller ? '#f59e0b' : 'rgba(226,232,240,0.7)',
-            cursor: isSaving ? 'default' : 'pointer',
+            cursor: 'pointer',
           }}
         >
           <BestsellerStar on={!!item.isBestseller} size={16} />
@@ -587,25 +653,22 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
         <button
           type="button"
           onClick={() => onPatch({ isOutOfStock: !item.isOutOfStock })}
-          disabled={isSaving}
           aria-pressed={!!item.isOutOfStock}
           className="flex items-center gap-2 self-start rounded-lg px-2.5 py-1.5 text-sm font-medium"
           style={{
             background: item.isOutOfStock ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
             border: `1px solid ${item.isOutOfStock ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
             color: item.isOutOfStock ? '#f87171' : 'rgba(226,232,240,0.7)',
-            cursor: isSaving ? 'default' : 'pointer',
+            cursor: 'pointer',
           }}
         >
           🚫 {translate('out_of_stock', locale)}
         </button>
       </div>
 
-      <div className="flex gap-2 pt-1">
-        <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave} className="flex-1">
-          {translate('save', locale)}
-        </Button>
-        <Button size="sm" variant="destructive" disabled={isSaving || isDeleting}
+      <div className="flex gap-2 pt-1 items-center">
+        <SaveStatusNote status={status} locale={locale} />
+        <Button size="sm" variant="destructive" disabled={isDeleting} className="ml-auto"
           onClick={() => { if (window.confirm(`Delete "${item.name}"?`)) onDelete(); }}>
           {isDeleting ? translate('deleting', locale) : translate('delete', locale)}
         </Button>
@@ -614,44 +677,13 @@ const MenuItemMobileCard = ({ item, locale, assignedTableCategories, subcategori
   );
 };
 
-const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, showSubcategories, onPatch, isSaving, onDelete, isDeleting }: MenuItemRowProps) => {
+const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, showTableCategories, showSubcategories, onPatch, onDelete, isDeleting }: MenuItemRowProps) => {
   const catSubs = subcategories.filter((s) => s.category === item.category);
-  const [localName, setLocalName] = useState(item.name);
-  const [localCategory, setLocalCategory] = useState<MenuItem['category']>(item.category);
-  const [localDescription, setLocalDescription] = useState(item.description ?? '');
-  const [localPrice, setLocalPrice] = useState(formatCents(item.priceCents));
-  const [localPhotoUrl, setLocalPhotoUrl] = useState(item.photoUrl ?? '');
-  const [localNameI18n, setLocalNameI18n] = useState<DishI18n>(item.nameI18n ?? {});
-  const [localDescriptionI18n, setLocalDescriptionI18n] = useState<DishI18n>(item.descriptionI18n ?? {});
+  const { draft, status, edit, flush } = useDishDraft(item, onPatch);
   const [showPhotoSelector, setShowPhotoSelector] = useState(false);
   const [showTranslations, setShowTranslations] = useState(false);
 
-  useEffect(() => {
-    setLocalName(item.name);
-    setLocalCategory(item.category);
-    setLocalDescription(item.description ?? '');
-    setLocalPrice(formatCents(item.priceCents));
-    setLocalPhotoUrl(item.photoUrl ?? '');
-    setLocalNameI18n(item.nameI18n ?? {});
-    setLocalDescriptionI18n(item.descriptionI18n ?? {});
-  }, [item.category, item.description, item.name, item.priceCents, item.photoUrl, item.nameI18n, item.descriptionI18n]);
-
-  const handleSave = () => {
-    const priceCents = parsePriceToCents(localPrice);
-    onPatch({
-      name: localName.trim(),
-      category: localCategory,
-      description: localDescription.trim() || undefined,
-      nameI18n: cleanI18n(localNameI18n) ?? {},
-      descriptionI18n: cleanI18n(localDescriptionI18n) ?? {},
-      photoUrl: localPhotoUrl.trim() || undefined,
-      ...(priceCents !== null ? { priceCents } : {}),
-      // Clear a now-mismatched subcategory when the dish's category changes.
-      ...(localCategory !== item.category ? { subcategoryId: null } : {})
-    });
-  };
-
-  const photoSrc = getPhotoUrl(localPhotoUrl) ?? null;
+  const photoSrc = getPhotoUrl(draft.photoUrl) ?? null;
 
   return (
     <>
@@ -684,12 +716,12 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
         {/* Name */}
         <td className="px-4 py-2.5">
-          <Input value={localName} onChange={(e) => setLocalName(e.target.value)} className="h-8 min-w-[140px] text-sm" />
+          <Input value={draft.name} onChange={(e) => edit({ name: e.target.value })} onBlur={flush} className="h-8 min-w-[140px] text-sm" />
         </td>
 
         {/* Category */}
         <td className="px-4 py-2.5">
-          <Select value={localCategory} onChange={(e) => setLocalCategory(e.target.value as MenuItem['category'])} className="h-8 min-w-[170px] text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <Select value={draft.category} onChange={(e) => edit({ category: e.target.value as MenuItem['category'] }, true)} className="h-8 min-w-[170px] text-sm" style={{ paddingTop: 0, paddingBottom: 0 }}>
             {CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{translate(o.key, locale)}</option>
             ))}
@@ -714,23 +746,22 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
         {/* Description */}
         <td className="px-4 py-2.5">
-          <Input value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} className="h-8 min-w-[160px] text-sm" placeholder="—" />
+          <Input value={draft.description} onChange={(e) => edit({ description: e.target.value })} onBlur={flush} className="h-8 min-w-[160px] text-sm" placeholder="—" />
         </td>
 
         {/* Price */}
         <td className="px-4 py-2.5">
-          <Input value={localPrice} onChange={(e) => setLocalPrice(e.target.value)} className="h-8 w-36 min-w-[130px] text-sm" />
+          <Input value={draft.price} onChange={(e) => edit({ price: e.target.value })} onBlur={flush} className="h-8 w-36 min-w-[130px] text-sm" />
         </td>
 
-        {/* Bestseller toggle */}
+        {/* Bestseller toggle — commits on click, independent of the draft. */}
         <td className="px-4 py-2.5 text-center">
           <button
             type="button"
             onClick={() => onPatch({ isBestseller: !item.isBestseller })}
-            disabled={isSaving}
             title={translate('bestseller', locale)}
             aria-pressed={!!item.isBestseller}
-            style={{ background: 'none', border: 'none', cursor: isSaving ? 'default' : 'pointer', padding: 4, lineHeight: 0 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}
           >
             <BestsellerStar on={!!item.isBestseller} size={20} />
           </button>
@@ -741,11 +772,10 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
           <button
             type="button"
             onClick={() => onPatch({ isOutOfStock: !item.isOutOfStock })}
-            disabled={isSaving}
             title={translate('out_of_stock', locale)}
             aria-pressed={!!item.isOutOfStock}
             style={{
-              background: 'none', border: 'none', cursor: isSaving ? 'default' : 'pointer', padding: '4px 8px',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
               fontSize: 18, lineHeight: 1, opacity: item.isOutOfStock ? 1 : 0.25,
               filter: item.isOutOfStock ? 'none' : undefined,
             }}
@@ -777,17 +807,16 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
         {/* Actions */}
         <td className="whitespace-nowrap px-4 py-2.5">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
           <Button size="sm" variant="outline" onClick={() => setShowTranslations((v) => !v)} title={translate('translations', locale)}>
             🌐
           </Button>
-          <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave}>
-            {translate('save', locale)}
-          </Button>
+          {/* Where the Save button was. */}
+          <SaveStatusNote status={status} locale={locale} />
           <Button
             size="sm"
             variant="destructive"
-            disabled={isSaving || isDeleting}
+            disabled={isDeleting}
             onClick={() => {
               if (window.confirm(`Delete "${item.name}"?`)) onDelete();
             }}
@@ -803,10 +832,10 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
         <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <PhotoSelector
             category="menu"
-            dishCategory={localCategory.toLowerCase()}
-            selectedPhotoUrl={localPhotoUrl || undefined}
+            dishCategory={draft.category.toLowerCase()}
+            selectedPhotoUrl={draft.photoUrl || undefined}
             onPhotoSelect={(url: string | undefined) => {
-              setLocalPhotoUrl(url || '');
+              edit({ photoUrl: url || '' }, true);
               setShowPhotoSelector(false);
             }}
           />
@@ -819,15 +848,12 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
         <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
           <DishTranslations
             locale={locale}
-            nameI18n={localNameI18n}
-            descriptionI18n={localDescriptionI18n}
-            onChange={({ nameI18n: n, descriptionI18n: d }) => { setLocalNameI18n(n); setLocalDescriptionI18n(d); }}
+            nameI18n={draft.nameI18n}
+            descriptionI18n={draft.descriptionI18n}
+            onChange={({ nameI18n: n, descriptionI18n: d }) => edit({ nameI18n: n, descriptionI18n: d })}
             defaultOpen
             hideToggle
           />
-          <div className="mt-2">
-            <Button size="sm" variant="outline" disabled={isSaving} onClick={handleSave}>{translate('save', locale)}</Button>
-          </div>
         </td>
       </tr>
     )}
