@@ -979,3 +979,31 @@ SKIP_TESTS=1 ./deploy.sh
 
 For getting the previous release back up during an incident — it prints a loud
 banner saying the code is unverified. Not for getting a red build out.
+
+---
+
+## 18. If the deploy stops at "DATABASE_URL … is not a postgresql:// URL"
+
+That check runs **before** the migrations, the build and the tests, so nothing
+was touched and nothing needs undoing. It reads `apps/api/.env` on the server —
+a gitignored file, so a `git pull` never changes it and a fresh checkout has no
+copy of it at all.
+
+The message now prints what it actually found (with the password masked) and
+names the likely cause. To look yourself:
+
+```
+grep -n DATABASE_URL apps/api/.env
+```
+
+| What you see | What happened |
+|---|---|
+| `file:./dev.db` | The checkout is carrying a **development** `.env`. Restore the server's own file. |
+| line starts with `#` | Commented out. |
+| no line at all | Wrong `.env`, or the file was recreated from `.env.example`. |
+| empty after `=` | The value was cleared. |
+
+The parser accepts `export` prefixes, leading whitespace, single or double
+quotes, CRLF endings and the `postgres://` scheme as well as `postgresql://` —
+so a rejection now means the value is genuinely wrong, not merely formatted
+unusually.

@@ -20,12 +20,50 @@ npm install
 # (dotenv does NOT override an already-set env var, so exporting it here makes it
 # authoritative for the pm2 --update-env restart too.)
 echo "==> Loading DATABASE_URL from apps/api/.env..."
-DATABASE_URL="$(grep -E '^DATABASE_URL=' apps/api/.env | head -1 | cut -d= -f2-)"
-DATABASE_URL="${DATABASE_URL%\"}"; DATABASE_URL="${DATABASE_URL#\"}"   # strip optional surrounding quotes
+ENV_FILE="$REPO_DIR/apps/api/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  echo "ERROR: $ENV_FILE does not exist."
+  echo "       The API reads its configuration from there; it is gitignored, so a"
+  echo "       fresh checkout will not have one. Copy it from the running deploy."
+  exit 1
+fi
+
+# Accepts the shapes a hand-edited .env actually turns up in: an `export`
+# prefix, leading whitespace, single OR double quotes, and CRLF line endings
+# (which leave a \r that silently corrupts the URL rather than failing loudly).
+DATABASE_URL="$(sed -n -E 's/^[[:space:]]*(export[[:space:]]+)?DATABASE_URL[[:space:]]*=[[:space:]]*(.*)$/\2/p' "$ENV_FILE" | head -1)"
+DATABASE_URL="${DATABASE_URL%$'\r'}"                                   # CRLF
+DATABASE_URL="${DATABASE_URL%\"}"; DATABASE_URL="${DATABASE_URL#\"}"   # "..."
+DATABASE_URL="${DATABASE_URL%\'}"; DATABASE_URL="${DATABASE_URL#\'}"   # '...'
 export DATABASE_URL
-if [[ "$DATABASE_URL" != postgresql://* ]]; then
-  echo "ERROR: DATABASE_URL in apps/api/.env is not a postgresql:// URL."
-  echo "       Aborting before touching the database. Check apps/api/.env."
+
+# Prisma accepts both schemes; so does this check, because rejecting a URL the
+# API itself would have connected with is a confusing way to fail.
+if [[ "$DATABASE_URL" != postgresql://* && "$DATABASE_URL" != postgres://* ]]; then
+  # Say what was actually found. The old message named the expectation but not
+  # the reality, which left nothing to act on.
+  echo "ERROR: DATABASE_URL in $ENV_FILE is not a postgres URL."
+  if ! grep -qE '^[[:space:]]*(export[[:space:]]+)?DATABASE_URL[[:space:]]*=' "$ENV_FILE"; then
+    if grep -qE '^[[:space:]]*#.*DATABASE_URL' "$ENV_FILE"; then
+      echo "       Found it, but the line is COMMENTED OUT."
+    else
+      echo "       There is no DATABASE_URL line in the file at all."
+    fi
+  elif [ -z "$DATABASE_URL" ]; then
+    echo "       The line is there but the value is empty."
+  else
+    # Mask the password before it reaches a terminal or a CI log.
+    echo "       Found:    $(printf '%s' "$DATABASE_URL" | sed -E 's#(://[^:/@]+:)[^@]*@#\1********@#')"
+    echo "       Expected: postgresql://user:password@host:5432/database"
+    case "$DATABASE_URL" in
+      file:*)     echo "       That is the SQLite URL from local development — this checkout is"
+                  echo "       carrying a dev .env. Restore the server's own file." ;;
+      mysql://*)  echo "       That is a MySQL URL; this project is PostgreSQL." ;;
+      *://*)      echo "       The scheme is not one Prisma will connect to here." ;;
+      *)          echo "       That does not look like a connection URL at all." ;;
+    esac
+  fi
+  echo "       Aborting before touching the database."
   exit 1
 fi
 
