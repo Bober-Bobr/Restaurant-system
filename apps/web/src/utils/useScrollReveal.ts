@@ -33,7 +33,10 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(deps: un
           }
         }
       },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+      // Any intersection, not a fraction of the element: `threshold: 0.12` meant
+      // an element taller than ~8 screens could never satisfy it, so a long
+      // photo or poster stayed at `opacity: 0` however far the visitor scrolled.
+      { threshold: 0, rootMargin: '0px 0px -8% 0px' }
     );
 
     const observe = (el: Element) => {
@@ -41,6 +44,25 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(deps: un
     };
 
     root.querySelectorAll('.reveal').forEach(observe);
+
+    // Backstop, for the same reason the block renderer has one: `.reveal` hides
+    // its element until JavaScript says otherwise, so an observation that never
+    // arrives (a bfcache restore, a throttled background tab, a late image that
+    // reflowed the page) would leave a published page with a blank hole in it.
+    // One pass a second over what is still hidden, ended by the cleanup below.
+    const sweep = window.setInterval(() => {
+      const pending = root.querySelectorAll('.reveal:not(.is-visible)');
+      if (pending.length === 0) return;
+      const h = window.innerHeight || document.documentElement.clientHeight || 0;
+      pending.forEach((el) => {
+        // Top edge past the reveal line — and still true once scrolled by, so
+        // nothing the visitor has already walked past is left behind hidden.
+        if (el.getBoundingClientRect().top < h * 0.92) {
+          el.classList.add('is-visible');
+          io.unobserve(el);
+        }
+      });
+    }, 900);
 
     // Watch for content swapped in by routing or async-loaded queries.
     const mo = new MutationObserver((mutations) => {
@@ -57,6 +79,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(deps: un
     return () => {
       io.disconnect();
       mo.disconnect();
+      window.clearInterval(sweep);
     };
     // The container ref may mount after async content loads; `deps` lets callers
     // re-run the setup once their ref'd element is actually in the DOM.

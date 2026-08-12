@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Component, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
 import { str, bool, fontScale, BLOCK_DEFS } from './types';
@@ -824,15 +824,39 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
   );
 }
 
+// ── One block may not take the page down with it ─────────────────────────────
+// Blocks render data typed by a manager and stored as free-form JSON. React
+// unmounts the WHOLE tree when a render throws, so without a boundary here one
+// malformed block turns a published flyer into a blank page — and the visitor
+// gets no hint that the rest of it exists. Per block, the damage is one gap.
+class BlockBoundary extends Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err: unknown) { console.error('[block] render failed', err); }
+  render() { return this.state.failed ? null : this.props.children; }
+}
+
 // Render an ordered block list (used by both the editor preview and public pages).
 // Hidden blocks are skipped entirely on the page.
 export function BlockList({ blocks, ctx }: { blocks: Block[]; ctx: RenderCtx }) {
   // Each BlockView provides its own (heading/body) scale context, so no outer
   // provider is needed here. `vccontact` is pulled out and rendered below the
   // footer by the flyer page, so it never shows in the normal flow.
+  // Keys are de-duplicated rather than trusted. Ids come from saved JSON, and a
+  // design applied twice — or one saved before ids carried a random suffix —
+  // can repeat one. React drops all but one child of a repeated key, which
+  // looks exactly like "that block and the ones after it never loaded".
+  const seen = new Map<string, number>();
+  const key = (id: string) => {
+    const n = (seen.get(id) ?? 0) + 1;
+    seen.set(id, n);
+    return n === 1 ? id : `${id}#${n}`;
+  };
   return (
     <>
-      {blocks.filter((b) => !b.hidden && b.type !== 'vccontact').map((b) => <BlockView key={b.id} block={b} ctx={ctx} />)}
+      {blocks.filter((b) => !b.hidden && b.type !== 'vccontact').map((b) => (
+        <BlockBoundary key={key(b.id)}><BlockView block={b} ctx={ctx} /></BlockBoundary>
+      ))}
     </>
   );
 }

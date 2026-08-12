@@ -3,8 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   guestInvitationService,
   type GuestInvitation,
-  type SectionAnimation,
-  type AnimationType,
   type SectionKey,
 } from '../services/guestInvitation.service';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -13,6 +11,7 @@ import { MusicPlayer } from '../components/MusicPlayer';
 import { getInvitationSubdomainSlug } from '../utils/subdomain';
 import { useParams } from 'react-router-dom';
 import { BlockList, readableText, type RenderCtx } from '../blocks/BlockRenderer';
+import { AnimatedSection } from '../blocks/AnimatedSection';
 import { ParticleField } from '../blocks/ParticleField';
 
 const TEXT = '#1a1a1a';
@@ -39,52 +38,9 @@ function useCountdown(target: string | null | undefined) {
   };
 }
 
-// ── Per-section animation wrapper ────────────────────────────────────────────
-function hiddenStyle(type: AnimationType): React.CSSProperties {
-  switch (type) {
-    case 'none': return {};
-    case 'fade': return { opacity: 0 };
-    case 'slide-up': return { opacity: 0, transform: 'translateY(40px)' };
-    case 'slide-down': return { opacity: 0, transform: 'translateY(-40px)' };
-    case 'slide-left': return { opacity: 0, transform: 'translateX(40px)' };
-    case 'slide-right': return { opacity: 0, transform: 'translateX(-40px)' };
-    case 'zoom': return { opacity: 0, transform: 'scale(0.85)' };
-    case 'blur': return { opacity: 0, filter: 'blur(12px)' };
-    case 'flip': return { opacity: 0, transform: 'perspective(800px) rotateX(35deg)' };
-    default: return { opacity: 0 };
-  }
-}
-
-function AnimatedSection({ anim, style, children }: { anim?: SectionAnimation; style?: React.CSSProperties; children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const type = anim?.type ?? 'fade';
-  const [shown, setShown] = useState(type === 'none');
-
-  useEffect(() => {
-    if (shown) return;
-    const el = ref.current;
-    if (!el) return;
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || !('IntersectionObserver' in window)) { setShown(true); return; }
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } }),
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [shown]);
-
-  const dur = anim?.durationMs ?? 700;
-  const delay = anim?.delayMs ?? 0;
-  const transition = `opacity ${dur}ms ease ${delay}ms, transform ${dur}ms cubic-bezier(0.22,1,0.36,1) ${delay}ms, filter ${dur}ms ease ${delay}ms`;
-  const visible: React.CSSProperties = { opacity: 1, transform: 'none', filter: 'none' };
-
-  return (
-    <div ref={ref} style={{ ...style, transition, willChange: 'opacity, transform', ...(shown ? visible : hiddenStyle(type)) }}>
-      {children}
-    </div>
-  );
-}
+// The per-section animation wrapper lives in blocks/AnimatedSection. This page
+// used to carry a byte-for-byte copy of it, which meant the reveal bug that hid
+// the lower half of published flyers had to be found and fixed twice.
 
 // ── Dispatcher: try the guest-invitation table first, else the flyer page ─────
 export const InvitationSubdomainDispatcher = () => {

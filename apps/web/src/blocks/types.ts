@@ -68,7 +68,11 @@ export type BlockDef = {
 let counter = 0;
 export function newBlockId(): string {
   counter += 1;
-  return `b_${Date.now().toString(36)}_${counter}`;
+  // The counter restarts at 1 on every page load, so a timestamp + counter pair
+  // repeats whenever two sessions create their first block in the same
+  // millisecond. Two blocks sharing an id are two blocks sharing a React key,
+  // and one of them stops rendering — the random suffix closes that off.
+  return `b_${Date.now().toString(36)}_${counter}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // Registry: one entry per block type. `fields` drives the settings panel.

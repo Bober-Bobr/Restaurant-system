@@ -122,6 +122,12 @@
 
 .reveal {
   opacity: 0;
+}
+
+/* Only while waiting to animate. Left on permanently it asks the browser to
+   hold a composited layer for every card on the page for the whole visit,
+   which on a phone shows up as correctly-sized but blank areas. */
+.reveal:not(.is-visible) {
   will-change: opacity, transform;
 }
 
