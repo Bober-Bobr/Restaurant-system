@@ -16,9 +16,16 @@ apps/web/src/*.js
 # Runtime uploads (server is source of truth; existing tracked files kept)
 apps/api/uploads/
 
-# Local env overrides (machine-specific, never commit)
+# Environment files. These were TRACKED until now, which meant the repo's
+# development values (a SQLite DATABASE_URL and a placeholder JWT_SECRET) could
+# be restored over the server's real configuration by any checkout, reset or
+# stash — and the API would then start against the wrong database, or worse,
+# sign tokens with a secret published in this repository.
+# `.env.example` is committed in their place.
 .env.local
+apps/api/.env
 apps/api/.env.local
+apps/web/.env
 apps/web/.env.local
 
 # Postgres docker credentials (the .env next to docker-compose.yml)

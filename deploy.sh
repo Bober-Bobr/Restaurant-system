@@ -8,9 +8,52 @@ WEB_ROOT="/var/www/restaurant"
 
 cd "$REPO_DIR"
 
+# ── Protect the server's configuration from the checkout ────────────────────
+# apps/api/.env and apps/web/.env used to be TRACKED, holding the repo's
+# development values. The server's real ones therefore lived one `git reset`,
+# `git checkout .` or `git stash` away from being replaced by a SQLite
+# DATABASE_URL and a placeholder JWT_SECRET — which is exactly what happened.
+#
+# They are gitignored now, so the commit that untracks them DELETES them from
+# this working tree on the way past. Copy them aside first and put them back.
+ENV_FILES=(apps/api/.env apps/web/.env)
+declare -A ENV_BACKUP=()
+for f in "${ENV_FILES[@]}"; do
+  if [ -f "$REPO_DIR/$f" ]; then
+    backup="$(mktemp)"
+    cp "$REPO_DIR/$f" "$backup"
+    ENV_BACKUP["$f"]="$backup"
+    # While a file is still tracked AND locally modified, `merge --ff-only`
+    # refuses to run at all ("local changes would be overwritten") — so the very
+    # commit that untracks it could never be pulled. The copy above is what
+    # makes discarding the modification safe; it is put back below.
+    if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+      git checkout -- "$f" 2>/dev/null || true
+    fi
+  fi
+done
+
 echo "==> Pulling latest changes..."
 git fetch origin
 git merge --ff-only origin/main
+
+for f in "${ENV_FILES[@]}"; do
+  backup="${ENV_BACKUP[$f]:-}"
+  [ -n "$backup" ] || continue
+  if [ ! -f "$REPO_DIR/$f" ]; then
+    # mkdir because git removes a directory that the checkout leaves empty.
+    mkdir -p "$(dirname "$REPO_DIR/$f")"
+    cp "$backup" "$REPO_DIR/$f"
+    echo "    Restored $f, which the checkout removed."
+  elif ! cmp -s "$backup" "$REPO_DIR/$f"; then
+    # The checkout changed a file the server owns. Keep the server's copy and
+    # say so — a silent swap here is how the wrong database gets deployed.
+    cp "$backup" "$REPO_DIR/$f"
+    echo "    !! $f was overwritten by the checkout; the server's copy was kept."
+    echo "       (It should be gitignored — check that it is not tracked.)"
+  fi
+  rm -f "$backup"
+done
 
 echo "==> Installing dependencies..."
 npm install

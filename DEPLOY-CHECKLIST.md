@@ -1007,3 +1007,68 @@ The parser accepts `export` prefixes, leading whitespace, single or double
 quotes, CRLF endings and the `postgres://` scheme as well as `postgresql://` —
 so a rejection now means the value is genuinely wrong, not merely formatted
 unusually.
+
+---
+
+## 19. `apps/api/.env` and `apps/web/.env` are no longer tracked in git
+
+**This is the cause of the `DATABASE_URL … is not a postgresql:// URL` failure in
+§18, and it needs one manual step on the server before the next deploy.**
+
+Both files were committed to the repository, holding development values —
+`DATABASE_URL="file:./dev.db"` and a placeholder `JWT_SECRET`. The server's real
+configuration was therefore a *locally modified tracked file*, one `git reset
+--hard`, `git checkout .`, `git stash` or fresh clone away from being replaced
+by the repo's dev copy. That is what happened.
+
+### Fix the server first
+
+The running API still holds the correct configuration **in memory**. Do not
+restart pm2 and do not re-run `deploy.sh` until `.env` is repaired — see the
+warning below for why.
+
+1. Recover the real values from the running process:
+   ```
+   pm2 env $(pm2 id restaurant-api | tr -d '[] ') | grep -E 'DATABASE_URL|JWT_SECRET'
+   ```
+   (This prints secrets to the terminal — do not paste the output anywhere.)
+2. Write them back into `apps/api/.env`, along with everything else the API
+   needs (see `apps/api/.env.example`).
+3. Confirm before deploying:
+   ```
+   grep -n DATABASE_URL apps/api/.env      # must be postgresql:// or postgres://
+   ```
+
+If the values cannot be recovered from the process:
+
+- **`DATABASE_URL`** — rebuild it from the Postgres container's credentials,
+  which come from the `.env` next to `docker-compose.yml` (`POSTGRES_USER`,
+  `POSTGRES_PASSWORD`, `POSTGRES_DB`, defaulting to `vmenu`/`vmenu`/`vmenu`):
+  `postgresql://<user>:<password>@localhost:5432/<db>`
+- **`JWT_SECRET`** — if it is genuinely lost, generate a new one
+  (`openssl rand -base64 48`). Everyone is signed out and has to log in again;
+  nothing else breaks.
+
+### Why not to restart first
+
+Starting the API with the dev `.env` does two things, and the second is silent:
+
+- `schema.prisma` is `provider = "postgresql"` while the URL says
+  `file:./dev.db`, so the API cannot connect — the site goes down.
+- The placeholder `JWT_SECRET` is 42 characters, so it **passes** the `min(32)`
+  validation in `config/env.ts` and the API starts happily signing tokens with a
+  secret published in this repository. Anyone could forge an admin token, and
+  nothing in the logs would say so.
+
+Nothing was leaked by the old tracking itself: every committed version of these
+files contained placeholders, never production values.
+
+### What changed in the repo
+
+- `.gitignore` now covers `apps/api/.env` and `apps/web/.env`; the
+  `.env.example` files stay committed.
+- `deploy.sh` copies both files aside before `git merge` and puts them back
+  afterwards. It also discards the local modification first — while the file is
+  still tracked *and* modified, `merge --ff-only` refuses outright, so the very
+  commit that untracks it could not otherwise be pulled. If a checkout ever
+  overwrites one again, the server's copy wins and the script says so.
