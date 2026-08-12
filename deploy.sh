@@ -16,7 +16,11 @@ cd "$REPO_DIR"
 #
 # They are gitignored now, so the commit that untracks them DELETES them from
 # this working tree on the way past. Copy them aside first and put them back.
-ENV_FILES=(apps/api/.env apps/web/.env)
+# The root .env holds the Postgres container's credentials (docker-compose.yml
+# reads POSTGRES_USER/PASSWORD/DB from it). It is STILL tracked — .gitignore
+# lists it, but that has no effect on a file already in the index — so it is
+# guarded here too until it is untracked properly.
+ENV_FILES=(apps/api/.env apps/web/.env .env)
 declare -A ENV_BACKUP=()
 for f in "${ENV_FILES[@]}"; do
   if [ -f "$REPO_DIR/$f" ]; then
@@ -89,6 +93,14 @@ if [[ "$DATABASE_URL" != postgresql://* && "$DATABASE_URL" != postgres://* ]]; t
   if ! grep -qE '^[[:space:]]*(export[[:space:]]+)?DATABASE_URL[[:space:]]*=' "$ENV_FILE"; then
     if grep -qE '^[[:space:]]*#.*DATABASE_URL' "$ENV_FILE"; then
       echo "       Found it, but the line is COMMENTED OUT."
+    elif grep -qE '^[[:space:]]*DATABASE_URL[[:space:]]*:' "$ENV_FILE"; then
+      # `pm2 env` prints KEY: value. Pasted straight into .env, dotenv ignores
+      # every line silently and the API starts with no configuration at all.
+      echo "       The line uses 'KEY: value' — that is pm2's display format."
+      echo "       A .env file needs 'KEY=value':"
+      echo "         DATABASE_URL=\"postgresql://user:password@localhost:5432/db\""
+      echo "       Convert the whole file with:"
+      echo "         sed -i -E 's/^([A-Za-z_][A-Za-z0-9_]*): *(.*)\$/\\1=\"\\2\"/' $ENV_FILE"
     else
       echo "       There is no DATABASE_URL line in the file at all."
     fi
