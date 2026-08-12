@@ -947,3 +947,35 @@ on its own — there is nothing to remember to clean up here.
   from Why us; the guest-responses tile now describes the **Telegram bot** that
   forwards RSVPs, which is what the product actually does
   (`InviteTelegramLink` / `InviteProject.telegramCode`).
+
+---
+
+## 17. `deploy.sh` now runs the unit tests
+
+`npm test` (vitest, ~15 s, both the API and web projects) runs as part of every
+deploy. Nothing to do differently — but two things are worth knowing before the
+next release.
+
+**Where it sits, and why.** After `prisma generate`, because the API suite
+imports `@prisma/client` for its enums; before `prisma migrate deploy`, which is
+the first step of the script that changes something we cannot take back. A
+failing test costs a deploy. The same failure one step later would cost a
+restore.
+
+**It needs dev dependencies.** vitest is a root devDependency, so a server
+running `npm install` with `NODE_ENV=production`, or one that has ever been
+installed with `--omit=dev`, will not have it. The script stops with an
+explanation rather than skipping quietly; the fix is:
+
+```
+npm install --include=dev
+```
+
+**Emergency escape hatch:**
+
+```
+SKIP_TESTS=1 ./deploy.sh
+```
+
+For getting the previous release back up during an incident — it prints a loud
+banner saying the code is unverified. Not for getting a red build out.

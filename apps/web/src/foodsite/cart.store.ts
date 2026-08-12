@@ -14,7 +14,21 @@ import { persist } from 'zustand/middleware';
 //     and will be actively wrong once orders reach a kitchen.
 
 /** A cart older than this is dropped on rehydrate. */
-const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+export const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Empty a cart that has been sitting in storage too long.
+ *
+ * Mutates in place because that is the shape `onRehydrateStorage` hands us, and
+ * is exported so the rule can be tested without driving zustand's persistence
+ * internals.
+ */
+export function dropIfStale(state: { lines: Record<string, number>; restaurantId: string | null; updatedAt?: number }, now = Date.now()): void {
+  if (now - (state.updatedAt ?? 0) > MAX_AGE_MS) {
+    state.lines = {};
+    state.restaurantId = null;
+  }
+}
 
 export type CartState = {
   restaurantId: string | null;
@@ -64,11 +78,7 @@ export const useCartStore = create<CartState>()(
       // Persist state only; the actions are recreated by the initializer.
       partialize: (s) => ({ restaurantId: s.restaurantId, lines: s.lines, updatedAt: s.updatedAt }),
       onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        if (Date.now() - (state.updatedAt ?? 0) > MAX_AGE_MS) {
-          state.lines = {};
-          state.restaurantId = null;
-        }
+        if (state) dropIfStale(state);
       },
     }
   )

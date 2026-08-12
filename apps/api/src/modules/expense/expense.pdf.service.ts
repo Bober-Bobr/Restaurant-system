@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit';
 import type { Locale } from '../../utils/translate.js';
 
 type Line = { name: string; quantity?: number; unit?: string; amountSum: number };
-type PdfEvent = {
+export type PdfEvent = {
   type: string;
   bookingName?: string | null;
   guestCount: number;
@@ -70,25 +70,25 @@ const sumLines = (lines: { amountSum: number }[]) => lines.reduce((s, l) => s + 
 // ── Revenue ──
 // Guest revenue is guests × price per guest, unless a manual figure was entered
 // for the department, which wins outright.
-const computedGuests = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
-const guestsRevenue = (e: PdfEvent) =>
+export const computedGuests = (e: PdfEvent) => e.guestCount * e.pricePerGuestSum;
+export const guestsRevenue = (e: PdfEvent) =>
   (e.manualGuestsSum != null ? e.manualGuestsSum : computedGuests(e));
 // Additional services are SOLD, so they are revenue too and add to the
 // department total. They are deliberately not part of the manual override —
 // overriding the guest figure must not silently drop them.
-const servicesRevenue = (e: PdfEvent) => sumLines(e.services);
-const eventRevenue = (e: PdfEvent) => guestsRevenue(e) + servicesRevenue(e);
+export const servicesRevenue = (e: PdfEvent) => sumLines(e.services);
+export const eventRevenue = (e: PdfEvent) => guestsRevenue(e) + servicesRevenue(e);
 
 // ── Spending ──
 // Products, salaries and additional expenses only. Services are revenue.
-const eventSpent = (e: PdfEvent) =>
+export const eventSpent = (e: PdfEvent) =>
   sumLines(e.products) + sumLines(e.salaries) + sumLines(e.additionals);
 
 const eventHasData = (e: PdfEvent) =>
   e.products.length > 0 || e.salaries.length > 0 || e.additionals.length > 0 || e.services.length > 0 ||
   computedGuests(e) > 0 || e.manualGuestsSum != null || !!e.bookingName?.trim() || !!e.report?.trim();
-const daySpent = (d: PdfDay) => d.events.reduce((s, e) => s + eventSpent(e), 0);
-const dayRevenue = (d: PdfDay) => d.events.reduce((s, e) => s + eventRevenue(e), 0);
+export const daySpent = (d: PdfDay) => d.events.reduce((s, e) => s + eventSpent(e), 0);
+export const dayRevenue = (d: PdfDay) => d.events.reduce((s, e) => s + eventRevenue(e), 0);
 const dayExtrasTotal = (d: PdfDay) => d.extras.reduce((s, e) => s + e.amountSum, 0);
 const sortedEvents = (d: PdfDay) => [...d.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
 

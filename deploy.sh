@@ -41,6 +41,30 @@ done
 echo "==> Generating Prisma client..."
 "$REPO_DIR/apps/api/node_modules/.bin/prisma" generate --schema=apps/api/prisma/schema.prisma
 
+# Tests run HERE on purpose: after `prisma generate`, because the API suite
+# imports @prisma/client for its enums, and before `migrate deploy`, which is
+# the first step of this script that changes something we cannot take back.
+# A failure now costs a deploy; a failure after the migration costs a restore.
+#
+# SKIP_TESTS=1 ./deploy.sh exists for a rollback during an incident, when the
+# priority is getting the previous release back up. It announces itself.
+if [ "${SKIP_TESTS:-0}" = "1" ]; then
+  echo "==> !! SKIPPING TESTS (SKIP_TESTS=1) — deploying unverified code."
+else
+  echo "==> Running unit tests..."
+  if [ ! -x "$REPO_DIR/node_modules/.bin/vitest" ]; then
+    echo "ERROR: vitest is not installed, so the tests cannot run."
+    echo "       This usually means dev dependencies were omitted (NODE_ENV=production"
+    echo "       or a previous 'npm install --omit=dev'). Fix with:"
+    echo "         npm install --include=dev"
+    echo "       To deploy anyway during an incident: SKIP_TESTS=1 ./deploy.sh"
+    exit 1
+  fi
+  # `npm test` runs both projects (api + web). set -e aborts the deploy on the
+  # first failing test, before the database or the live bundle is touched.
+  npm test
+fi
+
 echo "==> Running database migrations..."
 "$REPO_DIR/apps/api/node_modules/.bin/prisma" migrate deploy --schema=apps/api/prisma/schema.prisma
 

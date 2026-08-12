@@ -23,7 +23,10 @@ export function groupDigits(value: string): string {
 
 /** Parse a user-entered whole-so'm string into a non-negative integer, or null if invalid. */
 export function parseWholeSum(value: string): number | null {
-  const normalized = value.replace(/[\s,']/g, '').replace(/so'm?$/i, '').trim();
+  // The apostrophe strip above already removed the one in "so'm", so the label
+  // is matched WITHOUT it — `/so'm?$/` could never match anything by this point,
+  // which quietly made "45 000 so'm" unparseable.
+  const normalized = value.replace(/[\s,']/g, '').replace(/som?$/i, '').trim();
   if (!normalized) return null;
   const amount = Number(normalized);
   if (!Number.isFinite(amount) || amount < 0) return null;
@@ -33,7 +36,10 @@ export function parseWholeSum(value: string): number | null {
 /** Parse a user-entered so'm string and return the equivalent tiyin integer, or null if invalid. */
 export function parseSumToTiyin(value: string): number | null {
   // Strip thousands separators (space, apostrophe, comma) and the currency label
-  const normalized = value.replace(/[\s,']/g, '').replace(/so'm?$/i, '').trim();
+  // The apostrophe strip above already removed the one in "so'm", so the label
+  // is matched WITHOUT it — `/so'm?$/` could never match anything by this point,
+  // which quietly made "45 000 so'm" unparseable.
+  const normalized = value.replace(/[\s,']/g, '').replace(/som?$/i, '').trim();
   if (!normalized) return null;
   const amount = Number(normalized);
   if (!Number.isFinite(amount) || amount < 0) return null;

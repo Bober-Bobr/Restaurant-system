@@ -5,5 +5,7 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/generated"]
+  // Tests are run by vitest, which compiles them itself. Building them into
+  // dist/ would ship the fixtures — and the fake repositories — to production.
+  "exclude": ["src/generated", "src/**/*.test.ts", "src/test"]
 }

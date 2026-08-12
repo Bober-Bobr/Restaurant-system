@@ -60,7 +60,10 @@ export const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translat
 // doesn't mention (e.g. newly added ones) in the default order.
 export function orderCategories(saved: string[] | null | undefined): MenuCategory[] {
   const known = CATEGORY_ORDER as string[];
-  const valid = (saved ?? []).filter((c): c is MenuCategory => known.includes(c));
+  // De-duplicated on the way in: the stored arrangement is free-form JSON and
+  // nothing upstream forbids a repeated entry, which would render the whole
+  // category — heading, rail chip and every dish — twice on the menu.
+  const valid = [...new Set((saved ?? []).filter((c): c is MenuCategory => known.includes(c)))];
   const remaining = CATEGORY_ORDER.filter((c) => !valid.includes(c));
   return [...valid, ...remaining];
 }
