@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Invitation</title>
+<!--__CONFIG__-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Mulish:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   ANOR VA ATLAS — Talbon (Uzbek post-wedding celebration)
+   --------------------------------------------------------------------------
+   Identity : red satin that lives rather than lies flat · pomegranate (anor)
+              cross-sections · islimi floral ornament · warm gold · ceremony.
+   Motion   : gate (ribbon unties, flap opens, card rises, petals burst) ·
+              hero (satin + ornament draw) · brand (gold light sweep) ·
+              details (ornament corners draw) · programme (seed timeline) ·
+              couple (arch-mask reveal) · gallery (taped album + anor branch) ·
+              venue (map card) · rsvp (focus glow) · final (satin + petals).
+   Fonts    : Cinzel (display) · Cormorant (names) · Mulish (UI)
+   Build    : MOBILE-FIRST — the base is the 390–430px design.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. DESIGN TOKENS
+   -------------------------------------------------------------------------- */
+:root {
+  /* Reds (dominant) */
+  --crimson:     #8f1d2e;
+  --ruby:        #a51f33;
+  --pomegranate: #9c1b28;
+  --burgundy:    #6d1420;
+  --wine-dark:   #4c0d16;
+  --warm-red:    #b53042;
+
+  /* Warm neutrals */
+  --ivory:       #f8efe0;
+  --cream:       #f3e7d3;
+  --beige:       #ecdcc2;
+  --champagne:   #efdcb8;
+
+  /* Gold accents */
+  --gold:        #cba24e;
+  --gold-lt:     #e4c878;
+  --gold-soft:   #d8bd7e;
+  --bronze:      #9c7b3e;
+
+  /* Typography */
+  --ink:         #3a1418;
+  --ink-soft:    #6b3237;
+  --on-red:      #f8efe0;
+  --on-red-soft: rgba(248, 239, 224, 0.74);
+
+  --font-display: 'Cinzel', 'Georgia', serif;
+  --font-name:    'Cormorant', 'Georgia', serif;
+  --font-ui:      'Mulish', 'Helvetica Neue', sans-serif;
+
+  /* Motion */
+  --ease-silk:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft:   cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-hinge:  cubic-bezier(0.6, 0.04, 0.3, 1);
+
+  /* Layout */
+  --edge:        1.35rem;
+  --pad-sec:     4rem;
+  --content-max: 1080px;
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET & BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-name);
+  color: var(--ink);
+  background: var(--ivory);
+  overflow-x: hidden;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+/* The scroll lock is keyed on `html.js`, and that class is only ever added from
+   script. A dead script therefore leaves a scrollable page rather than one
+   frozen behind a gate that will never open. */
+html.js body:not(.is-open) { overflow: hidden; height: 100dvh; }
+
+img, svg, canvas { display: block; max-width: 100%; }
+button, input, textarea, select { font: inherit; color: inherit; }
+
+::selection { background: rgba(165, 31, 51, 0.28); }
+::-webkit-scrollbar { width: 9px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--warm-red); border-radius: 5px; }
+
+.hidden { display: none !important; }
+/* A section switched off in the builder, and an item with nothing in it. */
+.opt-off, .card-off { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   3. TYPOGRAPHY HELPERS
+   -------------------------------------------------------------------------- */
+.eyebrow {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 0.64rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--bronze);
+}
+.eyebrow.on-red { color: var(--gold-lt); }
+
+.sec-head { max-width: 580px; margin: 0 auto 2.4rem; text-align: center; }
+.sec-head .eyebrow { display: block; margin-bottom: 0.7rem; }
+.sec-head h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.5rem, 5.6vw, 2.4rem);
+  line-height: 1.28;
+  letter-spacing: 0.02em;
+  color: var(--crimson);
+}
+.sec-head.on-red h2 { color: var(--on-red); }
+.sec-head p { margin-top: 0.8rem; font-style: italic; color: var(--ink-soft); font-size: 1.02rem; }
+.sec-head.on-red p { color: var(--on-red-soft); }
+.sec-head p:empty { display: none; }
+
+/* ornament divider: eight-point guli flanked by gold vines */
+.guli-rule {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.7rem; margin: 1rem auto; color: var(--gold);
+}
+.guli-rule::before, .guli-rule::after {
+  content: ''; height: 1px; width: clamp(34px, 9vw, 70px);
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+.guli-rule::after { background: linear-gradient(90deg, currentColor, transparent); }
+.guli-rule svg { width: 20px; height: 20px; }
+
+/* reveal primitive */
+html.js .rise {
+  opacity: 0;
+  transform: translateY(26px);
+  filter: blur(5px);
+  transition: opacity 1.3s var(--ease-silk), transform 1.3s var(--ease-silk), filter 1.3s var(--ease-silk);
+  transition-delay: var(--rise-delay, 0s);
+}
+html.js .rise.in-view, html.js .in-view .rise { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+/* --------------------------------------------------------------------------
+   4. SATIN — living red fabric (folds + travelling specular sheen)
+   -------------------------------------------------------------------------- */
+.satin {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0;
+  background: linear-gradient(158deg, var(--burgundy) 0%, var(--crimson) 42%, var(--wine-dark) 100%);
+}
+.satin::before {
+  content: ''; position: absolute; inset: -10%;
+  background:
+    radial-gradient(60% 40% at 22% 18%, rgba(196, 60, 78, 0.55), transparent 60%),
+    radial-gradient(50% 45% at 82% 72%, rgba(70, 12, 22, 0.6), transparent 62%),
+    radial-gradient(70% 50% at 55% 110%, rgba(60, 10, 18, 0.7), transparent 60%);
+}
+.satin-fold {
+  position: absolute; inset: -25%;
+  background: repeating-linear-gradient(
+    114deg,
+    rgba(255, 214, 156, 0) 0px,
+    rgba(255, 206, 150, 0.055) 46px,
+    rgba(60, 10, 18, 0.12) 84px,
+    rgba(255, 214, 156, 0) 128px);
+  will-change: transform;
+}
+.satin-sheen {
+  position: absolute; top: -30%; left: -50%; width: 55%; height: 160%;
+  background: linear-gradient(104deg, transparent, rgba(255, 226, 170, 0.16) 42%, rgba(255, 241, 214, 0.26) 50%, rgba(255, 226, 170, 0.16) 58%, transparent);
+  filter: blur(16px);
+  transform: skewX(-11deg);
+  will-change: transform, opacity;
+}
+/* The fabric only breathes where it can be seen. The gate and the hero are the
+   intro and the fold, so they run at once; every satin further down waits for
+   its section to arrive — an animation nobody is looking at is heat. */
+.gate .satin-fold, .hero .satin-fold, .in-view .satin-fold {
+  animation: fold-breeze 19s var(--ease-soft) infinite alternate;
+}
+.gate .satin-sheen, .hero .satin-sheen, .in-view .satin-sheen {
+  animation: sheen-glide 17s var(--ease-soft) infinite;
+}
+@keyframes fold-breeze {
+  from { transform: translate3d(-2%, 0, 0) scale(1.05) rotate(0.001deg); }
+  to   { transform: translate3d(3%, 1%, 0) scale(1.08); }
+}
+@keyframes sheen-glide {
+  0%   { transform: translateX(-20%) skewX(-11deg); opacity: 0.55; }
+  50%  { transform: translateX(190%) skewX(-11deg); opacity: 1; }
+  100% { transform: translateX(-20%) skewX(-11deg); opacity: 0.55; }
+}
+
+/* --------------------------------------------------------------------------
+   5. AMBIENT CANVAS — red petals + ruby pomegranate seeds
+   -------------------------------------------------------------------------- */
+#ambient { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+
+/* ==========================================================================
+   6. ENVELOPE GATE — the ceremonial opening
+   ========================================================================== */
+.gate {
+  display: none; position: fixed; inset: 0; z-index: 95;
+  align-items: center; justify-content: center;
+  overflow: hidden; cursor: pointer; background: #2a0810;
+}
+html.js .gate { display: flex; }
+.gate .satin { opacity: 0.9; transition: opacity 1.4s var(--ease-silk); }
+.gate.opening .satin { opacity: 0.5; }
+.gate.is-hidden {
+  opacity: 0; visibility: hidden;
+  transition: opacity 1.3s var(--ease-silk), visibility 0s 1.3s;
+  pointer-events: none;
+}
+
+.gate-inner {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(1.3rem, 4vh, 2.4rem);
+  padding: 1.5rem; text-align: center;
+}
+.gate-msg { animation: ga-fade 1.6s var(--ease-silk) 0.3s both; }
+.gate-msg .eyebrow { display: block; color: var(--gold-lt); margin-bottom: 0.5rem; }
+.gate-msg h2 { font-family: var(--font-name); font-style: italic; font-weight: 500; font-size: clamp(1.3rem, 5vw, 1.8rem); color: var(--on-red); }
+@keyframes ga-fade { from { opacity: 0; transform: translateY(16px); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
+.gate.opening .gate-msg, .gate.opening .gate-hint { opacity: 0; transform: translateY(-12px); transition: 0.6s var(--ease-silk); }
+
+.gate-halo {
+  position: absolute; width: min(120vw, 640px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 150, 0.42), rgba(255, 190, 120, 0.12) 45%, transparent 68%);
+  opacity: 0.4; transition: opacity 2s var(--ease-silk); pointer-events: none;
+}
+.gate.opening .gate-halo { opacity: 1; }
+
+.gate-wrap { position: relative; }
+.env-scene {
+  position: relative; width: min(80vw, 360px); aspect-ratio: 1.5;
+  animation: env-float 6s var(--ease-soft) infinite alternate, ga-fade 1.7s var(--ease-silk) 0.15s both;
+}
+@keyframes env-float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+.gate.opening .env-scene { animation: ga-fade 0s both; }
+.env-shadow {
+  position: absolute; top: calc(100% + 14px); left: 50%;
+  width: 76%; height: 16px; transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.5), transparent 70%);
+  filter: blur(8px);
+  animation: env-shadow 6s var(--ease-soft) infinite alternate;
+}
+@keyframes env-shadow { from { transform: translateX(-50%) scaleX(1); opacity: 0.85; } to { transform: translateX(-50%) scaleX(0.9); opacity: 0.55; } }
+.gate.opening .env-shadow { animation: none; }
+
+/* no stacking context on .env, so the letter slots between the layers */
+.env { position: absolute; inset: 0; }
+
+.env-back {
+  position: absolute; inset: 0; z-index: 1; border-radius: 12px;
+  background: linear-gradient(162deg, #8f1d2e, #6d1420 55%, #4c0d16);
+  box-shadow: 0 26px 56px -18px rgba(0,0,0,0.7), 0 8px 20px -8px rgba(0,0,0,0.5);
+}
+.env-back::after {
+  content: ''; position: absolute; inset: 4px; border-radius: 9px;
+  background: linear-gradient(180deg, #3f0b13, #5a1019 55%);
+  box-shadow: inset 0 12px 26px -8px rgba(0,0,0,0.6);
+}
+
+.env-card {
+  position: absolute; left: 8%; right: 8%; top: 6%; height: 84%; z-index: 2;
+  border-radius: 9px;
+  background: linear-gradient(178deg, #fdf7ec, var(--cream));
+  box-shadow: 0 12px 30px -12px rgba(0,0,0,0.55);
+  transform: translateY(0);
+  transition: transform 1.5s var(--ease-silk);
+  will-change: transform;
+}
+.env-card-inner {
+  position: absolute; inset: 9px;
+  border: 1px solid rgba(203, 162, 78, 0.55); border-radius: 5px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.3rem; text-align: center; padding: 6%;
+}
+.env-card-inner::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(203,162,78,0.25); border-radius: 4px; }
+.env-card-inner .ec-anor { width: clamp(26px, 8vw, 38px); color: var(--pomegranate); }
+.env-card-inner .ec-names { font-family: var(--font-name); font-weight: 600; font-size: clamp(1.15rem, 5vw, 1.7rem); color: var(--crimson); line-height: 1.2; }
+.env-card-inner .ec-tal { font-family: var(--font-display); font-size: clamp(0.6rem, 2.3vw, 0.78rem); letter-spacing: 0.24em; color: var(--bronze); text-transform: uppercase; }
+.gate.stage-rise .env-card { transform: translateY(-104%); }
+.gate.stage-lift .env-card { z-index: 10; transform: translateY(-110%) scale(1.14); transition: transform 1.1s var(--ease-silk); box-shadow: 0 30px 60px -18px rgba(0,0,0,0.6); }
+.gate.stage-lift .env, .gate.stage-lift .env-shadow { opacity: 0.32; transition: opacity 0.9s var(--ease-silk); }
+
+.env-pocket { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.env-pocket svg { width: 100%; height: 100%; border-radius: 12px; }
+
+.env-flap {
+  position: absolute; top: 0; left: 0; right: 0; height: 55%; z-index: 4;
+  transform-origin: top center; transform-style: preserve-3d; transform: rotateX(0deg);
+  transition: transform 1.4s var(--ease-hinge);
+  will-change: transform;
+}
+.gate.stage-flap .env-flap { transform: rotateX(178deg); }
+.env-flap .face, .env-flap .back { position: absolute; inset: 0; backface-visibility: hidden; }
+.env-flap .back { transform: rotateX(180deg); }
+.env-flap svg { width: 100%; height: 100%; }
+
+.env-ribbon {
+  position: absolute; top: -6%; bottom: -6%; left: 50%; width: 15%;
+  transform: translateX(-50%); z-index: 5;
+  background: linear-gradient(90deg, #7a1522, #c23144 45%, #a51f33 55%, #6d1420);
+  box-shadow: 0 0 10px rgba(0,0,0,0.35), inset 2px 0 4px rgba(255,180,150,0.3), inset -2px 0 4px rgba(60,10,18,0.5);
+  transition: transform 1.15s var(--ease-silk), opacity 0.9s var(--ease-silk) 0.3s;
+}
+.env-ribbon .knot { position: absolute; top: 44%; left: 50%; width: 210%; height: 12%; transform: translate(-50%, -50%); }
+.env-ribbon .knot::before, .env-ribbon .knot::after {
+  content: ''; position: absolute; top: 50%; width: 44%; height: 320%;
+  border-radius: 60% 40% 40% 60% / 50%;
+  background: linear-gradient(180deg, #c23144, #7a1522);
+  box-shadow: inset 0 0 6px rgba(60,10,18,0.5);
+}
+.env-ribbon .knot::before { left: 2%; transform: translateY(-50%) rotate(-16deg); }
+.env-ribbon .knot::after  { right: 2%; transform: translateY(-50%) rotate(16deg); }
+.env-ribbon .knot i {
+  position: absolute; top: 50%; left: 50%; width: 26%; height: 260%;
+  transform: translate(-50%,-50%); border-radius: 3px;
+  background: linear-gradient(180deg, #d24457, #8f1d2e);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.gate.stage-untie .env-ribbon { transform: translateX(-50%) translateY(150%) rotate(6deg); opacity: 0; }
+
+.env-seal {
+  position: absolute; left: 50%; top: 100%;
+  width: clamp(48px, 15%, 66px); aspect-ratio: 1;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #f0d99f, var(--gold) 46%, #916d31 82%);
+  box-shadow: 0 5px 14px -4px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,246,214,0.6), inset 0 -3px 6px rgba(80,55,18,0.5);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 6;
+}
+.env-seal svg { width: 60%; color: #6d1420; }
+.env-glint { position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(120deg, transparent 30%, rgba(255,248,224,0.9) 50%, transparent 70%); opacity: 0; transform: translateX(-60%); }
+.gate.opening .env-glint { animation: seal-glint 0.9s var(--ease-silk) 0.15s both; }
+@keyframes seal-glint { from { opacity: 0; transform: translateX(-60%); } 30% { opacity: 1; } to { opacity: 0; transform: translateX(60%); } }
+.gate.opening .env-seal { animation: seal-drop 0.8s var(--ease-silk) 0.5s both; }
+@keyframes seal-drop { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(-50%,-50%) scale(0.7); filter: blur(3px); } }
+
+.burst { position: absolute; left: 50%; top: 46%; width: 0; height: 0; z-index: 7; pointer-events: none; }
+.burst span { position: absolute; left: 0; top: 0; opacity: 0; }
+.burst .petal { width: 12px; height: 8px; border-radius: 60% 40% 55% 45% / 60% 55% 45% 40%; background: linear-gradient(160deg, #d24457, #8f1d2e); }
+.burst .seed { width: 6px; height: 8px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 35% 30%, #e46a6a, #a51f33); }
+.gate.stage-rise .burst span { animation: burst-out 2.4s var(--ease-soft) both; }
+.burst span:nth-child(1) { --bx: -120px; --by: -60px;  --br: -40deg; animation-delay: 0.05s; }
+.burst span:nth-child(2) { --bx: 110px;  --by: -80px;  --br: 30deg;  animation-delay: 0.15s; }
+.burst span:nth-child(3) { --bx: -80px;  --by: -130px; --br: 60deg;  animation-delay: 0.1s; }
+.burst span:nth-child(4) { --bx: 70px;   --by: -120px; --br: -30deg; animation-delay: 0.22s; }
+.burst span:nth-child(5) { --bx: -150px; --by: -110px; --br: 20deg;  animation-delay: 0.3s; }
+.burst span:nth-child(6) { --bx: 150px;  --by: -60px;  --br: -50deg; animation-delay: 0.18s; }
+.burst span:nth-child(7) { --bx: -30px;  --by: -160px; --br: 45deg;  animation-delay: 0.26s; }
+.burst span:nth-child(8) { --bx: 30px;   --by: -150px; --br: -20deg; animation-delay: 0.34s; }
+@keyframes burst-out {
+  0%   { opacity: 0; transform: translate(0,0) rotate(0) scale(0.6); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--bx), var(--by)) rotate(var(--br)) scale(1); }
+}
+
+.gate-hint {
+  font-family: var(--font-ui); font-weight: 400;
+  font-size: 0.58rem; letter-spacing: 0.34em; text-transform: uppercase;
+  color: var(--on-red-soft);
+  animation: hint-pulse 2.6s var(--ease-soft) infinite, ga-fade 1.5s var(--ease-silk) 0.7s both;
+}
+@keyframes hint-pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* ==========================================================================
+   7. BUTTONS
+   ========================================================================== */
+.btn {
+  position: relative; display: inline-block;
+  padding: 0.95rem 2.5rem;
+  font-family: var(--font-ui); font-weight: 500;
+  font-size: 0.68rem; letter-spacing: 0.26em; text-transform: uppercase;
+  color: var(--on-red);
+  background: linear-gradient(130deg, var(--ruby), var(--crimson) 55%, var(--burgundy));
+  border: none; border-radius: 999px; cursor: pointer; overflow: hidden;
+  box-shadow: 0 12px 26px -10px rgba(109,20,32,0.6), inset 0 1px 0 rgba(255,220,180,0.25);
+  transition: transform 0.5s var(--ease-silk), box-shadow 0.5s var(--ease-silk);
+  text-decoration: none;
+}
+.btn::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(216,189,126,0.5); border-radius: 999px; pointer-events: none; }
+.btn::after { content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255,244,214,0.45), transparent); transform: skewX(-18deg); transition: left 0.9s var(--ease-silk); }
+.btn:hover { transform: translateY(-3px); box-shadow: 0 20px 40px -12px rgba(109,20,32,0.65), 0 0 26px rgba(203,162,78,0.4), inset 0 1px 0 rgba(255,220,180,0.25); }
+.btn:hover::after { left: 130%; }
+.btn:active { transform: translateY(-1px); }
+.btn[disabled] { opacity: 0.65; pointer-events: none; }
+.btn.gold { background: linear-gradient(130deg, var(--gold-lt), var(--gold) 55%, var(--bronze)); color: var(--wine-dark); }
+.btn.gold::before { border-color: rgba(109,20,32,0.3); }
+
+/* ==========================================================================
+   8. HERO
+   ========================================================================== */
+.hero {
+  position: relative; min-height: 100svh;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; text-align: center;
+  padding: 4.6rem var(--edge) 4rem;
+  color: var(--on-red);
+}
+.hero .satin { z-index: 0; }
+.hero-vignette { position: absolute; inset: 0; z-index: 1; background: radial-gradient(ellipse 90% 70% at 50% 45%, transparent 45%, rgba(40,8,14,0.5)); pointer-events: none; }
+
+.hero-corner { position: absolute; width: clamp(120px, 34vw, 240px); color: var(--gold-soft); z-index: 2; opacity: 0.9; pointer-events: none; }
+.hero-corner.tl { top: 8px; left: 8px; }
+.hero-corner.tr { top: 8px; right: 8px; transform: scaleX(-1); }
+.hero-corner.bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+.hero-corner.br { bottom: 8px; right: 8px; transform: scale(-1); }
+.hero-corner .draw { stroke-dasharray: 1; stroke-dashoffset: 1; }
+body.is-open .hero-corner .draw { animation: orn-draw 2.6s var(--ease-silk) 0.4s forwards; }
+@keyframes orn-draw { to { stroke-dashoffset: 0; } }
+
+.hero-inner { position: relative; z-index: 3; max-width: 640px; }
+html.js .hero-inner > * { opacity: 0; }
+body.is-open .hero-inner > * { animation: ga-fade 1.8s var(--ease-silk) forwards; }
+.hero-tal    { animation-delay: 0.3s; }
+.hero-kick   { animation-delay: 0.7s; }
+.hero-names  { animation-delay: 1.0s; }
+.hero-rule   { animation-delay: 1.9s; }
+.hero-date   { animation-delay: 2.15s; }
+.hero-msg    { animation-delay: 2.4s; }
+.hero-cta    { animation-delay: 2.7s; }
+
+.hero-tal {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: clamp(1.05rem, 4.4vw, 1.5rem);
+  letter-spacing: 0.34em; text-transform: uppercase;
+  color: var(--gold-lt);
+}
+.hero-kick { display: block; margin-top: 0.7rem; color: var(--on-red-soft); }
+.hero-names {
+  font-family: var(--font-name); font-weight: 500;
+  font-size: clamp(3rem, 15vw, 6rem); line-height: 1.02; margin-top: 0.5rem;
+  text-shadow: 0 4px 30px rgba(40,8,14,0.5);
+}
+.hero-names .amp { display: block; font-size: 0.42em; color: var(--gold-lt); font-style: italic; margin: 0.04em 0; }
+.hero-date { font-family: var(--font-ui); font-weight: 400; font-size: 0.82rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--on-red); }
+.hero-msg { margin: 1rem auto 2.1rem; max-width: 420px; font-style: italic; font-size: clamp(1rem, 3.6vw, 1.15rem); color: var(--on-red-soft); }
+.hero-scroll { position: absolute; bottom: 1.4rem; left: 0; right: 0; margin: 0 auto; width: max-content; z-index: 3; color: var(--on-red-soft); }
+html.js .hero-scroll { opacity: 0; }
+body.is-open .hero-scroll { animation: ga-fade 1.5s var(--ease-silk) 3.1s forwards; }
+.hero-scroll .eyebrow { font-size: 0.52rem; color: var(--on-red-soft); }
+.hero-scroll i { display: block; width: 1px; height: 28px; margin: 0.4rem auto 0; background: linear-gradient(180deg, var(--gold-lt), transparent); transform-origin: top; animation: sc 2.6s var(--ease-soft) infinite; }
+@keyframes sc { 0%,100% { transform: scaleY(0.6); opacity: 0.5; } 50% { transform: scaleY(1); opacity: 1; } }
+
+/* ==========================================================================
+   9. RESTAURANT BRANDING — logo plate with a gold light-sweep
+   ========================================================================== */
+.brand-sec { position: relative; padding: calc(var(--pad-sec) * 0.85) var(--edge); background: var(--ivory); text-align: center; }
+.brand-plate {
+  position: relative; max-width: 460px; margin: 0 auto;
+  padding: 2.2rem 1.6rem;
+  background: linear-gradient(168deg, #fffaf0, var(--cream));
+  border-radius: 18px;
+  box-shadow: 0 20px 44px -24px rgba(109,20,32,0.32);
+  overflow: hidden;
+}
+.brand-plate::before { content: ''; position: absolute; inset: 10px; border: 1px solid rgba(203,162,78,0.5); border-radius: 11px; pointer-events: none; }
+.brand-plate .sweep {
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgba(228,200,120,0.4) 50%, transparent 62%);
+  transform: translateX(-120%); pointer-events: none;
+}
+.brand-plate.in-view .sweep { animation: brand-sweep 1.6s var(--ease-silk) 0.3s both; }
+@keyframes brand-sweep { to { transform: translateX(120%); } }
+
+/* The venue's logo. Empty in the builder → the slot disappears rather than
+   showing an outlined box on a guest's invitation. */
+.logo-slot {
+  position: relative; z-index: 1;
+  width: min(74%, 240px); height: 92px; margin: 0 auto 1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-slot img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.brand-name { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.3rem, 5vw, 1.8rem); letter-spacing: 0.08em; color: var(--crimson); }
+.brand-tag { margin-top: 0.35rem; font-style: italic; color: var(--ink-soft); font-size: 0.95rem; }
+.brand-tag:empty { display: none; }
+
+/* ==========================================================================
+   10. EVENT INFO — cards with drawing ornament corners
+   ========================================================================== */
+.event-sec { position: relative; padding: var(--pad-sec) var(--edge); background: linear-gradient(180deg, var(--ivory), var(--cream) 60%, var(--ivory)); }
+.event-grid { max-width: var(--content-max); margin: 0 auto; display: grid; gap: 0.9rem; }
+.ev {
+  position: relative; display: flex; align-items: center; gap: 1rem;
+  padding: 1.2rem 1.25rem;
+  background: linear-gradient(165deg, #fffaf0, var(--cream));
+  border-radius: 14px;
+  box-shadow: 0 12px 28px -16px rgba(109,20,32,0.3);
+  overflow: hidden;
+  transition: transform 0.6s var(--ease-silk), box-shadow 0.6s var(--ease-silk);
+}
+.ev:hover { transform: translateY(-4px); box-shadow: 0 22px 42px -18px rgba(109,20,32,0.4); }
+.ev .corner-orn { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; color: var(--gold); opacity: 0.7; }
+.ev .corner-orn path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.ev.in-view .corner-orn path { animation: orn-draw 1.6s var(--ease-silk) 0.3s forwards; }
+.ev-ic {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; color: var(--crimson);
+  background: radial-gradient(circle at 34% 30%, #f2e0b6, var(--gold-soft));
+  box-shadow: inset 0 1px 2px rgba(255,248,224,0.7);
+}
+.ev-ic svg { width: 22px; height: 22px; }
+.ev h3 { font-family: var(--font-ui); font-weight: 600; font-size: 0.62rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--bronze); margin-bottom: 0.15rem; }
+.ev p { font-size: 1.02rem; color: var(--ink-soft); line-height: 1.45; }
+.ev p b { color: var(--crimson); font-weight: 600; display: block; }
+.ev p em { font-style: italic; }
+.ev p em:empty, .ev p b:empty { display: none; }
+
+/* ==========================================================================
+   11. PROGRAMME — pomegranate-seed timeline
+   ========================================================================== */
+.sched-sec { position: relative; padding: var(--pad-sec) var(--edge); color: var(--on-red); overflow: hidden; }
+.sched-sec .satin { z-index: 0; }
+.sched-inner { position: relative; z-index: 2; }
+.sched { position: relative; max-width: 520px; margin: 0 auto; padding-left: 2.3rem; }
+.sched::before {
+  content: ''; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px;
+  background: linear-gradient(180deg, transparent, rgba(216,189,126,0.7) 8%, rgba(216,189,126,0.7) 92%, transparent);
+  transform: scaleY(0); transform-origin: top; transition: transform 2.4s var(--ease-silk);
+}
+html:not(.js) .sched::before, .sched.in-view::before { transform: scaleY(1); }
+.sc-step { position: relative; padding: 0.9rem 0; }
+.sc-step .seed {
+  position: absolute; left: -2.3rem; top: 1.25rem; width: 15px; height: 19px; margin-left: 2px;
+  transform: translateX(-50%) scale(0);
+  transition: transform 0.8s var(--ease-silk) 0.3s;
+}
+html:not(.js) .sc-step .seed, .sc-step.in-view .seed { transform: translateX(-50%) scale(1); }
+html.js .sc-step { opacity: 0; transform: translateX(16px); transition: opacity 1.1s var(--ease-silk) 0.15s, transform 1.1s var(--ease-silk) 0.15s; }
+html.js .sc-step.in-view { opacity: 1; transform: none; }
+.sc-step .at { font-family: var(--font-ui); font-weight: 500; font-size: 0.62rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-lt); display: block; margin-bottom: 0.15rem; }
+.sc-step .at:empty { display: none; }
+.sc-step h3 { font-family: var(--font-name); font-weight: 600; font-size: 1.35rem; color: var(--on-red); }
+
+/* ==========================================================================
+   12. COUPLE — portraits revealed through arch masks
+   ========================================================================== */
+.couple-sec { position: relative; padding: var(--pad-sec) var(--edge); background: var(--ivory); overflow: hidden; }
+.couple-grid { max-width: 720px; margin: 0 auto; display: grid; gap: 2rem; }
+.person { text-align: center; }
+.portrait { position: relative; width: min(66vw, 240px); margin: 0 auto 1rem; aspect-ratio: 0.8; }
+.portrait-mask {
+  position: absolute; inset: 0;
+  border-radius: 50% 50% 8px 8px / 62% 62% 8px 8px;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--beige), var(--cream));
+  box-shadow: 0 18px 40px -20px rgba(109,20,32,0.4);
+  clip-path: inset(0 0 0 0);
+}
+html.js .portrait-mask { clip-path: inset(0 0 100% 0); transition: clip-path 1.6s var(--ease-silk); }
+html.js .person.in-view .portrait-mask { clip-path: inset(0 0 0 0); }
+.portrait-mask .ph {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--bronze);
+  background:
+    radial-gradient(circle at 50% 34%, rgba(203,162,78,0.18), transparent 60%),
+    linear-gradient(160deg, #ecdcc2, #dcc6a2);
+}
+.portrait-mask .ph svg { width: 44%; opacity: 0.7; }
+.portrait-mask img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* A photo that fails to load falls back to the drawn placeholder beneath it. */
+.portrait-mask img.broken { display: none; }
+.portrait-frame {
+  position: absolute; inset: -3px;
+  border-radius: 50% 50% 10px 10px / 62% 62% 10px 10px;
+  border: 2px solid var(--gold);
+  box-shadow: inset 0 0 0 4px rgba(255,250,240,0.5);
+  pointer-events: none;
+}
+.portrait::after {
+  content: ''; position: absolute; bottom: -10px; left: 50%; width: 44px; height: 20px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 50% 0, var(--pomegranate) 0 5px, transparent 6px);
+}
+.person .p-name { font-family: var(--font-name); font-weight: 600; font-size: clamp(1.6rem, 6.4vw, 2.2rem); color: var(--crimson); }
+.person .p-role { font-family: var(--font-ui); font-weight: 500; font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--bronze); }
+.couple-amp { text-align: center; font-family: var(--font-name); font-style: italic; font-size: 2rem; color: var(--gold); }
+
+/* ==========================================================================
+   13. GALLERY — album with a pomegranate branch
+   ========================================================================== */
+.gallery-sec { position: relative; padding: var(--pad-sec) var(--edge) calc(var(--pad-sec) * 1.1); background: linear-gradient(180deg, var(--ivory), var(--cream) 55%, var(--ivory)); overflow: hidden; }
+.anor-branch {
+  position: absolute; top: 6%; right: -30px; width: clamp(90px, 24vw, 170px);
+  color: var(--pomegranate); z-index: 1; opacity: 0;
+  transform: translateX(40px) rotate(6deg);
+  transition: opacity 1.6s var(--ease-silk), transform 1.8s var(--ease-silk);
+}
+.anor-branch.in-view { opacity: 0.92; transform: translateX(0) rotate(0deg); }
+/* The leaves only stir once the branch has arrived. */
+.anor-branch.in-view .leaf { animation: branch-sway 7s var(--ease-soft) infinite alternate; transform-origin: 90% 10%; }
+@keyframes branch-sway { from { transform: rotate(0deg); } to { transform: rotate(2.5deg); } }
+
+.album { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; }
+.frame {
+  --tw: -2.6deg;
+  position: relative; width: min(78vw, 300px);
+  background: #fffdf7; padding: 9px 9px 40px; border-radius: 4px;
+  box-shadow: 0 18px 38px -16px rgba(109,20,32,0.42);
+  margin: 0 auto 1.6rem;
+  transform: rotate(var(--tw));
+  transition: transform 0.8s var(--ease-silk), box-shadow 0.8s var(--ease-silk);
+  cursor: zoom-in; will-change: transform;
+}
+.frame:nth-child(even) { --tw: 2.4deg; margin-left: auto; margin-right: 5vw; margin-top: -1.8rem; }
+.frame:nth-child(odd)  { margin-left: 5vw; }
+.frame .tape { position: absolute; top: -10px; left: 50%; width: 78px; height: 22px; transform: translateX(-50%) rotate(-3deg); background: rgba(203,162,78,0.32); box-shadow: 0 1px 3px rgba(109,20,32,0.15); }
+.frame:nth-child(even) .tape { transform: translateX(-50%) rotate(3deg); }
+html.js .frame { opacity: 0; transform: rotate(calc(var(--tw) * 3)) translateY(-22px) scale(1.05); transition: opacity 1s var(--ease-silk) var(--fd,0s), transform 1.2s var(--ease-silk) var(--fd,0s); }
+html.js .frame.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) scale(1); }
+.frame:hover { transform: rotate(0deg) translateY(-5px) scale(1.02) !important; z-index: 5; }
+.frame-win { aspect-ratio: 1.04; border-radius: 2px; overflow: hidden; background: var(--beige); }
+.frame-win img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease-silk); }
+.frame-win img.broken { opacity: 0; }
+.frame:hover .frame-win img { transform: scale(1.05); }
+.frame-cap { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-family: var(--font-name); font-style: italic; font-size: 1.05rem; color: var(--ink-soft); }
+
+/* ==========================================================================
+   14. LOCATION — stylized map card
+   ========================================================================== */
+.loc-sec { position: relative; padding: var(--pad-sec) var(--edge); background: var(--ivory); }
+.loc-card {
+  max-width: 520px; margin: 0 auto;
+  background: linear-gradient(168deg, #fffaf0, var(--cream));
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 24px 50px -26px rgba(109,20,32,0.35);
+}
+.map-view { position: relative; height: 190px; overflow: hidden; }
+.map-view svg { width: 100%; height: 100%; }
+.map-pin { position: absolute; left: 50%; top: 44%; transform: translate(-50%,-100%); color: var(--crimson); width: 34px; }
+.loc-card.in-view .map-pin { animation: pin-bob 2.4s var(--ease-soft) infinite; }
+@keyframes pin-bob { 0%,100% { transform: translate(-50%,-100%); } 50% { transform: translate(-50%,-118%); } }
+.loc-body { padding: 1.4rem 1.4rem 1.6rem; text-align: center; }
+.loc-body .l-logo { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; color: var(--crimson); letter-spacing: 0.06em; }
+.loc-body .l-addr { margin: 0.4rem 0 1.1rem; color: var(--ink-soft); font-style: italic; }
+
+/* ==========================================================================
+   15. RSVP
+   ========================================================================== */
+.rsvp-sec { position: relative; padding: var(--pad-sec) var(--edge); color: var(--on-red); overflow: hidden; }
+.rsvp-sec .satin { z-index: 0; }
+.rsvp-inner { position: relative; z-index: 2; }
+.rsvp-card {
+  max-width: 520px; margin: 0 auto;
+  background: linear-gradient(170deg, #fffaf0, var(--cream));
+  border-radius: 20px; padding: 1.6rem 1.3rem 1.9rem;
+  box-shadow: 0 30px 60px -28px rgba(0,0,0,0.55); color: var(--ink);
+}
+.rsvp-form { display: grid; gap: 1.05rem; }
+.f label.fl { display: block; font-family: var(--font-ui); font-weight: 500; font-size: 0.6rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--bronze); margin: 0 0 0.4rem 0.8rem; transition: color 0.5s var(--ease-silk); }
+.f:focus-within label.fl { color: var(--crimson); }
+.f input[type="text"], .f input[type="number"], .f textarea {
+  width: 100%; min-height: 50px;
+  background: rgba(255,252,246,0.92);
+  border: 1px solid rgba(203,162,78,0.4); border-radius: 13px;
+  padding: 0.85rem 1.05rem;
+  font-family: var(--font-name); font-size: 1.05rem; color: var(--ink);
+  outline: none; resize: vertical;
+  transition: border-color 0.5s var(--ease-silk), box-shadow 0.5s var(--ease-silk);
+}
+.f textarea { min-height: 92px; }
+.f input::placeholder, .f textarea::placeholder { color: var(--ink-soft); opacity: 0.55; font-style: italic; }
+.f input:focus, .f textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(203,162,78,0.16), 0 8px 20px -12px rgba(109,20,32,0.3); }
+.f.invalid input { border-color: var(--warm-red); box-shadow: 0 0 0 4px rgba(181,48,66,0.14); }
+.attend-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.attend-row label {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 0.8rem 0.6rem; cursor: pointer;
+  border: 1px solid rgba(203,162,78,0.4); border-radius: 13px;
+  font-family: var(--font-ui); font-size: 0.72rem; letter-spacing: 0.06em;
+  color: var(--ink-soft); background: rgba(255,252,246,0.92);
+  transition: all 0.4s var(--ease-silk);
+}
+.attend-row label.sel { border-color: var(--crimson); color: var(--crimson); background: rgba(165,31,51,0.07); }
+.attend-row input { position: absolute; opacity: 0; pointer-events: none; }
+.rsvp-send { display: flex; justify-content: center; margin-top: 0.4rem; }
+.rsvp-err { margin-top: 0.9rem; text-align: center; font-size: 0.85rem; color: var(--warm-red); display: none; }
+.rsvp-err.show { display: block; }
+.rsvp-done { display: none; text-align: center; padding: 1.4rem 0.6rem 0.4rem; }
+.rsvp-done.show { display: block; animation: ga-fade 1.1s var(--ease-silk) both; }
+.rsvp-done .anor { width: 44px; margin: 0 auto 0.9rem; color: var(--pomegranate); animation: seed-pop 0.9s var(--ease-silk) 0.2s both; }
+@keyframes seed-pop { from { transform: scale(0.4) rotate(-12deg); opacity: 0; } 65% { transform: scale(1.08) rotate(3deg); opacity: 1; } to { transform: scale(1) rotate(0); } }
+.rsvp-done h3 { font-family: var(--font-name); font-weight: 600; font-size: 1.6rem; color: var(--crimson); }
+.rsvp-done p { font-style: italic; color: var(--ink-soft); margin-top: 0.3rem; }
+
+/* ==========================================================================
+   16. FINAL / FOOTER
+   ========================================================================== */
+.final-sec { position: relative; padding: calc(var(--pad-sec) * 1.1) var(--edge) 2.6rem; color: var(--on-red); text-align: center; overflow: hidden; }
+.final-sec .satin { z-index: 0; }
+.final-inner { position: relative; z-index: 2; }
+.final-anor { width: 54px; margin: 0 auto 1.2rem; color: var(--gold-lt); }
+.final-sec.in-view .final-anor { animation: anor-breathe 6s var(--ease-soft) infinite alternate; }
+@keyframes anor-breathe { from { transform: scale(1); opacity: 0.85; } to { transform: scale(1.06); opacity: 1; } }
+.final-sec .f-thanks { font-family: var(--font-name); font-style: italic; font-size: clamp(1.2rem, 5vw, 1.6rem); color: var(--gold-lt); }
+.final-sec .f-names { font-family: var(--font-name); font-weight: 600; font-size: clamp(2rem, 9vw, 3rem); margin: 0.4rem 0; }
+.final-sec .f-msg { max-width: 400px; margin: 0.4rem auto 1.6rem; color: var(--on-red-soft); font-style: italic; font-size: 0.98rem; }
+.final-brand { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid rgba(216,189,126,0.3); }
+.final-brand .fb-logo { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.08em; color: var(--gold-lt); }
+.final-brand .fb-fine { font-family: var(--font-ui); font-weight: 300; font-size: 0.58rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--on-red-soft); margin-top: 0.4rem; }
+
+/* --------------------------------------------------------------------------
+   16b. POMEGRANATE (ANOR) CROSS-SECTIONS — dividers & floating decor
+   -------------------------------------------------------------------------- */
+.anor-divider { display: flex; align-items: center; justify-content: center; gap: 0.9rem; max-width: 520px; margin: 0 auto 2.2rem; color: var(--gold); }
+.anor-divider .vine { height: 1px; flex: 1; max-width: 120px; background: linear-gradient(90deg, transparent, currentColor); }
+.anor-divider .vine.r { background: linear-gradient(90deg, currentColor, transparent); }
+.anor-divider svg { width: clamp(54px, 14vw, 76px); filter: drop-shadow(0 6px 12px rgba(60,10,18,0.35)); }
+html.js .anor-divider svg { opacity: 0; transform: scale(0.62) rotate(-12deg); transition: opacity 1s var(--ease-silk), transform 1.1s var(--ease-silk); }
+html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
+
+.anor-deco { position: absolute; z-index: 1; pointer-events: none; filter: drop-shadow(0 8px 16px rgba(60,10,18,0.3)); }
+/* Decorative halves drift only while their section is on screen. */
+.in-view > .anor-float, .in-view .anor-float { animation: anor-bob 7.5s var(--ease-soft) infinite alternate; }
+@keyframes anor-bob { from { transform: translateY(0) rotate(-5deg); } to { transform: translateY(-12px) rotate(3deg); } }
+.in-view > .anor-spin, .in-view .anor-spin { animation: anor-spin 46s linear infinite; }
+@keyframes anor-spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   17. CHROME — language bar, music, lightbox, credit
+   ========================================================================== */
+#langbar { position: fixed; top: 12px; right: 12px; z-index: 60; display: flex; gap: 6px; }
+#langbar button {
+  font-family: var(--font-ui); font-size: 0.62rem; letter-spacing: 0.14em;
+  padding: 0.34rem 0.6rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(203,162,78,0.5); background: rgba(248,239,224,0.86); color: var(--crimson);
+}
+#langbar button.active { background: var(--crimson); border-color: var(--crimson); color: var(--ivory); }
+
+#music-btn {
+  position: fixed; left: 14px; bottom: 14px; z-index: 60;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(203,162,78,0.5); background: rgba(76,13,22,0.72);
+  display: flex; align-items: center; justify-content: center;
+}
+#music-btn .bars { display: flex; align-items: flex-end; gap: 3px; height: 15px; }
+#music-btn .bars span { width: 3px; height: 40%; background: var(--gold-lt); border-radius: 2px; }
+#music-btn[aria-pressed="true"] .bars span { animation: eq 1s var(--ease-soft) infinite alternate; }
+#music-btn[aria-pressed="true"] .bars span:nth-child(2) { animation-delay: 0.18s; }
+#music-btn[aria-pressed="true"] .bars span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes eq { from { height: 25%; } to { height: 100%; } }
+
+#lightbox {
+  position: fixed; inset: 0; z-index: 90; display: none;
+  align-items: center; justify-content: center; padding: 4vw;
+  background: rgba(30,6,12,0.92);
+}
+#lightbox.show { display: flex; }
+#lightbox img { max-width: 92vw; max-height: 76vh; object-fit: contain; border-radius: 6px; }
+#lightbox p { margin-top: 0.8rem; text-align: center; color: var(--on-red-soft); font-style: italic; }
+#lbClose {
+  position: absolute; top: 14px; right: 14px; width: 40px; height: 40px;
+  border-radius: 50%; cursor: pointer; font-size: 1rem;
+  border: 1px solid rgba(216,189,126,0.5); background: rgba(76,13,22,0.7); color: var(--ivory);
+}
+
+#vconnect {
+  position: relative; z-index: 2;
+  padding: 1.6rem var(--edge) 2rem; text-align: center;
+  background: var(--wine-dark); color: var(--on-red-soft);
+  font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.28em; text-transform: uppercase;
+}
+#vconnect img { width: 34px; height: auto; margin: 0 auto 0.6rem; opacity: 0.9; }
+#vcContacts { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; margin-top: 0.9rem; }
+#vcContacts a { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--gold-lt); text-decoration: none; letter-spacing: 0.08em; text-transform: none; font-size: 0.72rem; }
+#vcContacts svg { width: 14px; height: 14px; }
+
+/* --------------------------------------------------------------------------
+   18. PROGRESSIVE ENHANCEMENT — mobile-first
+   -------------------------------------------------------------------------- */
+@media (min-width: 640px) {
+  .event-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .couple-grid { grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1.2rem; }
+  .rsvp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.05rem; }
+  .frame { width: 300px; }
+}
+@media (min-width: 768px) {
+  :root { --pad-sec: clamp(5.2rem, 12vh, 8rem); }
+  .sec-head { margin-bottom: 3.2rem; }
+  .btn { padding: 1.05rem 3rem; font-size: 0.72rem; }
+  .event-grid { grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+  .ev { flex-direction: column; text-align: center; gap: 0.8rem; padding: 2rem 1.4rem 1.8rem; }
+  .album { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .frame, .frame:nth-child(odd), .frame:nth-child(even) { margin: 0.6rem -0.8rem; }
+  .frame:nth-child(even) { margin-top: 2.4rem; }
+  .rsvp-card { padding: 2.4rem 2.4rem 2.6rem; }
+  .map-view { height: 230px; }
+}
+@media (min-width: 1024px) {
+  .sched { max-width: 620px; }
+}
+
+/* --------------------------------------------------------------------------
+   19. REDUCED MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+  html.js .rise, html.js .sc-step, html.js .frame { opacity: 1; transform: none; filter: none; }
+  html.js .hero-inner > *, html.js .hero-scroll { opacity: 1; animation: none; }
+  html.js .portrait-mask { clip-path: none; }
+  html.js .anor-divider svg { opacity: 1; transform: none; }
+  .sched::before { transform: scaleY(1); }
+  .sc-step .seed { transform: translateX(-50%) scale(1); }
+  .anor-branch { opacity: 0.92; transform: none; }
+  .hero-corner .draw, .ev .corner-orn path { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     POMEGRANATE (ANOR) CROSS-SECTION — reusable sprite
+     A halved pomegranate: rind, packed aril field, pale chamber membranes,
+     central core, calyx crown, gloss. Referenced via <use href="#anor-cross">.
+     ====================================================================== -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+  <defs>
+    <radialGradient id="anorRind" cx="40%" cy="32%" r="72%">
+      <stop offset="0" stop-color="#bb3446"/><stop offset="0.55" stop-color="#8f1d2e"/><stop offset="1" stop-color="#570e18"/>
+    </radialGradient>
+    <radialGradient id="anorAril" cx="35%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#f59a92"/><stop offset="0.45" stop-color="#d24457"/><stop offset="1" stop-color="#951a27"/>
+    </radialGradient>
+    <radialGradient id="anorGloss" cx="34%" cy="26%" r="58%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.45"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="anorSeeds" width="15" height="13" patternUnits="userSpaceOnUse" patternTransform="rotate(7)">
+      <rect width="15" height="13" fill="#f2ddc6"/>
+      <g stroke="#bf4b60" stroke-width="0.4" stroke-opacity="0.55" fill="url(#anorAril)">
+        <ellipse cx="7.5" cy="3.2" rx="4.4" ry="3.6"/>
+        <ellipse cx="0" cy="9.7" rx="4.4" ry="3.6"/>
+        <ellipse cx="15" cy="9.7" rx="4.4" ry="3.6"/>
+      </g>
+      <g fill="#ffffff" opacity="0.4">
+        <circle cx="5.8" cy="1.9" r="0.85"/><circle cx="-1.6" cy="8.4" r="0.85"/><circle cx="13.4" cy="8.4" r="0.85"/>
+      </g>
+    </pattern>
+    <clipPath id="anorClip"><circle cx="60" cy="62" r="40"/></clipPath>
+    <symbol id="anor-cross" viewBox="0 0 120 124">
+      <g fill="#94612f"><path d="M60 3 L64 15 L72 9 L69 21 M60 3 L56 15 L48 9 L51 21"/></g>
+      <path d="M50 19 Q60 12 70 19 L66 28 Q60 25 54 28 Z" fill="#814f27"/>
+      <circle cx="60" cy="62" r="47" fill="url(#anorRind)"/>
+      <circle cx="60" cy="62" r="43" fill="#ead0b6"/>
+      <circle cx="60" cy="62" r="40" fill="url(#anorSeeds)"/>
+      <g clip-path="url(#anorClip)" stroke="#f2ddc6" stroke-width="2.6" fill="none" opacity="0.85" stroke-linecap="round">
+        <path d="M60 62 L60 22 M60 62 L94 43 M60 62 L94 81 M60 62 L60 102 M60 62 L26 81 M60 62 L26 43"/>
+      </g>
+      <circle cx="60" cy="62" r="5.5" fill="#f2ddc6"/>
+      <circle cx="60" cy="62" r="40" fill="none" stroke="#e4c39f" stroke-width="3" opacity="0.6"/>
+      <circle cx="60" cy="62" r="47" fill="url(#anorGloss)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<canvas id="ambient" aria-hidden="true"></canvas>
+
+<div id="langbar" class="hidden" aria-label="Language"></div>
+
+<!-- ======================================================================
+     ENVELOPE GATE
+     ====================================================================== -->
+<div class="gate" id="gate">
+  <div class="satin" aria-hidden="true"><div class="satin-fold"></div><div class="satin-sheen"></div></div>
+  <div class="gate-halo" aria-hidden="true"></div>
+
+  <div class="gate-inner">
+    <div class="gate-msg">
+      <span class="eyebrow" data-t="gateKicker">Marhamat</span>
+      <h2 data-t="gateTitle">Sizni taklif etamiz</h2>
+    </div>
+
+    <div class="gate-wrap">
+      <div class="env-scene" id="envelopeWrap" role="button" tabindex="0" data-t-aria="openInvitation" aria-label="Open the invitation">
+        <div class="env" aria-hidden="true">
+          <div class="env-back"></div>
+
+          <div class="env-card">
+            <div class="env-card-inner">
+              <svg class="ec-anor" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+              <span class="ec-names" data-bind="coupleLine">&nbsp;</span>
+              <span class="ec-tal" data-bind="cardTal">&nbsp;</span>
+            </div>
+          </div>
+
+          <div class="env-pocket">
+            <svg viewBox="0 0 580 386" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="pkL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f1d2e"/><stop offset="1" stop-color="#6d1420"/></linearGradient>
+                <linearGradient id="pkR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#8f1d2e"/><stop offset="1" stop-color="#6d1420"/></linearGradient>
+                <linearGradient id="pkF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9c2130"/><stop offset="1" stop-color="#6a1420"/></linearGradient>
+              </defs>
+              <path d="M0 8 L262 196 L0 384 Z" fill="url(#pkL)" stroke="#cba24e" stroke-width="1" stroke-opacity="0.4"/>
+              <path d="M580 8 L318 196 L580 384 Z" fill="url(#pkR)" stroke="#cba24e" stroke-width="1" stroke-opacity="0.4"/>
+              <path d="M0 382 L0 120 L290 292 L580 120 L580 382 Q580 386 574 386 L6 386 Q0 386 0 382 Z" fill="url(#pkF)" stroke="#cba24e" stroke-width="1.2" stroke-opacity="0.5"/>
+              <g stroke="#d8bd7e" stroke-opacity="0.5" fill="none" stroke-width="1.3">
+                <path d="M210 350 q20 -24 40 0 q20 24 40 0 q20 -24 40 0 q20 24 40 0"/>
+                <path d="M290 300 q-10 -14 0 -26 q10 12 0 26 M290 300 q10 -14 0 -26"/>
+                <circle cx="290" cy="300" r="4"/>
+              </g>
+            </svg>
+          </div>
+
+          <div class="env-flap" id="envFlap">
+            <div class="face">
+              <svg viewBox="0 0 580 214" preserveAspectRatio="none">
+                <defs><linearGradient id="flF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a52333"/><stop offset="1" stop-color="#7d1826"/></linearGradient></defs>
+                <path d="M8 0 Q0 0 0 6 L0 10 L290 214 L580 10 L580 6 Q580 0 572 0 Z" fill="url(#flF)" stroke="#cba24e" stroke-width="1.2" stroke-opacity="0.45"/>
+                <path d="M40 22 L290 196 L540 22" stroke="#d8bd7e" stroke-opacity="0.35" stroke-width="1" fill="none"/>
+              </svg>
+            </div>
+            <div class="back"><svg viewBox="0 0 580 214" preserveAspectRatio="none"><path d="M8 0 Q0 0 0 6 L0 10 L290 214 L580 10 L580 6 Q580 0 572 0 Z" fill="#520e18" stroke="#3c0b13" stroke-width="1"/></svg></div>
+            <div class="env-seal">
+              <svg viewBox="0 0 40 46" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M20 12 C29 12 34 20 32 29 C30 38 23 42 20 40 C17 42 10 38 8 29 C6 20 11 12 20 12 Z"/>
+                <path d="M20 7 C20 4 22 3 23 2 C22.5 4 23 5.5 24.5 6"/>
+              </svg>
+              <div class="env-glint"></div>
+            </div>
+          </div>
+
+          <div class="env-ribbon" id="envRibbon">
+            <div class="knot"><i></i></div>
+          </div>
+        </div>
+
+        <div class="burst" aria-hidden="true">
+          <span class="petal"></span><span class="seed"></span><span class="petal"></span><span class="seed"></span>
+          <span class="petal"></span><span class="seed"></span><span class="petal"></span><span class="seed"></span>
+        </div>
+      </div>
+      <div class="env-shadow" aria-hidden="true"></div>
+    </div>
+
+    <p class="gate-hint" data-t="tapToOpen">Taklifnomani ochish uchun bosing</p>
+  </div>
+</div>
+
+<!-- ======================================================================
+     HERO
+     ====================================================================== -->
+<header class="hero" id="top">
+  <div class="satin" aria-hidden="true"><div class="satin-fold"></div><div class="satin-sheen"></div></div>
+  <div class="hero-vignette" aria-hidden="true"></div>
+
+  <svg class="hero-corner tl" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+    <path class="draw" pathLength="1" d="M6 60 C6 26 26 6 60 6 M6 96 C6 40 40 6 96 6"/>
+    <path class="draw" pathLength="1" d="M30 60 C40 40 60 40 70 30 C74 26 74 20 70 16 M60 30 C56 46 46 56 30 60"/>
+    <circle cx="52" cy="52" r="4"/>
+    <path class="draw" pathLength="1" d="M14 120 C14 110 22 104 30 108 C24 100 30 92 40 96 M120 14 C110 14 104 22 108 30 C100 24 92 30 96 40"/>
+  </svg>
+  <svg class="hero-corner tr" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+    <path class="draw" pathLength="1" d="M6 60 C6 26 26 6 60 6 M6 96 C6 40 40 6 96 6"/>
+    <path class="draw" pathLength="1" d="M30 60 C40 40 60 40 70 30 C74 26 74 20 70 16 M60 30 C56 46 46 56 30 60"/>
+    <circle cx="52" cy="52" r="4"/>
+  </svg>
+  <svg class="hero-corner bl" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+    <path class="draw" pathLength="1" d="M6 60 C6 26 26 6 60 6 M6 96 C6 40 40 6 96 6"/>
+    <path class="draw" pathLength="1" d="M30 60 C40 40 60 40 70 30 C74 26 74 20 70 16 M60 30 C56 46 46 56 30 60"/>
+    <circle cx="52" cy="52" r="4"/>
+  </svg>
+  <svg class="hero-corner br" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+    <path class="draw" pathLength="1" d="M6 60 C6 26 26 6 60 6 M6 96 C6 40 40 6 96 6"/>
+    <path class="draw" pathLength="1" d="M30 60 C40 40 60 40 70 30 C74 26 74 20 70 16 M60 30 C56 46 46 56 30 60"/>
+    <circle cx="52" cy="52" r="4"/>
+  </svg>
+
+  <div class="hero-inner">
+    <div class="hero-tal" data-bind="occasion">&nbsp;</div>
+    <span class="eyebrow hero-kick" data-bind="kicker"></span>
+    <h1 class="hero-names">
+      <span data-bind="brideName">&nbsp;</span>
+      <span class="amp">&amp;</span>
+      <span data-bind="groomName">&nbsp;</span>
+    </h1>
+    <div class="guli-rule hero-rule" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1 L12 6 L17 4 L15 9 L19 12 L14 12 L15 17 L10 14 L5 17 L6 12 L1 12 L5 9 L3 4 L8 6 Z"/></svg>
+    </div>
+    <p class="hero-date" data-bind="heroWhen">&nbsp;</p>
+    <p class="hero-msg" data-bind="heroMsg"></p>
+    <div class="hero-cta"><button class="btn gold" id="startBtn" type="button" data-t="moreDetails">Batafsil malumot</button></div>
+  </div>
+
+  <div class="hero-scroll" aria-hidden="true"><span class="eyebrow" data-t="scrollDown">Pastga</span><i></i></div>
+</header>
+
+<!-- ======================================================================
+     VENUE BRANDING
+     ====================================================================== -->
+<section class="brand-sec" id="brand" data-opt="brand">
+  <div class="sec-head rise observe">
+    <span class="eyebrow" data-t="ceremonyPlace">Marosim manzili</span>
+    <h2 data-t="theVenue">Bazm joyi</h2>
+  </div>
+
+  <div class="brand-plate observe">
+    <div class="sweep" aria-hidden="true"></div>
+    <div class="logo-slot hidden" id="brandLogoSlot">
+      <img id="brandLogo" alt="">
+    </div>
+    <div class="brand-name" data-bind="venueName">&nbsp;</div>
+    <div class="brand-tag" data-bind="venueTag"></div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     EVENT INFO
+     ====================================================================== -->
+<section class="event-sec" id="details" data-opt="details">
+  <div class="anor-divider observe" aria-hidden="true"><span class="vine"></span><svg viewBox="0 0 120 124"><use href="#anor-cross"/></svg><span class="vine r"></span></div>
+  <div class="sec-head rise observe">
+    <span class="eyebrow" data-t="information">Malumot</span>
+    <h2 data-t="ceremonyDetails">Marosim tafsilotlari</h2>
+    <div class="guli-rule" aria-hidden="true"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1 L12 6 L17 4 L15 9 L19 12 L14 12 L15 17 L10 14 L5 17 L6 12 L1 12 L5 9 L3 4 L8 6 Z"/></svg></div>
+  </div>
+
+  <div class="event-grid" id="evGrid">
+    <div class="ev rise observe" style="--rise-delay:0s">
+      <svg class="corner-orn" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path pathLength="1" d="M28 4 C20 4 20 12 12 12 M28 10 C24 10 22 14 22 18"/></svg>
+      <div class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10 H21 M8 3 v4 M16 3 v4"/></svg></div>
+      <div><h3 data-t="theDate">Sana</h3><p><b data-bind="evDate"></b><em data-bind="evDateNote"></em></p></div>
+    </div>
+    <div class="ev rise observe" style="--rise-delay:0.1s">
+      <svg class="corner-orn" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path pathLength="1" d="M28 4 C20 4 20 12 12 12 M28 10 C24 10 22 14 22 18"/></svg>
+      <div class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7.5 V12 l3.2 2.2"/></svg></div>
+      <div><h3 data-t="theStart">Boshlanish</h3><p><b data-bind="evTime"></b><em data-bind="evTimeNote"></em></p></div>
+    </div>
+    <div class="ev rise observe" style="--rise-delay:0.2s">
+      <svg class="corner-orn" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path pathLength="1" d="M28 4 C20 4 20 12 12 12 M28 10 C24 10 22 14 22 18"/></svg>
+      <div class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21 C7.5 16.5 4.5 13 4.5 9.2 A7.5 7.5 0 0 1 19.5 9.2 C19.5 13 16.5 16.5 12 21 Z"/><circle cx="12" cy="9.4" r="2.5"/></svg></div>
+      <div><h3 data-t="theAddress">Manzil</h3><p><b data-bind="evVenue"></b><em data-bind="evAddress"></em></p></div>
+    </div>
+    <div class="ev rise observe" style="--rise-delay:0.1s">
+      <svg class="corner-orn" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path pathLength="1" d="M28 4 C20 4 20 12 12 12 M28 10 C24 10 22 14 22 18"/></svg>
+      <div class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3 L12 6 L16 3 L19.5 7 L15.5 9 V20 a1 1 0 0 1 -1 1 H9.5 a1 1 0 0 1 -1 -1 V9 L4.5 7 Z"/></svg></div>
+      <div><h3 data-t="theAttire">Kiyim uslubi</h3><p><b data-bind="evDress"></b><em data-bind="evDressNote"></em></p></div>
+    </div>
+    <div class="ev rise observe" style="--rise-delay:0.2s">
+      <svg class="corner-orn" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path pathLength="1" d="M28 4 C20 4 20 12 12 12 M28 10 C24 10 22 14 22 18"/></svg>
+      <div class="ev-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12 h16 M6 12 V8 a6 6 0 0 1 12 0 v4 M9 20 h6 M10 12 v8 M14 12 v8"/></svg></div>
+      <div><h3 data-t="theExtra">Qoshimcha</h3><p><b data-bind="evExtra"></b><em data-bind="evExtraNote"></em></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     PROGRAMME — pomegranate-seed timeline
+     ====================================================================== -->
+<section class="sched-sec observe" id="program" data-opt="program">
+  <div class="satin" aria-hidden="true"><div class="satin-fold"></div><div class="satin-sheen"></div></div>
+  <div class="sched-inner">
+    <div class="sec-head on-red rise observe">
+      <span class="eyebrow on-red" data-t="programme">Dastur</span>
+      <h2 data-t="theOrder">Marosim tartibi</h2>
+    </div>
+    <div class="sched observe" id="schedList"></div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     COUPLE
+     ====================================================================== -->
+<section class="couple-sec observe" id="couple" data-opt="couple">
+  <svg class="anor-deco anor-spin" style="top:-40px; right:-46px; width:150px; opacity:0.1" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+  <svg class="anor-deco anor-spin" style="bottom:-30px; left:-40px; width:120px; opacity:0.08; animation-duration:60s" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+  <div class="anor-divider observe" aria-hidden="true"><span class="vine"></span><svg viewBox="0 0 120 124"><use href="#anor-cross"/></svg><span class="vine r"></span></div>
+  <div class="sec-head rise observe">
+    <span class="eyebrow" data-t="brideAndGroom">Kelin va kuyov</span>
+    <h2 data-t="happyCouple">Baxtli juftlik</h2>
+  </div>
+
+  <div class="couple-grid">
+    <div class="person observe" id="personBride">
+      <div class="portrait">
+        <div class="portrait-mask">
+          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
+          <img id="bridePhoto" alt="" class="hidden">
+        </div>
+        <div class="portrait-frame" aria-hidden="true"></div>
+      </div>
+      <div class="p-name" data-bind="brideFull">&nbsp;</div>
+      <div class="p-role" data-t="theBride">Kelin</div>
+    </div>
+
+    <div class="couple-amp" aria-hidden="true">❦</div>
+
+    <div class="person observe" id="personGroom">
+      <div class="portrait">
+        <div class="portrait-mask">
+          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
+          <img id="groomPhoto" alt="" class="hidden">
+        </div>
+        <div class="portrait-frame" aria-hidden="true"></div>
+      </div>
+      <div class="p-name" data-bind="groomFull">&nbsp;</div>
+      <div class="p-role" data-t="theGroom">Kuyov</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     GALLERY
+     ====================================================================== -->
+<section class="gallery-sec observe" id="gallery" data-opt="gallery">
+  <svg class="anor-branch observe" viewBox="0 0 170 260" fill="none" aria-hidden="true">
+    <path d="M20 -10 C50 60 40 120 70 180 C90 220 110 240 150 260" stroke="#7a2a1c" stroke-width="3" fill="none"/>
+    <g class="leaf" fill="#4f6152" opacity="0.85">
+      <path d="M60 70 Q80 55 100 62 Q84 80 60 70 Z"/>
+      <path d="M78 130 Q98 116 118 124 Q100 142 78 130 Z"/>
+    </g>
+    <g fill="#9c1b28">
+      <circle cx="70" cy="110" r="18"/><path d="M70 92 C70 88 72 86 74 85 C73 88 74 90 76 91 C74 92 72 94 71 96 Z" fill="#7a2a1c"/>
+      <circle cx="112" cy="188" r="22"/><path d="M112 166 C112 161 114 159 116 158 C115 161 116 163 118 164 C116 165 114 167 113 170 Z" fill="#7a2a1c"/>
+      <circle cx="46" cy="176" r="14"/>
+    </g>
+    <g fill="#e46a6a" opacity="0.6"><circle cx="66" cy="106" r="2"/><circle cx="74" cy="112" r="2"/><circle cx="108" cy="184" r="2"/><circle cx="116" cy="192" r="2"/></g>
+  </svg>
+
+  <svg class="anor-deco anor-float" style="bottom:5%; left:-26px; width:clamp(78px,22vw,126px)" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+  <svg class="anor-deco anor-float" style="top:13%; left:5%; width:clamp(46px,12vw,66px); opacity:0.9; animation-delay:-3.2s" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+
+  <div class="sec-head rise observe">
+    <span class="eyebrow" data-t="memories">Xotiralar</span>
+    <h2 data-t="weddingMoments">Toy lavhalari</h2>
+    <p data-bind="galleryLede"></p>
+  </div>
+
+  <div class="album" id="album"></div>
+</section>
+
+<!-- ======================================================================
+     LOCATION
+     ====================================================================== -->
+<section class="loc-sec" id="venue" data-opt="venue">
+  <div class="sec-head rise observe">
+    <span class="eyebrow" data-t="theAddress">Manzil</span>
+    <h2 data-t="findUs">Bizni toping</h2>
+  </div>
+
+  <div class="loc-card observe rise">
+    <div class="map-view">
+      <svg viewBox="0 0 520 230" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="520" height="230" fill="#efe7d6"/>
+        <g stroke="#d8c7a6" stroke-width="8" fill="none"><path d="M-20 70 H540 M-20 160 H540 M120 -20 V250 M330 -20 V250"/></g>
+        <g stroke="#e4d6ba" stroke-width="3" fill="none"><path d="M-20 115 H540 M225 -20 V250 M430 -20 V250 M60 -20 V250"/></g>
+        <rect x="130" y="80" width="80" height="70" fill="#d7bf98" opacity="0.6"/>
+        <rect x="340" y="20" width="70" height="50" fill="#d7bf98" opacity="0.5"/>
+        <path d="M120 160 Q225 120 330 160" stroke="#cba24e" stroke-width="2.5" stroke-dasharray="6 7" fill="none"/>
+      </svg>
+      <svg class="map-pin" viewBox="0 0 34 44" fill="currentColor" aria-hidden="true"><path d="M17 2 C26 2 32 9 32 18 C32 30 17 42 17 42 C17 42 2 30 2 18 C2 9 8 2 17 2 Z"/><circle cx="17" cy="18" r="6" fill="#f8efe0"/></svg>
+    </div>
+    <div class="loc-body">
+      <div class="l-logo" data-bind="venueName">&nbsp;</div>
+      <p class="l-addr" data-bind="venueAddress"></p>
+      <a class="btn" id="mapLink" href="#" target="_blank" rel="noopener" data-t="openMap">Xaritada ochish</a>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     RSVP
+     ====================================================================== -->
+<section class="rsvp-sec observe" id="rsvp" data-opt="rsvp">
+  <div class="satin" aria-hidden="true"><div class="satin-fold"></div><div class="satin-sheen"></div></div>
+  <div class="rsvp-inner">
+    <div class="anor-divider observe" aria-hidden="true"><span class="vine"></span><svg viewBox="0 0 120 124"><use href="#anor-cross"/></svg><span class="vine r"></span></div>
+    <div class="sec-head on-red rise observe">
+      <span class="eyebrow on-red" data-t="confirmation">Tasdiqlash</span>
+      <h2 data-t="letUsKnow">Kelishingizni bildiring</h2>
+      <p data-bind="rsvpLede"></p>
+    </div>
+
+    <div class="rsvp-card rise observe">
+      <form class="rsvp-form" id="rsvpForm" novalidate>
+        <div class="f">
+          <label class="fl" for="rsvpName" data-t="fullName">Ismingiz</label>
+          <input type="text" id="rsvpName" autocomplete="name">
+        </div>
+        <div class="f">
+          <label class="fl" data-t="willYouAttend">Kela olasizmi?</label>
+          <div class="attend-row" id="attendRow">
+            <label class="sel"><input type="radio" name="attend" value="yes" checked><span data-t="accept">Albatta boraman</span></label>
+            <label><input type="radio" name="attend" value="no"><span data-t="decline">Afsuski, yoq</span></label>
+          </div>
+        </div>
+        <div class="f" id="guestField">
+          <label class="fl" for="rsvpGuests" data-t="guestCount">Mehmonlar soni</label>
+          <input type="number" id="rsvpGuests" min="1" max="10" value="1">
+        </div>
+        <div class="f">
+          <label class="fl" for="rsvpMsg" data-t="messageLabel">Tilaklaringiz</label>
+          <textarea id="rsvpMsg"></textarea>
+        </div>
+        <div class="rsvp-send">
+          <button type="submit" class="btn gold" id="rsvpSubmit"><span data-t="send">Yuborish</span></button>
+        </div>
+        <p class="rsvp-err" id="rsvpErr" data-t="sendFailed">Yuborib bolmadi. Qaytadan urinib koring.</p>
+      </form>
+      <div class="rsvp-done" id="rsvpSuccess">
+        <svg class="anor" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+        <h3 data-t="thankYou">Rahmat!</h3>
+        <p id="successText"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     FINAL
+     ====================================================================== -->
+<footer class="final-sec observe">
+  <div class="satin" aria-hidden="true"><div class="satin-fold"></div><div class="satin-sheen"></div></div>
+  <div class="final-inner">
+    <svg class="final-anor" viewBox="0 0 120 124" aria-hidden="true"><use href="#anor-cross"/></svg>
+    <p class="f-thanks" data-t="gladToSeeYou">Tashrifingizdan mamnun bolamiz</p>
+    <p class="f-names" data-bind="coupleLine">&nbsp;</p>
+    <p class="f-msg" data-bind="closingWords"></p>
+    <div class="final-brand">
+      <div class="fb-logo" data-bind="venueName"></div>
+      <div class="fb-fine"><span data-bind="finalFine"></span></div>
+    </div>
+  </div>
+</footer>
+
+<footer id="vconnect">
+  <img id="vconnectLogo" alt="v-invite" width="34" height="40">
+  <span data-t="developedBy">Developed with love by V-INVITE</span>
+  <div id="vcContacts"></div>
+</footer>
+
+<div id="lightbox" role="dialog" aria-modal="true">
+  <button id="lbClose" type="button" data-t-aria="close" aria-label="Close">&#10005;</button>
+  <div>
+    <img id="lbImg" alt="">
+    <p id="lbCap"></p>
+  </div>
+</div>
+
+<button id="music-btn" class="hidden" aria-pressed="false" data-t-aria="music" aria-label="Music">
+  <span class="bars"><span></span><span></span><span></span></span>
+</button>
+<audio id="audio" loop preload="none"></audio>
+
+<script>
+/* ============================================================================
+   ANOR VA ATLAS — rich-template contract.
+   Config arrives as window.__CONFIG__ / __LANGS__ / __ORIGIN__ / __CONTACTS__;
+   live edits arrive by postMessage; RSVPs post back to the parent. CSS owns the
+   look and the movement — this script binds the content, opens the envelope,
+   builds the programme and the album, and takes the reply.
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var CONFIG = window.__CONFIG__ || {};
+  var LANGS = (window.__LANGS__ && window.__LANGS__.length) ? window.__LANGS__ : ['uz'];
+  var lang = LANGS[0];
+  var ORIGIN = window.__ORIGIN__ || '';
+  var ADMIN_EDIT = window.__ADMIN_EDIT__ === true;
+
+  /* ── Built-in UI strings (template chrome — not honoree-editable) ─────────
+     Uzbek first: this design is for a talbon, and uz is the language it will
+     almost always be read in. Apostrophes are avoided throughout, per the
+     repo convention for uz strings. */
+  var UI = {
+    uz: {
+      gateKicker: 'Marhamat', gateTitle: 'Sizni taklif etamiz',
+      openInvitation: 'Taklifnomani ochish', tapToOpen: 'Taklifnomani ochish uchun bosing',
+      moreDetails: 'Batafsil malumot', scrollDown: 'Pastga',
+      ceremonyPlace: 'Marosim manzili', theVenue: 'Bazm joyi',
+      information: 'Malumot', ceremonyDetails: 'Marosim tafsilotlari',
+      theDate: 'Sana', theStart: 'Boshlanish', theAddress: 'Manzil',
+      theAttire: 'Kiyim uslubi', theExtra: 'Qoshimcha',
+      programme: 'Dastur', theOrder: 'Marosim tartibi',
+      brideAndGroom: 'Kelin va kuyov', happyCouple: 'Baxtli juftlik',
+      theBride: 'Kelin', theGroom: 'Kuyov',
+      memories: 'Xotiralar', weddingMoments: 'Toy lavhalari',
+      findUs: 'Bizni toping', openMap: 'Xaritada ochish',
+      confirmation: 'Tasdiqlash', letUsKnow: 'Kelishingizni bildiring',
+      fullName: 'Ismingiz', willYouAttend: 'Kela olasizmi?',
+      accept: 'Albatta boraman', decline: 'Afsuski, yoq',
+      guestCount: 'Mehmonlar soni (siz bilan birga)', messageLabel: 'Tilaklaringiz',
+      send: 'Yuborish', sending: 'Yuborilmoqda...',
+      sendFailed: 'Yuborib bolmadi. Qaytadan urinib koring.', thankYou: 'Rahmat!',
+      savedYes: 'Javobingiz qabul qilindi. Sizni marosimda kutamiz.',
+      savedNo: 'Xabar berganingiz uchun rahmat. Sizni sogtnamiz.',
+      gladToSeeYou: 'Tashrifingizdan mamnun bolamiz',
+      talbon: 'Talbon marosimi', close: 'Yopish', music: 'Musiqa',
+      developedBy: 'V-INVITE tomonidan mehr bilan yaratildi'
+    },
+    ru: {
+      gateKicker: 'Добро пожаловать', gateTitle: 'Мы приглашаем вас',
+      openInvitation: 'Открыть приглашение', tapToOpen: 'Нажмите, чтобы открыть',
+      moreDetails: 'Подробнее', scrollDown: 'Вниз',
+      ceremonyPlace: 'Место торжества', theVenue: 'Место проведения',
+      information: 'Информация', ceremonyDetails: 'Детали торжества',
+      theDate: 'Дата', theStart: 'Начало', theAddress: 'Адрес',
+      theAttire: 'Дресс-код', theExtra: 'Дополнительно',
+      programme: 'Программа', theOrder: 'Порядок торжества',
+      brideAndGroom: 'Невеста и жених', happyCouple: 'Счастливая пара',
+      theBride: 'Невеста', theGroom: 'Жених',
+      memories: 'Воспоминания', weddingMoments: 'Свадебные моменты',
+      findUs: 'Как нас найти', openMap: 'Открыть карту',
+      confirmation: 'Подтверждение', letUsKnow: 'Сообщите, придёте ли вы',
+      fullName: 'Ваше имя', willYouAttend: 'Сможете присутствовать?',
+      accept: 'С радостью приду', decline: 'К сожалению, нет',
+      guestCount: 'Количество гостей (включая вас)', messageLabel: 'Ваши пожелания',
+      send: 'Отправить', sending: 'Отправляем…',
+      sendFailed: 'Не удалось отправить. Попробуйте ещё раз.', thankYou: 'Спасибо!',
+      savedYes: 'Ваш ответ получен. Ждём вас на торжестве.',
+      savedNo: 'Спасибо, что сообщили. Нам будет вас не хватать.',
+      gladToSeeYou: 'Будем рады видеть вас',
+      talbon: 'Талбон', close: 'Закрыть', music: 'Музыка',
+      developedBy: 'Сделано с любовью в V-INVITE'
+    },
+    en: {
+      gateKicker: 'Welcome', gateTitle: 'You are invited',
+      openInvitation: 'Open the invitation', tapToOpen: 'Tap to open the invitation',
+      moreDetails: 'See the details', scrollDown: 'Scroll',
+      ceremonyPlace: 'The setting', theVenue: 'The venue',
+      information: 'Information', ceremonyDetails: 'Celebration details',
+      theDate: 'Date', theStart: 'Begins', theAddress: 'Address',
+      theAttire: 'Attire', theExtra: 'Also',
+      programme: 'Programme', theOrder: 'Order of the day',
+      brideAndGroom: 'Bride and groom', happyCouple: 'The happy couple',
+      theBride: 'Bride', theGroom: 'Groom',
+      memories: 'Memories', weddingMoments: 'Wedding moments',
+      findUs: 'Find us', openMap: 'Open map',
+      confirmation: 'Confirmation', letUsKnow: 'Let us know',
+      fullName: 'Full name', willYouAttend: 'Will you attend?',
+      accept: 'Joyfully accept', decline: 'Regretfully decline',
+      guestCount: 'Number of guests (including you)', messageLabel: 'Your wishes',
+      send: 'Send', sending: 'Sending…',
+      sendFailed: 'Could not send. Please try again.', thankYou: 'Thank you!',
+      savedYes: 'Your response has been saved. We look forward to seeing you.',
+      savedNo: 'Thank you for letting us know. You will be missed.',
+      gladToSeeYou: 'We would be glad to see you',
+      talbon: 'Talbon celebration', close: 'Close', music: 'Music',
+      developedBy: 'Developed with love by V-INVITE'
+    }
+  };
+
+  var $ = function (s, c) { return (c || document).querySelector(s); };
+  var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function t(key) { return (UI[lang] && UI[lang][key]) || UI.uz[key] || key; }
+  function loc(v) {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    return v[lang] || v.uz || v.ru || v.en || '';
+  }
+  function cfg(path, dflt) {
+    var cur = CONFIG, parts = path.split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (cur == null || typeof cur !== 'object') return dflt;
+      cur = cur[parts[i]];
+    }
+    return cur == null ? dflt : cur;
+  }
+
+  /* ── Dates ─────────────────────────────────────────────────────────────── */
+  function eventDate() {
+    var d = new Date(cfg('event.dateISO', '2026-10-25T18:00:00'));
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  function intlLocale() { return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'en' ? 'en-GB' : 'ru-RU'); }
+  function fmtDateLong() {
+    try {
+      return new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'long', year: 'numeric' }).format(eventDate());
+    } catch (e) { return eventDate().toDateString(); }
+  }
+  function fmtWeekday() {
+    try {
+      return new Intl.DateTimeFormat(intlLocale(), { weekday: 'long' }).format(eventDate());
+    } catch (e) { return ''; }
+  }
+  function fmtTime() {
+    var d = eventDate(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  /* ── Text binding ──────────────────────────────────────────────────────── */
+  function bindTexts() {
+    var bride = loc(cfg('couple.bride', ''));
+    var groom = loc(cfg('couple.groom', ''));
+    var couple = (bride && groom) ? (bride + ' & ' + groom) : (bride || groom);
+    var timeText = loc(cfg('event.timeText', '')) || fmtTime();
+    var occasion = loc(cfg('invite.occasion', '')) || t('talbon');
+    var venueName = loc(cfg('venue.name', ''));
+
+    var map = {
+      brideName: bride,
+      groomName: groom,
+      coupleLine: couple,
+      brideFull: loc(cfg('couple.brideFull', '')) || bride,
+      groomFull: loc(cfg('couple.groomFull', '')) || groom,
+      occasion: occasion,
+      kicker: loc(cfg('invite.kicker', '')),
+      heroWhen: fmtDateLong() + ' · ' + timeText,
+      heroMsg: loc(cfg('invite.message', '')),
+      cardTal: occasion + ' · ' + eventDate().getFullYear(),
+
+      venueName: venueName,
+      venueTag: loc(cfg('venue.tagline', '')),
+      venueAddress: loc(cfg('venue.address', '')),
+
+      evDate: fmtDateLong(),
+      evDateNote: loc(cfg('event.dateNote', '')) || fmtWeekday(),
+      evTime: timeText,
+      evTimeNote: loc(cfg('event.timeNote', '')),
+      evVenue: venueName,
+      evAddress: loc(cfg('venue.address', '')),
+      evDress: loc(cfg('dress.title', '')),
+      evDressNote: loc(cfg('dress.note', '')),
+      evExtra: loc(cfg('extra.title', '')),
+      evExtraNote: loc(cfg('extra.note', '')),
+
+      galleryLede: loc(cfg('gallery_lede', '')),
+      rsvpLede: loc(cfg('rsvp.lede', '')),
+      closingWords: loc(cfg('invite.closing', '')),
+      finalFine: fmtDateLong() + ' · ' + occasion
+    };
+
+    $$('[data-bind]').forEach(function (el) {
+      var v = map[el.getAttribute('data-bind')];
+      if (v != null) el.textContent = v;
+    });
+    $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+    $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
+
+    document.title = couple || 'Invitation';
+    document.documentElement.lang = lang;
+  }
+
+  /* ── Photos ────────────────────────────────────────────────────────────── */
+  /* A portrait that is not set — or fails to load — leaves the drawn
+     placeholder showing, never an empty arch. */
+  function bindPhoto(imgId, path) {
+    var img = $('#' + imgId);
+    if (!img) return;
+    var src = cfg(path, '');
+    if (!src) { img.classList.add('hidden'); img.removeAttribute('src'); return; }
+    img.classList.remove('hidden');
+    img.onerror = function () { img.classList.add('hidden'); };
+    img.src = src;
+  }
+
+  function renderBrand() {
+    var slot = $('#brandLogoSlot'), img = $('#brandLogo');
+    if (!slot || !img) return;
+    var src = cfg('venue.logo', '');
+    if (!src) { slot.classList.add('hidden'); return; }
+    slot.classList.remove('hidden');
+    img.onerror = function () { slot.classList.add('hidden'); };
+    img.alt = loc(cfg('venue.name', '')) || '';
+    img.src = src;
+  }
+
+  /* ── Programme ─────────────────────────────────────────────────────────── */
+  function scheduleItems() {
+    var raw = cfg('schedule', []);
+    return Array.isArray(raw) ? raw.filter(function (s) {
+      return s && ((s.time && String(s.time).trim()) || (loc(s.label) || '').trim());
+    }) : [];
+  }
+
+  var SEED_SVG = '<path d="M7.5 1 C11 5 13 9 12.5 13 C12 17 9 19 7.5 18 C6 19 3 17 2.5 13 C2 9 4 5 7.5 1 Z"/>';
+
+  function renderSchedule() {
+    var host = $('#schedList'), section = $('#program');
+    if (!host) return;
+    var items = scheduleItems();
+    host.innerHTML = '';
+    if (section) section.classList.toggle('card-off', items.length === 0);
+    if (!items.length) return;
+    items.forEach(function (item) {
+      var step = document.createElement('div');
+      step.className = 'sc-step observe';
+
+      var seed = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      seed.setAttribute('class', 'seed');
+      seed.setAttribute('viewBox', '0 0 15 19');
+      seed.setAttribute('fill', 'currentColor');
+      seed.setAttribute('aria-hidden', 'true');
+      seed.innerHTML = SEED_SVG;
+
+      var at = document.createElement('span');
+      at.className = 'at';
+      at.textContent = (item.time || '').trim();
+
+      var h3 = document.createElement('h3');
+      h3.textContent = loc(item.label) || '';
+
+      step.appendChild(seed); step.appendChild(at); step.appendChild(h3);
+      host.appendChild(step);
+      observe(step);
+    });
+  }
+
+  /* ── Gallery ───────────────────────────────────────────────────────────── */
+  function galleryItems() {
+    var raw = cfg('gallery', []);
+    return Array.isArray(raw) ? raw.filter(function (g) { return g && g.image; }) : [];
+  }
+
+  function renderGallery() {
+    var album = $('#album'), section = $('#gallery');
+    if (!album) return;
+    var items = galleryItems();
+    album.innerHTML = '';
+    if (section) section.classList.toggle('card-off', items.length === 0);
+    if (!items.length) return;
+    items.forEach(function (g, i) {
+      var fig = document.createElement('figure');
+      fig.className = 'frame observe';
+      fig.style.setProperty('--fd', (i * 0.11).toFixed(2) + 's');
+
+      var tape = document.createElement('span');
+      tape.className = 'tape';
+      tape.setAttribute('aria-hidden', 'true');
+
+      var win = document.createElement('div');
+      win.className = 'frame-win';
+      var img = document.createElement('img');
+      img.alt = loc(g.caption) || '';
+      img.onerror = function () { img.classList.add('broken'); };
+      img.src = g.image;
+      win.appendChild(img);
+
+      var cap = document.createElement('figcaption');
+      cap.className = 'frame-cap';
+      cap.textContent = loc(g.caption) || '';
+
+      fig.appendChild(tape); fig.appendChild(win); fig.appendChild(cap);
+      fig.addEventListener('click', function () { openLightbox(g.image, loc(g.caption)); });
+      album.appendChild(fig);
+      observe(fig);
+    });
+  }
+
+  /* ── Lightbox ──────────────────────────────────────────────────────────── */
+  var lightbox = $('#lightbox');
+  function openLightbox(src, caption) {
+    if (!lightbox) return;
+    var img = $('#lbImg'), cap = $('#lbCap');
+    if (img) img.src = src;
+    if (cap) cap.textContent = caption || '';
+    lightbox.classList.add('show');
+  }
+  function closeLightbox() { if (lightbox) lightbox.classList.remove('show'); }
+  if (lightbox) lightbox.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLightbox(); });
+
+  /* ── Visibility ────────────────────────────────────────────────────────── */
+  /* Sections switched off in the builder, plus tiles with nothing in them — an
+     empty labelled card reads as a mistake, not as restraint. */
+  function applyVisibility() {
+    var hid = cfg('hidden', {}) || {};
+    $$('[data-opt]').forEach(function (el) {
+      el.classList.toggle('opt-off', hid[el.getAttribute('data-opt')] === true);
+    });
+
+    var shown = 0;
+    $$('#evGrid .ev').forEach(function (tile) {
+      var filled = $$('[data-bind]', tile).some(function (el) { return el.textContent.trim(); });
+      tile.classList.toggle('card-off', !filled);
+      if (filled) shown++;
+    });
+    var details = $('#details');
+    if (details && hid.details !== true) details.classList.toggle('card-off', shown === 0);
+
+    var couple = $('#couple');
+    var hasBride = !!(loc(cfg('couple.brideFull', '')) || loc(cfg('couple.bride', '')));
+    var hasGroom = !!(loc(cfg('couple.groomFull', '')) || loc(cfg('couple.groom', '')));
+    if (couple && hid.couple !== true) couple.classList.toggle('card-off', !hasBride && !hasGroom);
+
+    var brand = $('#brand');
+    if (brand && hid.brand !== true) brand.classList.toggle('card-off', !loc(cfg('venue.name', '')));
+
+    var mapLink = $('#mapLink');
+    if (mapLink) {
+      var url = cfg('venue.mapUrl', '');
+      if (!url) {
+        var q = loc(cfg('venue.address', '')) || loc(cfg('venue.name', ''));
+        url = q ? 'https://yandex.com/maps/?text=' + encodeURIComponent(q) : '';
+      }
+      mapLink.href = url || '#';
+      mapLink.classList.toggle('hidden', !url);
+    }
+  }
+
+  /* ── Reveal-on-scroll ──────────────────────────────────────────────────── */
+  /* Every entrance — and every ambient loop below the fold — is gated on
+     `.in-view`. Without IntersectionObserver, or inside the Design+ editor
+     which needs to see every section at once, everything is shown rather than
+     left invisible. */
+  var revObs = null;
+  function initObserver() {
+    var targets = $$('.observe');
+    if (ADMIN_EDIT || reduced || typeof IntersectionObserver === 'undefined') {
+      targets.forEach(function (el) { el.classList.add('in-view'); });
+      return;
+    }
+    revObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('in-view');
+        revObs.unobserve(e.target);
+      });
+    }, { threshold: 0, rootMargin: '0px 0px -5% 0px' });
+    targets.forEach(function (el) { revObs.observe(el); });
+  }
+  function observe(el) {
+    if (revObs) revObs.observe(el); else el.classList.add('in-view');
+  }
+  function revealEverything() {
+    $$('.observe').forEach(function (el) { el.classList.add('in-view'); });
+  }
+
+  /* ── The gate ──────────────────────────────────────────────────────────── */
+  var gate = $('#gate'), scene = $('#envelopeWrap'), flap = $('#envFlap');
+  var gateOpened = false, gateTimers = [];
+  function after(ms, fn) { gateTimers.push(setTimeout(fn, ms)); }
+
+  function finishGate() {
+    gateTimers.forEach(clearTimeout);
+    gateTimers = [];
+    gateOpened = true;
+    if (gate) {
+      gate.classList.add('is-hidden');
+      setTimeout(function () { if (gate.parentNode) gate.parentNode.removeChild(gate); }, 1400);
+    }
+    document.body.classList.add('is-open');
+  }
+
+  function openGate() {
+    if (gateOpened) return;
+    gateOpened = true;
+    startMusic();                        // the tap is the gesture autoplay needs
+    if (reduced || !gate) { finishGate(); return; }
+    gate.classList.add('opening');       // darken, seal glints
+    gateOpened = false;                  // finishGate() sets it for real
+    after(900,  function () { gate.classList.add('stage-untie'); });  // ribbon slides away
+    after(1700, function () { gate.classList.add('stage-flap'); });   // flap opens
+    after(2350, function () { if (flap) flap.style.zIndex = '0'; });  // z handoff at 90°
+    after(2600, function () { gate.classList.add('stage-rise'); });   // card rises + burst
+    after(3900, function () { gate.classList.add('stage-lift'); });   // card presented
+    after(4900, finishGate);                                          // satin → page
+  }
+
+  if (gate) gate.addEventListener('click', openGate);
+  if (scene) scene.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGate(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !document.body.classList.contains('is-open')) finishGate();
+  });
+
+  /* ── Ambient petals + pomegranate seeds ────────────────────────────────── */
+  function initAmbient() {
+    var canvas = $('#ambient');
+    var ctx = (canvas && canvas.getContext) ? canvas.getContext('2d') : null;
+    if (!ctx || reduced) return;
+    var petals = [], seeds = [], w = 0, h = 0, raf = 0;
+
+    function newPetal(top) {
+      return { x: Math.random() * w, y: top ? -14 : Math.random() * h,
+        rx: 5 + Math.random() * 5, ry: 2.6 + Math.random() * 2.4, vy: 0.22 + Math.random() * 0.4,
+        swayA: 20 + Math.random() * 24, swayF: 0.35 + Math.random() * 0.4, phase: Math.random() * 6.28,
+        rot: Math.random() * 6.28, rotV: (-0.5 + Math.random()) * 0.012, a: 0.3 + Math.random() * 0.28 };
+    }
+    function newSeed(top) {
+      return { x: Math.random() * w, y: top ? -10 : Math.random() * h,
+        r: 2 + Math.random() * 2, vy: 0.3 + Math.random() * 0.4, vx: (-0.5 + Math.random()) * 0.3,
+        a: 0.35 + Math.random() * 0.3, tw: Math.random() * 6.28 };
+    }
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      petals = []; seeds = [];
+      var np = Math.min(18, Math.floor(w * h / 60000));
+      var ns = Math.min(8, Math.floor(w * h / 150000));
+      for (var i = 0; i < np; i++) petals.push(newPetal(false));
+      for (var j = 0; j < ns; j++) seeds.push(newSeed(false));
+    }
+    function draw(ts) {
+      ctx.clearRect(0, 0, w, h);
+      var s = (ts || 0) * 0.001;
+      for (var i = 0; i < petals.length; i++) {
+        var p = petals[i];
+        p.y += p.vy; p.rot += p.rotV;
+        if (p.y > h + 16) petals[i] = newPetal(true);
+        var sway = Math.sin(s * p.swayF + p.phase) * p.swayA;
+        ctx.save();
+        ctx.translate(p.x + sway, p.y);
+        ctx.rotate(p.rot + Math.sin(s * p.swayF + p.phase) * 0.4);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.rx, p.ry, 0, 0, 6.28);
+        ctx.fillStyle = 'rgba(165,31,51,' + p.a + ')';
+        ctx.fill();
+        ctx.restore();
+      }
+      for (var k = 0; k < seeds.length; k++) {
+        var sd = seeds[k];
+        sd.y += sd.vy; sd.x += sd.vx;
+        if (sd.y > h + 12) seeds[k] = newSeed(true);
+        ctx.beginPath();
+        ctx.ellipse(sd.x, sd.y, sd.r * 0.8, sd.r, 0, 0, 6.28);
+        ctx.fillStyle = 'rgba(196,58,72,' + (sd.a * (0.6 + 0.4 * Math.sin(sd.tw + s))) + ')';
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    raf = requestAnimationFrame(draw);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) cancelAnimationFrame(raf); else raf = requestAnimationFrame(draw);
+    });
+  }
+
+  /* ── Music ─────────────────────────────────────────────────────────────── */
+  var audio = $('#audio'), musicBtn = $('#music-btn');
+  var musicRetry = false;
+  var RETRY_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+
+  function startMusic() {
+    if (!audio || !audio.getAttribute('src') || !audio.paused) return;
+    var p = audio.play();
+    if (p && p.catch) p.catch(armMusicRetry);
+    if (musicBtn) musicBtn.setAttribute('aria-pressed', 'true');
+  }
+  function armMusicRetry() {
+    if (musicRetry) return;
+    musicRetry = true;
+    var retry = function () {
+      var p = audio.play();
+      var stop = function () { RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); }); };
+      if (p && p.then) p.then(stop); else stop();
+    };
+    RETRY_EVENTS.forEach(function (ev) { window.addEventListener(ev, retry, { once: false }); });
+  }
+  function renderMusic() {
+    if (!audio || !musicBtn) return;
+    var url = cfg('music.url', '');
+    var hid = cfg('hidden', {}) || {};
+    if (!url || hid.music === true) {
+      audio.removeAttribute('src');
+      musicBtn.classList.add('hidden');
+      return;
+    }
+    if (audio.getAttribute('src') !== url) audio.setAttribute('src', url);
+    musicBtn.classList.remove('hidden');
+  }
+  if (musicBtn) musicBtn.addEventListener('click', function () {
+    if (!audio || !audio.getAttribute('src')) return;
+    if (audio.paused) { audio.play(); musicBtn.setAttribute('aria-pressed', 'true'); }
+    else { audio.pause(); musicBtn.setAttribute('aria-pressed', 'false'); }
+  });
+
+  /* ── RSVP ──────────────────────────────────────────────────────────────── */
+  var form = $('#rsvpForm'), success = $('#rsvpSuccess'), attendRow = $('#attendRow');
+  var rsvpPending = null;
+
+  function attending() {
+    var checked = form ? form.querySelector('input[name="attend"]:checked') : null;
+    return !checked || checked.value === 'yes';
+  }
+
+  if (attendRow) attendRow.addEventListener('change', function (e) {
+    $$('label', attendRow).forEach(function (l) { l.classList.remove('sel'); });
+    var label = e.target && e.target.closest ? e.target.closest('label') : null;
+    if (label) label.classList.add('sel');
+    var guestField = $('#guestField');
+    if (guestField) guestField.style.display = attending() ? '' : 'none';
+  });
+
+  if (form) form.addEventListener('submit', function (e) {
+    if (e.preventDefault) e.preventDefault();
+    var nameInput = $('#rsvpName');
+    var field = nameInput && nameInput.closest ? nameInput.closest('.f') : null;
+    var name = ((nameInput && nameInput.value) || '').trim();
+    if (!name) {
+      if (field) field.classList.add('invalid');
+      if (nameInput && nameInput.focus) nameInput.focus();
+      return;
+    }
+    if (field) field.classList.remove('invalid');
+    $('#rsvpErr').classList.remove('show');
+
+    var yes = attending();
+    var guestsInput = $('#rsvpGuests'), msgInput = $('#rsvpMsg');
+    var payload = {
+      name: name,
+      attending: yes,
+      guests: yes ? (parseInt(guestsInput && guestsInput.value, 10) || 1) : 0,
+      message: ((msgInput && msgInput.value) || '').trim() || undefined
+    };
+
+    var btn = $('#rsvpSubmit'), label = btn ? btn.querySelector('span') : null;
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = t('sending');
+
+    new Promise(function (resolve, reject) {
+      /* If no parent answers within 2.5s (the editor preview does not), treat
+         it as saved rather than showing the guest a failure. */
+      var timer = setTimeout(function () { rsvpPending = null; resolve(); }, 2500);
+      rsvpPending = { resolve: resolve, reject: reject, timer: timer };
+      window.parent.postMessage({ type: 'vinvite:rsvp', payload: payload }, '*');
+    }).then(function () {
+      $('#successText').textContent = yes ? t('savedYes') : t('savedNo');
+      form.style.display = 'none';
+      if (success) success.classList.add('show');
+    }, function () {
+      $('#rsvpErr').classList.add('show');
+    }).then(function () {
+      if (btn) btn.disabled = false;
+      if (label) label.textContent = t('send');
+    });
+  });
+
+  /* ── Platform credit ───────────────────────────────────────────────────── */
+  var SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.1 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.8.6A2 2 0 0 1 22 16.9z"/></svg>';
+  var SVG_TG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.8 18.6l.3-4.2 7.7-6.9c.3-.3-.1-.5-.5-.2L7.7 13.2 3.6 11.9c-.9-.3-.9-.9.2-1.3l16-6.2c.7-.3 1.4.2 1.1 1.3l-2.7 12.8c-.2.9-.7 1.1-1.5.7l-4.1-3-2 2c-.2.2-.4.4-.8.4z"/></svg>';
+  var SVG_IG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>';
+
+  function renderPlatformContacts() {
+    var host = $('#vcContacts');
+    if (!host) return;
+    var c = window.__CONTACTS__ || {};
+    host.innerHTML = '';
+    function link(href, label, svg) {
+      var a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.innerHTML = svg + '<span>' + label + '</span>';
+      host.appendChild(a);
+    }
+    var phone = (c.phone || '').trim(), tg = (c.telegram || '').trim(), ig = (c.instagram || '').trim();
+    if (phone) link('tel:' + phone.replace(/[^\d+]/g, ''), phone, SVG_PHONE);
+    if (tg) link(tg.indexOf('http') === 0 ? tg : 'https://t.me/' + tg.replace(/^@/, ''),
+      tg.replace(/^https?:\/\/t\.me\//, '@').replace(/^@?/, '@'), SVG_TG);
+    if (ig) link(ig.indexOf('http') === 0 ? ig : 'https://instagram.com/' + ig.replace(/^@/, ''),
+      ig.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/^@?/, '@'), SVG_IG);
+
+    var logo = $('#vconnectLogo');
+    if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/v-invite-logo.png');
+  }
+
+  /* ── Language bar ──────────────────────────────────────────────────────── */
+  function renderLangbar() {
+    var bar = $('#langbar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    if (LANGS.length < 2) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    LANGS.forEach(function (l) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = String(l).toUpperCase();
+      b.className = (l === lang) ? 'active' : '';
+      b.addEventListener('click', function () {
+        if (lang === l) return;
+        lang = l;
+        renderAll();
+      });
+      bar.appendChild(b);
+    });
+  }
+
+  /* ── Navigation ────────────────────────────────────────────────────────── */
+  var startBtn = $('#startBtn');
+  if (startBtn) startBtn.addEventListener('click', function () {
+    var target = $('#brand');
+    if (!target || target.classList.contains('card-off') || target.classList.contains('opt-off')) target = $('#details');
+    if (target && target.scrollIntoView) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  /* ── Host bridge ───────────────────────────────────────────────────────── */
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'vinvite:rsvp-ok' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.resolve(); rsvpPending = null; }
+    if (d.type === 'vinvite:rsvp-err' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.reject(); rsvpPending = null; }
+    if (d.type === 'vinvite:config') {
+      if (d.contacts) window.__CONTACTS__ = d.contacts;
+      CONFIG = d.config || CONFIG;
+      if (d.languages && d.languages.length) {
+        LANGS = d.languages;
+        if (LANGS.indexOf(lang) === -1) lang = LANGS[0];
+      }
+      renderAll();
+    }
+    /* The editor jumped to a section being edited: the gate must be out of the
+       way and every entrance already played, or the admin is looking at a
+       blank page behind a closed envelope. */
+    if (d.type === 'vinvite:focus') {
+      finishGate();
+      revealEverything();
+    }
+  });
+
+  /* ── Full render (initial + on config / language change) ───────────────── */
+  function renderAll() {
+    renderPlatformContacts();
+    bindTexts();
+    bindPhoto('bridePhoto', 'couple.bridePhoto');
+    bindPhoto('groomPhoto', 'couple.groomPhoto');
+    renderBrand();
+    renderSchedule();
+    renderGallery();
+    applyVisibility();
+    renderMusic();
+    renderLangbar();
+  }
+
+  /* ── Boot ──────────────────────────────────────────────────────────────── */
+  /* `js` gates the scroll lock and every "hidden until revealed" rule, so it is
+     added first and taken back off if anything below throws — a half-booted
+     page must still be readable and scrollable. */
+  document.documentElement.classList.add('js');
+  try {
+    renderAll();
+    initObserver();
+    initAmbient();
+    if (reduced) finishGate();
+  } catch (err) {
+    document.documentElement.classList.remove('js');
+    document.body.classList.add('is-open');
+    if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+    if (window.console && console.error) console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
