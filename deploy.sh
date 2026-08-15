@@ -155,7 +155,14 @@ else
   fi
   # `npm test` runs both projects (api + web). set -e aborts the deploy on the
   # first failing test, before the database or the live bundle is touched.
-  npm test
+  #
+  # VMENU_DEPLOY=1 turns on the strict half of `config/envFile.test.ts`, which
+  # reads apps/api/.env and refuses a deploy when it is the repository's own
+  # development copy — the state a `git stash` on the server leaves behind, and
+  # the one that silently cost us the database URL, the signing secret and both
+  # Telegram bot tokens. A developer's machine is meant to hold those dev
+  # values, so the strict rules only ever apply here.
+  VMENU_DEPLOY=1 npm test
 fi
 
 echo "==> Running database migrations..."

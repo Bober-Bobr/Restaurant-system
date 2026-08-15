@@ -1072,3 +1072,59 @@ files contained placeholders, never production values.
   still tracked *and* modified, `merge --ff-only` refuses outright, so the very
   commit that untracks it could not otherwise be pulled. If a checkout ever
   overwrites one again, the server's copy wins and the script says so.
+
+---
+
+## 20. Bringing the Telegram bots back
+
+`git stash` on the server restored the repository's copy of `apps/api/.env`
+(§19) and took **both bot tokens** with it. Nothing failed loudly, because
+`registerWebhook()` runs once on boot and returns without a word when the token,
+the webhook secret or the public URL is missing — the API starts, the logs look
+normal, and the bots never receive another message.
+
+Restore these to `apps/api/.env`, then restart the API:
+
+| Key | What it does |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | The main bot — forwards flyer form submissions. |
+| `TELEGRAM_WEBHOOK_SECRET` | Guards the public webhook path; also sent as Telegram's `secret_token`. |
+| `TELEGRAM_PUBLIC_URL` | Where Telegram POSTs updates, e.g. `https://event.v-menu.uz`. |
+| `TELEGRAM_INVITE_BOT_TOKEN` | Optional second bot for invitation RSVPs. Without it, the main bot serves both. |
+| `TELEGRAM_BOT_USERNAME`, `TELEGRAM_INVITE_BOT_USERNAME` | Only for building `t.me` deep links; fetched via `getMe` when omitted. |
+
+If the tokens are gone, reissue them from **@BotFather** (`/mytoken`). The
+webhook secret is ours — any long random string, as long as it matches what is
+registered; `openssl rand -hex 24` will do.
+
+Webhook registration happens **on boot**, so the tokens only take effect after
+`pm2 restart restaurant-api` (which `deploy.sh` does at the end). Confirm with:
+
+```
+pm2 logs restaurant-api --lines 50 | grep telegram
+# → [telegram] main webhook registered at https://event.v-menu.uz/api/telegram/webhook/…
+```
+
+No line means the registration was skipped — one of the three above is still
+missing.
+
+### This cannot happen quietly again
+
+`apps/api/src/config/envFile.test.ts` reads the real `.env` as part of the test
+suite, and `deploy.sh` runs the suite with `VMENU_DEPLOY=1` **before** the
+migrations and the pm2 restart. On a deploy it refuses:
+
+- the SQLite development URL, or any non-postgres one;
+- any value still carrying an example from `.env.example`;
+- a missing key that `.env.example` marks `# required` — which now includes the
+  three Telegram variables;
+- a bot token with no webhook secret or no public URL (a half-configured bot,
+  which is the silent-failure shape);
+- `KEY: value` lines (pm2's display format), duplicate keys, and a `JWT_SECRET`
+  too short for `env.ts`.
+
+Problems are reported by **key name only** — no value ever reaches the output.
+
+If you deliberately stop using the bots, remove their `# required` markers from
+`apps/api/.env.example`. That is a commit somebody can read, rather than a
+deploy that fails.
