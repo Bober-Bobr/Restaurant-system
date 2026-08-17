@@ -1149,7 +1149,14 @@ Two layers were fixed in the repo:
   precached `index.html`), and navigations now fetch with `cache: 'reload'`,
   bypassing the browser's own HTTP cache for the shell.
 - The title is applied in `main.tsx` **before the first render**, so it never
-  depends on an effect that runs after the first paint.
+  depends on an effect that runs after the first paint, and an inline script in
+  `index.html` names v-connect and v-invite before the bundle has even parsed.
+
+**Caches are per ORIGIN.** `v-connect.uz`, `v-invite.uz` and `v-menu.uz` each
+have their own service-worker registration and their own HTTP cache, so a hard
+refresh on one does nothing for the others. After a shell change, every origin
+needs one — which is the argument for fixing the nginx headers below rather than
+chasing it by hand.
 
 **The remaining layer is nginx**, and it is not in this repo. Each server block
 serving the SPA needs the shell excluded from caching while the hashed assets

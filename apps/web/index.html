@@ -22,6 +22,19 @@
          app replaces it per role in App.tsx (utils/appTitle.ts): a restaurant's
          staff see the restaurant's name, everyone else the product name. -->
     <title>Restaurant System</title>
+    <script>
+      // One HTML file serves three products, so the static title above is only
+      // right for v-menu. The app sets the real one (utils/appTitle.ts — the
+      // source of truth, including the per-restaurant case), but that waits for
+      // a ~600 kB bundle to download and parse; on a phone the wrong product
+      // name is visible for that whole time. Matching the hostname here costs
+      // nothing and is correct from the first paint.
+      (function () {
+        var host = location.hostname;
+        if (host.indexOf('v-connect') !== -1) document.title = 'V-connect';
+        else if (host.indexOf('v-invite') !== -1) document.title = 'v-invite.uz';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
