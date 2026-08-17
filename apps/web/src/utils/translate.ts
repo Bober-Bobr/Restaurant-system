@@ -6,7 +6,6 @@ export const defaultLocale: Locale = 'uz';
 
 const resources = {
   en: {
-    banquet_admin: 'Banquet Admin',
     events: 'Events',
     menu: 'Menu',
     tables: 'Table categories',
@@ -1057,7 +1056,6 @@ const resources = {
     fe_more: 'More',
   },
   ru: {
-    banquet_admin: 'Админ Банкет',
     events: 'События',
     menu: 'Меню',
     tables: 'Категории столов',
@@ -2098,7 +2096,6 @@ const resources = {
     fe_more: 'Больше',
   },
   uz: {
-    banquet_admin: 'Banket Maʼmuri',
     events: 'Tadbirlar',
     menu: 'Menyu',
     tables: 'Jadval Toifalari',

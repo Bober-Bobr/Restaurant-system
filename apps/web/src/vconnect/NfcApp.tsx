@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
@@ -22,9 +21,9 @@ export const NfcApp = () => {
   const accessToken = useAuthStore((s) => s.accessToken);
   const role = useAuthStore((s) => s.role);
 
-  useEffect(() => {
-    document.title = 'NFC · v-connect.uz';
-  }, []);
+  // The tab title is set in App.tsx for every v-connect host at once — builder,
+  // login and published plaque alike. Setting it here as well would only lose a
+  // race with it, since a child's effect runs first.
 
   const allowed = !!accessToken && (role === 'NFC_MAKER' || role === 'CHIEF_ADMIN');
 

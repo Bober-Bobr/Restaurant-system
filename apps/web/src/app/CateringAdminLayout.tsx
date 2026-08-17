@@ -8,6 +8,7 @@ import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { buildAbsoluteUrl } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { PLATFORM_TITLE } from '../utils/appTitle';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
@@ -87,7 +88,7 @@ export const CateringAdminLayout = () => {
             />
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
-                {restaurantName ?? t('banquet_admin')}
+                {restaurantName ?? PLATFORM_TITLE}
               </p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {username}

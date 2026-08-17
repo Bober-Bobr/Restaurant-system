@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { PLATFORM_TITLE } from '../utils/appTitle';
 import { buildAbsoluteUrl, buildSubdomainBase } from '../utils/subdomain';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
@@ -113,7 +114,7 @@ export const AdminLayout = () => {
             />
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>
-                {restaurantName ?? t('banquet_admin')}
+                {restaurantName ?? PLATFORM_TITLE}
               </p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {username}
