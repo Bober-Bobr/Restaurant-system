@@ -1128,3 +1128,55 @@ Problems are reported by **key name only** — no value ever reaches the output.
 If you deliberately stop using the bots, remove their `# required` markers from
 `apps/api/.env.example`. That is a commit somebody can read, rather than a
 deploy that fails.
+
+---
+
+## 21. The app shell must not be cached (tab title / stale release)
+
+**Symptom:** a visitor lands on a page showing the *previous* release — old tab
+title, old bundle — and only a manual refresh fixes it. Seen after the tab-title
+change, where `index.html` still carried `<title>Banquet Admin</title>`.
+
+`index.html` is the only file in `dist/` **without** a content hash in its name.
+Every asset beside it is immutable and safe to cache forever; the shell is the
+opposite and must be revalidated on every visit, because it is what names the
+current bundle.
+
+Two layers were fixed in the repo:
+
+- `apps/web/public/sw.js` — `CACHE` bumped to **`vmenu-v6`** (the `activate`
+  handler deletes every other cache, which is what actually evicts the previous
+  precached `index.html`), and navigations now fetch with `cache: 'reload'`,
+  bypassing the browser's own HTTP cache for the shell.
+- The title is applied in `main.tsx` **before the first render**, so it never
+  depends on an effect that runs after the first paint.
+
+**The remaining layer is nginx**, and it is not in this repo. Each server block
+serving the SPA needs the shell excluded from caching while the hashed assets
+keep their long cache:
+
+```nginx
+location = /index.html {
+    add_header Cache-Control "no-cache, must-revalidate";
+}
+location = /sw.js {
+    add_header Cache-Control "no-cache";
+}
+location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+location / { try_files $uri $uri/ /index.html; }
+```
+
+`no-cache` does **not** mean "do not store" — the browser still keeps the file
+and revalidates it, so a 304 costs nothing. Apply it to every SPA host block:
+`v-menu.uz`, `banquet.`, `food-admin.`, `test.`, `admin.`, `cabinet.`,
+`manager.`, `rmanager.`, `performer.`, `event.`, `v-invite.uz`, `v-connect.uz`,
+`nfc.v-connect.uz`.
+
+Verify after a deploy:
+
+```
+curl -sI https://v-menu.uz/ | grep -i cache-control
+curl -s  https://v-menu.uz/ | grep -o '<title>.*</title>'
+```

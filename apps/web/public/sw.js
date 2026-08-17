@@ -3,7 +3,11 @@
 // visit (nothing is cached yet); once a flyer has been opened online, its app
 // shell, assets, images and data are cached and it reopens offline.
 
-const CACHE = 'vmenu-v5';
+// Bump this whenever the app shell itself changes in a way a returning visitor
+// must not miss (the tab title, the routing waterfall, anything in index.html).
+// The activate handler below deletes every cache that is not this one, so the
+// bump is what actually evicts the previous /index.html.
+const CACHE = 'vmenu-v6';
 // The SPA shell we always want available offline for navigations.
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
@@ -59,9 +63,19 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   // App navigations: try the network, fall back to the cached SPA shell offline.
+  //
+  // `cache: 'reload'` bypasses the BROWSER's own HTTP cache for the shell — the
+  // one layer a service-worker version bump cannot reach. Without it a visitor
+  // whose browser still holds index.html gets the previous release's HTML, and
+  // with it the previous bundle, until they press reload. The shell is ~2 kB and
+  // the hashed assets underneath it are still cached, so this costs almost
+  // nothing; serving a stale shell costs a release.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      // Refetched by URL rather than by passing `request` through: a Request in
+      // navigate mode cannot be reconstructed with a non-empty init, which is
+      // what `fetch(request, { … })` does under the hood.
+      fetch(request.url, { cache: 'reload', credentials: 'same-origin' })
         .then((res) => put(request, res))
         .catch(() => caches.match(request).then((r) => r || caches.match('/index.html'))),
     );

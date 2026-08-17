@@ -43,7 +43,7 @@ import { TabletLayout } from './TabletLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
 import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, isFoodSiteHost, getFoodSiteSlug, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
-import { resolveAppTitle } from '../utils/appTitle';
+import { applyAppTitle } from '../utils/applyAppTitle';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
 import { PerformerLayout } from './PerformerLayout';
@@ -65,25 +65,16 @@ export const App = () => {
   const handledRef = useRef(false);
 
   // ── The browser tab ───────────────────────────────────────────────────────
-  // Set here, once, rather than in each layout: the effect of a child runs
-  // BEFORE its parent's, so a title written inside a layout would be overwritten
-  // by anything set up here a moment later. Subscribed rather than read from
-  // getState() so signing in retitles the tab without a reload.
-  //
-  // v-invite is the one product left alone — VInviteApp sets its own title, and
-  // this deliberately does not fight it.
+  // main.tsx applies this once before the first render; here it is re-applied
+  // whenever the session changes, so signing in retitles the tab without a
+  // reload. Both go through applyAppTitle rather than each layout setting its
+  // own title: a child's effect runs BEFORE its parent's, so a title written
+  // inside a layout would simply lose to this one a moment later.
   const role = useAuthStore((state) => state.role);
   const authRestaurantName = useAuthStore((state) => state.restaurantName);
-  const onInviteHost = isInviteRootDomain() || !!getInviteSiteSlug();
   useEffect(() => {
-    if (onInviteHost) return;
-    document.title = resolveAppTitle({
-      role,
-      restaurantName: authRestaurantName,
-      connectHost: isConnectHost(),
-      publicSite: !!getCateringSlug() || isFoodSiteHost() || isEventSubdomain() || !!getInvitationSubdomainSlug(),
-    });
-  }, [role, authRestaurantName, onInviteHost]);
+    applyAppTitle();
+  }, [role, authRestaurantName]);
 
   // ── v-invite.uz: the standalone invitation-builder product ──
   // <name>.v-invite.uz → a published invitation site; the root host → the app.
