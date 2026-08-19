@@ -1187,3 +1187,28 @@ Verify after a deploy:
 curl -sI https://v-menu.uz/ | grep -i cache-control
 curl -s  https://v-menu.uz/ | grep -o '<title>.*</title>'
 ```
+
+---
+
+## 22. New rich template — `wedding-chateau` ("Château Gates")
+
+A wedding design built around a **film**: the hero is a video of the estate
+gates opening. Registered in `RICH_TEMPLATES`, so it appears in the v-invite
+template chooser and on `/pricing` as soon as this is deployed.
+
+**It ships ~10 MB of new static assets** in `apps/web/public/chateau/` — ten
+JPEGs (~3.6 MB total, re-encoded from the 10 MB PNGs they arrived as) and
+`film.mp4` (6.5 MB). Vite copies `public/` into `dist/` and `deploy.sh` copies
+`dist/` to `/var/www/restaurant`, so **no new deploy step is needed** — but the
+copy is that much bigger, and the first deploy after this will show it.
+
+Worth doing at the same time:
+
+- **Give it a tier and a price** on `v-invite.uz/settings` (SYSTEM_ADMIN). A
+  template with neither set simply does not appear on the `/pricing` list —
+  `groupByTier` puts it in `unassigned` rather than dropping it, but nobody can
+  buy what is not listed.
+- **Check `film.mp4` is served with a long cache header** by the nginx `/`
+  block. It is content-static but its name is not hashed, so it will be
+  re-fetched on every visit if it lands under the `no-cache` rule added for
+  `index.html` in §21. Only `= /index.html` and `= /sw.js` should be no-cache.
