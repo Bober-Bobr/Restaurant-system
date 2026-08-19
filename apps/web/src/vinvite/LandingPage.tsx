@@ -583,7 +583,7 @@ function WorkCard({ entry, t, index, onPreview }: {
     <button type="button" className="vi-work vi-lp-tilt" onClick={onPreview} title={t('work_open')} {...tilt}>
       <span className="vi-work-stage">
         <span className="vi-work-live"><i />{t('lp_work_live')}</span>
-        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        <span className="vi-work-frame">
           <LivePreview entry={entry} />
         </span>
         <span className="vi-work-veil"><span>👁 {t('work_open')}</span></span>

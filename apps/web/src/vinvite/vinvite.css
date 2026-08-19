@@ -915,7 +915,10 @@
   display: block; position: relative; overflow: hidden;
   background: #0b0f1c; aspect-ratio: 10 / 16; width: 100%;
 }
-.vi-work-stage > * { position: absolute; inset: 0; pointer-events: none; }
+/* Named, not `.vi-work-stage > *`: the blunt child selector also put `inset: 0`
+   on the badge and the veil, and the badge only overrides `top`/`left` — the
+   surviving `right: 0; bottom: 0` stretched a pill across the whole card. */
+.vi-work-frame { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 
 .vi-work-veil {
   position: absolute; inset: 0; z-index: 2;
