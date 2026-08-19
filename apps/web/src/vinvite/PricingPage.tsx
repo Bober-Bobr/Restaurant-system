@@ -215,7 +215,7 @@ export const ViPricingPage = () => {
               <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--vi-muted)' }}>
                 {t('pricing_unassigned')}
               </p>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
                 {grouped.unassigned.map((tpl) => (
                   <TemplateCard
                     key={tpl.id}

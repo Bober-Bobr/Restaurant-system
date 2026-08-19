@@ -45,17 +45,19 @@ export function TemplateCard({ tpl, price, tier, selected, onPreview, onSelect, 
         aria-controls={bodyId}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="vi-tc-emoji" aria-hidden>{tpl.cover}</span>
+        <span className="vi-tc-top">
+          <span className="vi-tc-emoji" aria-hidden>{tpl.cover}</span>
 
-        <span className="vi-tc-headings">
-          <span className="vi-tc-name">{t(tpl.nameKey as ViKey)}</span>
-          <span className="vi-tc-short">{t(shortDescKey(tpl.id))}</span>
-        </span>
+          <span className="vi-tc-headings">
+            <span className="vi-tc-name">{t(tpl.nameKey as ViKey)}</span>
+            <span className="vi-tc-short">{t(shortDescKey(tpl.id))}</span>
+          </span>
 
-        <span className="vi-tc-price">
-          <span className="vi-tc-price-label">{t('cat_from')}</span>
-          <strong>{price}</strong>
-          {tier && <span className="vi-tc-tier">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>}
+          <span className="vi-tc-price">
+            <span className="vi-tc-price-label">{t('cat_from')}</span>
+            <strong>{price}</strong>
+            {tier && <span className="vi-tc-tier">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>}
+          </span>
         </span>
 
         {/* Says what pressing does, rather than leaving a bare chevron to be

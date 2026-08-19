@@ -549,7 +549,7 @@ function WorkSection({ t, entries, reveal, num, onPreview }: {
             <div
               key={entry.id}
               ref={reveal}
-              className={`vi-r vi-r-blur${i === 0 ? ' vi-work-lead' : ''}`}
+              className="vi-r vi-r-blur"
               style={{ ['--d' as string]: `${Math.min(i, 6) * 90}ms` }}
             >
               <WorkCard entry={entry} t={t} index={i} onPreview={() => onPreview(entry)} />
@@ -623,7 +623,7 @@ function CatalogSection({ t, reveal, num, templates, priceLabel, tierOf, onPrevi
           sub={t('cat_sub')} reveal={reveal}
         />
 
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', alignItems: 'start' }}>
           {templates.map((tpl, i) => (
             <div key={tpl.id} ref={reveal} className="vi-r vi-r-up" style={{ ['--d' as string]: `${Math.min(i, 6) * 70}ms` }}>
               <TemplateCard

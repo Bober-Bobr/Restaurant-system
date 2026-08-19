@@ -280,20 +280,6 @@
 .vi-lp-scroll-dot { animation: viMouse 1.9s ease-in-out infinite; }
 
 /* ── Work cards: live template previews ── */
-.vi-lp-work {
-  position: relative; overflow: hidden; border-radius: 20px;
-  border: 1px solid var(--vi-border); background: var(--vi-card);
-  box-shadow: var(--vi-shadow);
-  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease, border-color 0.3s ease;
-}
-.vi-lp-work:hover { transform: translateY(-10px); box-shadow: var(--vi-shadow-lg); border-color: var(--vi-ring); }
-.vi-lp-work-veil {
-  position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 22px; opacity: 0; transition: opacity 0.3s ease;
-  background: linear-gradient(to top, rgba(8,10,20,0.72) 0%, rgba(8,10,20,0.12) 45%, transparent 70%);
-}
-.vi-lp-work:hover .vi-lp-work-veil { opacity: 1; }
-
 /* ── Advantage tiles: accent glow follows the pointer ── */
 .vi-lp-tile {
   position: relative; overflow: hidden;
@@ -732,7 +718,7 @@
   .vi-lp-aurora, .vi-lp-float, .vi-lp-scroll-dot, .vi-lp-word, .vi-lp-gradient { animation: none !important; }
   .vi-lp-marquee-track, .vi-lp-feature::before, .vi-lp-progress { animation: none !important; }
   /* The progress rail still exists, it just does not slide. */
-  .vi-lp-work:hover, .vi-lp-tile:hover, .vi-lp-tier:hover, .vi-lp-tier-row:hover { transform: none; }
+  .vi-work:hover, .vi-lp-tile:hover, .vi-lp-tier:hover, .vi-lp-tier-row:hover { transform: none; }
   .vi-lp-tilt { transform: none !important; }
   .vi-theme-toggle:hover .vi-theme-icon { transform: none; }
   /* The sheet still opens/closes, just without the slide-in choreography. */
@@ -801,33 +787,50 @@
 /* The chosen design is ringed in its own colour, not the site's blue. */
 .vi-tc.chosen { outline: 2px solid var(--tb-border); outline-offset: 2px; }
 
+/* Two rows: the identity line, then the toggle. The head used to be a rigid
+   four-column grid, with the toggle's label ("More about this design", and
+   longer in ru) as a nowrap fourth column — inside a 280px pricing tier there
+   was no width for it and the columns collided. The label now has a row of its
+   own, and the identity line WRAPS: when the name cannot hold its 160px the
+   price drops beneath it instead of squeezing it into two characters. */
 .vi-tc-head {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center; gap: 14px;
-  width: 100%; padding: 18px 18px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  width: 100%; padding: 16px 18px 14px;
   border: 0; cursor: pointer; text-align: left;
   font: inherit; color: inherit;
   background: linear-gradient(180deg, var(--tb-tint, transparent), transparent);
 }
+.vi-tc-top {
+  display: flex; align-items: center; gap: 13px; flex-wrap: wrap;
+  width: 100%;
+}
 .vi-tc-emoji {
-  width: 46px; height: 46px; flex-shrink: 0;
+  width: 46px; height: 46px; flex: 0 0 auto;
   display: grid; place-items: center;
   font-size: 24px; border-radius: 13px;
   border: 1px solid var(--tb-border);
   background: var(--vi-card);
 }
-.vi-tc-headings { display: grid; gap: 4px; min-width: 0; }
+.vi-tc-headings { flex: 1 1 160px; display: grid; gap: 3px; min-width: 0; }
 .vi-tc-name {
   font-family: var(--tb-font, var(--vi-font-display));
-  font-size: 21px; line-height: 1.2; font-weight: 600;
+  font-size: 20px; line-height: 1.25; font-weight: 600;
   color: var(--tb-ink);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* A grid item's automatic minimum is its content, so the ellipsis never
+     engages and the name widens the whole card without this. */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vi-tc-short {
-  font-size: 13.5px; line-height: 1.45; color: var(--vi-muted);
+  font-size: 13px; line-height: 1.45; color: var(--vi-muted);
+  /* Two lines at most: the full description is what opening the card is for,
+     and a five-line "short" line makes a row of cards ragged. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.vi-tc-price { display: grid; gap: 2px; justify-items: end; text-align: right; }
+.vi-tc-price {
+  flex: 0 0 auto; margin-left: auto;
+  display: grid; gap: 2px; justify-items: end; text-align: right;
+}
 .vi-tc-price-label {
   font-size: 9.5px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase;
   color: var(--vi-muted);
@@ -839,8 +842,9 @@
   color: var(--tb-ink); border: 1px solid var(--tb-border);
 }
 .vi-tc-toggle {
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-  font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--vi-muted);
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding-top: 10px; border-top: 1px dashed var(--tb-border);
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em; color: var(--vi-muted);
 }
 .vi-tc-chevron { font-size: 10px; display: inline-block; transition: transform .3s ease; }
 .vi-tc.open .vi-tc-chevron { transform: rotate(180deg); }
@@ -872,11 +876,9 @@
 
 
 @media (max-width: 560px) {
-  .vi-tc-head { grid-template-columns: auto 1fr auto; gap: 12px; padding: 15px 14px; }
-  /* The chevron is the first thing to go: the whole head is the toggle, so it
-     was only ever a hint, and the price must not be squeezed for it. */
-  .vi-tc-toggle { display: none; }
-  .vi-tc-name { font-size: 18.5px; white-space: normal; }
+  .vi-tc-head { padding: 14px; gap: 9px; }
+  .vi-tc-top { gap: 11px; }
+  .vi-tc-name { font-size: 18px; }
   .vi-tc-short { font-size: 12.5px; }
   .vi-tc-price strong { font-size: 15px; }
   .vi-tc-actions .vi-tc-btn { flex: 1 1 100%; }
@@ -885,31 +887,39 @@
 /* ══════════════════════════════════════════════════════════════════════════
    OUR WORK — finished invitations, in their own block
 
-   Editorial rather than a grid of equal tiles: the first piece runs wide, the
-   rest follow beneath it. These are somebody's real invitations, so there is
-   no price and no "select" — only the name and the way in.
+   A grid of portrait cards, because that is the shape of the thing: every
+   invitation is a phone page, so the frames hold 10:16 at any column width
+   rather than a fixed pixel height. These are somebody's real invitations, so
+   there is no price and no "select" — only the name and the way in.
    ══════════════════════════════════════════════════════════════════════════ */
-.vi-work-band { display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
-/* The lead piece takes the full width on a wide screen. One large thing and
-   several small ones reads as a portfolio; twelve identical ones reads as a
-   contact sheet. */
-@media (min-width: 900px) { .vi-work-band > .vi-work-lead { grid-column: 1 / -1; } }
+.vi-work-band {
+  display: grid; gap: 22px; align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+}
 
 .vi-work {
-  position: relative; display: block; width: 100%; padding: 0;
+  position: relative; display: flex; flex-direction: column; width: 100%; padding: 0;
   border: 1px solid var(--vi-border); border-radius: 20px; overflow: hidden;
   background: var(--vi-card); cursor: pointer; text-align: left;
   box-shadow: var(--vi-shadow);
   transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, border-color .3s ease;
 }
 .vi-work:hover { transform: translateY(-8px); box-shadow: var(--vi-shadow-lg); border-color: var(--vi-ring); }
-.vi-work-stage { position: relative; overflow: hidden; background: #0b0f1c; height: 380px; }
-.vi-work-lead .vi-work-stage { height: 460px; }
+/* `display: block` is not optional here: this is a <span> inside a <button>,
+   and an inline box ignores height and overflow outright — which collapsed the
+   whole preview to nothing.
+   The height is an ASPECT RATIO rather than 380px, because an invitation is a
+   phone page: a fixed height meant a card in a wide column showed a letterbox
+   slice of one and a card in a narrow column showed a sliver. */
+.vi-work-stage {
+  display: block; position: relative; overflow: hidden;
+  background: #0b0f1c; aspect-ratio: 10 / 16; width: 100%;
+}
 .vi-work-stage > * { position: absolute; inset: 0; pointer-events: none; }
 
 .vi-work-veil {
   position: absolute; inset: 0; z-index: 2;
-  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 24px;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px;
   background: linear-gradient(to top, rgba(8,10,20,.74) 0%, rgba(8,10,20,.1) 46%, transparent 72%);
   opacity: 0; transition: opacity .3s ease;
 }
@@ -919,7 +929,7 @@
   background: rgba(255,255,255,.96); color: #111827;
 }
 
-.vi-work-foot { display: flex; align-items: center; gap: 11px; padding: 15px 18px; }
+.vi-work-foot { display: flex; align-items: center; gap: 11px; padding: 13px 16px; width: 100%; }
 .vi-work-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .vi-work-name {
   font-family: var(--vi-font-display); font-size: 18px; font-weight: 600; min-width: 0;
@@ -930,17 +940,13 @@
   color: var(--vi-muted); font-variant-numeric: tabular-nums;
 }
 .vi-work-live {
-  position: absolute; top: 14px; left: 14px; z-index: 3;
+  position: absolute; top: 12px; left: 12px; z-index: 3;
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 11px; border-radius: 999px;
   font-size: 11px; font-weight: 750; letter-spacing: .05em;
   background: rgba(10,12,20,.55); color: #fff; backdrop-filter: blur(6px);
 }
 .vi-work-live i { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: block; }
-
-@media (max-width: 560px) {
-  .vi-work-stage, .vi-work-lead .vi-work-stage { height: 320px; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .vi-tc:hover, .vi-work:hover, .vi-tc-btn:hover { transform: none; }
