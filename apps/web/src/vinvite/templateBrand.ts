@@ -90,6 +90,12 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#8f1d2e', buttonInk: '#f7ecd8', tint: '#f7ece2',
     font: `'EB Garamond', ${SERIF_FALLBACK}`,
   },
+  // Deep garden green, dusty rose and engraved gold.
+  'wedding-paris': {
+    ink: '#6E2733', inkDark: '#e8bdb9', border: '#B08D4F',
+    button: '#1E2A24', buttonInk: '#F8F4EC', tint: '#EADFC8',
+    font: `'Parisienne', ${SERIF_FALLBACK}`,
+  },
   // Estate green and engraved gold.
   'wedding-chateau': {
     ink: '#3d4a3b', inkDark: '#dfc48a', border: '#b8924e',

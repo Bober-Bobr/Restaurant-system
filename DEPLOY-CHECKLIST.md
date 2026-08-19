@@ -1212,3 +1212,27 @@ Worth doing at the same time:
   block. It is content-static but its name is not hashed, so it will be
   re-fetched on every visit if it lands under the `no-cache` rule added for
   `index.html` in §21. Only `= /index.html` and `= /sw.js` should be no-cache.
+
+---
+
+## 23. New rich template — `wedding-paris` ("An Afternoon in Paris")
+
+The château's city sibling, and the second design built around a **film**: the
+hero is a video of French doors opening onto Paris. Registered in
+`RICH_TEMPLATES`, so it appears in the template chooser, in the landing
+catalog and on `/pricing` as soon as this is deployed.
+
+**It ships ~12 MB of new static assets** in `apps/web/public/paris/` — thirteen
+JPEGs (4.2 MB total, re-encoded from the 10 MB PNGs they arrived as) and
+`film.mp4` (7.2 MB). As with §22 this needs **no new deploy step**: Vite copies
+`public/` into `dist/` and `deploy.sh` copies `dist/` to `/var/www/restaurant`.
+The two film-based templates now account for ~22 MB of that copy between them.
+
+Same two follow-ups as the château:
+
+- **Give it a tier and a price** on `v-invite.uz/settings` (SYSTEM_ADMIN).
+  Unpriced, it reads as "on request" in the catalog and falls into `unassigned`
+  on the price list — visible, but not orderable.
+- **Confirm `/paris/film.mp4` is not caught by the `no-cache` rule** from §21.
+  Only `= /index.html` and `= /sw.js` should be no-cache; an unhashed 7 MB video
+  re-fetched on every visit is the one mistake worth checking for here.
