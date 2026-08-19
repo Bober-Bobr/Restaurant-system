@@ -12,7 +12,10 @@ import { getTemplate, readRichDesign } from './templates';
 import { resolveAssetUrls } from './templates/utils';
 import { InviteSiteView } from './InviteSiteView';
 import { PreviewShell } from './PreviewShell';
-import type { PromoWork } from './api';
+import { TemplateCard } from './TemplateCard';
+import { useTemplatePricing } from './templatePricing';
+import { brandOf, brandVars } from './templateBrand';
+import type { PromoWork, TemplateTier } from './api';
 import { LOCALES, type TemplateDefinition } from './templates/types';
 
 // Stable identity: RichRenderer posts into the iframe whenever `config` or
@@ -104,15 +107,23 @@ export const ViLandingPage = () => {
   // The invitations the administrator chose, or the built-in templates until
   // they choose any. Falls back to the shipped set while loading or if the
   // request fails, so the page is never empty.
-  const { items } = usePromoShowcase();
+  const { items, templates } = usePromoShowcase();
+  const { priceLabel, tierOf } = useTemplatePricing();
+  const [tplPreview, setTplPreview] = useState<TemplateDefinition | null>(null);
 
+  // Our Work and the catalog are now two different things, so they no longer
+  // share a list. `work` is real published invitations and is EMPTY until an
+  // administrator picks some — the section simply does not render, rather than
+  // quietly showing blank templates as though they were finished commissions.
+  // The hero cover still falls back to templates, because a blank hero is the
+  // one thing this page cannot afford.
   const { work, cover } = useMemo(() => {
+    const templateEntries = () => templates.map((tpl) => templateEntry(tpl, t(tpl.nameKey as ViKey)));
     if (items.kind === 'works') {
       return { work: items.works.map(workEntry), cover: items.cover.map(workEntry) };
     }
-    const entries = items.templates.map((tpl) => templateEntry(tpl, t(tpl.nameKey as ViKey)));
-    return { work: entries, cover: entries };
-  }, [items, t]);
+    return { work: [] as ShowcaseEntry[], cover: templateEntries() };
+  }, [items, templates, t]);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -134,7 +145,8 @@ export const ViLandingPage = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const goWork = () => scrollTo('work');
+  const catalogCount = templates.length;
+  const goWork = () => scrollTo(work.length > 0 ? 'work' : 'catalog');
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
@@ -151,11 +163,17 @@ export const ViLandingPage = () => {
       />
 
       <main style={{ flex: 1 }}>
-        <HeroSection t={t} isMobile={isMobile} cover={cover} work={work} onWork={goWork} onPricing={() => goPricing()} />
-        <NameMarquee entries={work} />
-        <WorkSection t={t} entries={work} live={items.kind === 'works'} reveal={reveal}
-          onPreview={setPreview} onPricing={() => goPricing()} />
-        <WhySection t={t} reveal={reveal} />
+        <HeroSection t={t} isMobile={isMobile} cover={cover} designCount={catalogCount} onWork={goWork} onPricing={() => goPricing()} />
+        <NameMarquee entries={work.length > 0 ? work : cover} />
+        {work.length > 0 && (
+          <WorkSection t={t} entries={work} reveal={reveal} num="01" onPreview={setPreview} />
+        )}
+        <CatalogSection
+          t={t} reveal={reveal} num={work.length > 0 ? '02' : '01'}
+          templates={templates} priceLabel={priceLabel} tierOf={tierOf}
+          onPreview={setTplPreview} onPricing={() => goPricing()}
+        />
+        <WhySection t={t} reveal={reveal} num={work.length > 0 ? '03' : '02'} />
         <FinalCta t={t} reveal={reveal} onPricing={() => goPricing()} />
       </main>
 
@@ -176,6 +194,16 @@ export const ViLandingPage = () => {
       </footer>
 
       {preview && <PreviewModal entry={preview} onClose={() => setPreview(null)} />}
+      {tplPreview && (
+        <CatalogPreviewModal
+          tpl={tplPreview}
+          name={t(tplPreview.nameKey as ViKey)}
+          price={priceLabel(tplPreview.id)}
+          label={t('lp_nav_pricing')}
+          onPricing={() => { navigate(`/pricing?template=${tplPreview.id}`); }}
+          onClose={() => setTplPreview(null)}
+        />
+      )}
     </div>
   );
 };
@@ -188,6 +216,7 @@ export const ViLandingPage = () => {
 // `to` navigates; `id` scrolls to a section on this page.
 const NAV_ITEMS: { id: string; label: ViKey; to?: string }[] = [
   { id: 'work', label: 'lp_nav_work' },
+  { id: 'catalog', label: 'cat_kicker' },
   { id: 'why', label: 'lp_nav_why' },
   { id: 'pricing', label: 'lp_nav_pricing', to: '/pricing' },
 ];
@@ -365,9 +394,11 @@ function NameMarquee({ entries }: { entries: ShowcaseEntry[] }) {
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
+function HeroSection({ t, isMobile, cover, designCount, onWork, onPricing }: {
   t: (k: ViKey) => string; isMobile: boolean;
-  cover: ShowcaseEntry[]; work: ShowcaseEntry[];
+  cover: ShowcaseEntry[];
+  /** How many designs the catalog is showing — what the stat counts. */
+  designCount: number;
   onWork: () => void; onPricing: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
@@ -387,7 +418,7 @@ function HeroSection({ t, isMobile, cover, work, onWork, onPricing }: {
   const stats: { value: number; label: ViKey }[] = [
     // Count what a visitor can actually browse, not what ships in the bundle —
     // a design kept off the site must not be advertised.
-    { value: work.length, label: 'lp_stat_templates' },
+    { value: designCount, label: 'lp_stat_templates' },
     { value: 3, label: 'lp_stat_languages' },
   ];
 
@@ -489,35 +520,41 @@ function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: ShowcaseEntry[
 }
 
 // ── Our work ─────────────────────────────────────────────────────────────────
+// Finished invitations, in a block of their own. Nothing here is for sale — an
+// invitation belongs to the customer whose wedding it was — so there is no
+// price and no "select", only the name and the way in. The catalog below is
+// where the designs on offer live.
+//
+// The section is not rendered at all when no invitations have been chosen:
+// filling it with blank templates was the old behaviour, and it advertised
+// unfinished goods as a portfolio.
 
-function WorkSection({ t, entries, live, reveal, onPreview, onPricing }: {
+function WorkSection({ t, entries, reveal, num, onPreview }: {
   t: (k: ViKey) => string;
   entries: ShowcaseEntry[];
-  /** True once the gallery is showing real invitations rather than templates. */
-  live: boolean;
   reveal: (el: HTMLElement | null) => void;
+  num: string;
   onPreview: (entry: ShowcaseEntry) => void;
-  onPricing: () => void;
 }) {
   return (
     <section id="work" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <SectionHead
-          num="01" kicker={t('lp_work_kicker')} title={t('lp_work_title')}
-          sub={t(live ? 'lp_work_sub' : 'lp_work_sub_templates')} reveal={reveal}
+          num={num} kicker={t('work_kicker')} title={t('work_title')}
+          sub={t('work_sub')} reveal={reveal}
         />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 26 }}>
+        <div className="vi-work-band">
           {entries.map((entry, i) => (
-            <WorkCard key={entry.id} entry={entry} t={t} reveal={reveal} delayMs={i * 90} index={i}
-              onPreview={() => onPreview(entry)} />
+            <div
+              key={entry.id}
+              ref={reveal}
+              className={`vi-r vi-r-blur${i === 0 ? ' vi-work-lead' : ''}`}
+              style={{ ['--d' as string]: `${Math.min(i, 6) * 90}ms` }}
+            >
+              <WorkCard entry={entry} t={t} index={i} onPreview={() => onPreview(entry)} />
+            </div>
           ))}
-        </div>
-
-        <div ref={reveal} style={{ textAlign: 'center', marginTop: 44 }}>
-          <button type="button" className="vi-btn vi-btn-ghost" style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onPricing}>
-            💎 {t('lp_nav_pricing')} →
-          </button>
         </div>
       </div>
     </section>
@@ -534,80 +571,85 @@ function CountStat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function WorkCard({ entry, t, reveal, delayMs, index, onPreview }: {
+function WorkCard({ entry, t, index, onPreview }: {
   entry: ShowcaseEntry;
   t: (k: ViKey) => string;
-  reveal: (el: HTMLElement | null) => void;
-  delayMs: number;
   index: number;
   onPreview: () => void;
 }) {
-  const tilt = usePointerTilt(5);
+  const tilt = usePointerTilt(4);
 
   return (
-    <div ref={reveal} className="vi-r vi-r-blur" style={{ ['--d' as string]: `${delayMs}ms` }}>
-      <div className="vi-lp-work vi-lp-tilt" {...tilt}>
-        <button
-          type="button"
-          onClick={onPreview}
-          title={t('lp_work_open')}
-          style={{
-            position: 'relative', display: 'block', width: '100%', height: 430,
-            border: 'none', padding: 0, cursor: 'pointer', background: '#0b0f1c', overflow: 'hidden',
-          }}
-        >
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-            <LivePreview entry={entry} />
-          </div>
+    <button type="button" className="vi-work vi-lp-tilt" onClick={onPreview} title={t('work_open')} {...tilt}>
+      <span className="vi-work-stage">
+        <span className="vi-work-live"><i />{t('lp_work_live')}</span>
+        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          <LivePreview entry={entry} />
+        </span>
+        <span className="vi-work-veil"><span>👁 {t('work_open')}</span></span>
+      </span>
+      <span className="vi-work-foot">
+        <span className="vi-work-dot" style={{ background: entry.accent }} />
+        <span className="vi-work-name">{entry.name}</span>
+        <span className="vi-work-num">{String(index + 1).padStart(2, '0')}</span>
+      </span>
+    </button>
+  );
+}
 
-          <span style={{
-            position: 'absolute', top: 14, left: 14, display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 11, fontWeight: 750, letterSpacing: '0.05em', padding: '5px 11px', borderRadius: 999,
-            background: 'rgba(10,12,20,0.55)', color: '#fff', backdropFilter: 'blur(6px)',
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
-            {t('lp_work_live')}
-          </span>
+// ── The catalog ──────────────────────────────────────────────────────────────
+// What is actually on offer: every design, its price, and a line about it.
+// Opening one gives the full description and the way to see it full screen.
+// The cards carry each design's own palette and display face — see
+// templateBrand.ts — so the row reads as nine products, not nine copies of
+// this site's blue.
 
-          {/* Index, so the gallery reads as a numbered body of work. */}
-          <span style={{
-            position: 'absolute', top: 14, right: 14,
-            fontSize: 11.5, fontWeight: 800, letterSpacing: '0.08em',
-            padding: '5px 10px', borderRadius: 999,
-            background: 'rgba(10,12,20,0.55)', color: '#fff', backdropFilter: 'blur(6px)',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            {String(index + 1).padStart(2, '0')}
-          </span>
+function CatalogSection({ t, reveal, num, templates, priceLabel, tierOf, onPreview, onPricing }: {
+  t: (k: ViKey) => string;
+  reveal: (el: HTMLElement | null) => void;
+  num: string;
+  templates: TemplateDefinition[];
+  priceLabel: (id: string) => string;
+  tierOf: (id: string) => TemplateTier | null;
+  onPreview: (tpl: TemplateDefinition) => void;
+  onPricing: () => void;
+}) {
+  if (templates.length === 0) return null;
+  return (
+    <section id="catalog" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+        <SectionHead
+          num={num} kicker={t('cat_kicker')} title={t('cat_title')}
+          sub={t('cat_sub')} reveal={reveal}
+        />
 
-          <span className="vi-lp-work-veil">
-            <span style={{
-              padding: '11px 20px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-              background: 'rgba(255,255,255,0.96)', color: '#111827',
-            }}>
-              👁 {t('lp_work_open')}
-            </span>
-          </span>
-        </button>
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', alignItems: 'start' }}>
+          {templates.map((tpl, i) => (
+            <div key={tpl.id} ref={reveal} className="vi-r vi-r-up" style={{ ['--d' as string]: `${Math.min(i, 6) * 70}ms` }}>
+              <TemplateCard
+                tpl={tpl}
+                price={priceLabel(tpl.id)}
+                tier={tierOf(tpl.id)}
+                onPreview={() => onPreview(tpl)}
+              />
+            </div>
+          ))}
+        </div>
 
-        <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 11, height: 11, borderRadius: '50%', background: entry.accent, flexShrink: 0 }} />
-          <span style={{
-            fontSize: 16, fontWeight: 720, minWidth: 0,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {entry.name}
-          </span>
-          <span style={{ marginLeft: 'auto', fontSize: 20 }}>{entry.emoji}</span>
+        <div ref={reveal} style={{ textAlign: 'center', marginTop: 44 }}>
+          <button type="button" className="vi-btn vi-btn-ghost"
+            style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onPricing}>
+            💎 {t('lp_nav_pricing')} →
+          </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 // ── Why choose us ────────────────────────────────────────────────────────────
 
-function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void }) {
+function WhySection({ t, reveal, num }: { t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void; num: string }) {
   // The animation tile is the headline claim and spans the full width, because
   // it is what actually distinguishes these invitations from a picture of one —
   // and it is the one thing a static list of bullet points cannot demonstrate.
@@ -641,7 +683,7 @@ function WhySection({ t, reveal }: { t: (k: ViKey) => string; reveal: (el: HTMLE
 
       <div style={{ position: 'relative', maxWidth: 1180, margin: '0 auto' }}>
         <SectionHead
-          num="02" kicker={t('lp_why_kicker')} title={t('lp_why_title')}
+          num={num} kicker={t('lp_why_kicker')} title={t('lp_why_title')}
           sub={t('lp_why_sub')} reveal={reveal}
         />
 
@@ -731,6 +773,39 @@ function FinalCta({ t, reveal, onPricing }: {
 // tiers and the prices are. A "select" button here would send a visitor onward
 // having picked an INVITATION — somebody else's finished work, not something
 // they can order.
+
+function CatalogPreviewModal({ tpl, name, price, label, onPricing, onClose }: {
+  tpl: TemplateDefinition; name: string; price: string; label: string;
+  onPricing: () => void; onClose: () => void;
+}) {
+  const { effectiveConfig } = useTemplateOverrides();
+  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
+  const config = useMemo(
+    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tpl, effectiveConfig],
+  );
+  return (
+    <PreviewShell
+      onClose={onClose}
+      brandStyle={brandVars(brandOf(tpl), dark)}
+      header={(
+        <>
+          <span className="vi-pv-head-emoji" aria-hidden>{tpl.cover}</span>
+          <span className="vi-pv-head-name">{name}</span>
+          <span className="vi-pv-head-price">{price}</span>
+        </>
+      )}
+      footer={(
+        <button type="button" className="vi-tc-btn" style={{ width: '100%' }} onClick={onPricing}>
+          {label} <span style={{ fontSize: 17 }}>→</span>
+        </button>
+      )}
+    >
+      <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
+    </PreviewShell>
+  );
+}
 
 function PreviewModal({ entry, onClose }: { entry: ShowcaseEntry; onClose: () => void }) {
   return (

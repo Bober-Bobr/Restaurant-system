@@ -8,9 +8,13 @@ import { useEffect, type ReactNode } from 'react';
 // `footer` is what differs between the two callers — the pricing page pins a
 // "select" action under the preview, the promotional gallery shows none.
 
-export function PreviewShell({ onClose, footer, children }: {
+export function PreviewShell({ onClose, footer, header, brandStyle, children }: {
   onClose: () => void;
   footer?: ReactNode;
+  /** Name / price strip above the preview, in the design's own colours. */
+  header?: ReactNode;
+  /** `brandVars()` for the template being shown — see templateBrand.ts. */
+  brandStyle?: Record<string, string>;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -34,8 +38,14 @@ export function PreviewShell({ onClose, footer, children }: {
           borderRadius: 22, overflow: 'hidden', position: 'relative',
           background: '#0b0f1c', boxShadow: 'var(--vi-shadow-lg)',
           display: 'flex', flexDirection: 'column',
+          // The full view is framed in the design's own colour when one was
+          // given, so opening a card does not drop the visitor back into the
+          // site's blue the moment they look at what they picked.
+          border: brandStyle ? '2px solid var(--tb-border)' : 'none',
+          ...brandStyle,
         }}
       >
+        {header && <div className="vi-pv-head">{header}</div>}
         {/* A block-designed invitation scrolls inside this panel; a rich one
             fills it and scrolls inside its own iframe. */}
         <div style={{ flex: 1, position: 'relative', overflow: 'auto' }}>
@@ -62,7 +72,7 @@ export function PreviewShell({ onClose, footer, children }: {
             it. A button that only appeared after an event we cannot detect
             would be a button that never appeared. */}
         {footer && (
-          <div style={{ padding: 12, background: 'var(--vi-card)', borderTop: '1px solid var(--vi-border)' }}>
+          <div className="vi-pv-foot">
             {footer}
           </div>
         )}

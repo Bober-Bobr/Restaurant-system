@@ -750,3 +750,222 @@
   transition: background .22s ease, border-color .22s ease;
 }
 .vi-lp-tier-eye:hover { background: var(--vi-accent-soft); border-color: var(--vi-accent); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY — a wider range than one grotesque
+
+   index.html already loads nineteen families for the invitation templates, so
+   the marketing site can use them at no extra cost. Two roles here: an
+   editorial serif for the display headings, and a per-template display face
+   (--tb-font) carried by the catalog cards. Body copy stays Inter — the serif
+   is for the things that are read once, not for paragraphs.
+   ══════════════════════════════════════════════════════════════════════════ */
+.vi-root {
+  --vi-font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --vi-font-display: 'Playfair Display', 'Prata', Georgia, serif;
+  --vi-font-script: 'Great Vibes', 'Parisienne', cursive;
+}
+
+/* The display faces have real weight of their own; the -0.035em tracking and
+   850 weight tuned for Inter make them look cramped and overinked. */
+.vi-lp-display, .vi-lp-h1 {
+  font-family: var(--vi-font-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+.vi-lp-h1 { line-height: 1.04; }
+.vi-lp-gradient { font-style: italic; }
+
+/* The kicker keeps the sans — it is a label, not a title. */
+.vi-lp-kicker, .vi-lp-sec-num, .vi-lp-stat-label { font-family: var(--vi-font-ui); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TEMPLATE CARD — the catalog
+
+   Dressed in the palette of the design it advertises: --tb-ink, --tb-border,
+   --tb-button, --tb-button-ink, --tb-tint, --tb-font, set inline per card by
+   templateBrand.ts. Nothing below hard-codes a colour of its own, so a design
+   added later is themed by adding one entry to that table.
+   ══════════════════════════════════════════════════════════════════════════ */
+.vi-tc {
+  position: relative;
+  display: flex; flex-direction: column;
+  border-radius: 18px; overflow: hidden;
+  background: var(--vi-card);
+  border: 1px solid var(--tb-border, var(--vi-border));
+  box-shadow: var(--vi-shadow);
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease;
+}
+.vi-tc:hover { transform: translateY(-4px); box-shadow: var(--vi-shadow-lg); }
+.vi-tc.open { box-shadow: var(--vi-shadow-lg); }
+/* The chosen design is ringed in its own colour, not the site's blue. */
+.vi-tc.chosen { outline: 2px solid var(--tb-border); outline-offset: 2px; }
+
+.vi-tc-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: 14px;
+  width: 100%; padding: 18px 18px 16px;
+  border: 0; cursor: pointer; text-align: left;
+  font: inherit; color: inherit;
+  background: linear-gradient(180deg, var(--tb-tint, transparent), transparent);
+}
+.vi-tc-emoji {
+  width: 46px; height: 46px; flex-shrink: 0;
+  display: grid; place-items: center;
+  font-size: 24px; border-radius: 13px;
+  border: 1px solid var(--tb-border);
+  background: var(--vi-card);
+}
+.vi-tc-headings { display: grid; gap: 4px; min-width: 0; }
+.vi-tc-name {
+  font-family: var(--tb-font, var(--vi-font-display));
+  font-size: 21px; line-height: 1.2; font-weight: 600;
+  color: var(--tb-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vi-tc-short {
+  font-size: 13.5px; line-height: 1.45; color: var(--vi-muted);
+}
+.vi-tc-price { display: grid; gap: 2px; justify-items: end; text-align: right; }
+.vi-tc-price-label {
+  font-size: 9.5px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--vi-muted);
+}
+.vi-tc-price strong { font-size: 17px; font-weight: 800; white-space: nowrap; color: var(--tb-ink); }
+.vi-tc-tier {
+  margin-top: 3px; padding: 2px 8px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--tb-ink); border: 1px solid var(--tb-border);
+}
+.vi-tc-toggle {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--vi-muted);
+}
+.vi-tc-chevron { font-size: 10px; display: inline-block; transition: transform .3s ease; }
+.vi-tc.open .vi-tc-chevron { transform: rotate(180deg); }
+
+.vi-tc-body {
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--tb-border);
+  animation: viFadeUp .34s cubic-bezier(.22,1,.36,1) both;
+}
+.vi-tc-long {
+  margin: 16px 0 0; font-size: 14.5px; line-height: 1.68; color: var(--vi-text);
+}
+/* The actions sit at the foot of the description, which is where the reader
+   arrives — not at the top, where they would be read before the reason for
+   pressing them. */
+.vi-tc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.vi-tc-btn {
+  flex: 1 1 auto; padding: 12px 18px; border-radius: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  background: var(--tb-button); color: var(--tb-button-ink);
+  border: 1px solid var(--tb-button);
+  transition: filter .22s ease, transform .22s ease;
+}
+.vi-tc-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.vi-tc-btn.ghost {
+  background: transparent; color: var(--tb-ink); border-color: var(--tb-border);
+}
+.vi-tc-btn.ghost:hover { background: var(--tb-tint, transparent); }
+
+
+@media (max-width: 560px) {
+  .vi-tc-head { grid-template-columns: auto 1fr auto; gap: 12px; padding: 15px 14px; }
+  /* The chevron is the first thing to go: the whole head is the toggle, so it
+     was only ever a hint, and the price must not be squeezed for it. */
+  .vi-tc-toggle { display: none; }
+  .vi-tc-name { font-size: 18.5px; white-space: normal; }
+  .vi-tc-short { font-size: 12.5px; }
+  .vi-tc-price strong { font-size: 15px; }
+  .vi-tc-actions .vi-tc-btn { flex: 1 1 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   OUR WORK — finished invitations, in their own block
+
+   Editorial rather than a grid of equal tiles: the first piece runs wide, the
+   rest follow beneath it. These are somebody's real invitations, so there is
+   no price and no "select" — only the name and the way in.
+   ══════════════════════════════════════════════════════════════════════════ */
+.vi-work-band { display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+/* The lead piece takes the full width on a wide screen. One large thing and
+   several small ones reads as a portfolio; twelve identical ones reads as a
+   contact sheet. */
+@media (min-width: 900px) { .vi-work-band > .vi-work-lead { grid-column: 1 / -1; } }
+
+.vi-work {
+  position: relative; display: block; width: 100%; padding: 0;
+  border: 1px solid var(--vi-border); border-radius: 20px; overflow: hidden;
+  background: var(--vi-card); cursor: pointer; text-align: left;
+  box-shadow: var(--vi-shadow);
+  transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, border-color .3s ease;
+}
+.vi-work:hover { transform: translateY(-8px); box-shadow: var(--vi-shadow-lg); border-color: var(--vi-ring); }
+.vi-work-stage { position: relative; overflow: hidden; background: #0b0f1c; height: 380px; }
+.vi-work-lead .vi-work-stage { height: 460px; }
+.vi-work-stage > * { position: absolute; inset: 0; pointer-events: none; }
+
+.vi-work-veil {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 24px;
+  background: linear-gradient(to top, rgba(8,10,20,.74) 0%, rgba(8,10,20,.1) 46%, transparent 72%);
+  opacity: 0; transition: opacity .3s ease;
+}
+.vi-work:hover .vi-work-veil, .vi-work:focus-visible .vi-work-veil { opacity: 1; }
+.vi-work-veil span {
+  padding: 11px 22px; border-radius: 12px; font-size: 14px; font-weight: 700;
+  background: rgba(255,255,255,.96); color: #111827;
+}
+
+.vi-work-foot { display: flex; align-items: center; gap: 11px; padding: 15px 18px; }
+.vi-work-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.vi-work-name {
+  font-family: var(--vi-font-display); font-size: 18px; font-weight: 600; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vi-work-num {
+  margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  color: var(--vi-muted); font-variant-numeric: tabular-nums;
+}
+.vi-work-live {
+  position: absolute; top: 14px; left: 14px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px;
+  font-size: 11px; font-weight: 750; letter-spacing: .05em;
+  background: rgba(10,12,20,.55); color: #fff; backdrop-filter: blur(6px);
+}
+.vi-work-live i { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: block; }
+
+@media (max-width: 560px) {
+  .vi-work-stage, .vi-work-lead .vi-work-stage { height: 320px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vi-tc:hover, .vi-work:hover, .vi-tc-btn:hover { transform: none; }
+  .vi-tc-body { animation: none; }
+}
+
+/* Full-view preview chrome. Falls back to the site's own border and card when
+   no template brand was passed — the promotional gallery opens somebody's
+   finished invitation, which has no palette of ours to borrow. */
+.vi-pv-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--vi-card); border-bottom: 1px solid var(--tb-border, var(--vi-border));
+}
+.vi-pv-head-emoji { font-size: 22px; }
+.vi-pv-head-name {
+  font-family: var(--tb-font, var(--vi-font-display)); font-size: 18px; font-weight: 600;
+  color: var(--tb-ink, var(--vi-text));
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vi-pv-head-price {
+  margin-left: auto; font-size: 15px; font-weight: 800; white-space: nowrap;
+  color: var(--tb-ink, var(--vi-text));
+}
+.vi-pv-foot {
+  padding: 12px; background: var(--vi-card);
+  border-top: 1px solid var(--tb-border, var(--vi-border));
+}

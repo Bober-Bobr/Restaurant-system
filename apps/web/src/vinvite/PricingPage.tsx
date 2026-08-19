@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { vinviteService, TEMPLATE_TIERS, type TemplatePricing, type TemplateTier } from './api';
+import { TEMPLATE_TIERS, type TemplateTier } from './api';
 import { RICH_TEMPLATES } from './templates';
 import { usePromoShowcase } from './promoShowcase';
 import { groupByTier, instagramHref, telegramHref } from './pricing';
@@ -13,8 +12,11 @@ import { useTemplateOverrides } from './templateOverrides';
 import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
 import { PreviewShell } from './PreviewShell';
+import { TemplateCard } from './TemplateCard';
+import { brandOf, brandVars } from './templateBrand';
+import { useVInviteStore } from './store';
+import { useTemplatePricing } from './templatePricing';
 import { LOCALES, type TemplateDefinition } from './templates/types';
-import { formatSum } from '../utils/currency';
 
 // Stable identity: RichRenderer posts into the iframe whenever `config` or
 // `languages` change by reference, so this must not be rebuilt per render.
@@ -56,19 +58,10 @@ export const ViPricingPage = () => {
   const tilt = usePointerTilt(4);
 
   const { templates: visible } = usePromoShowcase();
+  const dark = useVInviteStore((state) => state.uiTheme) === 'dark';
   const [preview, setPreview] = useState<TemplateDefinition | null>(null);
 
-  const pricingQuery = useQuery({
-    queryKey: ['vi-template-pricing'],
-    queryFn: () => vinviteService.getTemplatePricing(),
-    staleTime: 60_000,
-  });
-
-  const byTemplate = useMemo(() => {
-    const map = new Map<string, TemplatePricing>();
-    for (const row of pricingQuery.data ?? []) map.set(row.templateId, row);
-    return map;
-  }, [pricingQuery.data]);
+  const { byTemplate, priceLabel, tierOf } = useTemplatePricing();
 
   const selected = RICH_TEMPLATES.find((tpl) => tpl.id === selectedId) ?? null;
   const selectedPricing = selected ? byTemplate.get(selected.id) : undefined;
@@ -78,13 +71,6 @@ export const ViPricingPage = () => {
   // that a template is missing from the price list, and a visitor seeing it
   // without a price is better than a template that silently vanished.
   const grouped = useMemo(() => groupByTier(visible, byTemplate), [visible, byTemplate]);
-
-  const priceLabel = (templateId: string): string => {
-    const price = byTemplate.get(templateId)?.priceCents;
-    if (price == null) return t('pricing_on_request');
-    if (price === 0) return t('pricing_free');
-    return formatSum(price);
-  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -126,12 +112,15 @@ export const ViPricingPage = () => {
             <div className="vi-card vi-pop vi-lp-sheenwrap" {...tilt} style={{
               maxWidth: 560, margin: '0 auto 40px', padding: 20,
               display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-              border: '1px solid var(--vi-accent)',
+              // The callout wears the chosen design's colours too, so the page
+              // confirms the choice in the language of the thing chosen.
+              ...brandVars(brandOf(selected), dark),
+              border: '1px solid var(--tb-border)',
             }}>
               <span style={{ fontSize: 34 }}>{selected.cover}</span>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <span className="vi-label" style={{ marginBottom: 2 }}>{t('pricing_your_choice')}</span>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>{t(selected.nameKey as ViKey)}</p>
+                <p className="vi-tc-name" style={{ margin: 0 }}>{t(selected.nameKey as ViKey)}</p>
                 {selectedPricing?.tier && (
                   <span style={{
                     display: 'inline-block', marginTop: 6, padding: '3px 10px', borderRadius: 999,
@@ -201,36 +190,20 @@ export const ViPricingPage = () => {
                   {templates.length === 0 ? (
                     <p style={{ margin: 0, fontSize: 13.5, color: 'var(--vi-muted)' }}>{t('pricing_tier_empty')}</p>
                   ) : (
-                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'grid', gap: 12 }}>
                       {templates.map((tpl) => (
-                        <li key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => choose(tpl.id)}
-                            aria-pressed={tpl.id === selectedId}
-                            className={`vi-lp-tier-row${tpl.id === selectedId ? ' chosen' : ''}`}
-                            style={{ flex: 1, minWidth: 0 }}
-                          >
-                            <span style={{ fontSize: 17 }}>{tpl.cover}</span>
-                            <span style={{
-                              flex: 1, minWidth: 0, fontSize: 14, fontWeight: 650,
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                              {t(tpl.nameKey as ViKey)}
-                            </span>
-                            <strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>{priceLabel(tpl.id)}</strong>
-                          </button>
-                          {/* Separate from the row, not inside it: a button
-                              cannot be nested in a button, and previewing is a
-                              different intent from choosing. */}
-                          <button type="button" className="vi-lp-tier-eye"
-                            onClick={() => setPreview(tpl)}
-                            title={t('pricing_preview')} aria-label={t('pricing_preview')}>
-                            👁
-                          </button>
-                        </li>
+                        <TemplateCard
+                          key={tpl.id}
+                          tpl={tpl}
+                          price={priceLabel(tpl.id)}
+                          tier={tierOf(tpl.id)}
+                          selected={tpl.id === selectedId}
+                          onPreview={() => setPreview(tpl)}
+                          onSelect={() => choose(tpl.id)}
+                          selectLabel={t('lp_select')}
+                        />
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </section>
               );
@@ -242,30 +215,17 @@ export const ViPricingPage = () => {
               <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--vi-muted)' }}>
                 {t('pricing_unassigned')}
               </p>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                 {grouped.unassigned.map((tpl) => (
-                  <span key={tpl.id} className="vi-card" style={{
-                    padding: '4px 6px 4px 12px', display: 'inline-flex', alignItems: 'center', gap: 8,
-                    border: `1px solid ${tpl.id === selectedId ? 'var(--vi-accent)' : 'var(--vi-border)'}`,
-                  }}>
-                    <button type="button"
-                      onClick={() => choose(tpl.id)}
-                      aria-pressed={tpl.id === selectedId}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8, padding: 0,
-                        fontSize: 13.5, cursor: 'pointer', font: 'inherit', color: 'inherit',
-                        background: 'none', border: 'none',
-                      }}>
-                      <span>{tpl.cover}</span>
-                      {t(tpl.nameKey as ViKey)}
-                      <strong style={{ color: 'var(--vi-muted)' }}>{priceLabel(tpl.id)}</strong>
-                    </button>
-                    <button type="button" className="vi-lp-tier-eye"
-                      onClick={() => setPreview(tpl)}
-                      title={t('pricing_preview')} aria-label={t('pricing_preview')}>
-                      👁
-                    </button>
-                  </span>
+                  <TemplateCard
+                    key={tpl.id}
+                    tpl={tpl}
+                    price={priceLabel(tpl.id)}
+                    selected={tpl.id === selectedId}
+                    onPreview={() => setPreview(tpl)}
+                    onSelect={() => choose(tpl.id)}
+                    selectLabel={t('lp_select')}
+                  />
                 ))}
               </div>
             </section>
@@ -300,6 +260,8 @@ export const ViPricingPage = () => {
       {preview && (
         <TemplatePreviewModal
           tpl={preview}
+          price={priceLabel(preview.id)}
+          name={t(preview.nameKey as ViKey)}
           label={t('lp_select')}
           onSelect={() => { choose(preview.id); setPreview(null); }}
           onClose={() => setPreview(null)}
@@ -309,12 +271,15 @@ export const ViPricingPage = () => {
   );
 };
 
-// Live preview of one template, with the action that brings a visitor here in
-// the first place pinned underneath it.
-function TemplatePreviewModal({ tpl, label, onSelect, onClose }: {
-  tpl: TemplateDefinition; label: string; onSelect: () => void; onClose: () => void;
+// Live preview of one template, framed in that template's own palette, with
+// its name and price above and the action that brings a visitor here pinned
+// underneath.
+function TemplatePreviewModal({ tpl, price, name, label, onSelect, onClose }: {
+  tpl: TemplateDefinition; price: string; name: string; label: string;
+  onSelect: () => void; onClose: () => void;
 }) {
   const { effectiveConfig } = useTemplateOverrides();
+  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
   // The administrator's saved Design+ config, not the shipped default — a
   // template edited in the studio must look the same here as everywhere else.
   const config = useMemo(
@@ -325,9 +290,16 @@ function TemplatePreviewModal({ tpl, label, onSelect, onClose }: {
   return (
     <PreviewShell
       onClose={onClose}
+      brandStyle={brandVars(brandOf(tpl), dark)}
+      header={(
+        <>
+          <span className="vi-pv-head-emoji" aria-hidden>{tpl.cover}</span>
+          <span className="vi-pv-head-name">{name}</span>
+          <span className="vi-pv-head-price">{price}</span>
+        </>
+      )}
       footer={(
-        <button type="button" className="vi-btn vi-btn-primary"
-          style={{ width: '100%', padding: '13px' }} onClick={onSelect}>
+        <button type="button" className="vi-tc-btn" style={{ width: '100%' }} onClick={onSelect}>
           {label} <span style={{ fontSize: 17 }}>→</span>
         </button>
       )}
