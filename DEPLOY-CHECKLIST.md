@@ -1236,3 +1236,33 @@ Same two follow-ups as the château:
 - **Confirm `/paris/film.mp4` is not caught by the `no-cache` rule** from §21.
   Only `= /index.html` and `= /sw.js` should be no-cache; an unhashed 7 MB video
   re-fetched on every visit is the one mistake worth checking for here.
+
+---
+
+## 24. Two more rich templates — `wedding-samarkand`, `wedding-stillvatn`
+
+Both registered in `RICH_TEMPLATES`, so they appear in the chooser, in the
+landing catalog and on `/pricing` as soon as this is deployed.
+
+**Static assets: ~11 MB more.** `apps/web/public/samarkand/` holds thirteen
+JPEGs (3.5 MB, re-encoded from 10 MB PNGs) and `film.mp4` (5.2 MB);
+`apps/web/public/stillvatn/` holds thirteen JPEGs (2.4 MB) and **no video** —
+that design opens on a photograph by intent. No new deploy step is needed
+(Vite copies `public/` into `dist/`, `deploy.sh` copies `dist/` to
+`/var/www/restaurant`), but the running total for bundled template artwork is
+now roughly **33 MB** across four designs. If that copy ever becomes the slow
+part of a deploy, these directories are why.
+
+Two follow-ups, the same as §22 and §23:
+
+- **Give each a tier and a price** on `v-invite.uz/settings` (SYSTEM_ADMIN).
+  Unpriced, they read as "on request" in the catalog and land in `unassigned`
+  on the price list — visible, but not orderable.
+- **Confirm `/samarkand/film.mp4` is not caught by the `no-cache` rule** from
+  §21. Only `= /index.html` and `= /sw.js` should be no-cache; with two
+  unhashed films now shipping, a mistake here re-downloads 12 MB per visit.
+
+Also worth knowing: `index.html` now loads **Amiri** and **La Belle Aurore** in
+addition to the existing families — the catalog sets each template's name in
+that design's own face, and those two were previously loaded only inside the
+iframes.

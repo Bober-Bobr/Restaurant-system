@@ -7,6 +7,8 @@ import { weddingChateauTemplate } from './wedding-chateau/definition';
 import { weddingEternalVowsTemplate } from './wedding-eternal-vows/definition';
 import { weddingKeepsakeTemplate } from './wedding-keepsake/definition';
 import { weddingParisTemplate } from './wedding-paris/definition';
+import { weddingSamarkandTemplate } from './wedding-samarkand/definition';
+import { weddingStillvatnTemplate } from './wedding-stillvatn/definition';
 import { weddingTalbonTemplate } from './wedding-talbon/definition';
 import { getPath } from './utils';
 import type { RichDesignData, TemplateCategory, TemplateDefinition } from './types';
@@ -22,6 +24,8 @@ export const RICH_TEMPLATES: TemplateDefinition[] = [
   weddingEternalVowsTemplate,
   weddingKeepsakeTemplate,
   weddingParisTemplate,
+  weddingSamarkandTemplate,
+  weddingStillvatnTemplate,
   weddingTalbonTemplate,
 ];
 

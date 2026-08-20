@@ -96,6 +96,18 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#1E2A24', buttonInk: '#F8F4EC', tint: '#EADFC8',
     font: `'Parisienne', ${SERIF_FALLBACK}`,
   },
+  // Lantern amber and gold over palace night.
+  'wedding-samarkand': {
+    ink: '#8a1f2f', inkDark: '#e8ce8a', border: '#C9A227',
+    button: '#2A1622', buttonInk: '#F2E4CE', tint: '#f6ecd8',
+    font: `'Amiri', ${SERIF_FALLBACK}`,
+  },
+  // Sage and olive over paper — the quietest card in the row.
+  'wedding-stillvatn': {
+    ink: '#55654e', inkDark: '#b9c9ad', border: '#93A088',
+    button: '#3B3A34', buttonInk: '#F4F2EC', tint: '#EDEAE1',
+    font: `'La Belle Aurore', ${SERIF_FALLBACK}`,
+  },
   // Estate green and engraved gold.
   'wedding-chateau': {
     ink: '#3d4a3b', inkDark: '#dfc48a', border: '#b8924e',
