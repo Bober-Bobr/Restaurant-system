@@ -163,7 +163,7 @@ function sizeFor(k: ParticleKind): number {
 export function ParticleField({ kind, count = 80, fixed = false, imageUrl, color }: { kind?: ParticleKind | string | null; count?: number; fixed?: boolean; imageUrl?: string | null; color?: string | null }) {
   const k = (kind ?? 'none') as ParticleKind;
   // Particle colour syncs with the accent (or an explicit override) by default.
-  const base = color || '#c9a42c';
+  const base = color || '#d8b45f';
   // Candies, hearts and custom images are larger — fewer of them read as
   // scattered accents rather than a dense, cluttered overlay.
   const n = (k === 'candy' || k === 'hearts' || k === 'custom') ? Math.round(count * 0.35) : count;

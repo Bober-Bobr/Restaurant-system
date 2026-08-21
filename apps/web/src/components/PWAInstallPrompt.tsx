@@ -91,10 +91,10 @@ export const PWAInstallPrompt = ({ locale }: { locale: Locale }) => {
         maxWidth: 460, margin: '0 auto',
         padding: 16,
         borderRadius: 18,
-        background: 'rgba(15,23,42,0.95)',
+        background: 'rgba(var(--adm-bg-rgb),0.95)',
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',
-        border: '1px solid rgba(201,164,44,0.35)',
+        border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
         boxShadow: '0 14px 40px rgba(0,0,0,0.5)',
         display: 'flex', alignItems: 'center', gap: 14,
       }}
@@ -120,7 +120,7 @@ export const PWAInstallPrompt = ({ locale }: { locale: Locale }) => {
             style={{
               padding: '8px 14px', fontSize: 12, fontWeight: 700,
               borderRadius: 10, border: 'none',
-              background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
+              background: 'linear-gradient(135deg, var(--adm-accent) 0%, #d4af37 100%)',
               color: '#1a3320', cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}

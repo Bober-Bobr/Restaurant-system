@@ -133,9 +133,9 @@ export const AdminSubcategoriesPage = () => {
             checked={hideSubcategories}
             disabled={settingsQuery.isLoading || toggleMasterMutation.isPending}
             onChange={(e) => toggleMasterMutation.mutate(e.target.checked)}
-            style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }}
+            style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: 'pointer' }}
           />
-          <span style={{ fontSize: 13, fontWeight: 600, color: hideSubcategories ? '#c9a42c' : 'rgba(226,232,240,0.7)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: hideSubcategories ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)' }}>
             {hideSubcategories ? t('subcategories_disabled') : t('subcategories_enabled')}
           </span>
         </label>

@@ -1323,7 +1323,7 @@ function ChildrenTableSection({
             onClick={() => setChildrenTableSelected(!childrenTableSelected)}
             className="rounded-xl px-5 py-2.5 text-sm font-bold transition-all"
             style={childrenTableSelected
-              ? { background: '#22c55e', color: '#0f172a', boxShadow: '0 4px 14px rgba(34,197,94,0.35)' }
+              ? { background: '#22c55e', color: 'var(--adm-bg)', boxShadow: '0 4px 14px rgba(34,197,94,0.35)' }
               : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.2)' }}>
             {childrenTableSelected ? `✓ ${t('children_table_included')}` : t('add_children_table')}
           </button>
@@ -1814,13 +1814,13 @@ export const TabletMenuPage = () => {
       {tabletParticles && tabletParticles !== 'none' && (
         <ParticleField
           kind={tabletParticles as ParticleKind}
-          color={tabletParticlesColor || tabletAccentColor || '#c9a42c'}
+          color={tabletParticlesColor || tabletAccentColor || '#d8b45f'}
           imageUrl={tabletParticlesImageUrl ? (getPhotoUrl(tabletParticlesImageUrl) ?? tabletParticlesImageUrl) : null}
           fixed
         />
       )}
       <FingerTrail
-        accent={tabletTrailColor || tabletAccentColor || '#c9a42c'}
+        accent={tabletTrailColor || tabletAccentColor || '#d8b45f'}
         template={(tabletTrailTemplate as TrailTemplate) || 'sparkle'}
         imageUrl={tabletTrailImageUrl ? (getPhotoUrl(tabletTrailImageUrl) ?? tabletTrailImageUrl) : null}
       />

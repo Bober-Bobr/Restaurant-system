@@ -39,7 +39,7 @@ export const DishTranslations = ({ locale, nameI18n, descriptionI18n, onChange, 
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
             background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-            color: '#c9a42c', fontSize: 13, fontWeight: 600,
+            color: 'var(--adm-accent)', fontSize: 13, fontWeight: 600,
           }}
         >
           <span style={{ transition: 'transform 0.15s', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>

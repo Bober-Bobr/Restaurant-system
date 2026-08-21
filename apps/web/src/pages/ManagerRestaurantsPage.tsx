@@ -18,20 +18,20 @@ import { authService } from '../services/auth.service';
 type Lang = 'en' | 'ru' | 'uz';
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+  background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
   color: '#e2e8f0', padding: '9px 12px', height: 40, fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
 };
 const labelStyle: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span style={{ color: '#c9a42c', letterSpacing: 1 }}>
+    <span style={{ color: 'var(--adm-accent)', letterSpacing: 1 }}>
       {'★'.repeat(rating)}<span style={{ color: 'rgba(255,255,255,0.2)' }}>{'★'.repeat(5 - rating)}</span>
     </span>
   );
 }
 
-const DEFAULT_ACCENT = '#c9a42c';
+const DEFAULT_ACCENT = '#d8b45f';
 const DEFAULT_BG = '#1a3320';
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
@@ -278,7 +278,7 @@ function RestaurantCard({ r, locale }: { r: Restaurant; locale: 'en' | 'ru' | 'u
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         {logo
           ? <img src={logo ?? undefined} alt="" style={{ height: 44, width: 'auto', maxWidth: 80, objectFit: 'contain' }} />
-          : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(201,164,44,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a42c', fontWeight: 700 }}>{displayName.charAt(0)}</div>}
+          : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(var(--adm-accent-rgb),0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--adm-accent)', fontWeight: 700 }}>{displayName.charAt(0)}</div>}
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{displayName}</h2>
       </header>
 
@@ -437,7 +437,7 @@ function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; res
   };
 
   return (
-    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ display: 'grid', gap: 4, flex: '1 1 160px' }}>
           <span style={labelStyle}>{t('name')}</span>
@@ -512,7 +512,7 @@ export const ManagerRestaurantsPage = () => {
     <div className="adm-bg">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)', backdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -532,9 +532,9 @@ export const ManagerRestaurantsPage = () => {
                 style={{
                   padding: '5px 10px', border: '1px solid', borderRadius: 6, cursor: 'pointer',
                   fontSize: 11, letterSpacing: '0.06em', transition: 'all 0.18s',
-                  borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
-                  background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                  color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                  borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
+                  background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                  color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                   fontWeight: locale === loc ? 700 : 500,
                 }}
               >

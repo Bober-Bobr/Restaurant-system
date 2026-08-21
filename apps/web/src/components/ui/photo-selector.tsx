@@ -100,9 +100,9 @@ export const PhotoSelector = ({
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '7px 14px', borderRadius: 8,
-              border: '1px dashed rgba(201,164,44,0.45)',
-              background: 'rgba(201,164,44,0.07)',
-              color: '#c9a42c', fontSize: 13, fontWeight: 600,
+              border: '1px dashed rgba(var(--adm-accent-rgb),0.45)',
+              background: 'rgba(var(--adm-accent-rgb),0.07)',
+              color: 'var(--adm-accent)', fontSize: 13, fontWeight: 600,
               cursor: uploadMutation.isPending ? 'wait' : 'pointer',
             }}
           >
@@ -133,9 +133,9 @@ export const PhotoSelector = ({
 
         {selectedPhotoUrl && (
           <div style={{
-            border: '1px solid rgba(201,164,44,0.4)',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
             borderRadius: 10, padding: 10,
-            background: 'rgba(201,164,44,0.08)',
+            background: 'rgba(var(--adm-accent-rgb),0.08)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
@@ -150,7 +150,7 @@ export const PhotoSelector = ({
                 />
               </button>
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#c9a42c' }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--adm-accent)' }}>
                   {translate('selected_photo', locale)}
                 </p>
                 <button
@@ -170,7 +170,7 @@ export const PhotoSelector = ({
           justifyContent: 'space-between',
           maxHeight: 188, overflowY: 'auto',
           border: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(15,23,42,0.4)',
+          background: 'rgba(var(--adm-bg-rgb),0.4)',
           borderRadius: 10, padding: 8,
         }}>
           {isLoading ? (
@@ -190,10 +190,10 @@ export const PhotoSelector = ({
                   className="group"
                   style={{
                     position: 'relative', cursor: 'pointer',
-                    border: `2px solid ${isSelected ? '#c9a42c' : 'rgba(255,255,255,0.08)'}`,
+                    border: `2px solid ${isSelected ? 'var(--adm-accent)' : 'rgba(255,255,255,0.08)'}`,
                     borderRadius: 8, overflow: 'hidden',
                     transition: 'all 0.15s',
-                    boxShadow: isSelected ? '0 0 0 2px rgba(201,164,44,0.25)' : 'none',
+                    boxShadow: isSelected ? '0 0 0 2px rgba(var(--adm-accent-rgb),0.25)' : 'none',
                   }}
                   onClick={() => handlePhotoClick(photoUrl)}
                 >
@@ -240,11 +240,11 @@ export const PhotoSelector = ({
                   {isSelected && (
                     <div style={{
                       position: 'absolute', inset: 0,
-                      background: 'rgba(201,164,44,0.18)',
+                      background: 'rgba(var(--adm-accent-rgb),0.18)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       <div style={{
-                        background: '#c9a42c', color: '#0f172a',
+                        background: 'var(--adm-accent)', color: 'var(--adm-bg)',
                         borderRadius: '50%', width: 26, height: 26,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 14, fontWeight: 800,

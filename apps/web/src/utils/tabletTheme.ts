@@ -6,8 +6,12 @@
 
 export type TabletTheme = { accent: string; bg: string };
 
-// The historic hardcoded palette — used as the fallback everywhere.
-export const DEFAULT_TABLET_THEME: TabletTheme = { accent: '#c9a42c', bg: '#1a3320' };
+// The banquet brand palette — used as the fallback everywhere. Must match the
+// `--rg-*` defaults in index.css, which cover the moment before a restaurant's
+// theme has loaded. Was a gold-on-green of its own until the banquet rebrand;
+// a restaurant that saved its own colors keeps them, since those never reach
+// this fallback.
+export const DEFAULT_TABLET_THEME: TabletTheme = { accent: '#d8b45f', bg: '#0b1120' };
 
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 

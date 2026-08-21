@@ -53,7 +53,7 @@ function SuccessAlert({ title, subtitle }: { title: string; subtitle?: string })
   const [open, setOpen] = useState(true);
   if (!open) return null;
   return createPortal(
-    <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 2147483600, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 2147483600, background: 'rgba(var(--adm-bg-rgb),0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <style>{PASSIVE_KEYFRAMES}</style>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, background: '#fff', borderRadius: 14, padding: '30px 26px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.35)', animation: 'saPop 0.35s cubic-bezier(0.22,1,0.36,1)', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         {/* Green check inside a light-green ringed disc */}
@@ -90,7 +90,7 @@ function useFsH(): (n: number) => number {
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  if (!m) return `rgba(201,164,44,${alpha})`;
+  if (!m) return `rgba(216,180,95,${alpha})`;
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
 

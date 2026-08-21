@@ -121,10 +121,10 @@ export const LoginPage = () => {
               style={{
                 padding: '5px 12px',
                 border: '1px solid',
-                borderColor: locale === loc ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.12)',
+                borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.6)' : 'rgba(255,255,255,0.12)',
                 borderRadius: 6,
-                background: locale === loc ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-                color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.7)',
+                background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(255,255,255,0.04)',
+                color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
                 fontWeight: locale === loc ? 700 : 500,
                 cursor: 'pointer',
                 fontSize: 12,
@@ -183,7 +183,7 @@ export const LoginPage = () => {
                   color: 'rgba(226,232,240,0.55)', padding: 6, borderRadius: 4,
                   transition: 'color 0.15s',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a42c'; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--adm-accent)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(226,232,240,0.55)'; }}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
@@ -249,9 +249,9 @@ export const LoginPage = () => {
             width: '100%',
             padding: '11px 16px',
             borderRadius: 12,
-            border: '1px solid rgba(201,164,44,0.35)',
-            background: 'rgba(201,164,44,0.08)',
-            color: '#c9a42c',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+            background: 'rgba(var(--adm-accent-rgb),0.08)',
+            color: 'var(--adm-accent)',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -286,7 +286,7 @@ export const LoginPage = () => {
               width: '100%', maxWidth: 460,
               maxHeight: '85vh',
               borderRadius: 18,
-              background: 'rgba(15,23,42,0.97)',
+              background: 'rgba(var(--adm-bg-rgb),0.97)',
               border: '1px solid rgba(255,255,255,0.08)',
               boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
               display: 'flex', flexDirection: 'column',
@@ -302,7 +302,7 @@ export const LoginPage = () => {
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
                   {t('choose_restaurant_to_view')}
                 </p>
-                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(201,164,44,0.7)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(var(--adm-accent-rgb),0.7)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   {t('view_only_mode')}
                 </p>
               </div>
@@ -343,7 +343,7 @@ export const LoginPage = () => {
                     cursor: 'pointer', textAlign: 'left',
                     transition: 'all 0.15s',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(201,164,44,0.1)'; e.currentTarget.style.borderColor = 'rgba(201,164,44,0.35)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(var(--adm-accent-rgb),0.1)'; e.currentTarget.style.borderColor = 'rgba(var(--adm-accent-rgb),0.35)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
                 >
                   {r.logoUrl && (
@@ -360,7 +360,7 @@ export const LoginPage = () => {
                       </p>
                     )}
                   </div>
-                  <span style={{ color: '#c9a42c', fontSize: 18 }}>›</span>
+                  <span style={{ color: 'var(--adm-accent)', fontSize: 18 }}>›</span>
                 </button>
               ))}
             </div>

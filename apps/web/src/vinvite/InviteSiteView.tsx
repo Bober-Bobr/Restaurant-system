@@ -64,7 +64,7 @@ export function InviteSiteView({ site, contacts, onRsvp, chrome = true }: {
   }
 
   const theme = site.theme ?? {};
-  const accent = theme.accentColor || '#c9a42c';
+  const accent = theme.accentColor || '#d8b45f';
   const bgColor = theme.backgroundColor || '#fafaf7';
   const bgImage = theme.backgroundImageUrl ? (getPhotoUrl(theme.backgroundImageUrl) ?? theme.backgroundImageUrl) : null;
   const musicSrc = theme.musicUrl ? (getPhotoUrl(theme.musicUrl) ?? theme.musicUrl) : null;

@@ -240,7 +240,7 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
   const linkPrefix = buildSubdomainBase('event', '/');
 
   return (
-    <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+    <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(var(--adm-bg-rgb),0.85)', backdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '10px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {/* Row 1: identity + actions + project switcher (top-right) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -263,7 +263,7 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
               onChange={(e) => { if (e.target.value !== '__current') onSwitch(e.target.value); }}
               title={t('my_flyers')}
               style={{
-                background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8,
+                background: 'rgba(var(--adm-bg-rgb),0.9)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8,
                 color: '#e2e8f0', padding: '8px 10px', fontSize: 12, outline: 'none', cursor: 'pointer', maxWidth: 170, colorScheme: 'dark',
               }}
             >
@@ -278,15 +278,15 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{
             flex: 1, minWidth: 260, display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px',
+            background: 'rgba(var(--adm-bg-rgb),0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px',
           }}>
             <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)', whiteSpace: 'nowrap' }}>{t('my_link')}:</span>
-            <span style={{ fontSize: 13, color: '#c9a42c', whiteSpace: 'nowrap' }}>{linkPrefix}</span>
+            <span style={{ fontSize: 13, color: 'var(--adm-accent)', whiteSpace: 'nowrap' }}>{linkPrefix}</span>
             <input
               value={slug}
               onChange={(e) => onSlug(e.target.value)}
               placeholder="my-flyer"
-              style={{ flex: '0 1 auto', width: Math.max(60, slug.length * 8 + 16), minWidth: 60, background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.3)', borderRadius: 6, color: '#c9a42c', padding: '3px 8px', fontSize: 13, fontWeight: 600, outline: 'none' }}
+              style={{ flex: '0 1 auto', width: Math.max(60, slug.length * 8 + 16), minWidth: 60, background: 'rgba(var(--adm-accent-rgb),0.08)', border: '1px solid rgba(var(--adm-accent-rgb),0.3)', borderRadius: 6, color: 'var(--adm-accent)', padding: '3px 8px', fontSize: 13, fontWeight: 600, outline: 'none' }}
             />
             <span style={{ flex: 1 }} />
             <button type="button" className="adm-btn-ghost" style={{ fontSize: 11, padding: '5px 10px' }} onClick={copy} disabled={!publicUrl}>
@@ -294,7 +294,7 @@ function FlyerTopBar({ t, slug, onSlug, publicUrl, isPublished, onPublishToggle,
             </button>
             {publicUrl && <LinkQrButton url={publicUrl} filename={slug || 'flyer'} t={t} />}
             {publicUrl && (
-              <a href={publicUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#c9a42c', textDecoration: 'none', padding: '5px 10px', borderRadius: 8, background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.3)' }}>↗</a>
+              <a href={publicUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--adm-accent)', textDecoration: 'none', padding: '5px 10px', borderRadius: 8, background: 'rgba(var(--adm-accent-rgb),0.08)', border: '1px solid rgba(var(--adm-accent-rgb),0.3)' }}>↗</a>
             )}
           </div>
           <button

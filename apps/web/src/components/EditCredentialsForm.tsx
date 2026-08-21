@@ -15,7 +15,7 @@ const formatError = (error: unknown): string => {
 };
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)',
+  background: 'rgba(var(--adm-bg-rgb),0.6)',
   border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 8,
   color: '#e2e8f0',
@@ -77,8 +77,8 @@ export const EditCredentialsForm = ({
       style={{
         padding: 12,
         borderRadius: 10,
-        background: 'rgba(15,23,42,0.7)',
-        border: '1px solid rgba(201,164,44,0.3)',
+        background: 'rgba(var(--adm-bg-rgb),0.7)',
+        border: '1px solid rgba(var(--adm-accent-rgb),0.3)',
         display: 'flex', flexDirection: 'column', gap: 10,
       }}
     >

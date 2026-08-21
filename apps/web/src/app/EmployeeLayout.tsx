@@ -52,7 +52,7 @@ export const EmployeeLayout = () => {
     <div className="adm-bg">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(15,23,42,0.78)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)',
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -83,12 +83,13 @@ export const EmployeeLayout = () => {
           <div className="emp-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Link
               to="/"
+              className={`adm-nav-item${isActive('/') ? ' is-active' : ''}`}
               style={{
                 padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                 textDecoration: 'none', whiteSpace: 'nowrap',
-                color: isActive('/') ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                background: isActive('/') ? 'rgba(201,164,44,0.12)' : 'transparent',
-                border: isActive('/') ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                color: isActive('/') ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                background: isActive('/') ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+                border: isActive('/') ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
                 transition: 'all 0.18s',
               }}
             >
@@ -96,12 +97,13 @@ export const EmployeeLayout = () => {
             </Link>
             <Link
               to="/calendar"
+              className={`adm-nav-item${isActive('/calendar') ? ' is-active' : ''}`}
               style={{
                 padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                 textDecoration: 'none', whiteSpace: 'nowrap',
-                color: isActive('/calendar') ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                background: isActive('/calendar') ? 'rgba(201,164,44,0.12)' : 'transparent',
-                border: isActive('/calendar') ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                color: isActive('/calendar') ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                background: isActive('/calendar') ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+                border: isActive('/calendar') ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
                 transition: 'all 0.18s',
               }}
             >
@@ -109,12 +111,13 @@ export const EmployeeLayout = () => {
             </Link>
             <Link
               to="/devices"
+              className={`adm-nav-item${isActive('/devices') ? ' is-active' : ''}`}
               style={{
                 padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                 textDecoration: 'none', whiteSpace: 'nowrap',
-                color: isActive('/devices') ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                background: isActive('/devices') ? 'rgba(201,164,44,0.12)' : 'transparent',
-                border: isActive('/devices') ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                color: isActive('/devices') ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                background: isActive('/devices') ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+                border: isActive('/devices') ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
                 transition: 'all 0.18s',
               }}
             >
@@ -125,8 +128,8 @@ export const EmployeeLayout = () => {
                 to={`/tablet?restaurantId=${tabletRestaurantId}`}
                 style={{
                   padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  textDecoration: 'none', color: '#c9a42c', whiteSpace: 'nowrap',
-                  background: 'rgba(201,164,44,0.1)', border: '1px solid rgba(201,164,44,0.4)',
+                  textDecoration: 'none', color: 'var(--adm-accent)', whiteSpace: 'nowrap',
+                  background: 'rgba(var(--adm-accent-rgb),0.1)', border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
                   transition: 'all 0.18s',
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                 }}
@@ -152,10 +155,10 @@ export const EmployeeLayout = () => {
                   style={{
                     padding: '5px 10px',
                     border: '1px solid',
-                    borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                    borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                     borderRadius: 6,
-                    background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                    color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                    background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                    color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                     fontWeight: locale === loc ? 700 : 500,
                     cursor: 'pointer',
                     fontSize: 11,
@@ -186,7 +189,10 @@ export const EmployeeLayout = () => {
         </div>
       </nav>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Keyed on the path so React remounts the wrapper on every navigation and
+          the entrance animation replays. Without the key the element persists
+          across routes and the animation would run once, on first load only. */}
+      <div key={location.pathname} className="adm-page-in" style={{ position: 'relative', zIndex: 1 }}>
         <Outlet />
       </div>
 

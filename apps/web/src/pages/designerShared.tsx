@@ -142,7 +142,7 @@ function TemplateCard({ item, t, onPick, onFavorite, onEdit, onDelete }: {
 }) {
   const cover = flyerCoverUrl({ blocks: item.blocks, backgroundImageUrl: item.theme?.backgroundImageUrl ?? null });
   const coverSrc = cover ? (getPhotoUrl(cover) ?? cover) : null;
-  const accent = item.theme?.accentColor || '#c9a42c';
+  const accent = item.theme?.accentColor || '#d8b45f';
 
   return (
     <div className="adm-card adm-card-hover" style={{ padding: 0, overflow: 'hidden', color: '#e2e8f0', display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -153,7 +153,7 @@ function TemplateCard({ item, t, onPick, onFavorite, onEdit, onDelete }: {
         <MiniAction title={t('delete_block')} onClick={onDelete} danger>×</MiniAction>
       </div>
       {item.builtin && (
-        <span className="adm-badge" style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(201,164,44,0.18)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)' }}>{t('ready_made')}</span>
+        <span className="adm-badge" style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, background: 'rgba(var(--adm-accent-rgb),0.18)', color: 'var(--adm-accent)', border: '1px solid rgba(var(--adm-accent-rgb),0.35)' }}>{t('ready_made')}</span>
       )}
 
       {/* Cover + name → pick */}
@@ -163,14 +163,14 @@ function TemplateCard({ item, t, onPick, onFavorite, onEdit, onDelete }: {
           height: 170, width: '100%', flexShrink: 0,
           background: coverSrc
             ? `url(${coverSrc}) top center / cover`
-            : `linear-gradient(160deg, ${accent}26 0%, rgba(15,23,42,0.92) 100%)`,
+            : `linear-gradient(160deg, ${accent}26 0%, rgba(var(--adm-bg-rgb),0.92) 100%)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {!coverSrc && <span style={{ fontSize: 34, opacity: 0.75 }}>{item.builtin ? '💍' : '🗂'}</span>}
         </div>
         <div style={{ padding: '10px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.07)', width: '100%' }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.favorite && <span style={{ color: '#c9a42c', marginRight: 5 }}>★</span>}{item.name}
+            {item.favorite && <span style={{ color: 'var(--adm-accent)', marginRight: 5 }}>★</span>}{item.name}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.5)' }}>{item.blocks.length} blocks</p>
         </div>
@@ -187,7 +187,7 @@ function MiniAction({ children, title, onClick, danger, active }: {
       style={{
         width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: danger ? 'rgba(220,38,38,0.85)' : active ? 'rgba(201,164,44,0.9)' : 'rgba(15,23,42,0.85)',
+        background: danger ? 'rgba(220,38,38,0.85)' : active ? 'rgba(var(--adm-accent-rgb),0.9)' : 'rgba(var(--adm-bg-rgb),0.85)',
         color: danger ? '#fff' : active ? '#1a1a1a' : '#e2e8f0',
         boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
       }}>{children}</button>

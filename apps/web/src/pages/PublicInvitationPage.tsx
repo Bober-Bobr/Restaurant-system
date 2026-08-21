@@ -12,7 +12,7 @@ import { useFlyerContact } from '../hooks/usePlatformContacts';
 import { ParticleField } from '../blocks/ParticleField';
 import { translate } from '../utils/translate';
 
-const ACCENT = '#c9a42c';
+const ACCENT = '#d8b45f';
 const PAGE_BG = `
   radial-gradient(circle at 20% 0%, rgba(212,175,55,0.18) 0%, transparent 40%),
   radial-gradient(circle at 80% 100%, rgba(212,175,55,0.14) 0%, transparent 50%),
@@ -23,7 +23,7 @@ const TEXT = '#1a1a1a';
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  if (!m) return `rgba(201,164,44,${alpha})`;
+  if (!m) return `rgba(216,180,95,${alpha})`;
   const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }

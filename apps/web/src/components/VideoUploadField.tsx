@@ -109,18 +109,18 @@ export const VideoUploadField = ({ value, onChange, restaurantId, label, height 
         style={{ display: 'none' }}
       />
       {src ? (
-        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: '#000', border: dragOver ? '1px solid #c9a42c' : '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: '#000', border: dragOver ? '1px solid var(--adm-accent)' : '1px solid rgba(255,255,255,0.08)' }}>
           <video src={src} controls muted playsInline style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
             <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-              style={iconBtnStyle('rgba(201,164,44,0.9)', '#1a1a1a')} title="Replace">
+              style={iconBtnStyle('rgba(var(--adm-accent-rgb),0.9)', '#1a1a1a')} title="Replace">
               {uploading ? '…' : '↻'}
             </button>
             <button type="button" onClick={() => onChange(null)} disabled={uploading}
               style={iconBtnStyle('rgba(220,38,38,0.9)', '#fff')} title="Remove">×</button>
           </div>
           {dragOver && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(201,164,44,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(var(--adm-accent-rgb),0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
           )}
         </div>
       ) : (
@@ -131,7 +131,7 @@ export const VideoUploadField = ({ value, onChange, restaurantId, label, height 
           style={{
             height,
             borderRadius: 12,
-            border: `1px dashed ${dragOver ? '#c9a42c' : 'rgba(167,139,250,0.4)'}`,
+            border: `1px dashed ${dragOver ? 'var(--adm-accent)' : 'rgba(167,139,250,0.4)'}`,
             background: dragOver ? 'rgba(124,58,237,0.14)' : 'rgba(124,58,237,0.06)',
             color: '#a78bfa',
             cursor: uploading ? 'wait' : 'pointer',

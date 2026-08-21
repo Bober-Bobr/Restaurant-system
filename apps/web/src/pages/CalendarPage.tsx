@@ -122,13 +122,13 @@ export const CalendarPage = () => {
           <button type="button" onClick={goPrev}
             style={{
               width: 38, height: 38, borderRadius: 10,
-              background: 'rgba(201,164,44,0.12)',
-              border: '1px solid rgba(201,164,44,0.35)',
-              color: '#c9a42c', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+              background: 'rgba(var(--adm-accent-rgb),0.12)',
+              border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+              color: 'var(--adm-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer',
             }}>‹</button>
           <div style={{
             minWidth: 200, textAlign: 'center', padding: '8px 18px',
-            background: 'rgba(15,23,42,0.6)', borderRadius: 10,
+            background: 'rgba(var(--adm-bg-rgb),0.6)', borderRadius: 10,
             border: '1px solid rgba(255,255,255,0.08)',
             color: '#f8fafc', fontWeight: 700, fontSize: 15,
           }}>
@@ -137,9 +137,9 @@ export const CalendarPage = () => {
           <button type="button" onClick={goNext}
             style={{
               width: 38, height: 38, borderRadius: 10,
-              background: 'rgba(201,164,44,0.12)',
-              border: '1px solid rgba(201,164,44,0.35)',
-              color: '#c9a42c', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+              background: 'rgba(var(--adm-accent-rgb),0.12)',
+              border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+              color: 'var(--adm-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer',
             }}>›</button>
         </div>
       </div>
@@ -148,7 +148,7 @@ export const CalendarPage = () => {
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 16,
         marginBottom: 20, padding: '12px 16px',
-        background: 'rgba(15,23,42,0.4)', borderRadius: 12,
+        background: 'rgba(var(--adm-bg-rgb),0.4)', borderRadius: 12,
         border: '1px solid rgba(255,255,255,0.06)',
       }}>
         <LegendDot color="rgba(220,38,38,0.5)" label={t('booked')} t={t} />
@@ -271,8 +271,8 @@ function HallCalendar({
                   aspectRatio: '1 / 1',
                   borderRadius: 8,
                   border: '1px solid',
-                  borderColor: isOpen ? '#c9a42c' : isToday ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.06)',
-                  background: hasBookings ? 'rgba(220,38,38,0.32)' : 'rgba(15,23,42,0.4)',
+                  borderColor: isOpen ? 'var(--adm-accent)' : isToday ? 'rgba(var(--adm-accent-rgb),0.6)' : 'rgba(255,255,255,0.06)',
+                  background: hasBookings ? 'rgba(220,38,38,0.32)' : 'rgba(var(--adm-bg-rgb),0.4)',
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'flex-start',
                   padding: '4px 2px 2px',
@@ -283,7 +283,7 @@ function HallCalendar({
               >
                 <span style={{
                   fontSize: 13, fontWeight: isToday ? 800 : 600,
-                  color: isToday ? '#c9a42c' : (hasBookings ? '#fff' : 'rgba(226,232,240,0.7)'),
+                  color: isToday ? 'var(--adm-accent)' : (hasBookings ? '#fff' : 'rgba(226,232,240,0.7)'),
                   lineHeight: 1,
                 }}>
                   {cell.day}
@@ -338,8 +338,8 @@ function EventDayBox({
           position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
           marginTop: 6, zIndex: 41,
           width: 'max(220px, 100%)',
-          background: 'rgba(15,23,42,0.98)',
-          border: '1px solid rgba(201,164,44,0.4)',
+          background: 'rgba(var(--adm-bg-rgb),0.98)',
+          border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
           borderRadius: 12,
           boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
           padding: 10,
@@ -351,8 +351,8 @@ function EventDayBox({
             display: 'flex', flexDirection: 'column', gap: 2,
             padding: '8px 10px',
             borderRadius: 8,
-            background: 'rgba(201,164,44,0.08)',
-            border: '1px solid rgba(201,164,44,0.2)',
+            background: 'rgba(var(--adm-accent-rgb),0.08)',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.2)',
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{ev.name}</p>
@@ -363,15 +363,15 @@ function EventDayBox({
                   flexShrink: 0,
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
                   padding: '3px 10px', borderRadius: 999, cursor: 'pointer',
-                  background: 'rgba(201,164,44,0.18)', color: '#c9a42c',
-                  border: '1px solid rgba(201,164,44,0.4)',
+                  background: 'rgba(var(--adm-accent-rgb),0.18)', color: 'var(--adm-accent)',
+                  border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
                 }}
               >
                 {t('edit')}
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{ev.time}</span>
+              <span style={{ fontSize: 12, color: 'var(--adm-accent)', fontWeight: 600 }}>{ev.time}</span>
               {ev.type && (
                 <span style={{
                   fontSize: 10, fontWeight: 600, letterSpacing: '0.04em',

@@ -30,12 +30,12 @@ export type BlockEditorProps = {
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec((hex || '').trim());
-  if (!m) return `rgba(201,164,44,${alpha})`;
+  if (!m) return `rgba(216,180,95,${alpha})`;
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
 
 const panelInput: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+  background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
   color: '#e2e8f0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
 };
 const panelLabel: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
@@ -49,7 +49,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
   // Global v-connect details, overridden by this page's own vccontact block.
   const flyerContact = useFlyerContact(blocks);
 
-  const accent = theme.accentColor || '#c9a42c';
+  const accent = theme.accentColor || '#d8b45f';
   const bgColor = theme.backgroundColor || '#fafaf7';
   const bgImage = theme.backgroundImageUrl ? (getPhotoUrl(theme.backgroundImageUrl) ?? theme.backgroundImageUrl) : null;
   const pageBackground = bgImage
@@ -132,9 +132,9 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
       </div>
 
       {/* Bottom floating toolbar */}
-      <div style={{ position: 'fixed', bottom: 18, left: '50%', transform: 'translateX(-50%)', zIndex: 40, display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 16, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
+      <div style={{ position: 'fixed', bottom: 18, left: '50%', transform: 'translateX(-50%)', zIndex: 40, display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 16, background: 'rgba(var(--adm-bg-rgb),0.92)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}>
         <button type="button" onClick={() => setMode(preview ? 'edit' : 'preview')} title={t('preview')}
-          style={{ width: 42, height: 42, borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: preview ? 'rgba(201,164,44,0.2)' : 'rgba(255,255,255,0.06)', color: '#e2e8f0', cursor: 'pointer', fontSize: 18 }}>👁</button>
+          style={{ width: 42, height: 42, borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: preview ? 'rgba(var(--adm-accent-rgb),0.2)' : 'rgba(255,255,255,0.06)', color: '#e2e8f0', cursor: 'pointer', fontSize: 18 }}>👁</button>
         <button type="button" className="adm-btn-primary" onClick={() => setPaletteOpen(true)} style={{ fontSize: 14, padding: '11px 22px' }}>+ {t('add_block')}</button>
         <button type="button" onClick={() => setThemeOpen(true)} title={t('theme_settings')}
           style={{ width: 42, height: 42, borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', cursor: 'pointer', fontSize: 18 }}>⚙</button>
@@ -146,7 +146,7 @@ export function BlockEditor({ kind, blocks, theme, onBlocksChange, onThemeChange
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
             {PALETTE_ORDER.filter((type) => kind === 'flyer' || kind === 'plaque' || type !== 'vccontact').map((type) => (
               <button key={type} type="button" onClick={() => addBlock(type)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 8px', borderRadius: 12, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 8px', borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', color: '#e2e8f0', cursor: 'pointer' }}>
                 <span style={{ fontSize: 24 }}>{BLOCK_DEFS[type].icon}</span>
                 <span style={{ fontSize: 12 }}>{t(BLOCK_DEFS[type].labelKey)}</span>
               </button>
@@ -187,7 +187,7 @@ function EditableBlock({ block, index, count, selected, t, children, onSelect, o
       onClick={onSelect}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => { e.preventDefault(); onDropOn(); }}
-      style={{ position: 'relative', cursor: 'pointer', outline: selected ? '2px solid #c9a42c' : '2px solid transparent', outlineOffset: -2 }}
+      style={{ position: 'relative', cursor: 'pointer', outline: selected ? '2px solid var(--adm-accent)' : '2px solid transparent', outlineOffset: -2 }}
     >
       {/* Block toolbar */}
       <div style={{ position: 'absolute', top: 4, right: 4, zIndex: 5, display: 'flex', gap: 4, opacity: selected ? 1 : 0.0, transition: 'opacity 0.15s' }}
@@ -202,12 +202,12 @@ function EditableBlock({ block, index, count, selected, t, children, onSelect, o
       </div>
       {/* "Hidden" badge so it's obvious the block won't appear on the page */}
       {hidden && (
-        <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 5, pointerEvents: 'none', padding: '3px 9px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.85)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif' }}>{t('hidden_badge')}</div>
+        <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 5, pointerEvents: 'none', padding: '3px 9px', borderRadius: 999, background: 'rgba(var(--adm-bg-rgb),0.9)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.85)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif' }}>{t('hidden_badge')}</div>
       )}
       {/* Left drag handle (always visible, like the reference) */}
       <div draggable onDragStart={onDragStart} onClick={(e) => e.stopPropagation()}
         title={block.type}
-        style={{ position: 'absolute', left: -48, top: '50%', transform: 'translateY(-50%)', zIndex: 5, width: 30, height: 44, borderRadius: 8, background: 'rgba(15,23,42,0.92)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 15 }}>☰</div>
+        style={{ position: 'absolute', left: -48, top: '50%', transform: 'translateY(-50%)', zIndex: 5, width: 30, height: 44, borderRadius: 8, background: 'rgba(var(--adm-bg-rgb),0.92)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(226,232,240,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', fontSize: 15 }}>☰</div>
       <div style={{ pointerEvents: 'none', opacity: hidden ? 0.35 : 1, filter: hidden ? 'grayscale(0.4)' : 'none', transition: 'opacity 0.15s' }}>{children}</div>
     </div>
   );
@@ -219,7 +219,7 @@ function Mini({ children, onClick, disabled, danger, draggable, onDragStart, tit
   return (
     <button type="button" disabled={disabled} draggable={draggable} onDragStart={onDragStart} onClick={onClick} title={title}
       style={{ width: 26, height: 26, borderRadius: 6, border: 'none', cursor: disabled ? 'default' : (draggable ? 'grab' : 'pointer'),
-        background: danger ? 'rgba(220,38,38,0.9)' : 'rgba(15,23,42,0.92)', color: danger ? '#fff' : (disabled ? 'rgba(226,232,240,0.3)' : '#e2e8f0'),
+        background: danger ? 'rgba(220,38,38,0.9)' : 'rgba(var(--adm-bg-rgb),0.92)', color: danger ? '#fff' : (disabled ? 'rgba(226,232,240,0.3)' : '#e2e8f0'),
         fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{children}</button>
   );
 }
@@ -227,7 +227,7 @@ function Mini({ children, onClick, disabled, danger, draggable, onDragStart, tit
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', borderRadius: 18, background: 'rgba(var(--adm-bg-rgb),0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
         <h3 style={{ margin: '0 0 16px', color: '#f8fafc', fontSize: 16 }}>{title}</h3>
         {children}
       </div>
@@ -239,7 +239,7 @@ function SlideOver({ title, onClose, children }: { title: string; onClose: () =>
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 55, display: 'flex', justifyContent: 'flex-end' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: 380, height: '100%', overflowY: 'auto', background: 'rgba(15,23,42,0.99)', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: 20 }}>
+      <div style={{ position: 'relative', width: '100%', maxWidth: 380, height: '100%', overflowY: 'auto', background: 'rgba(var(--adm-bg-rgb),0.99)', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 15 }}>{title}</h3>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
@@ -266,7 +266,7 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
   );
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('accent_color')}</span>{colorRow('accentColor', '#c9a42c')}</label>
+      <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('accent_color')}</span>{colorRow('accentColor', '#d8b45f')}</label>
       <label style={{ display: 'grid', gap: 5 }}><span style={panelLabel}>{t('background_color')}</span>{colorRow('backgroundColor', '#fafaf7')}</label>
       {/* Page-wide text color: recolors all blocks at once (per-block overrides win). */}
       <label style={{ display: 'grid', gap: 5 }}>
@@ -280,7 +280,7 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input type="range" min={0.7} max={1.6} step={0.05} value={scale}
             onChange={(e) => onChange({ ...theme, textScale: Number(e.target.value) })}
-            style={{ flex: 1, accentColor: '#c9a42c' }} />
+            style={{ flex: 1, accentColor: 'var(--adm-accent)' }} />
           {scale !== 1 && <button type="button" onClick={() => onChange({ ...theme, textScale: 1 })} style={{ background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0, whiteSpace: 'nowrap' }}>{t('reset_auto')}</button>}
         </div>
       </label>
@@ -306,7 +306,7 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
       {theme.particles && theme.particles !== 'none' && theme.particles !== 'custom' && (
         <label style={{ display: 'grid', gap: 5 }}>
           <span style={panelLabel}>{t('particle_color')}</span>
-          {colorRow('particlesColor', theme.accentColor || '#c9a42c')}
+          {colorRow('particlesColor', theme.accentColor || '#d8b45f')}
           {theme.particlesColor && <button type="button" onClick={() => set('particlesColor', null)} style={{ justifySelf: 'start', marginTop: 2, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('sync_with_accent')}</button>}
         </label>
       )}
@@ -319,7 +319,7 @@ function ThemePanel({ theme, onChange, t, restaurantId, showTrail }: { theme: De
               {TRAILS.map((tr) => {
                 const on = (theme.trailTemplate ?? 'sparkle') === tr.key;
                 return <button key={tr.key} type="button" onClick={() => set('trailTemplate', tr.key)}
-                  style={{ padding: '7px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: '1px solid', borderColor: on ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.12)', background: on ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)', color: on ? '#c9a42c' : '#e2e8f0' }}>{t(tr.labelKey)}</button>;
+                  style={{ padding: '7px 13px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: '1px solid', borderColor: on ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.12)', background: on ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(var(--adm-bg-rgb),0.5)', color: on ? 'var(--adm-accent)' : '#e2e8f0' }}>{t(tr.labelKey)}</button>;
               })}
             </div>
           </label>

@@ -20,8 +20,8 @@ function effectiveStatus(item: MenuItem): TabletStatus {
 
 // Card accents: PAID dishes are highlighted green (they show as paid extras on
 // the tablet); everything else is free to select, shown in a neutral card.
-const PAID_ACCENT = { solid: '#22c55e', solidText: '#0f172a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' };
-const FREE_ACCENT = { bg: 'rgba(15,23,42,0.5)', border: 'rgba(255,255,255,0.08)' };
+const PAID_ACCENT = { solid: '#22c55e', solidText: 'var(--adm-bg)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' };
+const FREE_ACCENT = { bg: 'rgba(var(--adm-bg-rgb),0.5)', border: 'rgba(255,255,255,0.08)' };
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
@@ -172,7 +172,7 @@ export const AdminAdditionalPage = () => {
               onChange={(e) => setSelectedCatId(e.target.value)}
               style={{
                 padding: '8px 12px', borderRadius: 9, minWidth: 220,
-                background: 'rgba(15,23,42,0.6)', color: '#f8fafc',
+                background: 'rgba(var(--adm-bg-rgb),0.6)', color: '#f8fafc',
                 border: '1px solid rgba(255,255,255,0.12)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -224,9 +224,9 @@ export const AdminAdditionalPage = () => {
             onClick={() => setCategoryFilter(null)}
             style={{
               padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: categoryFilter === null ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-              color: categoryFilter === null ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-              border: `1px solid ${categoryFilter === null ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              background: categoryFilter === null ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+              color: categoryFilter === null ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${categoryFilter === null ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.08)'}`,
               transition: 'all 0.15s',
             }}
           >
@@ -238,9 +238,9 @@ export const AdminAdditionalPage = () => {
               onClick={() => setCategoryFilter(cat)}
               style={{
                 padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                background: categoryFilter === cat ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-                color: categoryFilter === cat ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                border: `1px solid ${categoryFilter === cat ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                background: categoryFilter === cat ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+                color: categoryFilter === cat ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                border: `1px solid ${categoryFilter === cat ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.08)'}`,
                 transition: 'all 0.15s',
               }}
             >
@@ -278,7 +278,7 @@ export const AdminAdditionalPage = () => {
                       }
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#c9a42c', fontWeight: 600 }}>{formatSum(item.priceCents)}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--adm-accent)', fontWeight: 600 }}>{formatSum(item.priceCents)}</p>
                       </div>
                     </div>
 

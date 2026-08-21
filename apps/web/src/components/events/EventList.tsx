@@ -97,7 +97,7 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedul
 
             return (
               <tr key={event.id}>
-                <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: 12, color: '#c9a42c' }}>
+                <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: 12, color: 'var(--adm-accent)' }}>
                   #{event.id}
                 </td>
 

@@ -31,7 +31,7 @@ export const PerformerBookingsPage = () => {
   const statusBadge = (status: PerformerBooking['status']) => {
     if (status === 'ACCEPTED') return { label: t('pf_accepted'), background: 'rgba(34,197,94,0.16)', color: '#86efac', border: '1px solid rgba(34,197,94,0.4)' };
     if (status === 'DECLINED') return { label: t('pf_declined'), background: 'rgba(148,163,184,0.14)', color: 'rgba(226,232,240,0.6)', border: '1px solid rgba(255,255,255,0.15)' };
-    return { label: t('pf_pending'), background: 'rgba(201,164,44,0.18)', color: '#f4d47c', border: '1px solid rgba(201,164,44,0.4)' };
+    return { label: t('pf_pending'), background: 'rgba(var(--adm-accent-rgb),0.18)', color: '#f4d47c', border: '1px solid rgba(var(--adm-accent-rgb),0.4)' };
   };
 
   return (
@@ -64,7 +64,7 @@ export const PerformerBookingsPage = () => {
                 <div>
                   <p style={{ margin: 0, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'rgba(226,232,240,0.45)' }}>{t('pf_contact')}</p>
                   <p style={{ margin: 0 }}>
-                    {b.contactName} · <a href={`tel:${b.phone}`} style={{ color: '#c9a42c' }}>{b.phone}</a>
+                    {b.contactName} · <a href={`tel:${b.phone}`} style={{ color: 'var(--adm-accent)' }}>{b.phone}</a>
                   </p>
                 </div>
                 {b.eventNumber != null && (
@@ -83,9 +83,9 @@ export const PerformerBookingsPage = () => {
               {b.program && (
                 <div style={{
                   display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 8,
-                  background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.25)',
+                  background: 'rgba(var(--adm-accent-rgb),0.08)', border: '1px solid rgba(var(--adm-accent-rgb),0.25)',
                 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c9a42c' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--adm-accent)' }}>
                     {t('pf_program')}
                   </span>
                   <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.8)', whiteSpace: 'pre-wrap' }}>{b.program}</p>

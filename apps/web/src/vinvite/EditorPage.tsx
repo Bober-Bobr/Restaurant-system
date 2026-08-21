@@ -148,7 +148,7 @@ export const ViEditorPage = () => {
   return (
     <div className="adm-bg" style={{ minHeight: '100vh' }}>
       {/* Editor top bar */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(15,23,42,0.88)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(var(--adm-bg-rgb),0.88)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '10px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Link to="/" className="vi-btn vi-btn-ghost" style={{ fontSize: 13, padding: '7px 12px', color: '#e2e8f0', borderColor: 'rgba(255,255,255,0.16)' }}>← {t('back')}</Link>
@@ -167,7 +167,7 @@ export const ViEditorPage = () => {
 
           {/* Public link + publish */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 260, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px' }}>
+            <div style={{ flex: 1, minWidth: 260, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(var(--adm-bg-rgb),0.7)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px' }}>
               <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.55)', whiteSpace: 'nowrap' }}>{t('my_link')}:</span>
               <span style={{ fontSize: 13, color: '#60a5fa', whiteSpace: 'nowrap' }}>https://{inviteDomain()}/</span>
               <input

@@ -18,7 +18,7 @@ const TEXT = '#1a1a1a';
 
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
-  if (!m) return `rgba(201,164,44,${alpha})`;
+  if (!m) return `rgba(216,180,95,${alpha})`;
   return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${alpha})`;
 }
 
@@ -65,7 +65,7 @@ export const InvitationSubdomainDispatcher = () => {
 
 // ── The wedding-style renderer ───────────────────────────────────────────────
 function GuestInvitationView({ invitation: inv }: { invitation: GuestInvitation }) {
-  const accent = inv.accentColor || '#c9a42c';
+  const accent = inv.accentColor || '#d8b45f';
   const bgColor = inv.backgroundColor || '#fafaf7';
   const trailColor = inv.trailColor || accent;
   const heroImg = inv.heroImageUrl ? (getPhotoUrl(inv.heroImageUrl) ?? inv.heroImageUrl) : null;

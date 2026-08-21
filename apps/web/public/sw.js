@@ -7,7 +7,7 @@
 // must not miss (the tab title, the routing waterfall, anything in index.html).
 // The activate handler below deletes every cache that is not this one, so the
 // bump is what actually evicts the previous /index.html.
-const CACHE = 'vmenu-v6';
+const CACHE = 'vmenu-v7';  // bumped for the banquet rebrand — the precached shell carries the old palette
 // The SPA shell we always want available offline for navigations.
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 

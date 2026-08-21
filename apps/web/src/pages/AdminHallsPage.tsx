@@ -281,7 +281,7 @@ export const AdminHallsPage = () => {
                         <div>
                           <strong style={{ color: '#f8fafc', fontSize: 15 }}>{hall.name}</strong>
                           <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.6)' }}>
-                            {t('hall_capacity')}: <span style={{ color: '#c9a42c', fontWeight: 600 }}>{hall.capacity}</span>
+                            {t('hall_capacity')}: <span style={{ color: 'var(--adm-accent)', fontWeight: 600 }}>{hall.capacity}</span>
                             {hall.description ? <span style={{ color: 'rgba(226,232,240,0.45)' }}> · {hall.description}</span> : ''}
                             {!hall.isActive && <span style={{ color: '#fca5a5' }}> ({t('hall_inactive')})</span>}
                           </p>
@@ -291,7 +291,7 @@ export const AdminHallsPage = () => {
                         <button
                           onClick={() => startEditing(hall)}
                           className="adm-btn-ghost"
-                          style={{ fontSize: 12, padding: '5px 12px', color: '#c9a42c', borderColor: 'rgba(201,164,44,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          style={{ fontSize: 12, padding: '5px 12px', color: 'var(--adm-accent)', borderColor: 'rgba(var(--adm-accent-rgb),0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

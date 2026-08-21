@@ -62,7 +62,7 @@ export const PerformerProfilePage = () => {
   }
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+    background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
     color: '#e2e8f0', padding: '0.6rem 0.9rem', width: '100%', fontSize: 14,
     fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   };
@@ -78,7 +78,7 @@ export const PerformerProfilePage = () => {
           {draft.avatarUrl ? (
             <img src={getPhotoUrl(draft.avatarUrl)} alt="" style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'rgba(201,164,44,0.15)', border: '1px solid rgba(201,164,44,0.35)' }} />
+            <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'rgba(var(--adm-accent-rgb),0.15)', border: '1px solid rgba(var(--adm-accent-rgb),0.35)' }} />
           )}
           <label style={{ display: 'grid', gap: 4 }}>
             <span style={labelText}>{t('pf_avatar')}</span>

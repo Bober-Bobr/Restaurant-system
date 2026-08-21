@@ -26,7 +26,7 @@ import {
 // sandboxed phone-frame preview, updated as you type.
 
 const panelInput: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+  background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
   color: '#e2e8f0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
 };
 const panelLabel: React.CSSProperties = {
@@ -111,9 +111,9 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
             key={key} type="button" onClick={() => setTab(key)}
             style={{
               padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              border: '1px solid', borderColor: tab === key ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.12)',
-              background: tab === key ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
-              color: tab === key ? '#c9a42c' : '#e2e8f0',
+              border: '1px solid', borderColor: tab === key ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.12)',
+              background: tab === key ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(var(--adm-bg-rgb),0.5)',
+              color: tab === key ? 'var(--adm-accent)' : '#e2e8f0',
             }}
           >
             {key === 'design' ? `🎨 ${t('design_tab')}` : `💌 ${t('rsvp_tab')}`}
@@ -129,7 +129,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
           {/* ── Form panel ── */}
           <div style={{ flex: '1 1 380px', minWidth: 320, maxWidth: 560 }}>
             {/* Languages */}
-            <div style={{ marginBottom: 14, padding: 14, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ marginBottom: 14, padding: 14, borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <span style={panelLabel}>{t('langs_label')}</span>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 {LOCALES.map((lang) => {
@@ -140,9 +140,9 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                       style={{
                         padding: '7px 16px', borderRadius: 10, fontSize: 12, fontWeight: 800, letterSpacing: '0.06em',
                         cursor: 'pointer', border: '1px solid',
-                        borderColor: on ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.12)',
-                        background: on ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
-                        color: on ? '#c9a42c' : '#94a3b8',
+                        borderColor: on ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.12)',
+                        background: on ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(var(--adm-bg-rgb),0.5)',
+                        color: on ? 'var(--adm-accent)' : '#94a3b8',
                       }}
                     >
                       {lang.toUpperCase()}
@@ -158,7 +158,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
               if (!fields.length) return null;
               const open = openGroup === group.key;
               return (
-                <div key={group.key} style={{ marginBottom: 10, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div key={group.key} style={{ marginBottom: 10, borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                   <button
                     type="button"
                     onClick={() => toggleGroup(group)}
@@ -206,7 +206,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 18px', borderRadius: 999,
                 border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                background: 'rgba(15,23,42,0.5)', color: '#94a3b8',
+                background: 'rgba(var(--adm-bg-rgb),0.5)', color: '#94a3b8',
               }}
             >
               ↻ {t('replay_invitation')}
@@ -220,7 +220,7 @@ export function RichDesignEditor({ design, onChange, projectId, initialTab }: {
                   display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999,
                   border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
                   borderColor: adminPlay ? 'rgba(167,139,250,0.6)' : 'rgba(255,255,255,0.14)',
-                  background: adminPlay ? 'rgba(124,58,237,0.18)' : 'rgba(15,23,42,0.5)',
+                  background: adminPlay ? 'rgba(124,58,237,0.18)' : 'rgba(var(--adm-bg-rgb),0.5)',
                   color: adminPlay ? '#a78bfa' : '#94a3b8',
                 }}
               >
@@ -359,7 +359,7 @@ function FieldEditor({ field, design, setConfig }: {
             type="checkbox"
             checked={!hidden}
             onChange={(e) => setConfig(field.path, !e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: '#c9a42c', cursor: 'pointer' }}
+            style={{ width: 16, height: 16, accentColor: 'var(--adm-accent)', cursor: 'pointer' }}
           />
           <span style={{ fontSize: 13, color: hidden ? 'rgba(226,232,240,0.45)' : '#e2e8f0' }}>
             {label}
@@ -383,7 +383,7 @@ function FieldEditor({ field, design, setConfig }: {
 
 const itemBox: React.CSSProperties = {
   display: 'grid', gap: 8, padding: 12, borderRadius: 12,
-  background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(255,255,255,0.08)',
+  background: 'rgba(var(--adm-bg-rgb),0.55)', border: '1px solid rgba(255,255,255,0.08)',
 };
 
 // Ordered list of colour swatches. Order matters — it is the order they appear
@@ -710,7 +710,7 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
                 return (
                 <div key={el.id} style={{
                   padding: selected ? 12 : '8px 10px', borderRadius: 12,
-                  background: selected ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.3)',
+                  background: selected ? 'rgba(var(--adm-bg-rgb),0.5)' : 'rgba(var(--adm-bg-rgb),0.3)',
                   border: `1px solid ${selected ? 'rgba(167,139,250,0.55)' : 'rgba(255,255,255,0.08)'}`,
                   display: 'grid', gap: selected ? 10 : 0,
                 }}>
@@ -813,7 +813,7 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
             <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_styles')}</div>
             <div style={{ display: 'grid', gap: 8 }}>
               {styles.map((s) => (
-                <div key={s.section} style={{ padding: 10, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <div key={s.section} style={{ padding: 10, borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <strong style={{ fontSize: 12.5, color: '#e2e8f0' }}>#{s.section}</strong>
                   <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
                     {t('adm_bg')}
@@ -846,7 +846,7 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
           {/* ── Page-wide text size ── */}
           <div>
             <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_text_size')}</div>
-            <div style={{ padding: 10, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ padding: 10, borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 11, color: '#94a3b8' }}>A</span>
               <input
                 type="range"
@@ -984,7 +984,7 @@ function ParticlesEditor({ particles, onChange }: {
   return (
     <div>
       <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_particles')}</div>
-      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 15 }}>❄</span>
           <select value={p.preset} onChange={(e) => set({ preset: e.target.value as AdminParticles['preset'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
@@ -1056,7 +1056,7 @@ function TrailEditor({ trail, onChange }: {
   return (
     <div>
       <div style={{ ...panelLabel, marginBottom: 8 }}>{t('adm_trail')}</div>
-      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
+      <div style={{ padding: 12, borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 15 }}>✨</span>
           <select value={p.preset} onChange={(e) => set({ preset: e.target.value as AdminTrail['preset'] })} style={{ ...panelInput, width: 'auto', padding: '6px 8px', fontSize: 12 }}>
@@ -1126,14 +1126,14 @@ function RsvpResponsesPanel({ projectId }: { projectId: string }) {
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <Stat label={t('will_come')} value={String(coming.length)} color="#4ade80" />
         <Stat label={t('wont_come')} value={String(rsvps.length - coming.length)} color="#f87171" />
-        <Stat label={t('guests_lbl')} value={String(totalGuests)} color="#c9a42c" />
+        <Stat label={t('guests_lbl')} value={String(totalGuests)} color="var(--adm-accent)" />
       </div>
 
       {/* Telegram forwarding */}
       <TelegramPanel projectId={projectId} />
 
       {rsvps.length === 0 ? (
-        <div style={{ padding: '52px 20px', textAlign: 'center', color: '#64748b', borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ padding: '52px 20px', textAlign: 'center', color: '#64748b', borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: 38, marginBottom: 10 }}>💌</div>
           {t('no_rsvp')}
         </div>
@@ -1175,7 +1175,7 @@ function TelegramPanel({ projectId }: { projectId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vi-telegram', projectId] }),
   });
 
-  const card: React.CSSProperties = { padding: 14, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' };
+  const card: React.CSSProperties = { padding: 14, borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)' };
   return (
     <div style={{ ...card, marginBottom: 16 }}>
       <button
@@ -1198,12 +1198,12 @@ function TelegramPanel({ projectId }: { projectId: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <p style={{ margin: 0, color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>{t('tg_howto')}</p>
 
-              <div style={{ ...card, textAlign: 'center', background: 'rgba(15,23,42,0.6)' }}>
+              <div style={{ ...card, textAlign: 'center', background: 'rgba(var(--adm-bg-rgb),0.6)' }}>
                 <div style={{ ...panelLabel, marginBottom: 8 }}>{t('tg_your_code')}</div>
                 <div
                   onClick={() => status.code && navigator.clipboard?.writeText(status.code)}
                   title={t('copy_link')}
-                  style={{ fontSize: 28, fontWeight: 800, letterSpacing: '0.3em', color: '#c9a42c', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
+                  style={{ fontSize: 28, fontWeight: 800, letterSpacing: '0.3em', color: 'var(--adm-accent)', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
                 >{status.code}</div>
                 {qr && <img src={qr} alt="" style={{ width: 170, height: 170, margin: '12px auto 0', borderRadius: 10, background: '#fff', padding: 6 }} />}
                 {status.link && (
@@ -1246,7 +1246,7 @@ function TelegramPanel({ projectId }: { projectId: string }) {
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ flex: '1 1 120px', padding: '14px 16px', borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ flex: '1 1 120px', padding: '14px 16px', borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <div style={{ fontSize: 24, fontWeight: 800, color }}>{value}</div>
       <div style={{ ...panelLabel, marginTop: 4 }}>{label}</div>
     </div>
@@ -1256,7 +1256,7 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
 function RsvpCard({ rsvp, onDelete }: { rsvp: InviteRsvp; onDelete: () => void }) {
   const t = useViT();
   return (
-    <div style={{ padding: 14, borderRadius: 14, background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ padding: 14, borderRadius: 14, background: 'rgba(var(--adm-bg-rgb),0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <strong style={{ color: '#f1f5f9', fontSize: 14.5 }}>{rsvp.guestName}</strong>
         <span style={{

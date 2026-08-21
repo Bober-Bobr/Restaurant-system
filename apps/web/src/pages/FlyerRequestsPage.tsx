@@ -39,9 +39,9 @@ export const FlyerRequestsPage = () => {
         {requestsQuery.isLoading ? (
           <p style={{ color: 'rgba(226,232,240,0.6)', fontSize: 14 }}>…</p>
         ) : requests.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', borderRadius: 16, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(226,232,240,0.6)', fontSize: 14 }}>{t('no_requests')}</div>
+          <div style={{ padding: 40, textAlign: 'center', borderRadius: 16, background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(226,232,240,0.6)', fontSize: 14 }}>{t('no_requests')}</div>
         ) : (
-          <div style={{ overflowX: 'auto', borderRadius: 16, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ overflowX: 'auto', borderRadius: 16, background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
               <thead>
                 <tr>
@@ -55,7 +55,7 @@ export const FlyerRequestsPage = () => {
                 {requests.map((r: InvitationRequest) => (
                   <tr key={r.id}>
                     <td style={{ ...td, fontWeight: 600, color: '#f8fafc' }}>{r.name}</td>
-                    <td style={td}><a href={`tel:${r.phone}`} style={{ color: '#c9a42c', textDecoration: 'none', whiteSpace: 'nowrap' }}>{r.phone}</a></td>
+                    <td style={td}><a href={`tel:${r.phone}`} style={{ color: 'var(--adm-accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{r.phone}</a></td>
                     <td style={{ ...td, color: 'rgba(226,232,240,0.8)', minWidth: 200 }}>{r.message || '—'}</td>
                     <td style={{ ...td, color: 'rgba(226,232,240,0.5)', fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(r.createdAt).toLocaleString()}</td>
                   </tr>

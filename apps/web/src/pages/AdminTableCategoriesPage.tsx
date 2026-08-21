@@ -97,7 +97,7 @@ function ServingsInput({ value, onChange, title }: { value: number; onChange: (n
       }}
       style={{
         width: 44, textAlign: 'center', padding: '2px 4px', borderRadius: 6,
-        border: '1px solid rgba(201,164,44,0.4)', background: 'rgba(15,23,42,0.6)',
+        border: '1px solid rgba(var(--adm-accent-rgb),0.4)', background: 'rgba(var(--adm-bg-rgb),0.6)',
         color: '#f8fafc', fontSize: 12, outline: 'none', MozAppearance: 'textfield',
       }}
     />
@@ -178,16 +178,16 @@ function FoodPackageSection({
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 10,
             overflow: 'hidden',
-            background: 'rgba(15,23,42,0.4)',
+            background: 'rgba(var(--adm-bg-rgb),0.4)',
           }}
         >
           <label
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px',
-              background: selectedCats.includes(cat) ? 'rgba(201,164,44,0.12)' : 'transparent',
+              background: selectedCats.includes(cat) ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
               cursor: 'pointer', fontWeight: 600, fontSize: 13,
-              color: selectedCats.includes(cat) ? '#c9a42c' : '#e2e8f0',
+              color: selectedCats.includes(cat) ? 'var(--adm-accent)' : '#e2e8f0',
               borderBottom: grouped[cat].length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
               transition: 'all 0.15s',
             }}
@@ -196,7 +196,7 @@ function FoodPackageSection({
               type="checkbox"
               checked={selectedCats.includes(cat)}
               onChange={() => toggleCat(cat)}
-              style={{ accentColor: '#c9a42c' }}
+              style={{ accentColor: 'var(--adm-accent)' }}
             />
             {t(CATEGORY_LABEL_KEY[cat])}
             <span style={{ marginLeft: 'auto', fontSize: 11, color: 'rgba(226,232,240,0.45)', fontWeight: 500 }}>
@@ -214,9 +214,9 @@ function FoodPackageSection({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: active ? '3px 6px 3px 12px' : '4px 12px', borderRadius: 999,
-                      border: `1px solid ${active ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                      background: active ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
-                      color: active ? '#c9a42c' : '#cbd5e1',
+                      border: `1px solid ${active ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)'}`,
+                      background: active ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(var(--adm-bg-rgb),0.5)',
+                      color: active ? 'var(--adm-accent)' : '#cbd5e1',
                       fontSize: 12, transition: 'all 0.15s',
                     }}
                   >
@@ -228,7 +228,7 @@ function FoodPackageSection({
                         style={{
                           width: 24, height: 24, borderRadius: 6, padding: 0, flexShrink: 0,
                           overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)',
-                          cursor: 'zoom-in', background: 'rgba(15,23,42,0.5)',
+                          cursor: 'zoom-in', background: 'rgba(var(--adm-bg-rgb),0.5)',
                         }}
                       >
                         <img src={getPhotoUrl(item.photoUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -247,7 +247,7 @@ function FoodPackageSection({
                     {active && (
                       <span
                         title={t('servings_per_table')}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, paddingLeft: 6, borderLeft: '1px solid rgba(201,164,44,0.3)' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, paddingLeft: 6, borderLeft: '1px solid rgba(var(--adm-accent-rgb),0.3)' }}
                       >
                         <span style={{ color: 'rgba(226,232,240,0.55)' }}>×</span>
                         <ServingsInput
@@ -284,7 +284,7 @@ function PhotosField({ photoUrls, onChange }: { photoUrls: string[]; onChange: (
               <button
                 type="button"
                 onClick={() => setLightboxSrc(getPhotoUrl(url) ?? null)}
-                style={{ display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', padding: 0, background: 'rgba(15,23,42,0.5)' }}
+                style={{ display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', padding: 0, background: 'rgba(var(--adm-bg-rgb),0.5)' }}
               >
                 <img
                   src={getPhotoUrl(url)}
@@ -313,9 +313,9 @@ function PhotosField({ photoUrls, onChange }: { photoUrls: string[]; onChange: (
             onClick={() => setAdding((v) => !v)}
             style={{
               width: 72, height: 60, borderRadius: 8,
-              border: `2px dashed ${adding ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.15)'}`,
-              background: adding ? 'rgba(201,164,44,0.08)' : 'rgba(15,23,42,0.4)',
-              cursor: 'pointer', fontSize: 22, color: adding ? '#c9a42c' : 'rgba(226,232,240,0.45)',
+              border: `2px dashed ${adding ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.15)'}`,
+              background: adding ? 'rgba(var(--adm-accent-rgb),0.08)' : 'rgba(var(--adm-bg-rgb),0.4)',
+              cursor: 'pointer', fontSize: 22, color: adding ? 'var(--adm-accent)' : 'rgba(226,232,240,0.45)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}
@@ -325,7 +325,7 @@ function PhotosField({ photoUrls, onChange }: { photoUrls: string[]; onChange: (
           </button>
         </div>
         {adding && (
-          <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 10, background: 'rgba(15,23,42,0.4)' }}>
+          <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 10, background: 'rgba(var(--adm-bg-rgb),0.4)' }}>
             <PhotoSelector
               category="table"
               selectedPhotoUrl={undefined}
@@ -678,7 +678,7 @@ export const AdminTableCategoriesPage = () => {
                             {(category.photos ?? []).length > 4 && (
                               <div style={{
                                 width: 56, height: 44, borderRadius: 4,
-                                background: 'rgba(15,23,42,0.6)', display: 'flex',
+                                background: 'rgba(var(--adm-bg-rgb),0.6)', display: 'flex',
                                 alignItems: 'center', justifyContent: 'center',
                                 fontSize: 12, color: 'rgba(226,232,240,0.6)', fontWeight: 600,
                                 border: '1px solid rgba(255,255,255,0.08)',
@@ -698,7 +698,7 @@ export const AdminTableCategoriesPage = () => {
                             )}
                           </strong>
                           <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
-                            {t('rate')}: <span style={{ color: '#c9a42c', fontWeight: 600 }}>{formatSum(category.ratePerPerson)}</span>
+                            {t('rate')}: <span style={{ color: 'var(--adm-accent)', fontWeight: 600 }}>{formatSum(category.ratePerPerson)}</span>
                             {!category.isActive && <span style={{ color: '#fca5a5' }}> • {t('inactive')}</span>}
                           </p>
                           {parseCats(category.includedCategories).length > 0 && (
@@ -729,7 +729,7 @@ export const AdminTableCategoriesPage = () => {
                         <button
                           onClick={() => startEditing(category)}
                           className="adm-btn-ghost"
-                          style={{ fontSize: 12, padding: '5px 12px', color: '#c9a42c', borderColor: 'rgba(201,164,44,0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          style={{ fontSize: 12, padding: '5px 12px', color: 'var(--adm-accent)', borderColor: 'rgba(var(--adm-accent-rgb),0.35)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />

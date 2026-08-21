@@ -67,7 +67,7 @@ export const TemplateEditorPage = () => {
 
   return (
     <div className="adm-bg">
-      <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 45, background: 'rgba(var(--adm-bg-rgb),0.85)', backdropFilter: 'blur(18px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <Link to={backLink} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <img src={networkingLogoSrc} alt="" style={{ height: 34, width: 'auto' }} />
@@ -81,7 +81,7 @@ export const TemplateEditorPage = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('template_name')}
-            style={{ marginLeft: 12, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', padding: '7px 12px', fontSize: 13, width: 220, outline: 'none' }}
+            style={{ marginLeft: 12, background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0', padding: '7px 12px', fontSize: 13, width: 220, outline: 'none' }}
           />
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>

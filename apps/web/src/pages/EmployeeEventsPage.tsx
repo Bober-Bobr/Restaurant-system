@@ -112,7 +112,7 @@ export const EmployeeEventsPage = () => {
             <div key={event.id} className="adm-card adm-card-hover tablet-fade-up" style={{ padding: 20, animationDelay: `${idx * 60}ms` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#f8fafc' }}>
-                  <span style={{ color: '#c9a42c' }}>#{event.id}</span> — {event.customerName}
+                  <span style={{ color: 'var(--adm-accent)' }}>#{event.id}</span> — {event.customerName}
                 </h2>
                 <span className="adm-badge" style={{ background: status.bg, color: '#fff' }}>
                   {t(status.labelKey)}
@@ -163,7 +163,7 @@ export const EmployeeEventsPage = () => {
 
               {event.notes && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, marginBottom: 12, fontSize: 13, color: 'rgba(226,232,240,0.65)' }}>
-                  <strong style={{ color: '#c9a42c' }}>{t('notes')}:</strong> {event.notes}
+                  <strong style={{ color: 'var(--adm-accent)' }}>{t('notes')}:</strong> {event.notes}
                 </div>
               )}
 

@@ -50,7 +50,7 @@ export const AdminNotificationsPage = () => {
                 <span style={{ fontSize: 20 }}>⚠</span>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>
-                    <span style={{ color: '#c9a42c' }}>#{event.id}</span> — {event.customerName}
+                    <span style={{ color: 'var(--adm-accent)' }}>#{event.id}</span> — {event.customerName}
                     {event.customerPhone && (
                       <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 500, color: 'rgba(226,232,240,0.55)' }}>{event.customerPhone}</span>
                     )}

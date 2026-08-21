@@ -248,7 +248,7 @@ export const AdminPhotosPage = () => {
                     <button
                       type="button"
                       onClick={() => setLightboxSrc(getPhotoUrl(photoUrl) ?? null)}
-                      style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: 'rgba(15,23,42,0.5)', border: 'none', padding: 0, cursor: 'pointer' }}
+                      style={{ display: 'block', width: '100%', aspectRatio: '1 / 1', overflow: 'hidden', background: 'rgba(var(--adm-bg-rgb),0.5)', border: 'none', padding: 0, cursor: 'pointer' }}
                     >
                       <img
                         src={getPhotoUrl(photoUrl)}

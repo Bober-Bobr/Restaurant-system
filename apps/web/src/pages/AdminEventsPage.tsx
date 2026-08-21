@@ -55,7 +55,7 @@ const eventTypes: NonNullable<Event['eventType']>[] = ['RESERVATION', 'BANQUET',
 // ── Create/Edit Event form styling ──
 // Field labels are rendered in the brand yellow, and fields are grouped under
 // small yellow section headings with a fading rule line.
-const GOLD = '#c9a42c';
+const GOLD = 'var(--adm-accent)';
 
 const fieldLabelStyle: React.CSSProperties = {
   display: 'grid', gap: 6,
@@ -71,7 +71,7 @@ const GroupHeading = ({ children }: { children: React.ReactNode }) => (
     }}>
       {children}
     </span>
-    <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(201,164,44,0.45), transparent)' }} />
+    <span aria-hidden className="adm-rule-in" style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(var(--adm-accent-rgb),0.45), transparent)' }} />
   </div>
 );
 
@@ -710,13 +710,13 @@ export const AdminEventsPage = () => {
               onClick={goToTabletWithDraft}
               disabled={!tabletRestaurantId}
               style={{
-                background: 'linear-gradient(135deg, var(--rg-accent, #c9a42c), var(--rg-accent-soft, #d9b84a))',
+                background: 'linear-gradient(135deg, var(--rg-accent, var(--adm-accent)), var(--rg-accent-soft, #d9b84a))',
                 color: '#1a1205',
                 fontWeight: 700,
                 fontSize: '1rem',
                 padding: '12px 28px',
                 border: 'none',
-                boxShadow: '0 6px 20px rgba(201,164,44,0.45)',
+                boxShadow: '0 6px 20px rgba(var(--adm-accent-rgb),0.45)',
                 animation: 'menuCtaPulse 2.4s ease-in-out infinite',
               }}
             >
@@ -767,7 +767,7 @@ export const AdminEventsPage = () => {
           const totalPcs   = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
 
           return (
-            <div className="tablet-fade-up" style={{ background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 18 }}>
+            <div className="tablet-fade-up" style={{ background: 'rgba(var(--adm-bg-rgb),0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 18 }}>
               <h4 className="adm-heading" style={{ margin: '0 0 14px' }}>{t('search_result')}</h4>
 
               <div className="form-grid-3" style={{ gap: '10px 24px' }}>
@@ -907,9 +907,9 @@ export const AdminEventsPage = () => {
             className="adm-input"
             style={{
               padding: '6px 12px', fontSize: 13, fontWeight: 600, borderRadius: 999, cursor: 'pointer',
-              background: monthFilter ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-              color: monthFilter ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-              border: `1px solid ${monthFilter ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              background: monthFilter ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(255,255,255,0.04)',
+              color: monthFilter ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${monthFilter ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.1)'}`,
               colorScheme: 'dark', width: 'auto',
             }}
           >

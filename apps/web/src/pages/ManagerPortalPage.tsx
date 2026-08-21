@@ -35,7 +35,7 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 30,
-      background: 'rgba(15,23,42,0.78)',
+      background: 'rgba(var(--adm-bg-rgb),0.78)',
       backdropFilter: 'blur(18px)',
       WebkitBackdropFilter: 'blur(18px)',
       borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -56,7 +56,7 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
           </div>
         </Link>
         {currentRestaurantName && (
-          <span className="adm-badge" style={{ background: 'rgba(201,164,44,0.15)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.3)' }}>
+          <span className="adm-badge" style={{ background: 'rgba(var(--adm-accent-rgb),0.15)', color: 'var(--adm-accent)', border: '1px solid rgba(var(--adm-accent-rgb),0.3)' }}>
             {currentRestaurantName}
           </span>
         )}
@@ -66,8 +66,8 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
             marginLeft: 'auto',
             padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             textDecoration: 'none', whiteSpace: 'nowrap',
-            color: '#c9a42c', background: 'rgba(201,164,44,0.1)',
-            border: '1px solid rgba(201,164,44,0.35)',
+            color: 'var(--adm-accent)', background: 'rgba(var(--adm-accent-rgb),0.1)',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
           }}
         >
           {t('my_restaurants')}
@@ -77,8 +77,8 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
           style={{
             padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             textDecoration: 'none', whiteSpace: 'nowrap',
-            color: '#c9a42c', background: 'rgba(201,164,44,0.1)',
-            border: '1px solid rgba(201,164,44,0.35)',
+            color: 'var(--adm-accent)', background: 'rgba(var(--adm-accent-rgb),0.1)',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
           }}
         >
           {t('devices')}
@@ -92,9 +92,9 @@ export function ManagerNav({ pageTitle, currentRestaurantName, locale }: {
               style={{
                 padding: '5px 10px', border: '1px solid', borderRadius: 6, cursor: 'pointer',
                 fontSize: 11, letterSpacing: '0.06em', transition: 'all 0.18s',
-                borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
-                background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
+                background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                 fontWeight: locale === loc ? 700 : 500,
               }}
             >
@@ -153,7 +153,7 @@ export const ManagerPortalPage = () => {
 
         {flyersQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.5)' }}>...</p>}
 
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+        <div className="adm-stagger" style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
           {/* New project card */}
           <button
             type="button"
@@ -188,16 +188,16 @@ export const ManagerPortalPage = () => {
                   height: 210, position: 'relative', flexShrink: 0,
                   background: coverSrc
                     ? `url(${coverSrc}) top center / cover`
-                    : `linear-gradient(160deg, ${f.accentColor || '#c9a42c'}22 0%, rgba(15,23,42,0.9) 100%)`,
+                    : `linear-gradient(160deg, ${f.accentColor || '#d8b45f'}22 0%, rgba(var(--adm-bg-rgb),0.9) 100%)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {!coverSrc && (
-                    <span style={{ fontSize: 40, fontWeight: 700, color: f.accentColor || '#c9a42c', opacity: 0.8 }}>
+                    <span style={{ fontSize: 40, fontWeight: 700, color: f.accentColor || '#d8b45f', opacity: 0.8 }}>
                       {f.slug.charAt(0).toUpperCase()}
                     </span>
                   )}
                   {!f.isPublished && (
-                    <span className="adm-badge" style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(15,23,42,0.85)', color: 'rgba(226,232,240,0.8)', border: '1px solid rgba(148,163,184,0.35)' }}>
+                    <span className="adm-badge" style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(var(--adm-bg-rgb),0.85)', color: 'rgba(226,232,240,0.8)', border: '1px solid rgba(148,163,184,0.35)' }}>
                       {t('unpublished')}
                     </span>
                   )}
@@ -205,7 +205,7 @@ export const ManagerPortalPage = () => {
                 {/* Name + link */}
                 <div style={{ padding: '10px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.slug}</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: '#c9a42c', display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--adm-accent)', display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <span style={{ opacity: 0.7 }}>{f.isPublished ? '★' : '☆'}</span>
                     {linkText(f.slug)}
                   </p>

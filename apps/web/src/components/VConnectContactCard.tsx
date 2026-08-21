@@ -41,7 +41,7 @@ export const VConnectContactCard = () => {
   });
 
   return (
-    <section style={{ background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+    <section style={{ background: 'rgba(var(--adm-surface-rgb),0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
       <h2 style={{ fontSize: 16, marginBottom: 4 }}>{t('pc_title_vconnect')}</h2>
       <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'rgba(226,232,240,0.55)' }}>
         {t('pc_hint_vconnect')}
@@ -66,7 +66,7 @@ export const VConnectContactCard = () => {
           <button type="submit" className="adm-btn-primary" disabled={save.isPending}>
             {save.isPending ? t('saving') : t('save')}
           </button>
-          {saved && <span style={{ fontSize: 12.5, color: '#c9a42c' }}>{t('saved')}</span>}
+          {saved && <span style={{ fontSize: 12.5, color: 'var(--adm-accent)' }}>{t('saved')}</span>}
           {save.isError && <span style={{ fontSize: 12.5, color: '#fca5a5' }}>{t('pc_save_failed')}</span>}
         </div>
       </form>

@@ -306,7 +306,7 @@ function TableCategoryArrangementSection({ t }: { t: (k: Parameters<typeof trans
                   {tc.isActive ? t('active') : t('inactive')}
                 </p>
               </div>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#c9a42c', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--adm-accent)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                 {formatSum(tc.ratePerPerson)} / {t('person')}
               </p>
               <div style={{ display: 'flex', gap: 4 }}>

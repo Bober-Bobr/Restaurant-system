@@ -50,7 +50,7 @@ const formatError = (error: unknown): string => {
 };
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)',
+  background: 'rgba(var(--adm-bg-rgb),0.6)',
   border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 10,
   color: '#e2e8f0',
@@ -257,9 +257,9 @@ export const AdminUsersPage = () => {
                           style={{
                             padding: '5px 10px', fontSize: 12, fontWeight: 600,
                             borderRadius: 6,
-                            background: editingId === user.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
-                            color: '#c9a42c',
-                            border: '1px solid rgba(201,164,44,0.35)',
+                            background: editingId === user.id ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(var(--adm-accent-rgb),0.08)',
+                            color: 'var(--adm-accent)',
+                            border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
                             cursor: 'pointer',
                           }}
                         >

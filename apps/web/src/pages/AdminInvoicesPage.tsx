@@ -158,9 +158,9 @@ export const AdminInvoicesPage = () => {
             className="adm-badge"
             style={{
               cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600,
-              background: filter === f.id ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-              color: filter === f.id ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-              border: `1px solid ${filter === f.id ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              background: filter === f.id ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(255,255,255,0.04)',
+              color: filter === f.id ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+              border: `1px solid ${filter === f.id ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.1)'}`,
             }}
           >
             {f.label}
@@ -173,9 +173,9 @@ export const AdminInvoicesPage = () => {
           style={{
             marginLeft: 'auto', padding: '6px 12px', fontSize: 13, fontWeight: 600,
             borderRadius: 999, cursor: 'pointer',
-            background: monthFilter ? 'rgba(201,164,44,0.15)' : 'rgba(255,255,255,0.04)',
-            color: monthFilter ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-            border: `1px solid ${monthFilter ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            background: monthFilter ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(255,255,255,0.04)',
+            color: monthFilter ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+            border: `1px solid ${monthFilter ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.1)'}`,
             colorScheme: 'dark',
           }}
         >
@@ -214,7 +214,7 @@ export const AdminInvoicesPage = () => {
             <div key={event.id} className="adm-card adm-card-hover tablet-fade-up" style={{ padding: 20, animationDelay: `${idx * 50}ms` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
-                  <span style={{ color: '#c9a42c' }}>#{event.id}</span> — {event.customerName}
+                  <span style={{ color: 'var(--adm-accent)' }}>#{event.id}</span> — {event.customerName}
                 </h2>
                 <span className="adm-badge" style={{ background: status.bg, color: status.fg, border: `1px solid ${status.border}` }}>
                   {t(status.key)}
@@ -247,7 +247,7 @@ export const AdminInvoicesPage = () => {
                         {formatSum(exactTotal)}
                       </span>
                     )}
-                    <span style={{ fontSize: 17, fontWeight: 800, color: '#c9a42c' }}>{formatSum(shownTotal)}</span>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--adm-accent)' }}>{formatSum(shownTotal)}</span>
                     {isRounded && (
                       <span style={{ display: 'block', fontSize: 11, color: 'rgba(226,232,240,0.45)', marginTop: 2 }}>
                         {t('rounded_to_million')}
@@ -360,7 +360,7 @@ export const AdminInvoicesPage = () => {
               {/* Action */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, marginTop: 12 }}>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(226,232,240,0.85)', cursor: 'pointer', userSelect: 'none' }}>
-                  <input type="checkbox" checked={rounded} onChange={() => toggleRounded(event.id)} style={{ accentColor: '#c9a42c', width: 16, height: 16 }} />
+                  <input type="checkbox" checked={rounded} onChange={() => toggleRounded(event.id)} style={{ accentColor: 'var(--adm-accent)', width: 16, height: 16 }} />
                   {t('round_up_to_million')}
                 </label>
                 {isCancelled ? (

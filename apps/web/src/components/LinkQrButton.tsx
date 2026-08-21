@@ -100,7 +100,7 @@ function LinkQrModal({ url, filename, t, onClose }: { url: string; filename: str
 
   return createPortal(
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 420, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 22 }}>
+      <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 420, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: 18, background: 'rgba(var(--adm-bg-rgb),0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 22 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 16 }}>{t('link_and_qr')}</h3>
           <button type="button" onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
@@ -120,7 +120,7 @@ function LinkQrModal({ url, filename, t, onClose }: { url: string; filename: str
             <div style={{ width: '100%' }}>
               <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{t('share_link')}</span>
               <a href={url} target="_blank" rel="noreferrer"
-                style={{ display: 'block', marginTop: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.3)', color: '#c9a42c', fontSize: 13, wordBreak: 'break-all', textDecoration: 'none' }}>
+                style={{ display: 'block', marginTop: 6, padding: '10px 12px', borderRadius: 10, background: 'rgba(var(--adm-accent-rgb),0.08)', border: '1px solid rgba(var(--adm-accent-rgb),0.3)', color: 'var(--adm-accent)', fontSize: 13, wordBreak: 'break-all', textDecoration: 'none' }}>
                 {url}
               </a>
             </div>

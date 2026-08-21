@@ -1266,3 +1266,67 @@ Also worth knowing: `index.html` now loads **Amiri** and **La Belle Aurore** in
 addition to the existing families — the catalog sets each template's name in
 that design's own face, and those two were previously loaded only inside the
 iframes.
+
+## 25. Banquet rebrand — palette + motion
+
+**No migration, no server change, no nginx change.** This is a frontend-only
+release: `./deploy.sh` is sufficient. What follows is what to look at afterwards,
+and the one thing that can go wrong.
+
+### The one thing that can go wrong: a stale app shell
+
+The whole release is CSS and bundle content. Returning visitors are served the
+old shell from two caches:
+
+1. **The service worker.** `apps/web/public/sw.js` has been bumped
+   `vmenu-v6` → `vmenu-v7`. The activate handler deletes every cache that is not
+   the current one, so the bump is what evicts the old `/index.html`. Nothing to
+   do — but if a tester reports "the colours did not change", this is the first
+   thing to check (DevTools → Application → Service Workers → the active cache
+   name should read `vmenu-v7`).
+2. **The browser's HTTP cache**, which is what §21 is about. If the `no-cache`
+   headers on `= /index.html` and `= /sw.js` were never added, a returning
+   visitor can hold the old `index.html` — and therefore the old CSS hash — for
+   as long as the default `expires` allows. **§21 is a prerequisite for this
+   release being visible.** Do it first if it is still outstanding.
+
+### What changed
+
+- **Colours are now tokens.** Each product declares its palette once (see the
+  "Brand palettes" section in `CLAUDE.md`). The banquet gold moved from
+  `#c9a42c` to `#d8b45f` and the background from `#0f172a` to `#0b1120`. This
+  touched ~87 files, but almost every edit is a literal becoming a `var()`.
+- **The tablet now defaults to the banquet palette** instead of its own
+  gold-on-green. **A restaurant that has saved a tablet accent/background keeps
+  it** — those never reach the fallback. Only restaurants that never themed the
+  tablet will see a change, and it is the intended one.
+- **Two scopes are excluded**, both by re-declaring the tokens rather than by
+  avoiding them: `.adm-legacy` (the OWNER cabinet, excluded by request) and
+  `.cadm-theme` (Catering Admin + Food Employee, which stay monochrome).
+- **v-invite and v-connect** got the same treatment under their own prefixes.
+  One genuine defect was fixed on the way: v-invite's dark theme put white text
+  on a light-blue accent at ~2.5:1. There is now an ink token that flips with
+  the theme.
+- **Motion**: drifting background light, a route-change entrance, button sheen,
+  card lift, table-row accent bar, nav underline, staggered card grids. All
+  transform/opacity, all behind `prefers-reduced-motion`.
+
+### After deploying, spot-check
+
+1. `banquet.v-menu.uz/<slug>` — new gold, background light drifts slowly,
+   switching tabs fades the page in, nav underline follows the active tab.
+2. `cabinet.v-menu.uz` (OWNER) — **unchanged**. Old gold, old navy, still. This
+   is the exclusion working; if the owner cabinet changed colour, `adm-legacy`
+   came off the page root.
+3. `food-admin.v-menu.uz/<slug>` — **still monochrome**, no gold anywhere.
+4. `/tablet` on a restaurant that has **never** set tablet colours → new
+   palette. On one that **has** → exactly its own colours, unchanged. Both cases
+   matter; the second is the one a customer would complain about.
+5. `v-invite.uz` in **both** light and dark (the theme toggle) — check a primary
+   button's label is readable in dark, which is the case that was broken.
+6. `v-connect.uz/login` and `nfc.v-connect.uz` — warmer beige, bronze accent.
+7. Anything with `prefers-reduced-motion: reduce` set (macOS: Reduce Motion;
+   Windows: Show animations off) — everything static, nothing half-faded.
+
+`palette.test.ts` guards the legibility of all of this and runs in `npm test`,
+which `deploy.sh` already executes.

@@ -4,26 +4,34 @@
    the v-invite cream-on-blue, so the three products never look alike. */
 
 .vc-root {
-  --vc-black:      #0b0b0a;
-  --vc-black-2:    #131211;
-  --vc-surface:    #1a1817;
-  --vc-surface-2:  #221f1d;
-  --vc-beige:      #e8dcc8;
-  --vc-beige-soft: #cbbda3;
-  --vc-beige-dim:  rgba(232, 220, 200, 0.55);
-  --vc-line:       rgba(232, 220, 200, 0.14);
-  --vc-line-soft:  rgba(232, 220, 200, 0.08);
-  --vc-accent:     #c8a97a;
-  --vc-accent-dim: rgba(200, 169, 122, 0.16);
+  /* Rebrand: the sand family warmed a step and the accent moved from a flat
+     tan to a bronze with more red in it, so the thin rules read as metal
+     against the black rather than as grey-brown. The structure is unchanged —
+     v-connect stays the quiet, architectural one of the three products. */
+  --vc-black:      #0a0908;
+  --vc-black-2:    #141210;
+  --vc-surface:    #1c1917;
+  --vc-surface-2:  #24201c;
+  --vc-beige:      #efe4d2;
+  --vc-beige-rgb:  239, 228, 210;
+  --vc-beige-soft: #d3c3a6;
+  --vc-beige-dim:  rgba(239, 228, 210, 0.55);
+  --vc-line:       rgba(239, 228, 210, 0.15);
+  --vc-line-soft:  rgba(239, 228, 210, 0.08);
+  --vc-accent:     #d2b184;
+  --vc-accent-rgb: 210, 177, 132;
+  --vc-accent-dim: rgba(210, 177, 132, 0.16);
   --vc-danger:     #e07a6a;
 
   min-height: 100vh;
   background:
-    radial-gradient(120% 70% at 50% -10%, rgba(200, 169, 122, 0.10) 0%, transparent 60%),
-    radial-gradient(90% 60% at 10% 110%, rgba(232, 220, 200, 0.05) 0%, transparent 55%),
+    radial-gradient(120% 70% at 50% -10%, rgba(var(--vc-accent-rgb), 0.12) 0%, transparent 60%),
+    radial-gradient(90% 60% at 10% 110%, rgba(var(--vc-beige-rgb), 0.05) 0%, transparent 55%),
     var(--vc-black);
   color: var(--vc-beige);
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  position: relative;
+  isolation: isolate;   /* see .vc-root::before under Motion */
 }
 
 /* ── Motion ── */
@@ -35,6 +43,49 @@
 
 .vc-fade-up { animation: vcFadeUp .6s cubic-bezier(.22,1,.36,1) both; }
 .vc-fade-in { animation: vcFadeIn .5s ease both; }
+
+/* Rebrand motion. The v-connect look is architectural, so the movement is
+   restrained: light travelling across a surface, rules drawing themselves,
+   nothing bouncing. */
+@keyframes vcDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(3%, -2%, 0) scale(1.06); }
+}
+@keyframes vcRuleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* A slow wash of accent light across the page. `position: fixed` so it does not
+   grow the scroll area, and `z-index: -1` under the `isolation: isolate` on
+   .vc-root below so it lands above the root's own background but beneath all
+   content — without the isolation, -1 would put it behind that background and
+   it would never be seen. */
+.vc-root::before {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(45% 40% at 70% 20%, rgba(var(--vc-accent-rgb), 0.07) 0%, transparent 70%);
+  animation: vcDrift 38s ease-in-out infinite;
+}
+
+.vc-rule { transform-origin: left center; animation: vcRuleIn .8s cubic-bezier(.22,1,.36,1) both; }
+
+.vc-stagger > * { animation: vcFadeUp .55s cubic-bezier(.22,1,.36,1) both; }
+.vc-stagger > *:nth-child(1) { animation-delay: 0s; }
+.vc-stagger > *:nth-child(2) { animation-delay: .05s; }
+.vc-stagger > *:nth-child(3) { animation-delay: .10s; }
+.vc-stagger > *:nth-child(4) { animation-delay: .15s; }
+.vc-stagger > *:nth-child(5) { animation-delay: .20s; }
+.vc-stagger > *:nth-child(n+6) { animation-delay: .25s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-root::before,
+  .vc-rule,
+  .vc-stagger > *,
+  .vc-fade-up,
+  .vc-fade-in { animation: none; }
+  .vc-rule { transform: none; }
+}
 
 /* ── Surfaces ── */
 .vc-card {

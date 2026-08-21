@@ -41,10 +41,10 @@ export const AudioUploadField = ({ value, onChange, restaurantId, label }: Props
         style={{ display: 'none' }}
       />
       {src ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <audio src={src} controls style={{ flex: 1, height: 36, minWidth: 0 }} />
           <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-            style={iconBtnStyle('rgba(201,164,44,0.9)', '#1a1a1a')} title="Replace">
+            style={iconBtnStyle('rgba(var(--adm-accent-rgb),0.9)', '#1a1a1a')} title="Replace">
             {uploading ? '…' : '↻'}
           </button>
           <button type="button" onClick={() => onChange(null)} disabled={uploading}
@@ -58,9 +58,9 @@ export const AudioUploadField = ({ value, onChange, restaurantId, label }: Props
           style={{
             height: 84,
             borderRadius: 12,
-            border: '1px dashed rgba(201,164,44,0.35)',
-            background: 'rgba(201,164,44,0.05)',
-            color: '#c9a42c',
+            border: '1px dashed rgba(var(--adm-accent-rgb),0.35)',
+            background: 'rgba(var(--adm-accent-rgb),0.05)',
+            color: 'var(--adm-accent)',
             cursor: uploading ? 'wait' : 'pointer',
             fontSize: 13, fontWeight: 600,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,

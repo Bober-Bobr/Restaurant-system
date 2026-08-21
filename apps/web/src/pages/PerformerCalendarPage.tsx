@@ -144,21 +144,21 @@ export const PerformerCalendarPage = () => {
   const isCurrentMonth = today.getFullYear() === viewYear && today.getMonth() === viewMonth;
 
   const inputStyle: React.CSSProperties = {
-    background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+    background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
     color: '#e2e8f0', padding: '0.6rem 0.9rem', width: '100%', fontSize: 14,
     fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   };
   const labelText: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'rgba(226,232,240,0.75)' };
   const navBtn: React.CSSProperties = {
     width: 38, height: 38, borderRadius: 10,
-    background: 'rgba(201,164,44,0.12)', border: '1px solid rgba(201,164,44,0.35)',
-    color: '#c9a42c', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+    background: 'rgba(var(--adm-accent-rgb),0.12)', border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+    color: 'var(--adm-accent)', fontSize: 18, fontWeight: 700, cursor: 'pointer',
   };
   const chip = (active: boolean): React.CSSProperties => ({
     padding: '6px 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-    background: active ? 'rgba(201,164,44,0.15)' : 'rgba(15,23,42,0.5)',
-    color: active ? '#c9a42c' : 'rgba(226,232,240,0.65)',
-    border: `1px solid ${active ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)'}`,
+    background: active ? 'rgba(var(--adm-accent-rgb),0.15)' : 'rgba(var(--adm-bg-rgb),0.5)',
+    color: active ? 'var(--adm-accent)' : 'rgba(226,232,240,0.65)',
+    border: `1px solid ${active ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)'}`,
     transition: 'all 0.18s',
   });
 
@@ -172,7 +172,7 @@ export const PerformerCalendarPage = () => {
           <button type="button" onClick={goPrev} style={navBtn} aria-label="previous month">‹</button>
           <div style={{
             minWidth: 200, textAlign: 'center', padding: '8px 18px',
-            background: 'rgba(15,23,42,0.6)', borderRadius: 10,
+            background: 'rgba(var(--adm-bg-rgb),0.6)', borderRadius: 10,
             border: '1px solid rgba(255,255,255,0.08)',
             color: '#f8fafc', fontWeight: 700, fontSize: 15,
           }}>
@@ -187,7 +187,7 @@ export const PerformerCalendarPage = () => {
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
         marginBottom: 18, padding: '12px 16px',
-        background: 'rgba(15,23,42,0.4)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)',
+        background: 'rgba(var(--adm-bg-rgb),0.4)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)',
       }}>
         {(['all', 'manual', 'booking'] as SourceFilter[]).map((s) => (
           <button key={s} type="button" onClick={() => { setSource(s); setOpenDay(null); }} style={chip(source === s)}>
@@ -216,7 +216,7 @@ export const PerformerCalendarPage = () => {
       {/* Legend */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 14, fontSize: 12, color: 'rgba(226,232,240,0.6)' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(201,164,44,0.55)' }} /> {t('pf_filter_manual')}
+          <span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(var(--adm-accent-rgb),0.55)' }} /> {t('pf_filter_manual')}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
           <span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(219,39,119,0.6)' }} /> {t('pf_from_booking')}
@@ -293,10 +293,10 @@ export const PerformerCalendarPage = () => {
             const hasBooking = dayEvents.some((e) => e.bookingId);
             const hasManual = dayEvents.some((e) => !e.bookingId);
             const bg = dayEvents.length === 0
-              ? 'rgba(15,23,42,0.4)'
+              ? 'rgba(var(--adm-bg-rgb),0.4)'
               : hasBooking && !hasManual ? 'rgba(219,39,119,0.35)'
               : hasBooking ? 'rgba(160,60,110,0.38)'
-              : 'rgba(201,164,44,0.28)';
+              : 'rgba(var(--adm-accent-rgb),0.28)';
 
             return (
               <button
@@ -306,7 +306,7 @@ export const PerformerCalendarPage = () => {
                 onClick={() => setOpenDay(isOpen ? null : cell.key)}
                 style={{
                   aspectRatio: '1 / 1', borderRadius: 8, border: '1px solid',
-                  borderColor: isOpen ? '#c9a42c' : isToday ? 'rgba(201,164,44,0.6)' : 'rgba(255,255,255,0.06)',
+                  borderColor: isOpen ? 'var(--adm-accent)' : isToday ? 'rgba(var(--adm-accent-rgb),0.6)' : 'rgba(255,255,255,0.06)',
                   background: bg,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
                   padding: '4px 2px', overflow: 'hidden', cursor: 'pointer', font: 'inherit',
@@ -314,7 +314,7 @@ export const PerformerCalendarPage = () => {
               >
                 <span style={{
                   fontSize: 13, fontWeight: isToday ? 800 : 600, lineHeight: 1,
-                  color: isToday ? '#c9a42c' : dayEvents.length ? '#fff' : 'rgba(226,232,240,0.7)',
+                  color: isToday ? 'var(--adm-accent)' : dayEvents.length ? '#fff' : 'rgba(226,232,240,0.7)',
                 }}>
                   {cell.day}
                 </span>
@@ -391,9 +391,9 @@ function EventRow({ ev, t, showDate, onEdit, onDelete, deleting }: {
       {ev.program && (
         <div style={{
           display: 'grid', gap: 4, padding: '10px 12px', borderRadius: 8,
-          background: 'rgba(201,164,44,0.08)', border: '1px solid rgba(201,164,44,0.25)',
+          background: 'rgba(var(--adm-accent-rgb),0.08)', border: '1px solid rgba(var(--adm-accent-rgb),0.25)',
         }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#c9a42c' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--adm-accent)' }}>
             {t('pf_program')}
           </span>
           <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.8)', whiteSpace: 'pre-wrap' }}>{ev.program}</p>

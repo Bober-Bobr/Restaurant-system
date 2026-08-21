@@ -41,7 +41,7 @@ export function seedFlyerBlocks(inv: Partial<Invitation>): Block[] {
 
 export function flyerTheme(inv: Partial<Invitation>): DesignTheme {
   return {
-    accentColor: inv.accentColor ?? '#c9a42c',
+    accentColor: inv.accentColor ?? '#d8b45f',
     backgroundColor: inv.backgroundColor ?? '#fafaf7',
     backgroundImageUrl: inv.backgroundImageUrl ?? null,
     textColor: inv.textColor ?? null,
@@ -81,7 +81,7 @@ export function seedInvitationBlocks(inv: Partial<GuestInvitation>): Block[] {
 
 export function invitationTheme(inv: Partial<GuestInvitation>): DesignTheme {
   return {
-    accentColor: inv.accentColor ?? '#c9a42c',
+    accentColor: inv.accentColor ?? '#d8b45f',
     backgroundColor: inv.backgroundColor ?? '#fafaf7',
     backgroundImageUrl: inv.backgroundImageUrl ?? null,
     textColor: inv.textColor ?? null,

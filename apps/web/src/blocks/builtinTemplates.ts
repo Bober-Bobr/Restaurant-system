@@ -92,7 +92,7 @@ function restaurantFlyer(): BuiltinTemplate {
     id: 'builtin-restaurant-flyer',
     name: 'Ресторан · Тёмный',
     theme: {
-      accentColor: '#c9a42c',
+      accentColor: '#d8b45f',
       backgroundColor: '#0d0d0d',
       backgroundImageUrl: null,
       musicUrl: null,

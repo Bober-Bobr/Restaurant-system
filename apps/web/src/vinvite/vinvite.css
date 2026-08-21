@@ -2,26 +2,34 @@
    A cream + blue, shadcn-inspired look: soft borders, rounded corners, gentle
    shadows, springy micro-animations. Light/dark themes via [data-theme]. */
 
+/* Rebrand: the blue moved from a web-standard #2563eb to a deeper royal indigo,
+   which sits better beside the champagne gold the rest of the platform now uses
+   and reads less like a default link colour. The cream warmed a step to match.
+   `--vi-accent` carries white button labels in light and is body text in dark,
+   so both were checked against those two jobs rather than only against paper. */
 .vi-root {
   /* light (cream) */
-  --vi-bg: #faf6ee;
-  --vi-bg-soft: #f3ecdf;
+  --vi-bg: #faf5ec;
+  --vi-bg-soft: #f2eadb;
   --vi-card: #fffdf8;
-  --vi-text: #1f2937;
-  --vi-muted: #6b7280;
-  --vi-border: rgba(30, 58, 138, 0.14);
-  --vi-accent: #2563eb;
-  --vi-accent-strong: #1d4ed8;
-  --vi-accent-soft: rgba(37, 99, 235, 0.1);
-  --vi-ring: rgba(37, 99, 235, 0.35);
+  --vi-text: #1c2434;
+  --vi-muted: #67707f;
+  --vi-border: rgba(47, 69, 197, 0.15);
+  --vi-accent: #2f45c5;
+  --vi-accent-rgb: 47, 69, 197;
+  --vi-accent-strong: #24369e;
+  --vi-accent-soft: rgba(47, 69, 197, 0.1);
+  --vi-accent-ink: #ffffff;      /* text ON the accent */
+  --vi-ring: rgba(47, 69, 197, 0.35);
+  --vi-gold: 216, 180, 95;      /* shared with the banquet accent */
   --vi-danger: #dc2626;
-  --vi-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);
-  --vi-shadow-lg: 0 18px 50px rgba(30, 58, 138, 0.14);
+  --vi-shadow: 0 10px 30px rgba(28, 36, 84, 0.09);
+  --vi-shadow-lg: 0 18px 50px rgba(28, 36, 84, 0.15);
 
   min-height: 100vh;
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
-    radial-gradient(700px 420px at -10% 110%, rgba(217, 168, 90, 0.14) 0%, transparent 55%),
+    radial-gradient(900px 500px at 85% -10%, rgba(var(--vi-accent-rgb), 0.10) 0%, transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(var(--vi-gold), 0.16) 0%, transparent 55%),
     var(--vi-bg);
   color: var(--vi-text);
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -29,23 +37,27 @@
 }
 
 .vi-root[data-theme='dark'] {
-  --vi-bg: #0e1420;
-  --vi-bg-soft: #131b2b;
+  --vi-bg: #0d1320;
+  --vi-bg-soft: #121a2b;
   --vi-card: #161f31;
   --vi-text: #ede7da;
-  --vi-muted: #94a0b4;
-  --vi-border: rgba(147, 197, 253, 0.16);
-  --vi-accent: #60a5fa;
-  --vi-accent-strong: #3b82f6;
-  --vi-accent-soft: rgba(96, 165, 250, 0.14);
-  --vi-ring: rgba(96, 165, 250, 0.4);
+  --vi-muted: #98a3b7;
+  --vi-border: rgba(142, 164, 255, 0.17);
+  --vi-accent: #8ea4ff;
+  --vi-accent-rgb: 142, 164, 255;
+  --vi-accent-strong: #6d86f5;
+  --vi-accent-soft: rgba(142, 164, 255, 0.14);
+  /* The dark accent is a light blue, so white on it is unreadable (~2.5:1 —
+     it was already so before the rebrand). The ink flips with the theme. */
+  --vi-accent-ink: #0d1320;
+  --vi-ring: rgba(142, 164, 255, 0.4);
   --vi-danger: #f87171;
   --vi-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --vi-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
 
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(59, 130, 246, 0.14) 0%, transparent 60%),
-    radial-gradient(700px 420px at -10% 110%, rgba(217, 168, 90, 0.08) 0%, transparent 55%),
+    radial-gradient(900px 500px at 85% -10%, rgba(var(--vi-accent-rgb), 0.14) 0%, transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(var(--vi-gold), 0.09) 0%, transparent 55%),
     var(--vi-bg);
 }
 
@@ -59,6 +71,83 @@
 
 .vi-fade-up { animation: viFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .vi-pop { animation: viPop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Rebrand motion. v-invite sells invitations, so its own chrome is allowed a
+   little more life than the admin apps — but still transform/opacity only. */
+@keyframes viDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-2.5%, 2%, 0) scale(1.08); }
+}
+@keyframes viShine {
+  from { background-position: 0% 50%; }
+  to   { background-position: 200% 50%; }
+}
+
+/* The two background washes drift independently of each other. They live on
+   pseudo-elements rather than on the root's own `background`, because a
+   `background-position` animation over a 900px gradient repaints the whole
+   viewport every frame; a transform on a fixed layer is composited. */
+.vi-root { position: relative; isolation: isolate; }
+.vi-root::before,
+.vi-root::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(30px);
+}
+.vi-root::before {
+  top: -18%; right: -12%; width: 60vw; height: 55vh;
+  background: radial-gradient(circle, rgba(var(--vi-accent-rgb), 0.09) 0%, transparent 65%);
+  animation: viDrift 46s ease-in-out infinite;
+}
+.vi-root::after {
+  bottom: -20%; left: -14%; width: 55vw; height: 50vh;
+  background: radial-gradient(circle, rgba(var(--vi-gold), 0.12) 0%, transparent 65%);
+  animation: viDrift 58s ease-in-out infinite reverse;
+}
+
+/* Section headings that catch the light as it passes. */
+.vi-shine {
+  background: linear-gradient(
+    100deg,
+    var(--vi-text) 0%, var(--vi-text) 40%,
+    var(--vi-accent) 50%,
+    var(--vi-text) 60%, var(--vi-text) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: viShine 6s linear infinite;
+}
+
+.vi-stagger > * { animation: viFadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.vi-stagger > *:nth-child(1) { animation-delay: 0s; }
+.vi-stagger > *:nth-child(2) { animation-delay: .05s; }
+.vi-stagger > *:nth-child(3) { animation-delay: .10s; }
+.vi-stagger > *:nth-child(4) { animation-delay: .15s; }
+.vi-stagger > *:nth-child(5) { animation-delay: .20s; }
+.vi-stagger > *:nth-child(6) { animation-delay: .25s; }
+.vi-stagger > *:nth-child(n+7) { animation-delay: .30s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vi-root::before,
+  .vi-root::after,
+  .vi-stagger > *,
+  .vi-fade-up,
+  .vi-pop { animation: none; }
+  /* Not just `animation: none` — the gradient text would freeze mid-sweep and
+     leave the heading half-coloured. Hand it back to a plain colour. */
+  .vi-shine {
+    animation: none;
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--vi-text);
+  }
+}
 
 /* ── Cards ── */
 .vi-card {
@@ -87,7 +176,7 @@
 .vi-btn:active { transform: scale(0.97); }
 .vi-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.vi-btn-primary { background: var(--vi-accent); color: #fff; box-shadow: 0 6px 18px var(--vi-accent-soft); }
+.vi-btn-primary { background: var(--vi-accent); color: var(--vi-accent-ink); box-shadow: 0 6px 18px var(--vi-accent-soft); }
 .vi-btn-primary:hover { background: var(--vi-accent-strong); box-shadow: 0 8px 22px var(--vi-ring); }
 .vi-btn-primary::after {
   content: ''; position: absolute; top: 0; bottom: 0; width: 40%;
@@ -156,7 +245,7 @@
 /* Unread counter on a tab (Notifications). */
 .vi-tab-badge {
   margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px;
-  border-radius: 999px; background: var(--vi-accent); color: #fff;
+  border-radius: 999px; background: var(--vi-accent); color: var(--vi-accent-ink);
   font-size: 11px; font-weight: 800; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
 }

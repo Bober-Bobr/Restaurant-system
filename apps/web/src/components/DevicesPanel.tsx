@@ -66,12 +66,12 @@ export const DevicesPanel = ({ locale }: { locale: Locale }) => {
             <div key={s.id} style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '12px 14px', borderRadius: 12,
-              background: s.isCurrent ? 'rgba(34,197,94,0.08)' : 'rgba(15,23,42,0.5)',
+              background: s.isCurrent ? 'rgba(34,197,94,0.08)' : 'rgba(var(--adm-bg-rgb),0.5)',
               border: `1px solid ${s.isCurrent ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
             }}>
               <div style={{
                 width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                background: 'rgba(201,164,44,0.12)', color: '#c9a42c',
+                background: 'rgba(var(--adm-accent-rgb),0.12)', color: 'var(--adm-accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

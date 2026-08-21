@@ -70,9 +70,9 @@ export const PerformerLayout = () => {
   const linkStyle = (active: boolean): React.CSSProperties => ({
     padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, letterSpacing: '0.01em',
     textDecoration: 'none',
-    color: active ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-    background: active ? 'rgba(201,164,44,0.12)' : 'transparent',
-    border: active ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+    color: active ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+    background: active ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+    border: active ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
     transition: 'all 0.18s',
   });
 
@@ -80,7 +80,7 @@ export const PerformerLayout = () => {
     <div className="adm-bg">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(15,23,42,0.78)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)',
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -106,7 +106,7 @@ export const PerformerLayout = () => {
           {/* Desktop nav */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, flexWrap: 'wrap' }} className="adm-nav-desktop">
             {navItems.map((item) => (
-              <Link key={item.to} to={item.to} style={{ ...linkStyle(isActive(item.to)), display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <Link key={item.to} to={item.to} className={`adm-nav-item${isActive(item.to) ? ' is-active' : ''}`} style={{ ...linkStyle(isActive(item.to)), display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                 {item.label}
                 {!!item.badge && <NavBadge count={item.badge} />}
               </Link>
@@ -123,10 +123,10 @@ export const PerformerLayout = () => {
                   onClick={() => setLocale(loc)}
                   style={{
                     padding: '5px 10px', border: '1px solid',
-                    borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                    borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                     borderRadius: 6,
-                    background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                    color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                    background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                    color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                     fontWeight: locale === loc ? 700 : 500,
                     cursor: 'pointer', fontSize: 11, letterSpacing: '0.06em', transition: 'all 0.18s',
                   }}
@@ -175,7 +175,7 @@ export const PerformerLayout = () => {
             style={{
               position: 'absolute', top: 0, right: 0,
               width: 280, maxWidth: '85vw', height: '100%',
-              background: 'rgba(15,23,42,0.97)',
+              background: 'rgba(var(--adm-bg-rgb),0.97)',
               backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
               borderLeft: '1px solid rgba(255,255,255,0.08)',
               padding: '72px 16px 24px',
@@ -201,10 +201,10 @@ export const PerformerLayout = () => {
                     onClick={() => setLocale(loc)}
                     style={{
                       flex: 1, padding: '7px 10px', border: '1px solid',
-                      borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                      borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                       borderRadius: 8,
-                      background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                      color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                      background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                      color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                       fontWeight: locale === loc ? 700 : 500, cursor: 'pointer', fontSize: 12, letterSpacing: '0.06em',
                     }}
                   >
@@ -226,7 +226,10 @@ export const PerformerLayout = () => {
         </div>
       )}
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Keyed on the path so React remounts the wrapper on every navigation and
+          the entrance animation replays. Without the key the element persists
+          across routes and the animation would run once, on first load only. */}
+      <div key={location.pathname} className="adm-page-in" style={{ position: 'relative', zIndex: 1 }}>
         <Outlet />
       </div>
 

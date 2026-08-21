@@ -137,12 +137,12 @@ export const AccountsPage = () => {
               <div key={day.id} className="adm-card tablet-fade-up"
                 style={{
                   padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-                  border: isSelected ? '1px solid rgba(201,164,44,0.6)' : undefined,
-                  background: isSelected ? 'rgba(201,164,44,0.08)' : undefined,
+                  border: isSelected ? '1px solid rgba(var(--adm-accent-rgb),0.6)' : undefined,
+                  background: isSelected ? 'rgba(var(--adm-accent-rgb),0.08)' : undefined,
                 }}>
                 <div style={{ width: 22, display: 'flex', justifyContent: 'center' }}>
                   <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(day.id)}
-                    style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+                    style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: 'pointer' }} />
                 </div>
 
                 <div style={{ minWidth: 150 }}>

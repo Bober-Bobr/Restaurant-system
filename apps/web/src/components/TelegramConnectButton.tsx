@@ -52,7 +52,7 @@ export function TelegramConnectButton({ id, t, api, queryKey, howtoKey = 'tg_how
     onSuccess: () => qc.invalidateQueries({ queryKey: [queryKey, id] }),
   });
 
-  const panel: React.CSSProperties = { padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)' };
+  const panel: React.CSSProperties = { padding: 12, borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.08)' };
   return (
     <>
       <button type="button" className="adm-btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(true)}>
@@ -60,7 +60,7 @@ export function TelegramConnectButton({ id, t, api, queryKey, howtoKey = 'tg_how
       </button>
       {open && createPortal(
         <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: 18, background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} className="scale-in" style={{ width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: 18, background: 'rgba(var(--adm-bg-rgb),0.98)', border: '1px solid rgba(255,255,255,0.12)', padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 16 }}>✈ {t('tg_connect')}</h3>
               <button type="button" onClick={() => setOpen(false)} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}>×</button>
@@ -79,7 +79,7 @@ export function TelegramConnectButton({ id, t, api, queryKey, howtoKey = 'tg_how
                   <div
                     onClick={() => status.code && navigator.clipboard?.writeText(status.code)}
                     title={t('copy_link')}
-                    style={{ fontSize: 30, fontWeight: 800, letterSpacing: '0.3em', color: '#c9a42c', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
+                    style={{ fontSize: 30, fontWeight: 800, letterSpacing: '0.3em', color: 'var(--adm-accent)', fontFamily: 'ui-monospace, monospace', cursor: 'pointer' }}
                   >{status.code}</div>
                   {qr && (
                     <img src={qr} alt="" style={{ width: 180, height: 180, margin: '12px auto 0', borderRadius: 10, background: '#fff', padding: 6 }} />

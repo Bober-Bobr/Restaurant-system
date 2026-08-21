@@ -39,9 +39,9 @@ export const AdditionalExpensesPage = () => {
 
   const arrowBtn = (enabled: boolean): React.CSSProperties => ({
     width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-    border: '1px solid rgba(201,164,44,0.35)',
-    background: enabled ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.03)',
-    color: enabled ? '#c9a42c' : 'rgba(226,232,240,0.25)',
+    border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+    background: enabled ? 'rgba(var(--adm-accent-rgb),0.12)' : 'rgba(255,255,255,0.03)',
+    color: enabled ? 'var(--adm-accent)' : 'rgba(226,232,240,0.25)',
     cursor: enabled ? 'pointer' : 'default', fontSize: 20, lineHeight: 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   });

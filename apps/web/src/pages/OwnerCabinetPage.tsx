@@ -203,12 +203,16 @@ export const OwnerCabinetPage = () => {
   };
 
   return (
-    <div className="adm-bg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    // `adm-legacy` re-pins the pre-rebrand palette tokens (see index.css). The
+    // banquet rebrand deliberately excluded the owner view, and this class is
+    // the entirety of that exclusion — the markup below is the same `adm-*`
+    // vocabulary every other admin page uses.
+    <div className="adm-bg adm-legacy" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       <header className="tablet-fade-in" style={{
         position: 'sticky', top: 0, zIndex: 30,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 24px',
-        background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)', backdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         flexWrap: 'wrap', gap: 12,
       }}>
@@ -235,10 +239,10 @@ export const OwnerCabinetPage = () => {
                 style={{
                   padding: '5px 10px',
                   border: '1px solid',
-                  borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                  borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                   borderRadius: 6,
-                  background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                  color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                  background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                  color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                   fontWeight: locale === loc ? 700 : 500,
                   cursor: 'pointer',
                   fontSize: 11,
@@ -261,7 +265,7 @@ export const OwnerCabinetPage = () => {
         </div>
       </header>
 
-      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.5)' }}>
+      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(var(--adm-bg-rgb),0.5)' }}>
         <button onClick={() => setTab('companies')} style={tabStyle(tab === 'companies')}>
           {t('companies')}
         </button>
@@ -316,7 +320,7 @@ export const OwnerCabinetPage = () => {
                 return (
                   <div key={company.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden' }}>
                     {/* Company header */}
-                    <div className="owner-company-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(15,23,42,0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="owner-company-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(var(--adm-bg-rgb),0.55)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="owner-company-logo-input" style={{ width: 96, flexShrink: 0 }}>
                         <PhotoUploadField
                           value={company.logoUrl ?? null}
@@ -364,7 +368,7 @@ export const OwnerCabinetPage = () => {
                             const isEditing = editingRestaurantId === r.id;
                             if (isEditing) {
                               return (
-                                <div key={r.id} style={{ background: 'rgba(15,23,42,0.7)', borderRadius: 7, padding: 12, border: '1px solid rgba(201,164,44,0.3)' }}>
+                                <div key={r.id} style={{ background: 'rgba(var(--adm-bg-rgb),0.7)', borderRadius: 7, padding: 12, border: '1px solid rgba(var(--adm-accent-rgb),0.3)' }}>
                                   <div style={{ width: 120, marginBottom: 10 }}>
                                     <PhotoUploadField
                                       label={t('logo')}
@@ -400,7 +404,7 @@ export const OwnerCabinetPage = () => {
                               );
                             }
                             return (
-                              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(15,23,42,0.55)', borderRadius: 7 }}>
+                              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(var(--adm-bg-rgb),0.55)', borderRadius: 7 }}>
                                 {effLogo && <img src={getPhotoUrl(effLogo)} alt={r.name} style={{ height: 32, width: 'auto', maxWidth: 72, objectFit: 'contain', flexShrink: 0 }} />}
                                 <div style={{ flex: 1 }}>
                                   <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name || r.company?.name || company.name}</p>
@@ -408,7 +412,7 @@ export const OwnerCabinetPage = () => {
                                 </div>
                                 <button
                                   onClick={() => startEditRestaurant(r)}
-                                  style={{ ...btnStyle, background: 'rgba(201,164,44,0.12)', color: '#c9a42c', border: '1px solid rgba(201,164,44,0.35)', fontSize: 11, padding: '4px 8px' }}
+                                  style={{ ...btnStyle, background: 'rgba(var(--adm-accent-rgb),0.12)', color: 'var(--adm-accent)', border: '1px solid rgba(var(--adm-accent-rgb),0.35)', fontSize: 11, padding: '4px 8px' }}
                                 >
                                   {t('edit')}
                                 </button>
@@ -430,7 +434,7 @@ export const OwnerCabinetPage = () => {
 
                       {/* Add restaurant form (toggle per company) */}
                       {showForm ? (
-                        <div style={{ background: 'rgba(15,23,42,0.55)', padding: 12, borderRadius: 7 }}>
+                        <div style={{ background: 'rgba(var(--adm-bg-rgb),0.55)', padding: 12, borderRadius: 7 }}>
                           <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>{t('company_logo_used')}</p>
                           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
                             <input placeholder={t('name_optional')} value={rName} onChange={(e) => setRName(e.target.value)} style={inputStyle} />
@@ -476,7 +480,7 @@ export const OwnerCabinetPage = () => {
 
         {tab === 'users' && (
           <>
-            <section style={{ background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+            <section style={{ background: 'rgba(var(--adm-surface-rgb),0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
               <h2 style={{ marginTop: 0, fontSize: 16 }}>{t('create_user')}</h2>
               <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <input placeholder={t('username')} value={uName} onChange={(e) => setUName(e.target.value)} style={inputStyle} />
@@ -516,7 +520,7 @@ export const OwnerCabinetPage = () => {
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
                   <Fragment key={u.id}>
-                  <div className="owner-user-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8 }}>
+                  <div className="owner-user-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(var(--adm-surface-rgb),0.4)', borderRadius: 8 }}>
                     <div className="owner-user-info" style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.username}</p>
                       <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -550,9 +554,9 @@ export const OwnerCabinetPage = () => {
                       style={{
                         padding: '6px 12px', fontSize: 12, fontWeight: 600,
                         borderRadius: 8,
-                        background: editingUserId === u.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
-                        color: '#c9a42c',
-                        border: '1px solid rgba(201,164,44,0.35)',
+                        background: editingUserId === u.id ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(var(--adm-accent-rgb),0.08)',
+                        color: 'var(--adm-accent)',
+                        border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
                         cursor: 'pointer', flexShrink: 0,
                       }}
                     >
@@ -622,15 +626,15 @@ export const OwnerCabinetPage = () => {
 
 const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: '12px 20px', background: 'none', border: 'none',
-  borderBottom: active ? '2px solid #c9a42c' : '2px solid transparent',
-  color: active ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+  borderBottom: active ? '2px solid var(--adm-accent)' : '2px solid transparent',
+  color: active ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
   cursor: 'pointer', fontSize: 14, fontWeight: 600,
   textTransform: 'capitalize',
   transition: 'all 0.18s',
 });
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)',
+  background: 'rgba(var(--adm-bg-rgb),0.6)',
   border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 10,
   color: '#e2e8f0',
@@ -643,10 +647,10 @@ const inputStyle: React.CSSProperties = {
 
 const btnStyle: React.CSSProperties = {
   padding: '0.6rem 1.2rem',
-  background: 'linear-gradient(135deg, #c9a42c 0%, #d4af37 100%)',
+  background: 'linear-gradient(135deg, var(--adm-accent) 0%, #d4af37 100%)',
   border: 'none',
   borderRadius: 10,
-  color: '#0f172a',
+  color: 'var(--adm-bg)',
   cursor: 'pointer',
   fontSize: 13,
   fontWeight: 700,

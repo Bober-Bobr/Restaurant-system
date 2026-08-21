@@ -317,9 +317,9 @@ export const AdminMenuPage = () => {
                 onClick={() => setActiveCategory(null)}
                 style={{
                   padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  background: activeCategory === null ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-                  color: activeCategory === null ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                  border: `1px solid ${activeCategory === null ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  background: activeCategory === null ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+                  color: activeCategory === null ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                  border: `1px solid ${activeCategory === null ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.08)'}`,
                   transition: 'all 0.15s',
                 }}
               >
@@ -331,9 +331,9 @@ export const AdminMenuPage = () => {
                   onClick={() => setActiveCategory(cat)}
                   style={{
                     padding: '6px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    background: activeCategory === cat ? 'rgba(201,164,44,0.18)' : 'rgba(255,255,255,0.04)',
-                    color: activeCategory === cat ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                    border: `1px solid ${activeCategory === cat ? 'rgba(201,164,44,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    background: activeCategory === cat ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(255,255,255,0.04)',
+                    color: activeCategory === cat ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                    border: `1px solid ${activeCategory === cat ? 'rgba(var(--adm-accent-rgb),0.4)' : 'rgba(255,255,255,0.08)'}`,
                     transition: 'all 0.15s',
                   }}
                 >
@@ -829,7 +829,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
     {showPhotoSelector && (
       <tr>
-        <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(var(--adm-bg-rgb),0.4)' }}>
           <PhotoSelector
             category="menu"
             dishCategory={draft.category.toLowerCase()}
@@ -845,7 +845,7 @@ const MenuItemRow = ({ item, locale, assignedTableCategories, subcategories, sho
 
     {showTranslations && (
       <tr>
-        <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(15,23,42,0.4)' }}>
+        <td colSpan={8 + (showSubcategories ? 1 : 0) + (showTableCategories ? 1 : 0)} className="border-t-0 px-4 pb-3 pt-2" style={{ background: 'rgba(var(--adm-bg-rgb),0.4)' }}>
           <DishTranslations
             locale={locale}
             nameI18n={draft.nameI18n}

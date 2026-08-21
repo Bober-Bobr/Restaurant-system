@@ -6,7 +6,7 @@ import { translate } from '../utils/translate';
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span style={{ color: '#c9a42c', letterSpacing: 1 }}>
+    <span style={{ color: 'var(--adm-accent)', letterSpacing: 1 }}>
       {'★'.repeat(rating)}<span style={{ color: 'rgba(255,255,255,0.2)' }}>{'★'.repeat(5 - rating)}</span>
     </span>
   );
@@ -51,16 +51,16 @@ export const AdminReviewsPage = () => {
         {reviews.map((rev: Review) => (
           <div key={rev.id} className="adm-card" style={{
             padding: '14px 16px',
-            background: rev.isApproved ? 'rgba(34,197,94,0.07)' : 'rgba(15,23,42,0.5)',
+            background: rev.isApproved ? 'rgba(34,197,94,0.07)' : 'rgba(var(--adm-bg-rgb),0.5)',
             border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.28)' : 'rgba(255,255,255,0.08)'}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 700, color: '#f8fafc', fontSize: 15 }}>{rev.authorName}</span>
               <Stars rating={rev.rating} />
               <span className="adm-badge" style={{
-                background: rev.isApproved ? 'rgba(34,197,94,0.15)' : 'rgba(201,164,44,0.15)',
-                color: rev.isApproved ? '#4ade80' : '#c9a42c',
-                border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(201,164,44,0.3)'}`,
+                background: rev.isApproved ? 'rgba(34,197,94,0.15)' : 'rgba(var(--adm-accent-rgb),0.15)',
+                color: rev.isApproved ? '#4ade80' : 'var(--adm-accent)',
+                border: `1px solid ${rev.isApproved ? 'rgba(34,197,94,0.3)' : 'rgba(var(--adm-accent-rgb),0.3)'}`,
               }}>
                 {rev.isApproved ? t('approved') : t('pending_moderation')}
               </span>
@@ -71,8 +71,8 @@ export const AdminReviewsPage = () => {
                   onClick={() => approve.mutate({ id: rev.id, isApproved: !rev.isApproved })}
                   style={{
                     fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 8, cursor: 'pointer',
-                    border: '1px solid rgba(201,164,44,0.35)',
-                    background: 'rgba(201,164,44,0.1)', color: '#c9a42c',
+                    border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+                    background: 'rgba(var(--adm-accent-rgb),0.1)', color: 'var(--adm-accent)',
                   }}
                 >
                   {rev.isApproved ? t('unapprove') : t('approve')}

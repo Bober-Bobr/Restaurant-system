@@ -112,18 +112,18 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
         style={{ display: 'none' }}
       />
       {src ? (
-        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(15,23,42,0.5)', border: dragOver ? '1px solid #c9a42c' : '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height, background: 'rgba(var(--adm-bg-rgb),0.5)', border: dragOver ? '1px solid var(--adm-accent)' : '1px solid rgba(255,255,255,0.08)' }}>
           <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
             <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-              style={iconBtnStyle('rgba(201,164,44,0.9)', '#1a1a1a')}>
+              style={iconBtnStyle('rgba(var(--adm-accent-rgb),0.9)', '#1a1a1a')}>
               {uploading ? '…' : '↻'}
             </button>
             <button type="button" onClick={() => onChange(null)} disabled={uploading}
               style={iconBtnStyle('rgba(220,38,38,0.9)', '#fff')}>×</button>
           </div>
           {dragOver && (
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(201,164,44,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(var(--adm-accent-rgb),0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, pointerEvents: 'none' }}>⬇</div>
           )}
         </div>
       ) : (
@@ -134,9 +134,9 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
           style={{
             height,
             borderRadius: 12,
-            border: `1px dashed ${dragOver ? '#c9a42c' : 'rgba(201,164,44,0.35)'}`,
-            background: dragOver ? 'rgba(201,164,44,0.14)' : 'rgba(201,164,44,0.05)',
-            color: '#c9a42c',
+            border: `1px dashed ${dragOver ? 'var(--adm-accent)' : 'rgba(var(--adm-accent-rgb),0.35)'}`,
+            background: dragOver ? 'rgba(var(--adm-accent-rgb),0.14)' : 'rgba(var(--adm-accent-rgb),0.05)',
+            color: 'var(--adm-accent)',
             cursor: uploading ? 'wait' : 'pointer',
             fontSize: 13, fontWeight: 600,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -148,7 +148,7 @@ export const PhotoUploadField = ({ value, onChange, restaurantId, label, height 
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           {dragOver ? 'Drop image' : uploading ? 'Uploading…' : 'Upload from device'}
-          <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(201,164,44,0.65)', textTransform: 'none', letterSpacing: 0 }}>{hint}</span>
+          <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(var(--adm-accent-rgb),0.65)', textTransform: 'none', letterSpacing: 0 }}>{hint}</span>
         </button>
       )}
       {error && <p style={{ margin: 0, fontSize: 11, color: '#fca5a5' }}>{error}</p>}

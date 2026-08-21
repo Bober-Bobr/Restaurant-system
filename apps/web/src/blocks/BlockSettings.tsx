@@ -11,7 +11,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 type T = (k: TranslationKey) => string;
 
 const input: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
+  background: 'rgba(var(--adm-bg-rgb),0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
   color: '#e2e8f0', padding: '9px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none', width: '100%',
 };
 const label: React.CSSProperties = { fontSize: 11, color: 'rgba(226,232,240,0.6)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' };
@@ -31,7 +31,7 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Hide this block from the published page (still editable here). */}
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', padding: '8px 10px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', padding: '8px 10px', borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <input type="checkbox" checked={block.hidden === true} onChange={(e) => onChange({ ...block, hidden: e.target.checked })} />
         {t('hide_block')}
       </label>
@@ -94,7 +94,7 @@ function FontControls({ heading, body, onHeading, onBody, t }: {
     </div>
   );
   return (
-    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_fonts')}</span>
       {select(heading, onHeading, t('bf_heading_size'))}
       {select(body, onBody, t('bf_body_size'))}
@@ -116,12 +116,12 @@ function FontSizeControls({ heading, body, onHeading, onBody, t }: {
       <input
         type="range" min={0.6} max={2} step={0.05} value={val}
         onChange={(e) => on(Number(e.target.value))}
-        style={{ width: '100%', accentColor: '#c9a42c', cursor: 'pointer' }}
+        style={{ width: '100%', accentColor: 'var(--adm-accent)', cursor: 'pointer' }}
       />
     </div>
   );
   return (
-    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div style={{ display: 'grid', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_font_sizes')}</span>
       {row(heading, onHeading, t('bf_heading_size'))}
       {row(body, onBody, t('bf_body_size'))}
@@ -233,7 +233,7 @@ function DateTimeField({ label, value, onChange, t }: { label: string; value: st
         />
         {value && (
           <button type="button" onClick={() => onChange(null)} title={t('reset_auto')}
-            style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(15,23,42,0.9)', color: '#e2e8f0', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
+            style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(var(--adm-bg-rgb),0.9)', color: '#e2e8f0', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
         )}
       </div>
     </Labeled>
@@ -258,7 +258,7 @@ function ActionEditor({ value, onChange, t }: { value?: ButtonAction; onChange: 
 }
 
 function rowBox(children: React.ReactNode) {
-  return <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: 8, borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>{children}</div>;
+  return <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: 8, borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>{children}</div>;
 }
 function delBtn(onClick: () => void) {
   return <button type="button" onClick={onClick} style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1, flexShrink: 0 }}>×</button>;
@@ -299,7 +299,7 @@ function GalleryItemsEditor({ items, onChange, t, restaurantId }: { items: Galle
 function moveBtn(onClick: () => void, glyph: string, disabled: boolean, title: string) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title}
-      style={{ width: 24, height: 20, borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', cursor: disabled ? 'default' : 'pointer', background: 'rgba(15,23,42,0.9)', color: disabled ? 'rgba(226,232,240,0.25)' : '#e2e8f0', fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</button>
+      style={{ width: 24, height: 20, borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', cursor: disabled ? 'default' : 'pointer', background: 'rgba(var(--adm-bg-rgb),0.9)', color: disabled ? 'rgba(226,232,240,0.25)' : '#e2e8f0', fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</button>
   );
 }
 
@@ -310,7 +310,7 @@ function MenuItemsEditor({ items, onChange, t, restaurantId, labelText }: { item
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map((it, i) => (
           rowBox(<>
-            <span style={{ width: 22, textAlign: 'center', color: '#c9a42c', fontWeight: 700 }}>{it.number}</span>
+            <span style={{ width: 22, textAlign: 'center', color: 'var(--adm-accent)', fontWeight: 700 }}>{it.number}</span>
             {it.photoUrl
               ? <img src={getPhotoUrl(it.photoUrl) ?? it.photoUrl} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
               : <div style={{ width: 40, height: 40, borderRadius: 6, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />}

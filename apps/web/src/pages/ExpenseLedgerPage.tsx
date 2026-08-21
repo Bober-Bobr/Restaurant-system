@@ -110,9 +110,9 @@ export const ExpenseLedgerPage = () => {
 
   const arrowBtn = (enabled: boolean): React.CSSProperties => ({
     width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-    border: '1px solid rgba(201,164,44,0.35)',
-    background: enabled ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.03)',
-    color: enabled ? '#c9a42c' : 'rgba(226,232,240,0.25)',
+    border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+    background: enabled ? 'rgba(var(--adm-accent-rgb),0.12)' : 'rgba(255,255,255,0.03)',
+    color: enabled ? 'var(--adm-accent)' : 'rgba(226,232,240,0.25)',
     cursor: enabled ? 'pointer' : 'default', fontSize: 20, lineHeight: 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   });
@@ -177,7 +177,7 @@ const labelStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: 
 // (AdminEventsPage): gold field labels, gold uppercase section headings closed
 // by a fading rule, and inputs given a gold-tinted border so every field reads
 // as a field on this dark background rather than melting into the card.
-const GOLD = '#c9a42c';
+const GOLD = 'var(--adm-accent)';
 
 const fieldLabelStyle: React.CSSProperties = {
   display: 'grid', gap: 6,
@@ -188,8 +188,8 @@ const fieldLabelStyle: React.CSSProperties = {
 // The highlight itself, separated from the row height so multi-line textareas
 // can take the surface without being forced to 38px.
 const fieldSurface: React.CSSProperties = {
-  background: 'rgba(15,23,42,0.78)',
-  borderColor: 'rgba(201,164,44,0.3)',
+  background: 'rgba(var(--adm-bg-rgb),0.78)',
+  borderColor: 'rgba(var(--adm-accent-rgb),0.3)',
 };
 
 const rowInput: React.CSSProperties = { ...fieldSurface, height: 38 };
@@ -200,7 +200,7 @@ const rowInput: React.CSSProperties = { ...fieldSurface, height: 38 };
 // disappear as soon as a value is typed — these keep the columns named.
 const colHeader: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-  color: 'rgba(201,164,44,0.75)',
+  color: 'rgba(var(--adm-accent-rgb),0.75)',
 };
 
 // Column widths mirror the row inputs below them exactly, so the labels sit
@@ -234,7 +234,7 @@ const BlockHeading = ({ title, total, tone }: {
     }}>
       {title}
     </span>
-    <span aria-hidden style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(201,164,44,0.45), transparent)' }} />
+    <span aria-hidden className="adm-rule-in" style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(var(--adm-accent-rgb),0.45), transparent)' }} />
     {total && (
       // Revenue and spending are told apart by colour: the two are easy to
       // confuse on this page, and the section totals are where it shows.
@@ -345,20 +345,20 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
                   <div key={ev.id} className="tablet-fade-up"
                     style={{
                       position: 'relative', borderRadius: 16,
-                      background: 'linear-gradient(160deg, rgba(201,164,44,0.12), rgba(255,255,255,0.03))',
-                      border: checked ? '1px solid rgba(201,164,44,0.7)' : '1px solid rgba(201,164,44,0.3)',
+                      background: 'linear-gradient(160deg, rgba(var(--adm-accent-rgb),0.12), rgba(255,255,255,0.03))',
+                      border: checked ? '1px solid rgba(var(--adm-accent-rgb),0.7)' : '1px solid rgba(var(--adm-accent-rgb),0.3)',
                       transition: 'all 0.18s',
                     }}>
                     <label onClick={(e) => e.stopPropagation()}
                       style={{ position: 'absolute', top: 12, right: 12, display: 'flex', cursor: 'pointer', zIndex: 1 }}>
                       <input type="checkbox" checked={checked} onChange={() => toggleEvent(ev.id)}
-                        style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+                        style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: 'pointer' }} />
                     </label>
                     <button type="button" onClick={() => setActiveEventId(ev.id)}
                       style={{ width: '100%', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', padding: '18px 18px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 26 }}>
                         <span style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>{t(EVENT_LABEL_KEY[ev.type])}</span>
-                        <span style={{ color: '#c9a42c', fontSize: 18, marginLeft: 'auto' }}>›</span>
+                        <span style={{ color: 'var(--adm-accent)', fontSize: 18, marginLeft: 'auto' }}>›</span>
                       </div>
                       <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('budget')}</p>
                       <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evBudget > 0 ? '#e2e8f0' : 'rgba(226,232,240,0.45)' }}>
@@ -378,7 +378,7 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
           /* Selected department's expense panel */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <button type="button" onClick={() => setActiveEventId(null)}
-              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#c9a42c', fontSize: 15, fontWeight: 700, padding: 0 }}>
+              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-accent)', fontSize: 15, fontWeight: 700, padding: 0 }}>
               ‹ {t(EVENT_LABEL_KEY[activeEvent.type])}
             </button>
             <EventPanel event={activeEvent} t={t} onChanged={invalidate} />
@@ -566,7 +566,7 @@ const ManualGuestsField = ({ event, t, onSave }: {
     <div style={{ display: 'grid', gap: 8, paddingTop: 12, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
         <input type="checkbox" checked={enabled} onChange={(e) => toggle(e.target.checked)}
-          style={{ width: 18, height: 18, accentColor: '#c9a42c', cursor: 'pointer' }} />
+          style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: 'pointer' }} />
         <span style={{ fontSize: 13, color: 'rgba(226,232,240,0.8)' }}>{t('edit_amount_manually')}</span>
       </label>
       {enabled && (

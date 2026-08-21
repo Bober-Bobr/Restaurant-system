@@ -180,14 +180,14 @@ export const ChiefAdminPage = () => {
         position: 'sticky', top: 0, zIndex: 30,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 24px',
-        background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(18px)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)', backdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12, overflow: 'hidden',
-            border: '1px solid rgba(201,164,44,0.35)',
-            background: 'rgba(15,23,42,0.5)',
+            border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
+            background: 'rgba(var(--adm-bg-rgb),0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <img src={networkingLogoSrc} alt="Networking" style={{ width: 32, height: 32, objectFit: 'contain' }} />
@@ -212,12 +212,12 @@ export const ChiefAdminPage = () => {
         </button>
       </header>
 
-      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(15,23,42,0.5)' }}>
+      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(var(--adm-bg-rgb),0.5)' }}>
         {(['companies', 'users', 'devices'] as Tab[]).map((tabKey) => (
           <button key={tabKey} onClick={() => setTab(tabKey)} style={{
             padding: '12px 20px', background: 'none', border: 'none',
-            borderBottom: tab === tabKey ? '2px solid #c9a42c' : '2px solid transparent',
-            color: tab === tabKey ? '#c9a42c' : 'rgba(226,232,240,0.6)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            borderBottom: tab === tabKey ? '2px solid var(--adm-accent)' : '2px solid transparent',
+            color: tab === tabKey ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
             textTransform: 'capitalize',
             transition: 'all 0.18s',
           }}>
@@ -237,12 +237,12 @@ export const ChiefAdminPage = () => {
 
             {companiesQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>Loading…</p>}
 
-            <div style={{ display: 'grid', gap: 14 }}>
+            <div className="adm-stagger" style={{ display: 'grid', gap: 14 }}>
               {companies.map((company, idx) => (
                 <div key={company.id} className="adm-card adm-card-hover tablet-fade-up" style={{ overflow: 'hidden', animationDelay: `${idx * 60}ms` }}>
 
                   {/* Company header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', background: 'rgba(15,23,42,0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px', background: 'rgba(var(--adm-bg-rgb),0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     {company.logoUrl && (
                       <img src={getPhotoUrl(company.logoUrl)} alt={company.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
                     )}
@@ -300,7 +300,7 @@ export const ChiefAdminPage = () => {
                     ) : (
                       <div style={{ display: 'grid', gap: 8 }}>
                         {company.restaurants.map((r) => (
-                          <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
+                          <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(var(--adm-bg-rgb),0.5)', borderRadius: 7 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {r.logoUrl && (
                               <img src={getPhotoUrl(r.logoUrl)} alt={r.name || company.name} style={{ width: 32, height: 32, borderRadius: 5, objectFit: 'cover' }} />
@@ -364,7 +364,7 @@ export const ChiefAdminPage = () => {
 
               {unassignedRestaurants.length > 0 && (
                 <div className="adm-card tablet-fade-up" style={{ overflow: 'hidden' }}>
-                  <div style={{ padding: '14px 18px', background: 'rgba(15,23,42,0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ padding: '14px 18px', background: 'rgba(var(--adm-bg-rgb),0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Restaurants without a company</p>
                     <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>
                       Not listed under any company above — their modules are managed here.
@@ -372,7 +372,7 @@ export const ChiefAdminPage = () => {
                   </div>
                   <div style={{ padding: '10px 16px 14px', display: 'grid', gap: 8 }}>
                     {unassignedRestaurants.map((r) => (
-                      <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(15,23,42,0.5)', borderRadius: 7 }}>
+                      <div key={r.id} style={{ padding: '10px 12px', background: 'rgba(var(--adm-bg-rgb),0.5)', borderRadius: 7 }}>
                         <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{r.name}</p>
                         {r.address && <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{r.address}</p>}
                         <ModuleSwitches
@@ -396,9 +396,9 @@ export const ChiefAdminPage = () => {
         {/* ── Users tab ── */}
         {tab === 'users' && (
           <>
-            <section style={{ background: 'rgba(30,41,59,0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
+            <section style={{ background: 'rgba(var(--adm-surface-rgb),0.4)', padding: 20, borderRadius: 8, marginBottom: 24 }}>
               <h2 style={{ marginTop: 0, fontSize: 16 }}>Create user</h2>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+              <div className="adm-stagger" style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <input placeholder="Username" value={uName} onChange={(e) => setUName(e.target.value)} style={inputStyle} />
                 <input placeholder="Password" type="password" value={uPwd} onChange={(e) => setUPwd(e.target.value)} style={inputStyle} />
                 <select value={uRole} onChange={(e) => setURole(e.target.value as AdminRole)} style={inputStyle}>
@@ -444,7 +444,7 @@ export const ChiefAdminPage = () => {
               <div style={{ display: 'grid', gap: 8 }}>
                 {users.map((u) => (
                   <Fragment key={u.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(30,41,59,0.4)', borderRadius: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(var(--adm-surface-rgb),0.4)', borderRadius: 8, flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: 160 }}>
                       <p style={{ margin: 0, fontWeight: 600 }}>{u.username}</p>
                       <p style={{ margin: 0, fontSize: 12, color: 'rgba(226,232,240,0.55)' }}>
@@ -490,9 +490,9 @@ export const ChiefAdminPage = () => {
                       style={{
                         padding: '6px 12px', fontSize: 12, fontWeight: 600,
                         borderRadius: 8,
-                        background: editingUserId === u.id ? 'rgba(201,164,44,0.18)' : 'rgba(201,164,44,0.08)',
-                        color: '#c9a42c',
-                        border: '1px solid rgba(201,164,44,0.35)',
+                        background: editingUserId === u.id ? 'rgba(var(--adm-accent-rgb),0.18)' : 'rgba(var(--adm-accent-rgb),0.08)',
+                        color: 'var(--adm-accent)',
+                        border: '1px solid rgba(var(--adm-accent-rgb),0.35)',
                         cursor: 'pointer', flexShrink: 0,
                       }}
                     >
@@ -552,7 +552,7 @@ const ModuleSwitches = ({ restaurant, busy, onToggle }: {
             display: 'inline-flex', alignItems: 'center', gap: 7,
             padding: '5px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 600,
             cursor: restaurant && !busy ? 'pointer' : 'default',
-            background: on ? 'rgba(34,197,94,0.14)' : 'rgba(15,23,42,0.6)',
+            background: on ? 'rgba(34,197,94,0.14)' : 'rgba(var(--adm-bg-rgb),0.6)',
             color: on ? '#86efac' : 'rgba(226,232,240,0.5)',
             border: `1px solid ${on ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.1)'}`,
             opacity: restaurant ? 1 : 0.5,
@@ -576,7 +576,7 @@ const ModuleSwitches = ({ restaurant, busy, onToggle }: {
 );
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 12px', height: 40, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6,
+  padding: '8px 12px', height: 40, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6,
   color: '#e2e8f0', fontSize: 14, fontFamily: 'inherit',
 };
 

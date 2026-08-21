@@ -88,9 +88,9 @@ export const AdminLayout = () => {
   const navLinkStyle = (active: boolean): React.CSSProperties => ({
     padding: '7px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, letterSpacing: '0.01em',
     textDecoration: 'none',
-    color: active ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-    background: active ? 'rgba(201,164,44,0.12)' : 'transparent',
-    border: active ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+    color: active ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+    background: active ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+    border: active ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
     transition: 'all 0.18s',
   });
 
@@ -98,7 +98,7 @@ export const AdminLayout = () => {
     <div className="adm-bg">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(15,23,42,0.78)',
+        background: 'rgba(var(--adm-bg-rgb),0.78)',
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -131,6 +131,7 @@ export const AdminLayout = () => {
               <Link
                 key={item.to}
                 to={item.to}
+                className={`adm-nav-item${isActive(item.to) ? ' is-active' : ''}`}
                 style={{
                   padding: '7px 13px',
                   borderRadius: 8,
@@ -138,9 +139,9 @@ export const AdminLayout = () => {
                   fontWeight: 600,
                   letterSpacing: '0.01em',
                   textDecoration: 'none',
-                  color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.7)',
-                  background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
-                  border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                  color: isActive(item.to) ? 'var(--adm-accent)' : 'rgba(226,232,240,0.7)',
+                  background: isActive(item.to) ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+                  border: isActive(item.to) ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
                   transition: 'all 0.18s',
                 }}
                 onMouseEnter={(e) => { if (!isActive(item.to)) (e.currentTarget as HTMLElement).style.color = '#fff'; }}
@@ -178,7 +179,7 @@ export const AdminLayout = () => {
                       style={{
                         position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 41,
                         minWidth: 200,
-                        background: 'rgba(15,23,42,0.98)',
+                        background: 'rgba(var(--adm-bg-rgb),0.98)',
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 12,
                         boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
@@ -210,14 +211,14 @@ export const AdminLayout = () => {
                 fontSize: 13,
                 fontWeight: 700,
                 textDecoration: 'none',
-                color: '#c9a42c',
-                background: 'rgba(201,164,44,0.1)',
-                border: '1px solid rgba(201,164,44,0.4)',
+                color: 'var(--adm-accent)',
+                background: 'rgba(var(--adm-accent-rgb),0.1)',
+                border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
                 transition: 'all 0.18s',
                 display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(201,164,44,0.2)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(201,164,44,0.1)'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(var(--adm-accent-rgb),0.2)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(var(--adm-accent-rgb),0.1)'; }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="14" rx="2" />
@@ -239,9 +240,9 @@ export const AdminLayout = () => {
                 position: 'relative',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 36, height: 36, borderRadius: 10,
-                color: isActive('/admin/notifications') ? '#c9a42c' : 'rgba(226,232,240,0.75)',
-                background: isActive('/admin/notifications') ? 'rgba(201,164,44,0.12)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isActive('/admin/notifications') ? 'rgba(201,164,44,0.35)' : 'rgba(255,255,255,0.1)'}`,
+                color: isActive('/admin/notifications') ? 'var(--adm-accent)' : 'rgba(226,232,240,0.75)',
+                background: isActive('/admin/notifications') ? 'rgba(var(--adm-accent-rgb),0.12)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isActive('/admin/notifications') ? 'rgba(var(--adm-accent-rgb),0.35)' : 'rgba(255,255,255,0.1)'}`,
                 textDecoration: 'none',
                 transition: 'all 0.18s',
               }}
@@ -256,7 +257,7 @@ export const AdminLayout = () => {
                   minWidth: 17, height: 17, padding: '0 4px', borderRadius: 999,
                   background: '#dc2626', color: '#fff',
                   fontSize: 10, fontWeight: 800, lineHeight: '17px', textAlign: 'center',
-                  border: '2px solid rgba(15,23,42,0.9)', boxSizing: 'content-box',
+                  border: '2px solid rgba(var(--adm-bg-rgb),0.9)', boxSizing: 'content-box',
                 }}>
                   {overdueCount > 99 ? '99+' : overdueCount}
                 </span>
@@ -271,10 +272,10 @@ export const AdminLayout = () => {
                   style={{
                     padding: '5px 10px',
                     border: '1px solid',
-                    borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                    borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                     borderRadius: 6,
-                    background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                    color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                    background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                    color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                     fontWeight: locale === loc ? 700 : 500,
                     cursor: 'pointer',
                     fontSize: 11,
@@ -333,7 +334,7 @@ export const AdminLayout = () => {
             style={{
               position: 'absolute', top: 0, right: 0,
               width: 280, maxWidth: '85vw', height: '100%',
-              background: 'rgba(15,23,42,0.97)',
+              background: 'rgba(var(--adm-bg-rgb),0.97)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               borderLeft: '1px solid rgba(255,255,255,0.08)',
@@ -361,9 +362,9 @@ export const AdminLayout = () => {
                     fontSize: 14,
                     fontWeight: 600,
                     textDecoration: 'none',
-                    color: isActive(item.to) ? '#c9a42c' : 'rgba(226,232,240,0.85)',
-                    background: isActive(item.to) ? 'rgba(201,164,44,0.12)' : 'transparent',
-                    border: isActive(item.to) ? '1px solid rgba(201,164,44,0.35)' : '1px solid transparent',
+                    color: isActive(item.to) ? 'var(--adm-accent)' : 'rgba(226,232,240,0.85)',
+                    background: isActive(item.to) ? 'rgba(var(--adm-accent-rgb),0.12)' : 'transparent',
+                    border: isActive(item.to) ? '1px solid rgba(var(--adm-accent-rgb),0.35)' : '1px solid transparent',
                     transition: 'all 0.15s',
                   }}
                 >
@@ -381,9 +382,9 @@ export const AdminLayout = () => {
                 fontSize: 14,
                 fontWeight: 700,
                 textDecoration: 'none',
-                color: '#c9a42c',
-                background: 'rgba(201,164,44,0.1)',
-                border: '1px solid rgba(201,164,44,0.4)',
+                color: 'var(--adm-accent)',
+                background: 'rgba(var(--adm-accent-rgb),0.1)',
+                border: '1px solid rgba(var(--adm-accent-rgb),0.4)',
                 display: 'flex', alignItems: 'center', gap: 8,
               }}
             >
@@ -406,10 +407,10 @@ export const AdminLayout = () => {
                       flex: 1,
                       padding: '7px 10px',
                       border: '1px solid',
-                      borderColor: locale === loc ? 'rgba(201,164,44,0.5)' : 'rgba(255,255,255,0.1)',
+                      borderColor: locale === loc ? 'rgba(var(--adm-accent-rgb),0.5)' : 'rgba(255,255,255,0.1)',
                       borderRadius: 8,
-                      background: locale === loc ? 'rgba(201,164,44,0.15)' : 'transparent',
-                      color: locale === loc ? '#c9a42c' : 'rgba(226,232,240,0.6)',
+                      background: locale === loc ? 'rgba(var(--adm-accent-rgb),0.15)' : 'transparent',
+                      color: locale === loc ? 'var(--adm-accent)' : 'rgba(226,232,240,0.6)',
                       fontWeight: locale === loc ? 700 : 500,
                       cursor: 'pointer',
                       fontSize: 12,
@@ -439,7 +440,10 @@ export const AdminLayout = () => {
         </div>
       )}
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Keyed on the path so React remounts the wrapper on every navigation and
+          the entrance animation replays. Without the key the element persists
+          across routes and the animation would run once, on first load only. */}
+      <div key={location.pathname} className="adm-page-in" style={{ position: 'relative', zIndex: 1 }}>
         <Outlet />
       </div>
 

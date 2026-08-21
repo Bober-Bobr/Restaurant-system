@@ -9,6 +9,40 @@
   color: #0f172a;
 }
 
+/* ── Banquet brand palette ────────────────────────────────────────────────────
+   The single definition of the v-menu banquet look. Every `adm-*` class below
+   and every inline style in the banquet pages reads these instead of a literal,
+   so the palette is adjusted here and nowhere else — the previous gold was
+   written out 144 times across 60 files, which is why it could not be changed.
+
+   `--adm-accent-rgb` is a bare channel triple on purpose: it feeds
+   `rgba(var(--adm-accent-rgb), 0.35)`, which is how the many translucent
+   borders and glows stay in step with the accent.
+
+   Two scopes deliberately opt out, further down:
+     .adm-legacy  — the OWNER cabinet, which keeps the previous palette
+     .cadm-theme  — the food-service surfaces, which are monochrome */
+:root {
+  --adm-accent: #d8b45f;          /* champagne gold — warmer + brighter than the old #c9a42c */
+  --adm-accent-rgb: 216, 180, 95;
+  --adm-accent-soft: #efd68f;     /* hover / highlight */
+  --adm-accent-deep: #a8823a;     /* gradient foot */
+  --adm-accent-ink: #0b1120;      /* text ON the accent */
+
+  --adm-bg: #0b1120;              /* deep ink — was #0f172a */
+  --adm-bg-rgb: 11, 17, 32;
+  --adm-surface: rgba(24, 33, 56, 0.58);
+  --adm-surface-rgb: 24, 33, 56;
+  --adm-surface-solid: #182138;
+  --adm-line: rgba(255, 255, 255, 0.09);
+
+  --adm-text: #e6ecf7;
+  --adm-text-rgb: 230, 236, 247;
+  --adm-title: #f6f9ff;
+
+  --adm-cool: 96, 140, 235;       /* the secondary aurora blob */
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -140,9 +174,54 @@
   .reveal.is-visible { animation: none; }
 }
 
+/* ── OWNER cabinet: the previous palette, deliberately unchanged ──
+   The rebrand covers the banquet staff apps; the owner view was explicitly left
+   out of it. Re-pinning the tokens here is the whole opt-out — the page markup
+   is identical to every other admin page. */
+.adm-legacy {
+  --adm-accent: #c9a42c;
+  --adm-accent-rgb: 201, 164, 44;
+  --adm-accent-soft: #e0bc3f;
+  --adm-accent-deep: #d4af37;
+  --adm-accent-ink: #0f172a;
+  --adm-bg: #0f172a;
+  --adm-bg-rgb: 15, 23, 42;
+  --adm-surface: rgba(30, 41, 59, 0.55);
+  --adm-surface-rgb: 30, 41, 59;
+  --adm-surface-solid: #1e293b;
+  --adm-line: rgba(255, 255, 255, 0.08);
+  --adm-text: #e2e8f0;
+  --adm-text-rgb: 226, 232, 240;
+  --adm-title: #f8fafc;
+  --adm-cool: 59, 130, 246;
+}
+/* The exclusion covers the new motion as well as the new palette — the owner
+   view is meant to be exactly what it was. */
+.adm-legacy.adm-bg::before,
+.adm-legacy.adm-bg::after { animation: none; }
+
 /* ── Catering Admin: monochrome black & white theme (catering-site look) ──
    Scoped overrides applied when the layout root carries `.cadm-theme`. Restyles
-   the shared `adm-*` tokens to greyscale and drops the gold/blue glow + bg. */
+   the shared `adm-*` tokens to greyscale and drops the gold/blue glow + bg.
+   Overriding the accent token is what keeps the food-service surfaces out of
+   the banquet rebrand: they now stay monochrome by construction rather than by
+   each page happening not to mention the accent. */
+.cadm-theme {
+  --adm-accent: #ffffff;
+  --adm-accent-rgb: 255, 255, 255;
+  --adm-accent-soft: #ffffff;
+  --adm-accent-deep: #d4d4d4;
+  --adm-accent-ink: #0a0a0a;
+  --adm-bg: #0a0a0a;
+  --adm-bg-rgb: 10, 10, 10;
+  --adm-surface: rgba(255, 255, 255, 0.05);
+  --adm-surface-rgb: 26, 26, 26;
+  --adm-surface-solid: #1a1a1a;
+  --adm-line: rgba(255, 255, 255, 0.12);
+  --adm-text: #ffffff;
+  --adm-text-rgb: 255, 255, 255;
+  --adm-title: #ffffff;
+}
 .cadm-theme.adm-bg { background: #0a0a0a; }
 .cadm-theme.adm-bg::before,
 .cadm-theme.adm-bg::after { display: none; }
@@ -168,15 +247,19 @@
    common ones toward white inside the catering theme. */
 .cadm-theme .adm-card-hover:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
 
-/* ── Admin dark-slate theme ── */
+/* ── Admin dark theme ── */
 .adm-bg {
-  background: #0f172a;
+  background: var(--adm-bg);
   min-height: 100vh;
-  color: #e2e8f0;
+  color: var(--adm-text);
   position: relative;
   overflow-x: hidden;
 }
 
+/* The two aurora blobs now drift. They are `position: fixed` and blurred to
+   60px, so the movement reads as slow ambient light rather than as something
+   sliding — at this scale a 40s cycle is felt more than seen. `transform` only,
+   so the compositor carries it and no layout work happens per frame. */
 .adm-bg::before {
   content: '';
   position: fixed;
@@ -185,10 +268,11 @@
   width: 620px;
   height: 620px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,164,44,0.16) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--adm-accent-rgb), 0.18) 0%, transparent 65%);
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
+  animation: admAurora 42s ease-in-out infinite;
 }
 
 .adm-bg::after {
@@ -199,15 +283,22 @@
   width: 580px;
   height: 580px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--adm-cool), 0.20) 0%, transparent 65%);
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
+  animation: admAurora 54s ease-in-out infinite reverse;
+}
+
+@keyframes admAurora {
+  0%,  100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%       { transform: translate3d(-70px, 48px, 0) scale(1.12); }
+  66%       { transform: translate3d(46px, -38px, 0) scale(0.94); }
 }
 
 .adm-card {
-  background: rgba(30, 41, 59, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-line);
   border-radius: 1.25rem;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -215,16 +306,16 @@
 }
 
 .adm-card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
 }
 .adm-card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  border-color: rgba(201, 164, 44, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(var(--adm-accent-rgb), 0.10);
+  border-color: rgba(var(--adm-accent-rgb), 0.38);
 }
 
 .adm-heading {
-  color: #c9a42c;
+  color: var(--adm-accent);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -232,14 +323,14 @@
 }
 
 .adm-title {
-  color: #f8fafc;
+  color: var(--adm-title);
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .adm-label {
-  color: rgba(226, 232, 240, 0.55);
+  color: rgba(var(--adm-text-rgb), 0.55);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -247,10 +338,10 @@
 }
 
 .adm-input {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(var(--adm-bg-rgb), 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.65rem;
-  color: #e2e8f0;
+  color: var(--adm-text);
   padding: 0.6rem 0.9rem;
   width: 100%;
   font-size: 0.9rem;
@@ -264,51 +355,70 @@
   .adm-input { height: 42px; }
   textarea.adm-input { height: auto; }
 }
-.adm-input::placeholder { color: rgba(226, 232, 240, 0.3); }
+.adm-input::placeholder { color: rgba(var(--adm-text-rgb), 0.3); }
 .adm-input:focus {
-  border-color: #c9a42c;
-  background: rgba(15, 23, 42, 0.85);
-  box-shadow: 0 0 0 3px rgba(201, 164, 44, 0.15);
+  border-color: var(--adm-accent);
+  background: rgba(var(--adm-bg-rgb), 0.85);
+  box-shadow: 0 0 0 3px rgba(var(--adm-accent-rgb), 0.15);
 }
-.adm-input option { background: #1e293b; color: #e2e8f0; }
+.adm-input option { background: var(--adm-surface-solid); color: var(--adm-text); }
 
 .adm-btn-primary {
-  background: linear-gradient(135deg, #c9a42c 0%, #d4af37 100%);
-  color: #0f172a;
+  background: linear-gradient(135deg, var(--adm-accent-deep) 0%, var(--adm-accent) 55%, var(--adm-accent-soft) 100%);
+  color: var(--adm-accent-ink);
   border: none;
   padding: 0.6rem 1.2rem;
   border-radius: 0.65rem;
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s, opacity 0.15s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  /* for the sheen */
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
+/* A light sweeps across the button on hover. Driven by `transform` on a
+   pseudo-element rather than by animating `background-position`, which on a
+   gradient forces a repaint of the whole button every frame. */
+.adm-btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.adm-btn-primary:hover:not(:disabled)::after { transform: translateX(120%); }
 .adm-btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(201, 164, 44, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(var(--adm-accent-rgb), 0.38);
 }
-.adm-btn-primary:active:not(:disabled) { transform: translateY(0); }
+.adm-btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 .adm-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .adm-btn-ghost {
   background: rgba(255, 255, 255, 0.04);
-  color: #e2e8f0;
+  color: var(--adm-text);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.55rem 1rem;
   border-radius: 0.65rem;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .adm-btn-ghost:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(201, 164, 44, 0.3);
+  border-color: rgba(var(--adm-accent-rgb), 0.35);
+  transform: translateY(-1px);
 }
+.adm-btn-ghost:active { transform: translateY(0) scale(0.98); }
 
 .adm-btn-danger {
   background: rgba(220, 38, 38, 0.9);
@@ -341,7 +451,7 @@
 .adm-empty {
   padding: 3rem 1.5rem;
   text-align: center;
-  color: rgba(226, 232, 240, 0.45);
+  color: rgba(var(--adm-text-rgb), 0.45);
   font-size: 0.9rem;
 }
 
@@ -356,11 +466,11 @@
 }
 
 .adm-link {
-  color: #c9a42c;
+  color: var(--adm-accent);
   font-weight: 600;
   transition: color 0.15s;
 }
-.adm-link:hover { color: #e0bc3f; }
+.adm-link:hover { color: var(--adm-accent-soft); }
 
 @keyframes admFloat {
   0%, 100% { transform: translateY(0); }
@@ -373,6 +483,106 @@
   50% { opacity: 0.6; }
 }
 .adm-pulse { animation: admPulse 2.2s ease-in-out infinite; }
+
+/* ── Rebrand motion layer ─────────────────────────────────────────────────────
+   Applied from the layouts, so every banquet page inherits it without 40 page
+   files being edited. Everything here is opacity/transform only and every rule
+   is switched off by the reduced-motion block at the foot of this section. */
+
+/* Whole-page entrance. Sits on the layout's content wrapper and re-runs on
+   navigation because React remounts it under a changed `key`. */
+@keyframes admPageIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.adm-page-in { animation: admPageIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Staggered entrance for a list or card grid: put `.adm-stagger` on the
+   container and its children come in one after another. Capped at 12 because
+   past roughly half a second the delay stops reading as choreography and starts
+   reading as the page being slow — later children simply animate with the 12th. */
+.adm-stagger > * { animation: admPageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.adm-stagger > *:nth-child(1)  { animation-delay: 0.00s; }
+.adm-stagger > *:nth-child(2)  { animation-delay: 0.04s; }
+.adm-stagger > *:nth-child(3)  { animation-delay: 0.08s; }
+.adm-stagger > *:nth-child(4)  { animation-delay: 0.12s; }
+.adm-stagger > *:nth-child(5)  { animation-delay: 0.16s; }
+.adm-stagger > *:nth-child(6)  { animation-delay: 0.20s; }
+.adm-stagger > *:nth-child(7)  { animation-delay: 0.24s; }
+.adm-stagger > *:nth-child(8)  { animation-delay: 0.28s; }
+.adm-stagger > *:nth-child(9)  { animation-delay: 0.32s; }
+.adm-stagger > *:nth-child(10) { animation-delay: 0.36s; }
+.adm-stagger > *:nth-child(11) { animation-delay: 0.40s; }
+.adm-stagger > *:nth-child(n+12) { animation-delay: 0.44s; }
+
+/* Nav item: an accent underline grows out from the centre on hover and stays
+   while the item is the active route. The layouts' navs are horizontal rows of
+   pills, hence an underline rather than the left-hand rule a sidebar would use.
+   `scaleX` on a full-width bar, so the growth is composited and the element
+   never changes size — a width transition here would relayout the pill. */
+.adm-nav-item {
+  position: relative;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.adm-nav-item::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--adm-accent);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.adm-nav-item:hover::after,
+.adm-nav-item.is-active::after { transform: scaleX(1); }
+
+/* The fading rule that closes a gold uppercase section heading draws itself in.
+   Put on the rule element itself (the banquet forms already render it as its own
+   `<span aria-hidden>`), so nothing about the heading's layout changes. */
+@keyframes admRuleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.adm-rule-in {
+  transform-origin: left center;
+  animation: admRuleIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Skeleton/placeholder sweep in brand colour. */
+.adm-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(var(--adm-accent-rgb), 0.13) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmerMove 1.6s ease-in-out infinite;
+}
+
+/* Draws attention to a value that just changed (a total, a badge count). */
+@keyframes admBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.adm-bump { animation: admBump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-bg::before,
+  .adm-bg::after { animation: none; }
+  .adm-page-in,
+  .adm-stagger > *,
+  .adm-rule-in,
+  .adm-bump,
+  .adm-float,
+  .adm-pulse,
+  .adm-glow,
+  .adm-shimmer { animation: none; }
+  .adm-btn-primary::after { display: none; }
+  .adm-nav-item::after { transition: none; }
+}
 
 @keyframes admSlideInLeft {
   from { opacity: 0; transform: translateX(-24px); }
@@ -387,15 +597,15 @@
 .adm-slide-in-right { animation: admSlideInRight 0.45s ease-out both; }
 
 @keyframes admGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 164, 44, 0); }
-  50% { box-shadow: 0 0 22px 4px rgba(201, 164, 44, 0.35); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--adm-accent-rgb), 0); }
+  50% { box-shadow: 0 0 22px 4px rgba(var(--adm-accent-rgb), 0.35); }
 }
 .adm-glow { animation: admGlow 2.4s ease-in-out infinite; }
 
 /* Pulse for the highlighted "Create/Edit Menu" call-to-action on the Events page. */
 @keyframes menuCtaPulse {
-  0%, 100% { box-shadow: 0 6px 20px rgba(201, 164, 44, 0.40); transform: translateY(0); }
-  50% { box-shadow: 0 8px 28px rgba(201, 164, 44, 0.65); transform: translateY(-1px); }
+  0%, 100% { box-shadow: 0 6px 20px rgba(var(--adm-accent-rgb), 0.40); transform: translateY(0); }
+  50% { box-shadow: 0 8px 28px rgba(var(--adm-accent-rgb), 0.65); transform: translateY(-1px); }
 }
 
 .adm-table {
@@ -407,7 +617,7 @@
   text-align: left;
   padding: 0.75rem 1rem;
   font-weight: 700;
-  color: #c9a42c;
+  color: var(--adm-accent);
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -415,24 +625,33 @@
 }
 .adm-table tbody tr {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.15s;
+  /* box-shadow, not border-left: a border would shift every cell by 2px on
+     hover and make the whole row jitter as the pointer travels down the table. */
+  transition: background 0.18s ease, box-shadow 0.18s ease;
 }
-.adm-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
-.adm-table tbody td { padding: 0.85rem 1rem; color: #e2e8f0; }
+.adm-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 2px 0 0 0 var(--adm-accent);
+}
+.adm-table tbody td { padding: 0.85rem 1rem; color: var(--adm-text); }
 
-/* ── Tablet dark-green theme ──
+/* ── Tablet theme ──
    Colors are driven by CSS variables so each restaurant can theme the tablet +
-   summary pages. Defaults reproduce the original gold-on-green palette; the page
-   roots override --rg-accent / --rg-bg (and derived vars) inline from the
-   restaurant's saved theme. See utils/tabletTheme.ts. */
+   summary pages. The defaults are the banquet brand palette above — the tablet
+   is the guest-facing face of the banquet product, so out of the box it should
+   look like the rest of it (it used to default to a gold-on-green of its own).
+   A restaurant that has saved its own accent/background is unaffected: the page
+   roots override --rg-accent / --rg-bg (and the derived vars) inline from the
+   saved theme, and only a null falls through to these. See utils/tabletTheme.ts,
+   which must be kept in step with the values here. */
 :root {
-  --rg-accent: #c9a42c;
-  --rg-accent-rgb: 201, 164, 44;
-  --rg-accent-soft: #d9b84a;
-  --rg-bg: #1a3320;
-  --rg-bg-rgb: 26, 51, 32;
-  --rg-bg-dark: #0f2114;
-  --rg-bg-dark-rgb: 15, 33, 20;
+  --rg-accent: #d8b45f;
+  --rg-accent-rgb: 216, 180, 95;
+  --rg-accent-soft: #efd68f;
+  --rg-bg: #0b1120;
+  --rg-bg-rgb: 11, 17, 32;
+  --rg-bg-dark: #070a13;
+  --rg-bg-dark-rgb: 7, 10, 19;
 }
 .rg-bg {
   background: var(--rg-bg);
