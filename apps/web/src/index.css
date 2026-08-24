@@ -19,9 +19,9 @@
    `rgba(var(--adm-accent-rgb), 0.35)`, which is how the many translucent
    borders and glows stay in step with the accent.
 
-   Two scopes deliberately opt out, further down:
-     .adm-legacy  — the OWNER cabinet, which keeps the previous palette
-     .cadm-theme  — the food-service surfaces, which are monochrome */
+   One scope deliberately opts out, further down: `.cadm-theme`, the
+   food-service surfaces, which stay monochrome. The OWNER cabinet was excluded
+   at first and is now in scope like every other banquet role. */
 :root {
   --adm-accent: #d8b45f;          /* champagne gold — warmer + brighter than the old #c9a42c */
   --adm-accent-rgb: 216, 180, 95;
@@ -174,32 +174,6 @@
   .reveal.is-visible { animation: none; }
 }
 
-/* ── OWNER cabinet: the previous palette, deliberately unchanged ──
-   The rebrand covers the banquet staff apps; the owner view was explicitly left
-   out of it. Re-pinning the tokens here is the whole opt-out — the page markup
-   is identical to every other admin page. */
-.adm-legacy {
-  --adm-accent: #c9a42c;
-  --adm-accent-rgb: 201, 164, 44;
-  --adm-accent-soft: #e0bc3f;
-  --adm-accent-deep: #d4af37;
-  --adm-accent-ink: #0f172a;
-  --adm-bg: #0f172a;
-  --adm-bg-rgb: 15, 23, 42;
-  --adm-surface: rgba(30, 41, 59, 0.55);
-  --adm-surface-rgb: 30, 41, 59;
-  --adm-surface-solid: #1e293b;
-  --adm-line: rgba(255, 255, 255, 0.08);
-  --adm-text: #e2e8f0;
-  --adm-text-rgb: 226, 232, 240;
-  --adm-title: #f8fafc;
-  --adm-cool: 59, 130, 246;
-}
-/* The exclusion covers the new motion as well as the new palette — the owner
-   view is meant to be exactly what it was. */
-.adm-legacy.adm-bg::before,
-.adm-legacy.adm-bg::after { animation: none; }
-
 /* ── Catering Admin: monochrome black & white theme (catering-site look) ──
    Scoped overrides applied when the layout root carries `.cadm-theme`. Restyles
    the shared `adm-*` tokens to greyscale and drops the gold/blue glow + bg.
@@ -247,9 +221,52 @@
    common ones toward white inside the catering theme. */
 .cadm-theme .adm-card-hover:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.45); }
 
-/* ── Admin dark theme ── */
+/* The banquet redesign gave the shared primitives a display serif, a lit card
+   edge and an accent tick on section headings. Food service is excluded from
+   that work, so it keeps the plain forms. */
+.cadm-theme .adm-title {
+  font-family: inherit;
+  font-weight: 700;
+  background: none;
+  letter-spacing: -0.01em;
+}
+.cadm-theme .adm-heading::before { display: none; }
+.cadm-theme .adm-card {
+  background: rgba(255,255,255,0.05);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+.cadm-theme .adm-table thead th {
+  background: rgba(255,255,255,0.04);
+  border-bottom-color: rgba(255,255,255,0.14);
+}
+
+/* ── Admin dark theme ──────────────────────────────────────────────────────────
+   The ground is no longer a flat fill. Four layers, cheapest first:
+
+     1. a hairline weave — two 1px repeating-linear-gradients at ±45°, at ~2%
+        opacity. It is what stops a large empty page reading as a void; you do
+        not see the lines, you see that the surface has a texture.
+     2. a broad spotlight from above the fold, so the top of the page (where the
+        nav and page title live) sits in more light than the foot.
+     3. a floor wash in the accent, which keeps the gold present even on a page
+        with no gold content.
+     4. the ink itself.
+
+   All four are gradients on the element's own `background` — no image request,
+   no extra DOM. `background-attachment: fixed` on the spotlight would cost a
+   repaint per scroll frame, so the lit feel comes from the drifting blobs on
+   ::before/::after instead. */
 .adm-bg {
-  background: var(--adm-bg);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg,
+      rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 11px),
+    radial-gradient(120% 60% at 50% -12%,
+      rgba(var(--adm-accent-rgb), 0.09) 0%, transparent 62%),
+    radial-gradient(100% 55% at 50% 112%,
+      rgba(var(--adm-cool), 0.10) 0%, transparent 60%),
+    var(--adm-bg);
   min-height: 100vh;
   color: var(--adm-text);
   position: relative;
@@ -296,24 +313,70 @@
   66%       { transform: translate3d(46px, -38px, 0) scale(0.94); }
 }
 
+/* A card now reads as a panel lit from above rather than as a flat translucent
+   rectangle: the body is a gradient (lighter at the top edge), an inset hairline
+   along the top catches the light, and the shadow is deep and soft enough to lift
+   it off the ground.
+
+   The lit edge is an inset box-shadow, deliberately not a ::before — `.adm-card`
+   is on 65 elements across the app and some of them already own their pseudo-
+   elements. A shadow cannot collide with anything. */
 .adm-card {
-  background: var(--adm-surface);
+  background:
+    linear-gradient(168deg,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.012) 42%,
+      rgba(0, 0, 0, 0.05) 100%),
+    var(--adm-surface);
   border: 1px solid var(--adm-line);
-  border-radius: 1.25rem;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  border-radius: 1.15rem;
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),   /* the lit top edge */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),        /* and the shaded bottom one */
+    0 10px 34px rgba(0, 0, 0, 0.30),
+    0 2px 8px rgba(0, 0, 0, 0.18);
+  position: relative;
 }
 
 .adm-card-hover {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease, border-color 0.32s ease;
 }
 .adm-card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(var(--adm-accent-rgb), 0.10);
-  border-color: rgba(var(--adm-accent-rgb), 0.38);
+  transform: translateY(-4px);
+  border-color: rgba(var(--adm-accent-rgb), 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--adm-accent-rgb), 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 20px 52px rgba(0, 0, 0, 0.44),
+    0 0 0 1px rgba(var(--adm-accent-rgb), 0.12),
+    0 0 34px -8px rgba(var(--adm-accent-rgb), 0.30);
 }
 
+/* Opt-in: a gold hairline across the top of a card, for the one panel on a page
+   that should read as the primary one. */
+.adm-card-lead { border-top-color: transparent; }
+.adm-card-lead::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(90deg,
+    transparent, rgba(var(--adm-accent-rgb), 0.85), transparent);
+}
+
+/* A small-caps gold heading now carries a short accent tick before it, so a
+   section announces itself without a rule having to be drawn in the markup.
+
+   The tick is an `inline-block` ::before and the element's own `display` is left
+   alone on purpose: `.adm-heading` sits on a mix of `<p>`, `<h3>` and `<span>`
+   across 32 places, and forcing them all to inline-flex would collapse the
+   block-level ones to their content width — silently breaking every centred or
+   full-width heading on these pages. */
 .adm-heading {
   color: var(--adm-accent);
   font-size: 0.75rem;
@@ -321,31 +384,68 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
+.adm-heading::before {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  width: 1.5em;
+  height: 2px;
+  border-radius: 2px;
+  margin-right: 0.6em;
+  /* Nudge up to sit on the optical centre of uppercase text rather than the
+     line box's middle, which small-caps tracking pushes low. */
+  margin-bottom: 0.15em;
+  background: linear-gradient(90deg, transparent, var(--adm-accent));
+}
 
+/* The page title is set in the display serif the invitation side already loads,
+   which is what makes an events product look like an events product rather than
+   like a dashboard. `background-clip: text` gives it a soft vertical sheen —
+   static, so there is nothing to disable for reduced motion. */
 .adm-title {
-  color: var(--adm-title);
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-family: 'Playfair Display', 'Prata', Georgia, serif;
+  font-size: clamp(1.7rem, 1.35rem + 1.2vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  background: linear-gradient(175deg, var(--adm-title) 0%, rgba(var(--adm-text-rgb), 0.72) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Safari paints nothing for clipped text inside a `backdrop-filter` ancestor in
+   some versions; the fallback colour keeps the title readable if the clip is
+   ignored. It is overridden by `color: transparent` above wherever clipping
+   does work. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .adm-title { background: none; color: var(--adm-title); }
 }
 
 .adm-label {
-  color: rgba(var(--adm-text-rgb), 0.55);
+  color: rgba(var(--adm-text-rgb), 0.52);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
+/* Inputs read as recessed into the panel — an inset shadow along the top, a
+   hairline highlight along the bottom — rather than as another flat box sitting
+   on it. That difference is what makes a dense admin form scannable. */
 .adm-input {
-  background: rgba(var(--adm-bg-rgb), 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.65rem;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.20) 0%, transparent 38%),
+    rgba(var(--adm-bg-rgb), 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.6rem;
   color: var(--adm-text);
   padding: 0.6rem 0.9rem;
   width: 100%;
   font-size: 0.9rem;
   outline: none;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.03);
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
 }
 /* Fixed single-line height so <input> and <select> always match. Placed in the
@@ -358,8 +458,11 @@
 .adm-input::placeholder { color: rgba(var(--adm-text-rgb), 0.3); }
 .adm-input:focus {
   border-color: var(--adm-accent);
-  background: rgba(var(--adm-bg-rgb), 0.85);
-  box-shadow: 0 0 0 3px rgba(var(--adm-accent-rgb), 0.15);
+  background: rgba(var(--adm-bg-rgb), 0.88);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.30),
+    0 0 0 3px rgba(var(--adm-accent-rgb), 0.16),
+    0 0 18px -6px rgba(var(--adm-accent-rgb), 0.55);
 }
 .adm-input option { background: var(--adm-surface-solid); color: var(--adm-text); }
 
@@ -421,48 +524,99 @@
 .adm-btn-ghost:active { transform: translateY(0) scale(0.98); }
 
 .adm-btn-danger {
-  background: rgba(220, 38, 38, 0.9);
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.92) 0%, rgba(220, 38, 38, 0.92) 100%);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.10);
   padding: 0.5rem 1rem;
   border-radius: 0.55rem;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
 }
-.adm-btn-danger:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
+.adm-btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px rgba(220, 38, 38, 0.32);
+}
+.adm-btn-danger:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+
+/* Scrollbars inside the admin/tablet shells. The default light scrollbar on a
+   near-black page is the single loudest un-themed element left on these screens.
+   Scoped rather than global so the light-themed public pages keep the native one. */
+.adm-bg, .adm-bg *, .rg-bg, .rg-bg * { scrollbar-width: thin; }
+.adm-bg, .adm-bg * { scrollbar-color: rgba(var(--adm-accent-rgb), 0.42) transparent; }
+.rg-bg,  .rg-bg *  { scrollbar-color: rgba(var(--rg-accent-rgb), 0.42) transparent; }
+
+.adm-bg ::-webkit-scrollbar,
+.rg-bg  ::-webkit-scrollbar { width: 10px; height: 10px; }
+.adm-bg ::-webkit-scrollbar-track,
+.rg-bg  ::-webkit-scrollbar-track { background: transparent; }
+.adm-bg ::-webkit-scrollbar-thumb {
+  background: rgba(var(--adm-accent-rgb), 0.30);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.adm-bg ::-webkit-scrollbar-thumb:hover { background: rgba(var(--adm-accent-rgb), 0.55); background-clip: content-box; }
+.rg-bg ::-webkit-scrollbar-thumb {
+  background: rgba(var(--rg-accent-rgb), 0.32);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
 .adm-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .adm-btn-sm { padding: 0.35rem 0.75rem !important; font-size: 0.75rem !important; }
 .adm-btn-lg { padding: 0.75rem 1.5rem !important; font-size: 1rem !important; }
 
 .adm-section {
-  padding: 1.25rem;
+  padding: 1.35rem;
   margin-bottom: 1.25rem;
 }
 
+/* The divider picks up a faint gold centre, so a rule between sections belongs
+   to the brand instead of being a generic grey line. */
 .adm-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  margin: 1rem 0;
+  border: 0;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08) 22%,
+    rgba(var(--adm-accent-rgb), 0.30) 50%,
+    rgba(255, 255, 255, 0.08) 78%,
+    transparent);
+  margin: 1.15rem 0;
 }
 
+/* An empty state is the first thing a new restaurant sees on most of these
+   pages, so it gets a dashed frame and room rather than one grey line adrift in
+   a panel. */
 .adm-empty {
-  padding: 3rem 1.5rem;
+  padding: 3.25rem 1.5rem;
   text-align: center;
   color: rgba(var(--adm-text-rgb), 0.45);
   font-size: 0.9rem;
+  border: 1px dashed rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background:
+    radial-gradient(80% 60% at 50% 0%,
+      rgba(var(--adm-accent-rgb), 0.045) 0%, transparent 70%);
 }
 
+/* Badges are pills with their own hairline. Callers set the colours inline
+   (status greens, debt reds); this only fixes the shape, so none of them break. */
 .adm-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.55rem;
-  border-radius: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.045em;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .adm-link {
@@ -520,6 +674,37 @@
    pills, hence an underline rather than the left-hand rule a sidebar would use.
    `scaleX` on a full-width bar, so the growth is composited and the element
    never changes size — a width transition here would relayout the pill. */
+/* The sticky bar at the top of every banquet layout. Was a flat translucent
+   strip with a white hairline; it now has depth (a gradient into the blur, a
+   drop shadow) and is closed by a gold rule, which is what makes the app feel
+   like it has a masthead rather than a border. The rule is a ::after so it can
+   fade at both ends — a `border-bottom` cannot. */
+.adm-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background:
+    linear-gradient(180deg,
+      rgba(var(--adm-bg-rgb), 0.92) 0%,
+      rgba(var(--adm-bg-rgb), 0.74) 100%);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+}
+.adm-topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(var(--adm-accent-rgb), 0.42) 18%,
+    rgba(var(--adm-accent-rgb), 0.42) 82%,
+    transparent);
+}
+
 .adm-nav-item {
   position: relative;
   transition: color 0.2s ease, background 0.2s ease;
@@ -613,15 +798,30 @@
   border-collapse: collapse;
   font-size: 0.875rem;
 }
+/* The header row is a band rather than a bare line of gold text: a faint gold
+   wash and a gold hairline under it.
+
+   Deliberately NOT `position: sticky`. Neither table on these pages has its own
+   vertical scrollport — the page scrolls — so a sticky <th> would pin to the top
+   of the viewport and sit *behind* the blurred .adm-topbar, which owns z-index 30.
+   Making it work needs the topbar's measured height as the `top` offset, and that
+   height differs per layout and changes when the nav wraps.
+
+   The wash is translucent rather than opaque for the same kind of reason: an
+   opaque band would paint into the rounded top corners of the .adm-card wrapping
+   the table and square them off, and a table cannot be clipped by `overflow`. */
 .adm-table thead th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   font-weight: 700;
   color: var(--adm-accent);
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg,
+    rgba(var(--adm-accent-rgb), 0.10) 0%,
+    rgba(var(--adm-accent-rgb), 0.02) 100%);
+  border-bottom: 1px solid rgba(var(--adm-accent-rgb), 0.28);
 }
 .adm-table tbody tr {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -629,9 +829,12 @@
      hover and make the whole row jitter as the pointer travels down the table. */
   transition: background 0.18s ease, box-shadow 0.18s ease;
 }
+/* Zebra striping at 1.5% — below the threshold where it reads as a colour, but
+   enough that the eye tracks a row across a wide table without a ruler. */
+.adm-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.015); }
 .adm-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: inset 2px 0 0 0 var(--adm-accent);
+  background: rgba(var(--adm-accent-rgb), 0.06);
+  box-shadow: inset 3px 0 0 0 var(--adm-accent);
 }
 .adm-table tbody td { padding: 0.85rem 1rem; color: var(--adm-text); }
 
@@ -648,27 +851,56 @@
   --rg-accent: #d8b45f;
   --rg-accent-rgb: 216, 180, 95;
   --rg-accent-soft: #efd68f;
+  --rg-accent-deep: #a8823a;
   --rg-bg: #0b1120;
   --rg-bg-rgb: 11, 17, 32;
   --rg-bg-dark: #070a13;
   --rg-bg-dark-rgb: 7, 10, 19;
 }
+/* The kiosk is the one screen a paying guest sits in front of, so it gets the
+   same treatment as the admin shell but staged larger: a wider vignette, a
+   stronger overhead light, and the accent washing the floor of the page. Every
+   layer is derived from --rg-accent / --rg-bg, so a restaurant that has themed
+   its tablet gets its own colours through the whole composition and not just on
+   the buttons. */
 .rg-bg {
-  background: var(--rg-bg);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 9px),
+    radial-gradient(130% 62% at 50% -14%,
+      rgba(var(--rg-accent-rgb), 0.14) 0%, transparent 62%),
+    radial-gradient(115% 60% at 50% 114%,
+      rgba(var(--rg-accent-rgb), 0.07) 0%, transparent 58%),
+    linear-gradient(180deg,
+      rgba(var(--rg-bg-rgb), 1) 0%,
+      rgba(var(--rg-bg-dark-rgb), 1) 100%);
 }
 
 .rg-card {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 1.5rem;
-  backdrop-filter: blur(10px);
+  background:
+    linear-gradient(168deg,
+      rgba(255, 255, 255, 0.085) 0%,
+      rgba(255, 255, 255, 0.025) 45%,
+      rgba(0, 0, 0, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 1.35rem;
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0 16px 44px rgba(0, 0, 0, 0.34);
 }
 
+/* Kiosk headings are set in the display serif and closed by a gold rule that
+   runs the width of the heading — at tablet size this is the strongest single
+   cue that the guest is looking at a menu and not at an app. */
 .rg-heading {
   color: var(--rg-accent);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-family: 'Playfair Display', 'Prata', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -680,8 +912,44 @@
   text-transform: uppercase;
 }
 
+/* The kiosk's large titles. Applied per element rather than to a tag, because
+   the tablet pages set their sizes inline and the sizes differ a lot between
+   the welcome screen, the course header and the modals — this contributes the
+   face and the weight only, and leaves the size where it was. */
+.rg-display {
+  font-family: 'Playfair Display', 'Prata', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* A slow gold sweep across a heading that already paints itself with a clipped
+   gradient. Only `background-size` and `background-position` are set here — the
+   gradient itself stays in the page's inline style, so the restaurant's own
+   accent is what sweeps.
+
+   Deliberately not applied to the drifting-blob treatment used on the admin
+   shell: `.rg-bg` is not a stacking context, and the kiosk renders full-screen
+   `position: fixed` overlays inside it, so introducing `isolation: isolate`
+   there to host a background layer would change what paints over what. */
+@keyframes rgShine {
+  from { background-position: 0% 50%; }
+  to   { background-position: 200% 50%; }
+}
+.rg-shine {
+  background-size: 250% 100%;
+  animation: rgShine 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Gradient-clipped text frozen mid-sweep leaves the heading part-coloured, so
+     it is parked at the start of the sweep rather than merely stopped. */
+  .rg-shine { animation: none; background-position: 0% 50%; }
+}
+
 .rg-input {
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, transparent 40%),
+    rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 0.75rem;
   color: white;
@@ -689,7 +957,8 @@
   width: 100%;
   font-size: 0.875rem;
   outline: none;
-  transition: border-color 0.15s;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 /* Fixed single-line height so <input> and <select> always match (textarea opts out). */
 @layer components {
@@ -697,7 +966,12 @@
   textarea.rg-input { height: auto; }
 }
 .rg-input::placeholder { color: rgba(255,255,255,0.3); }
-.rg-input:focus { border-color: var(--rg-accent); }
+.rg-input:focus {
+  border-color: var(--rg-accent);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.28),
+    0 0 0 3px rgba(var(--rg-accent-rgb), 0.18);
+}
 .rg-input option { background: var(--rg-bg); color: white; }
 
 .rg-shimmer {

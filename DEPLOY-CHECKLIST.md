@@ -1300,9 +1300,8 @@ old shell from two caches:
   gold-on-green. **A restaurant that has saved a tablet accent/background keeps
   it** — those never reach the fallback. Only restaurants that never themed the
   tablet will see a change, and it is the intended one.
-- **Two scopes are excluded**, both by re-declaring the tokens rather than by
-  avoiding them: `.adm-legacy` (the OWNER cabinet, excluded by request) and
-  `.cadm-theme` (Catering Admin + Food Employee, which stay monochrome).
+- **One scope is excluded**, by re-declaring the tokens rather than by avoiding
+  them: `.cadm-theme` (Catering Admin + Food Employee, which stay monochrome).
 - **v-invite and v-connect** got the same treatment under their own prefixes.
   One genuine defect was fixed on the way: v-invite's dark theme put white text
   on a light-blue accent at ~2.5:1. There is now an ink token that flips with
@@ -1315,9 +1314,7 @@ old shell from two caches:
 
 1. `banquet.v-menu.uz/<slug>` — new gold, background light drifts slowly,
    switching tabs fades the page in, nav underline follows the active tab.
-2. `cabinet.v-menu.uz` (OWNER) — **unchanged**. Old gold, old navy, still. This
-   is the exclusion working; if the owner cabinet changed colour, `adm-legacy`
-   came off the page root.
+2. `cabinet.v-menu.uz` (OWNER) — **in scope**, same treatment as the rest.
 3. `food-admin.v-menu.uz/<slug>` — **still monochrome**, no gold anywhere.
 4. `/tablet` on a restaurant that has **never** set tablet colours → new
    palette. On one that **has** → exactly its own colours, unchanged. Both cases
@@ -1330,3 +1327,48 @@ old shell from two caches:
 
 `palette.test.ts` guards the legibility of all of this and runs in `npm test`,
 which `deploy.sh` already executes.
+
+
+## 26. Banquet rebrand, part two — the surface treatment
+
+Still frontend-only; `./deploy.sh` is sufficient and §25's cache note applies
+unchanged (the service worker is already at `vmenu-v7` from that release — do
+**not** bump it again if §25 has not yet shipped, it is the same shell).
+
+### What changed on top of §25
+
+§25 moved the colours into tokens and added micro-interactions. This redraws the
+shared primitives themselves, which is what actually changes every page for
+CHIEF_ADMIN, MANAGER, OWNER, ADMIN, RESTAURANT_MANAGER, EMPLOYEE, KITCHEN,
+PERFORMER and HOST — **no page files were touched**, only `index.css` and the
+five layouts. See the "banquet surface treatment" table in `CLAUDE.md` for the
+per-primitive detail.
+
+- **The OWNER cabinet is now in scope.** §25 excluded it via `.adm-legacy`; that
+  class and its token block are gone. If the owner view was signed off as-is,
+  this reverses that.
+- **Tablet + Summary** were redrawn to match: layered background, lit cards,
+  display-serif headings, and a slow gold sweep on the kiosk hero title.
+- **Two kiosk bugs fixed on the way.** A full-screen overlay in `TabletMenuPage`
+  was painted with a hardcoded pre-rebrand dark green, so it never matched the
+  page and never followed a restaurant's saved theme; and the kiosk's gold
+  gradients ended in a fixed `#b8941f`. Both now read `--rg-bg-dark` /
+  `--rg-accent-deep`, the latter newly emitted by `tabletThemeVars()`.
+
+### Spot-check, in addition to §25's list
+
+1. A **themed** tablet (one with a saved `tabletAccentColor`) — the whole
+   composition should be in that restaurant's colour now, including the page
+   background wash and the gold gradients, not just the buttons. This is the
+   check that would catch a `--rg-*` token the theme function forgot to emit
+   (`palette.test.ts` guards it, but see it once).
+2. The **course-replacement overlay** on the tablet (tap a dish → choose
+   replacement) — it should sit on the restaurant's background, not on green.
+3. Any page with a **table** (Events, Menu) — header band, zebra, hover bar. The
+   header is intentionally *not* sticky; if you want it sticky later it needs
+   `.adm-topbar`'s measured height as a `top` offset.
+4. `food-admin.v-menu.uz/<slug>` — still flat, monochrome, sans-serif, no accent
+   tick on section headings. This is `.cadm-theme` opting out of the new
+   treatment as well as the new palette.
+5. A long page in a **narrow window** — the `.adm-heading` tick and the new badge
+   pill should not wrap oddly.

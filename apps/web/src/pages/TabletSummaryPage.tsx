@@ -71,7 +71,7 @@ function PageHeader({
           <img src={logoSrc ?? networkingLogoSrc} alt={restaurantName ?? 'logo'} className="h-10 sm:h-14" style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
           <div className="min-w-0">
             {restaurantName && <p className="rg-label truncate">{restaurantName}</p>}
-            <h1 className="text-base sm:text-2xl font-bold text-white truncate">{title}</h1>
+            <h1 className="rg-display text-base sm:text-2xl text-white truncate">{title}</h1>
           </div>
         </div>
         <select
@@ -618,7 +618,7 @@ export const TabletSummaryPage = () => {
               </svg>
             </div>
             <div className="space-y-2">
-              <p className="text-2xl font-bold text-white">{t('event_confirmed')}</p>
+              <p className="rg-display text-2xl text-white">{t('event_confirmed')}</p>
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('thank_you')}</p>
               <p className="mt-3 font-mono text-sm" style={{ color: 'rgba(var(--rg-accent-rgb),0.7)' }}>Event #{confirmedEventId}</p>
             </div>

@@ -141,14 +141,22 @@ export const LoginPage = () => {
         <div className="scale-in" style={{ textAlign: 'center', marginBottom: 28 }}>
           <img className="adm-float" src={logoSrc} alt="Logo"
             style={{ height: 160, width: 'auto', maxWidth: '70%', objectFit: 'contain', display: 'block', margin: '0 auto 18px' }} />
-          <h1 className="adm-title" style={{ margin: '0 0 6px', fontSize: 26 }}>{t('sign_in')}</h1>
-          <p style={{ margin: 0, color: 'rgba(226,232,240,0.55)', fontSize: 14 }}>{t('login_subtitle')}</p>
+          <h1 className="adm-title" style={{ margin: '0 0 10px' }}>{t('sign_in')}</h1>
+          {/* The lozenge-and-rules mark the kiosk uses over its course header,
+              repeated here so the first screen of the product already carries
+              the banquet vocabulary. */}
+          <div aria-hidden style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '0 0 12px' }}>
+            <span style={{ height: 1, width: 48, background: 'linear-gradient(90deg, transparent, rgba(var(--adm-accent-rgb),0.7))' }} />
+            <span style={{ width: 6, height: 6, transform: 'rotate(45deg)', background: 'var(--adm-accent)', boxShadow: '0 0 10px rgba(var(--adm-accent-rgb),0.75)' }} />
+            <span style={{ height: 1, width: 48, background: 'linear-gradient(90deg, rgba(var(--adm-accent-rgb),0.7), transparent)' }} />
+          </div>
+          <p style={{ margin: 0, color: 'rgba(var(--adm-text-rgb),0.55)', fontSize: 14 }}>{t('login_subtitle')}</p>
         </div>
 
         {/* Form card */}
         <form
           onSubmit={submit}
-          className="adm-card tablet-fade-up"
+          className="adm-card adm-card-lead tablet-fade-up"
           style={{ padding: 28, display: 'grid', gap: 18, animationDelay: '120ms' }}
         >
           <label style={{ display: 'grid', gap: 8 }}>

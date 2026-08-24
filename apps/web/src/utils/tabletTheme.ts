@@ -50,12 +50,14 @@ export function tabletThemeVars(theme?: { accent?: string | null; bg?: string | 
   const bg = normalizeHex(theme?.bg) ?? DEFAULT_TABLET_THEME.bg;
 
   const accentSoft = shade(accent, 0.35);   // lighter accent (was #d9b84a / #f7e6a8)
+  const accentDeep = shade(accent, -0.28);   // darker accent — the foot of the gold gradients
   const bgDark = shade(bg, -0.4);            // darker bg for gradients (was #0f2114 / 15,33,20)
 
   return {
     '--rg-accent': accent,
     '--rg-accent-rgb': channels(toRgb(accent)),
     '--rg-accent-soft': toHex(accentSoft),
+    '--rg-accent-deep': toHex(accentDeep),
     '--rg-bg': bg,
     '--rg-bg-rgb': channels(toRgb(bg)),
     '--rg-bg-dark': toHex(bgDark),

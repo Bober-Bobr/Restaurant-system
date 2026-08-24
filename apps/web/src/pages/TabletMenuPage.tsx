@@ -83,7 +83,7 @@ function BestsellerBadge({ t }: { t: TFn }) {
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '3px 8px', borderRadius: 999, fontSize: 10, fontWeight: 800,
       letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1,
-      color: 'var(--rg-bg)', background: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+      color: 'var(--rg-bg)', background: 'linear-gradient(135deg, var(--rg-accent-soft) 0%, var(--rg-accent) 100%)',
       boxShadow: '0 3px 10px rgba(var(--rg-accent-rgb),0.5)',
     }}>★ {t('bestseller')}</span>
   );
@@ -189,7 +189,7 @@ function TableCategoryFullscreen({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9997,
-      background: 'linear-gradient(135deg, #0a1f12 0%, #051208 100%)',
+      background: 'linear-gradient(135deg, var(--rg-bg) 0%, var(--rg-bg-dark) 100%)',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Top bar */}
@@ -532,8 +532,8 @@ function CategorySlide({
 
         {/* Name + Price */}
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{
-            margin: 0, fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
+          <h2 className="rg-display" style={{
+            margin: 0, fontSize: 28, color: '#fff', letterSpacing: '-0.01em',
           }}>{tc.name}</h2>
           <p style={{
             margin: '8px 0 0', fontSize: 18, fontWeight: 700, color: 'var(--rg-accent)',
@@ -549,7 +549,7 @@ function CategorySlide({
         <button type="button" onClick={onSelect}
           style={{
             padding: '11px 34px', borderRadius: 12, border: 'none',
-            background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
+            background: 'linear-gradient(135deg, var(--rg-accent) 0%, var(--rg-accent-soft) 100%)',
             color: 'var(--rg-bg)', fontSize: 15, fontWeight: 700, letterSpacing: '0.02em',
             cursor: 'pointer', boxShadow: '0 6px 18px rgba(var(--rg-accent-rgb),0.35)',
           }}>
@@ -714,10 +714,10 @@ function CourseChoiceSection({
     <>
       <div className="mb-6" style={{ textAlign: 'center' }}>
         {showName && <p className="rg-label">{tableCategory.name}</p>}
-        <h2 style={{
-          margin: '6px 0 0', fontSize: 28, fontWeight: 800,
-          letterSpacing: '0.04em', textTransform: 'uppercase',
-          backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 60%, #b8941f 100%)',
+        <h2 className="rg-display rg-shine" style={{
+          margin: '6px 0 0', fontSize: 28,
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          backgroundImage: 'linear-gradient(135deg, var(--rg-accent-soft) 0%, var(--rg-accent) 60%, var(--rg-accent-deep) 100%)',
           WebkitBackgroundClip: 'text', backgroundClip: 'text',
           WebkitTextFillColor: 'transparent', color: 'var(--rg-accent)',
           textShadow: '0 2px 18px rgba(var(--rg-accent-rgb),0.25)',
@@ -744,7 +744,7 @@ function CourseChoiceSection({
             <div style={{
               width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+              backgroundImage: 'linear-gradient(135deg, var(--rg-accent-soft) 0%, var(--rg-accent) 100%)',
               color: 'var(--rg-bg)', fontWeight: 800, fontSize: 20,
               boxShadow: '0 6px 18px rgba(var(--rg-accent-rgb),0.45)',
               border: '2px solid rgba(255,255,255,0.3)',
@@ -757,10 +757,10 @@ function CourseChoiceSection({
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
                   padding: '3px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em',
-                  color: '#e0c25a', background: 'rgba(var(--rg-accent-rgb),0.14)', border: '1px solid rgba(var(--rg-accent-rgb),0.34)',
+                  color: 'var(--rg-accent-soft)', background: 'rgba(var(--rg-accent-rgb),0.14)', border: '1px solid rgba(var(--rg-accent-rgb),0.34)',
                 }}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l3 3 5-6" stroke="#e0c25a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 6l3 3 5-6" stroke="var(--rg-accent-soft)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {t('up_to_n', { count: hotAppetizerMax })}
                 </span>
@@ -1458,7 +1458,7 @@ function SelectedDishesBar({
                 flexShrink: 0,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 30, height: 30, borderRadius: '50%',
-                backgroundImage: 'linear-gradient(135deg, #f0d878 0%, var(--rg-accent) 100%)',
+                backgroundImage: 'linear-gradient(135deg, var(--rg-accent-soft) 0%, var(--rg-accent) 100%)',
                 color: 'var(--rg-bg)', fontWeight: 800, fontSize: 14,
                 boxShadow: '0 4px 12px rgba(var(--rg-accent-rgb),0.4)',
               }}>{i + 1}</span>
@@ -1758,8 +1758,8 @@ export const TabletMenuPage = () => {
                 }}
               />
             )}
-            <h2 style={{
-              margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em',
+            <h2 className="rg-display" style={{
+              margin: 0, fontSize: 26, letterSpacing: '-0.01em',
               color: 'var(--rg-accent)',
             }}>
               {t('welcome_title')}
@@ -1783,7 +1783,7 @@ export const TabletMenuPage = () => {
                 padding: '12px 36px',
                 borderRadius: 14,
                 border: 'none',
-                background: 'linear-gradient(135deg, var(--rg-accent) 0%, #d4af37 100%)',
+                background: 'linear-gradient(135deg, var(--rg-accent) 0%, var(--rg-accent-soft) 100%)',
                 color: 'var(--rg-bg)',
                 fontWeight: 700,
                 fontSize: 15,

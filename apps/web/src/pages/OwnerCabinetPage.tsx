@@ -203,17 +203,10 @@ export const OwnerCabinetPage = () => {
   };
 
   return (
-    // `adm-legacy` re-pins the pre-rebrand palette tokens (see index.css). The
-    // banquet rebrand deliberately excluded the owner view, and this class is
-    // the entirety of that exclusion — the markup below is the same `adm-*`
-    // vocabulary every other admin page uses.
-    <div className="adm-bg adm-legacy" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <header className="tablet-fade-in" style={{
-        position: 'sticky', top: 0, zIndex: 30,
+    <div className="adm-bg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <header className="tablet-fade-in adm-topbar" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 24px',
-        background: 'rgba(var(--adm-bg-rgb),0.78)', backdropFilter: 'blur(18px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
         flexWrap: 'wrap', gap: 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

@@ -78,13 +78,8 @@ export const PerformerLayout = () => {
 
   return (
     <div className="adm-bg">
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(var(--adm-bg-rgb),0.78)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-      }}>
+      {/* Sticky, blurred, closed by a fading gold rule — see .adm-topbar. */}
+      <nav className="adm-topbar">
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
 
           {/* Brand */}

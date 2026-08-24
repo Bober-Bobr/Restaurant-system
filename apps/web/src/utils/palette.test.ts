@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_TABLET_THEME } from './tabletTheme';
+import { DEFAULT_TABLET_THEME, tabletThemeVars } from './tabletTheme';
 
 const SRC = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(SRC, rel), 'utf8');
@@ -60,12 +60,9 @@ const AA = 4.5;
 
 describe('banquet palette (index.css)', () => {
   const css = read('index.css');
-  // `--adm-accent` is declared twice more further down (the .adm-legacy and
-  // .cadm-theme opt-outs), so each scope is read from its own offset.
+  // `--adm-accent` is declared again further down by the .cadm-theme opt-out,
+  // so each scope is read from its own offset.
   const brand = css.indexOf('--adm-accent:');
-  // Anchored on the rule's opening brace, not the bare class name — the token
-  // block's own comment names `.adm-legacy` further up the file.
-  const legacy = css.indexOf('.adm-legacy {');
   const catering = css.indexOf('.cadm-theme {');
 
   it('accent is legible on the page background', () => {
@@ -88,19 +85,11 @@ describe('banquet palette (index.css)', () => {
     expect(rgb(token(css, 'adm-accent-rgb', brand))).toEqual(rgb(token(css, 'adm-accent', brand)));
   });
 
-  it('the owner cabinet still carries the pre-rebrand palette', () => {
-    // The owner view was explicitly excluded from the rebrand. If someone
-    // "tidies up" .adm-legacy into an alias of the brand tokens, that exclusion
-    // silently disappears — hence asserting the two are different.
-    expect(token(css, 'adm-accent', legacy)).not.toBe(token(css, 'adm-accent', brand));
-    expect(contrast(token(css, 'adm-accent', legacy), token(css, 'adm-bg', legacy))).toBeGreaterThanOrEqual(AA);
-  });
-
   it('every opt-out scope redeclares the whole token set', () => {
     // A scope that overrides only *some* tokens half-opts-out: the ones it
-    // forgets leak in from :root, so the owner cabinet quietly picks up the new
-    // surface colour on the cards it uses them for. Caught exactly that during
-    // the rebrand, with --adm-surface-rgb and --adm-line.
+    // forgets leak in from :root, so a page meant to be excluded quietly picks
+    // up brand colours on whatever uses them. Caught exactly that during the
+    // rebrand, with --adm-surface-rgb and --adm-line.
     const declared = (from: number) => {
       const block = css.slice(from, css.indexOf('}', from));
       return new Set([...block.matchAll(/--(adm-[a-z-]+)\s*:/g)].map((m) => m[1]));
@@ -108,7 +97,7 @@ describe('banquet palette (index.css)', () => {
     const base = declared(css.indexOf(':root {', css.indexOf('Banquet brand palette')));
     // The blue aurora blob; .cadm-theme hides both blobs outright.
     const exempt = new Set(['adm-cool']);
-    for (const [name, at] of [['.adm-legacy', legacy], ['.cadm-theme', catering]] as const) {
+    for (const [name, at] of [['.cadm-theme', catering]] as const) {
       const missing = [...base].filter((tk) => !declared(at).has(tk) && !exempt.has(tk));
       expect(missing, `${name} does not redeclare: ${missing.join(', ')}`).toEqual([]);
     }
@@ -129,6 +118,19 @@ describe('banquet palette (index.css)', () => {
     expect(token(css, 'rg-bg', rg)).toBe(DEFAULT_TABLET_THEME.bg);
     expect(rgb(token(css, 'rg-accent-rgb', rg))).toEqual(rgb(DEFAULT_TABLET_THEME.accent));
     expect(contrast(DEFAULT_TABLET_THEME.accent, DEFAULT_TABLET_THEME.bg)).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('every --rg-* the kiosk CSS declares is also emitted per restaurant', () => {
+    // The kiosk's gradients read tokens like --rg-accent-deep. Any token the
+    // stylesheet declares but tabletThemeVars() does not emit keeps its default
+    // value for EVERY restaurant — so a themed tablet would show one stripe of
+    // the platform gold inside its own colours. Adding --rg-accent-deep for the
+    // redesign is exactly the situation this guards.
+    const rg = css.indexOf('--rg-accent:');
+    const block = css.slice(rg, css.indexOf('}', rg));
+    const declared = [...block.matchAll(/--(rg-[a-z-]+)\s*:/g)].map((m) => m[1]);
+    const emitted = new Set(Object.keys(tabletThemeVars(null)).map((k) => k.replace(/^--/, '')));
+    expect(declared.filter((tk) => !emitted.has(tk))).toEqual([]);
   });
 });
 
