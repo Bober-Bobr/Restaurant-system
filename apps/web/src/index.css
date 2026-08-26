@@ -542,6 +542,96 @@
 }
 .adm-btn-danger:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
+/* Additional Services: the invitation card runs the full width of the desktop
+   layout, but a single-column text field 1100px wide is unreadable and reads as
+   unfinished. The card keeps its full width; its content column is capped.
+
+   Done with padding on the card rather than `max-width` + `margin-inline: auto`
+   on the children, because that centres nothing on a child that is not
+   block-level — the submit `<button>` is inline-block, and it sat flush left
+   while every field beside it was centred. Padding also leaves each child's own
+   `display` alone; capping the children would have needed `display: block`,
+   which would have flattened the `grid` rows into blocks.
+
+   Written as `.rg-card.addon-measure` for specificity, not for scoping: this
+   bundle emits the Tailwind utilities AFTER everything in this file, so the
+   card's own `sm:p-7` (a `padding` shorthand) would otherwise reset the
+   padding-inline set here and the cap would silently do nothing. */
+@media (min-width: 1024px) {
+  .rg-card.addon-measure {
+    padding-inline: max(1.75rem, calc((100% - 860px) / 2));
+  }
+}
+
+/* A field that reads as text until you approach it — used for the name on a
+   performer's profile, which is a heading first and an input second. Without
+   the hover/focus reveal there is nothing to say it can be edited at all. */
+.adm-inline-edit {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.adm-inline-edit:hover:not(:focus) {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(var(--adm-accent-rgb), 0.28);
+}
+.adm-inline-edit:focus {
+  background: rgba(var(--adm-bg-rgb), 0.75);
+  border-color: var(--adm-accent);
+}
+
+/* The styled stand-in for a native file input — see ui/FilePickButton.tsx.
+   `.adm-filepick` for the admin shell, `.rg-filepick` for the kiosk. Both hang
+   their focus ring off :focus-within, because the real (focusable) input is
+   visually hidden inside the label. */
+.adm-filepick,
+.rg-filepick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  position: relative;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.adm-filepick {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--adm-text);
+  border: 1px dashed rgba(var(--adm-accent-rgb), 0.34);
+}
+.adm-filepick:hover:not([data-disabled]) {
+  background: rgba(var(--adm-accent-rgb), 0.09);
+  border-color: rgba(var(--adm-accent-rgb), 0.6);
+  transform: translateY(-1px);
+}
+.adm-filepick:focus-within {
+  outline: none;
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(var(--adm-accent-rgb), 0.28);
+}
+
+.rg-filepick {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px dashed rgba(var(--rg-accent-rgb), 0.4);
+}
+.rg-filepick:hover:not([data-disabled]) {
+  background: rgba(var(--rg-accent-rgb), 0.12);
+  border-color: rgba(var(--rg-accent-rgb), 0.65);
+}
+.rg-filepick:focus-within {
+  outline: none;
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(var(--rg-accent-rgb), 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-filepick:hover:not([data-disabled]) { transform: none; }
+}
+
 /* Scrollbars inside the admin/tablet shells. The default light scrollbar on a
    near-black page is the single loudest un-themed element left on these screens.
    Scoped rather than global so the light-themed public pages keep the native one. */

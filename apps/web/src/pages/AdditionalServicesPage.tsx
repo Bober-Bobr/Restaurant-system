@@ -6,6 +6,7 @@ import { publicPerformerService, type PublicPerformer, type PublicPerformerDetai
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { translate, defaultLocale, locales, type Locale } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { FilePickButton } from '../components/ui/FilePickButton';
 import networkingLogoSrc from '../assets/networking-logo.png';
 
 // The banquet product's event types, reused verbatim so an order that came from
@@ -37,18 +38,32 @@ const MAX_PHOTOS = 10;
 function PageBackground() {
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden">
-      <div style={{
+      <div className="adm-float" style={{
         position: 'absolute', top: '-140px', right: '-140px',
         width: '560px', height: '560px', borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.22) 0%, transparent 65%)',
         filter: 'blur(50px)',
       }} />
+      {/* Was a fixed green (rgba(60,110,50,…)) left over from the kiosk's old
+          palette, so it ignored the restaurant's theme and clashed with it.
+          Both blobs are the accent now, at different depths. */}
       <div style={{
         position: 'absolute', bottom: '-120px', left: '-120px',
         width: '520px', height: '520px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(60,110,50,0.35) 0%, transparent 65%)',
+        background: 'radial-gradient(circle, rgba(var(--rg-accent-rgb),0.12) 0%, transparent 65%)',
         filter: 'blur(50px)',
       }} />
+    </div>
+  );
+}
+
+/** Gold hairline + lozenge, the kiosk's section mark. */
+function SectionMark() {
+  return (
+    <div aria-hidden className="flex items-center gap-2.5 pt-1">
+      <span style={{ height: 1, width: 40, background: 'linear-gradient(90deg, rgba(var(--rg-accent-rgb),0.75), transparent)' }} />
+      <span style={{ width: 5, height: 5, transform: 'rotate(45deg)', background: 'var(--rg-accent)', boxShadow: '0 0 8px rgba(var(--rg-accent-rgb),0.8)' }} />
+      <span style={{ height: 1, flex: 1, background: 'linear-gradient(90deg, rgba(var(--rg-accent-rgb),0.28), transparent)' }} />
     </div>
   );
 }
@@ -172,10 +187,11 @@ function InvitationSection({ t, prefill }: {
   }
 
   return (
-    <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
+    <div className="rg-card tablet-fade-up addon-measure space-y-4 p-5 sm:p-7">
       <div className="space-y-1">
-        <p className="text-lg font-bold text-white">💌 {t('addon_inv_title')}</p>
+        <p className="rg-display text-lg text-white sm:text-xl">💌 {t('addon_inv_title')}</p>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('addon_inv_intro')}</p>
+        <SectionMark />
       </div>
 
       {/* Names — one row per honoree */}
@@ -213,40 +229,45 @@ function InvitationSection({ t, prefill }: {
         )}
       </div>
 
-      <div className="grid gap-1.5">
-        <label className="rg-label">{t('addon_inv_event_type')}</label>
-        <select className="rg-input" value={eventType} onChange={(e) => changeEventType(e.target.value)}>
-          {EVENT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {t(`event_type_${type.toLowerCase()}` as Parameters<typeof translate>[0])}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid gap-1.5">
-        <label className="rg-label">{t('addon_inv_phone')}</label>
-        <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      </div>
-
-      <div className="grid gap-1.5">
-        <label className="rg-label">{t('addon_inv_card')}{optional}</label>
-        <input className="rg-input" inputMode="numeric" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
-      </div>
-
-      <div className="grid gap-1.5">
-        <label className="rg-label">{t('addon_inv_restaurant')}</label>
-        <input className="rg-input" value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
+      {/* Two-up from `sm`: this card is full width on a desktop, where a single
+          column of short fields left most of the row empty. The date/time pair
+          below keeps its own 2-col grid at every size — they belong together. */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-1.5">
-          <label className="rg-label">{t('addon_inv_date')}</label>
-          <input className="rg-input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          <label className="rg-label">{t('addon_inv_event_type')}</label>
+          <select className="rg-input" value={eventType} onChange={(e) => changeEventType(e.target.value)}>
+            {EVENT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(`event_type_${type.toLowerCase()}` as Parameters<typeof translate>[0])}
+              </option>
+            ))}
+          </select>
         </div>
+
         <div className="grid gap-1.5">
-          <label className="rg-label">{t('addon_inv_time')}</label>
-          <input className="rg-input" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
+          <label className="rg-label">{t('addon_inv_phone')}</label>
+          <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="rg-label">{t('addon_inv_card')}{optional}</label>
+          <input className="rg-input" inputMode="numeric" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="rg-label">{t('addon_inv_restaurant')}</label>
+          <input className="rg-input" value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+          <div className="grid gap-1.5">
+            <label className="rg-label">{t('addon_inv_date')}</label>
+            <input className="rg-input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="rg-label">{t('addon_inv_time')}</label>
+            <input className="rg-input" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
+          </div>
         </div>
       </div>
 
@@ -287,16 +308,17 @@ function InvitationSection({ t, prefill }: {
           </div>
         )}
         {photoUrls.length < MAX_PHOTOS && (
-          <input
-            className="rg-input"
-            type="file"
+          <FilePickButton
             accept="image/*"
             multiple
             disabled={uploading}
-            // Clearing the value lets the same file be picked again after a
-            // removal — otherwise the change event never fires a second time.
-            onChange={(e) => { void pickPhotos(e.target.files); e.target.value = ''; }}
-          />
+            onPick={(files) => void pickPhotos(files)}
+            className="rg-filepick"
+            style={{ justifyContent: 'center' }}
+          >
+            <span aria-hidden>＋</span>
+            {uploading ? t('addon_inv_uploading') : t('addon_inv_photos')}
+          </FilePickButton>
         )}
         {uploading && <span className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t('addon_inv_uploading')}</span>}
       </div>
@@ -425,8 +447,11 @@ function PerformersSection({ t, prefill, kind }: {
   // ── Detail view ──
   if (openId && detail) {
     const booked = bookedIds.includes(detail.id);
+    // `lg:col-span-2`: this is a grid item of the performers/hosts pair, and an
+    // open profile takes the whole row rather than half of it — its own
+    // two-column split needs the width.
     return (
-      <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
+      <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7 lg:col-span-2">
         <button
           type="button"
           onClick={() => setOpenId(null)}
@@ -436,106 +461,121 @@ function PerformersSection({ t, prefill, kind }: {
           ← {t(copy.back)}
         </button>
 
-        <div className="flex items-center gap-3">
+        {/* Identity band — the avatar, name and phone read as a profile header
+            rather than as the first row of a form. */}
+        <div className="flex items-center gap-4">
           {detail.avatarUrl
-            ? <img src={getPhotoUrl(detail.avatarUrl)} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
-            : <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)' }} />}
+            ? <img src={getPhotoUrl(detail.avatarUrl)} alt="" style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(var(--rg-accent-rgb),0.4)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }} />
+            : <div style={{
+                width: 76, height: 76, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',
+                background: 'rgba(var(--rg-accent-rgb),0.16)', border: '2px solid rgba(var(--rg-accent-rgb),0.4)',
+                color: 'var(--rg-accent)', fontSize: 30, fontWeight: 700, fontFamily: "'Playfair Display', Georgia, serif",
+              }}>{detail.displayName.trim().charAt(0).toUpperCase() || '·'}</div>}
           <div className="min-w-0">
-            <p className="text-lg font-bold text-white">{detail.displayName}</p>
+            <p className="rg-display truncate text-xl text-white sm:text-2xl">{detail.displayName}</p>
+            {detail.phone && (
+              <a
+                href={`tel:${detail.phone}`}
+                className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold"
+                style={{ color: 'var(--rg-accent)', textDecoration: 'none' }}
+              >
+                <span aria-hidden>☎</span>{detail.phone}
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Description and phone — what a guest decides on. */}
-        {detail.bio && (
-          <div className="grid gap-1">
-            <span className="rg-label">{t('pf_bio')}</span>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', whiteSpace: 'pre-wrap' }}>{detail.bio}</p>
-          </div>
-        )}
+        <SectionMark />
 
-        {detail.phone && (
-          <div className="grid gap-1">
-            <span className="rg-label">{t('pf_phone')}</span>
-            <a
-              href={`tel:${detail.phone}`}
-              className="text-sm font-semibold"
-              style={{ color: 'var(--rg-accent)', textDecoration: 'none' }}
-            >
-              {detail.phone}
-            </a>
-          </div>
-        )}
-
-        {detail.photos.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {detail.photos.map((url) => (
-              <img key={url} src={getPhotoUrl(url)} alt="" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 10 }} />
-            ))}
-          </div>
-        )}
-
-        {detail.videos.length > 0 && (
-          <div className="grid gap-2">
-            {detail.videos.map((url) => (
-              <video key={url} src={getPhotoUrl(url)} controls preload="metadata"
-                style={{ width: '100%', borderRadius: 10, background: '#000' }} />
-            ))}
-          </div>
-        )}
-
-        {booked ? (
-          <p className="text-sm" style={{ color: '#86efac' }}>{t(copy.booked)}</p>
-        ) : (
-          <>
-            <div className="grid gap-1.5">
-              <label className="rg-label">{t('addon_pf_your_name')}</label>
-              <input className="rg-input" value={contactName} onChange={(e) => setContactName(e.target.value)} />
-            </div>
-            <div className="grid gap-1.5">
-              <label className="rg-label">{t('addon_inv_phone')}</label>
-              <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-
-            {/* Hosts only, and required: a host runs to the programme, so the
-                request is not answerable without it. */}
-            {isHost && (
-              <div className="grid gap-1.5">
-                <label className="rg-label">{t('addon_hs_program')}</label>
-                <textarea
-                  className="rg-input"
-                  rows={6}
-                  placeholder={t('addon_hs_program_hint')}
-                  value={program}
-                  onChange={(e) => setProgram(e.target.value)}
-                />
-                {!program.trim() && (
-                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    {t('addon_hs_program_required')}
-                  </span>
-                )}
+        {/* On a desktop the media sits beside the booking form instead of above
+            it, so the decision and the request are on screen together. */}
+        <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-7">
+          <div className="space-y-4">
+            {detail.bio && (
+              <div className="grid gap-1">
+                <span className="rg-label">{t('pf_bio')}</span>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{detail.bio}</p>
               </div>
             )}
 
-            <div className="grid gap-1.5">
-              <label className="rg-label">{t(copy.note)} ({t('addon_inv_optional')})</label>
-              <textarea className="rg-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-            </div>
-            {error && <p className="text-sm" style={{ color: '#fca5a5' }}>{error}</p>}
-            <button
-              type="button"
-              disabled={!canBook}
-              onClick={() => void book(detail.id)}
-              className="w-full rounded-xl py-3 text-sm font-bold transition-all"
-              style={{
-                background: canBook ? 'var(--rg-accent)' : 'rgba(255,255,255,0.12)',
-                color: canBook ? 'var(--rg-bg)' : 'rgba(255,255,255,0.4)',
-                cursor: canBook ? 'pointer' : 'default',
-              }}
-            >
-              {busy ? t('addon_inv_sending') : t('addon_pf_book')}
-            </button>
-          </>
-        )}
+            {detail.photos.length > 0 && (
+              <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(min(104px, 100%), 1fr))' }}>
+                {detail.photos.map((url) => (
+                  <img key={url} src={getPhotoUrl(url)} alt=""
+                    style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 12, display: 'block', border: '1px solid rgba(255,255,255,0.1)' }} />
+                ))}
+              </div>
+            )}
+
+            {detail.videos.length > 0 && (
+              <div className="grid gap-2">
+                {detail.videos.map((url) => (
+                  <video key={url} src={getPhotoUrl(url)} controls preload="metadata"
+                    style={{ width: '100%', borderRadius: 12, background: '#000' }} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {booked ? (
+              <p className="text-sm" style={{ color: '#86efac' }}>{t(copy.booked)}</p>
+            ) : (
+              <>
+                <div className="grid gap-1.5">
+                  <label className="rg-label">{t('addon_pf_your_name')}</label>
+                  <input className="rg-input" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="rg-label">{t('addon_inv_phone')}</label>
+                  <input className="rg-input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+
+                {/* Hosts only, and required: a host runs to the programme, so the
+                    request is not answerable without it. */}
+                {isHost && (
+                  <div className="grid gap-1.5">
+                    <label className="rg-label">{t('addon_hs_program')}</label>
+                    <textarea
+                      className="rg-input"
+                      rows={6}
+                      placeholder={t('addon_hs_program_hint')}
+                      value={program}
+                      onChange={(e) => setProgram(e.target.value)}
+                    />
+                    {!program.trim() && (
+                      <span className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                        {t('addon_hs_program_required')}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid gap-1.5">
+                  <label className="rg-label">{t(copy.note)} ({t('addon_inv_optional')})</label>
+                  <textarea className="rg-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+                </div>
+                {error && <p className="text-sm" style={{ color: '#fca5a5' }}>{error}</p>}
+                <button
+                  type="button"
+                  disabled={!canBook}
+                  onClick={() => void book(detail.id)}
+                  className="w-full rounded-xl py-3 text-sm font-bold transition-all"
+                  style={{
+                    background: canBook
+                      ? 'linear-gradient(135deg, var(--rg-accent-deep) 0%, var(--rg-accent) 55%, var(--rg-accent-soft) 100%)'
+                      : 'rgba(255,255,255,0.12)',
+                    color: canBook ? 'var(--rg-bg)' : 'rgba(255,255,255,0.4)',
+                    boxShadow: canBook ? '0 8px 24px -6px rgba(var(--rg-accent-rgb),0.6)' : 'none',
+                    cursor: canBook ? 'pointer' : 'default',
+                  }}
+                >
+                  {busy ? t('addon_inv_sending') : t('addon_pf_book')}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -544,8 +584,9 @@ function PerformersSection({ t, prefill, kind }: {
   return (
     <div className="rg-card tablet-fade-up space-y-4 p-5 sm:p-7">
       <div className="space-y-1">
-        <p className="text-lg font-bold text-white">{copy.icon} {t(copy.title)}</p>
+        <p className="rg-display text-lg text-white sm:text-xl">{copy.icon} {t(copy.title)}</p>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{t(copy.intro)}</p>
+        <SectionMark />
       </div>
 
       <div className="grid gap-1.5">
@@ -556,36 +597,68 @@ function PerformersSection({ t, prefill, kind }: {
       {performers === null && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>…</p>}
       {performers?.length === 0 && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t(copy.none)}</p>}
 
-      <div className="grid gap-2">
-        {(performers ?? []).map((p) => (
-          <div key={p.id} className="flex items-center gap-3 rounded-xl p-3"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {p.avatarUrl
-              ? <img src={getPhotoUrl(p.avatarUrl)} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              : <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(var(--rg-accent-rgb),0.18)', flexShrink: 0 }} />}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{p.displayName}</p>
-              {/* Availability is only meaningful once a date is chosen. */}
-              {p.available !== undefined && (
-                <span className="text-xs font-semibold" style={{ color: p.available ? '#86efac' : '#fca5a5' }}>
-                  {p.available ? t('addon_pf_available') : t('addon_pf_busy')}
+      <div className="grid gap-2.5">
+        {(performers ?? []).map((p) => {
+          const booked = bookedIds.includes(p.id);
+          return (
+            // The whole row opens the profile, not just the button — on a phone
+            // a 44px avatar and a name are a much easier target than a pill at
+            // the far edge. The button stays for the affordance.
+            <button
+              key={p.id}
+              type="button"
+              disabled={booked}
+              onClick={() => setOpenId(p.id)}
+              className="group flex w-full items-center gap-3.5 rounded-2xl p-3 text-left transition-all"
+              style={{
+                background: 'linear-gradient(150deg, rgba(255,255,255,0.075), rgba(255,255,255,0.03))',
+                border: '1px solid rgba(255,255,255,0.11)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)',
+                cursor: booked ? 'default' : 'pointer',
+              }}
+            >
+              <span className="relative flex-none">
+                {p.avatarUrl
+                  ? <img src={getPhotoUrl(p.avatarUrl)} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', display: 'block', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }} />
+                  : <span style={{
+                      width: 52, height: 52, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                      background: 'rgba(var(--rg-accent-rgb),0.16)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)',
+                      color: 'var(--rg-accent)', fontSize: 20, fontWeight: 700,
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                    }}>{p.displayName.trim().charAt(0).toUpperCase() || '·'}</span>}
+                {/* Availability as a dot on the avatar, the way a presence
+                    indicator reads — only once a date makes it meaningful. */}
+                {p.available !== undefined && (
+                  <span aria-hidden style={{
+                    position: 'absolute', right: -1, bottom: -1, width: 14, height: 14, borderRadius: '50%',
+                    background: p.available ? '#4ade80' : '#f87171',
+                    border: '2px solid var(--rg-bg)',
+                  }} />
+                )}
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] font-bold text-white">{p.displayName}</span>
+                {p.available !== undefined && (
+                  <span className="text-xs font-semibold" style={{ color: p.available ? '#86efac' : '#fca5a5' }}>
+                    {p.available ? t('addon_pf_available') : t('addon_pf_busy')}
+                  </span>
+                )}
+              </span>
+
+              {booked ? (
+                <span className="flex-none text-xs font-semibold" style={{ color: '#86efac' }}>✓</span>
+              ) : (
+                <span
+                  className="flex-none rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors"
+                  style={{ background: 'rgba(var(--rg-accent-rgb),0.14)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }}
+                >
+                  {t('addon_pf_view')}
                 </span>
               )}
-            </div>
-            {bookedIds.includes(p.id) ? (
-              <span className="text-xs font-semibold" style={{ color: '#86efac' }}>✓</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setOpenId(p.id)}
-                className="rounded-xl px-3 py-1.5 text-xs font-semibold"
-                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.18)', cursor: 'pointer' }}
-              >
-                {t('addon_pf_view')}
-              </button>
-            )}
-          </div>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -616,21 +689,25 @@ export const AdditionalServicesView = ({
   const logoSrc = restaurantLogoUrl ? getPhotoUrl(restaurantLogoUrl) : null;
 
   return (
-    <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-12 sm:px-6" style={themeStyle}>
+    <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-8 sm:px-6 lg:py-12" style={themeStyle}>
       <PageBackground />
-      <div className="relative mx-auto max-w-md space-y-6">
+      {/* The page was capped at max-w-md — a phone column, centred, whatever the
+          screen. It now widens in steps: one column on a phone, a wider single
+          column on a tablet, and on a desktop the hero runs full width with the
+          three sections laid out beneath it (see the grid below). */}
+      <div className="relative mx-auto w-full max-w-md space-y-6 lg:max-w-6xl lg:space-y-8">
 
         <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src={logoSrc ?? networkingLogoSrc}
               alt={restaurantName ?? 'logo'}
-              className="h-10 sm:h-12"
+              className="h-10 sm:h-12 lg:h-14"
               style={{ width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
             <div className="min-w-0">
               {restaurantName && <p className="rg-label truncate">{restaurantName}</p>}
-              <p className="truncate text-lg font-bold text-white">{t('addon_services')}</p>
+              <p className="rg-display truncate text-lg text-white lg:text-2xl">{t('addon_services')}</p>
             </div>
           </div>
           <select
@@ -643,10 +720,20 @@ export const AdditionalServicesView = ({
           </select>
         </header>
 
-        <div className="rg-card tablet-fade-up space-y-5 p-6 text-center sm:p-10" style={{ animationDelay: '80ms' }}>
+        {/* Hero. Stacked and centred on a phone; on a desktop it turns on its
+            side so it reads as a masthead instead of a tall centred column with
+            a lot of air in it. */}
+        <div
+          className="rg-card tablet-fade-up p-6 text-center sm:p-10 lg:flex lg:items-center lg:gap-8 lg:p-9 lg:text-left"
+          style={{ animationDelay: '80ms' }}
+        >
           <div
-            className="scale-in mx-auto flex h-20 w-20 items-center justify-center rounded-full"
-            style={{ background: 'rgba(var(--rg-accent-rgb),0.15)', border: '2px solid rgba(var(--rg-accent-rgb),0.4)' }}
+            className="scale-in mx-auto flex h-20 w-20 flex-none items-center justify-center rounded-full lg:mx-0"
+            style={{
+              background: 'radial-gradient(circle at 30% 25%, rgba(var(--rg-accent-rgb),0.28), rgba(var(--rg-accent-rgb),0.10))',
+              border: '2px solid rgba(var(--rg-accent-rgb),0.45)',
+              boxShadow: '0 0 34px -8px rgba(var(--rg-accent-rgb),0.6)',
+            }}
           >
             <svg className="h-10 w-10" style={{ color: 'var(--rg-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -654,15 +741,14 @@ export const AdditionalServicesView = ({
             </svg>
           </div>
 
-          {eventNumber != null && (
-            <p className="font-mono text-sm" style={{ color: 'rgba(var(--rg-accent-rgb),0.75)' }}>
-              {t('addon_services_for_event')} #{eventNumber}
-            </p>
-          )}
-
-          <div className="space-y-2">
-            <p className="text-xl font-bold text-white">{t('addon_services')}</p>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+          <div className="mt-5 min-w-0 flex-1 space-y-2 lg:mt-0">
+            {eventNumber != null && (
+              <p className="font-mono text-sm" style={{ color: 'rgba(var(--rg-accent-rgb),0.75)' }}>
+                {t('addon_services_for_event')} #{eventNumber}
+              </p>
+            )}
+            <p className="rg-display text-xl text-white lg:text-3xl">{t('addon_services')}</p>
+            <p className="text-sm lg:max-w-2xl" style={{ color: 'rgba(255,255,255,0.6)' }}>
               {unavailable ? t('addon_services_unavailable') : t('addon_services_intro')}
             </p>
           </div>
@@ -671,7 +757,7 @@ export const AdditionalServicesView = ({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all"
+              className="mt-5 inline-flex w-full flex-none items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all lg:mt-0 lg:w-auto"
               style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.15)' }}
             >
               ← {t('back')}
@@ -679,24 +765,31 @@ export const AdditionalServicesView = ({
           )}
         </div>
 
-        {/* Sections stack in order: invitations, performers, hosts. */}
+        {/* Sections in order: invitations, performers, hosts.
+
+            On a desktop the invitation form spans the full width (it is long,
+            and its own fields go two-up inside), and performers and hosts sit
+            side by side beneath it — they are short lists and the same shape,
+            so pairing them is what removes most of the scrolling. */}
         {!unavailable && (
-          <>
+          <div className="space-y-6 lg:space-y-8">
             <InvitationSection
               t={t}
               prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
             />
-            <PerformersSection
-              kind="performer"
-              t={t}
-              prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
-            />
-            <PerformersSection
-              kind="host"
-              t={t}
-              prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
-            />
-          </>
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
+              <PerformersSection
+                kind="performer"
+                t={t}
+                prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
+              />
+              <PerformersSection
+                kind="host"
+                t={t}
+                prefill={{ ...prefill, restaurantName: prefill?.restaurantName || restaurantName || '' }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </main>

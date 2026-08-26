@@ -1372,3 +1372,32 @@ per-primitive detail.
    treatment as well as the new palette.
 5. A long page in a **narrow window** — the `.adm-heading` tick and the new badge
    pill should not wrap oddly.
+
+## 27. Additional Services desktop layout + performer profile redesign
+
+Frontend-only again; `./deploy.sh` is sufficient, no migration, no new env var.
+The §25 cache note still applies.
+
+- **Additional Services** (`banquet.v-menu.uz/<slug>` without the banquet module,
+  and the tablet's confirmed screen) now has a real desktop layout instead of a
+  centred phone column. Check it at ≥1024px: hero horizontal, invitation form
+  two-up, performers and hosts side by side. Then check it at 390px — this page
+  is opened from a phone far more often than from a desktop, and that is the
+  layout that must not have regressed.
+- **Open a performer, then a host** on a desktop: the profile should take the
+  full row, with photos/videos on the left and the booking form on the right.
+  For a host, the programme field is still required (server-enforced).
+- **The performer/host profile page** (`performer.v-menu.uz/profile`) is now a
+  social-style profile. The name is an inline-editable heading — confirm it
+  shows a field outline on hover and focus, or nobody will know it is editable.
+- **The native "Обзор…" file button is gone** from these pages, replaced by
+  styled "＋ Add" controls. Worth one keyboard pass: Tab should still reach each
+  upload control and Space/Enter should open the picker (the real input is
+  visually hidden, not removed).
+- **Three new i18n keys** — `pf_hidden`, `pf_add`, `pf_gallery_empty` — added in
+  en/ru/uz. `TranslationKey` derives from `resources.en` only, so a missing ru/uz
+  string fails silently at runtime; all three were added together.
+- **One more stale colour fixed**: the Additional Services background carried a
+  hardcoded green blob (`rgba(60,110,50,…)`) from the kiosk's old palette, so it
+  ignored the restaurant's theme. Both blobs are the accent now — check the page
+  on a restaurant with a custom `tabletAccentColor`.
