@@ -115,6 +115,15 @@ export function readableText(bg: string | null | undefined): string {
   return luminance < 0.5 ? '#f5f5f5' : TEXT;
 }
 
+// ── Image loading ────────────────────────────────────────────────────────────
+// Gallery tiles, promo art, the logo block and the attribution mark are
+// `loading="lazy"`: they sit below the fold, and the block wrapping them starts
+// at opacity 0 anyway, so the fetch lands right about when the reveal does.
+//
+// The `hero` and `image` blocks get `decoding="async"` but stay EAGER. Every
+// plaque template opens with one, so it is the page's main image on a phone
+// that has just been tapped against a tag — deferring the one picture the
+// visitor came to see is the wrong trade even though it is the largest.
 const img = (u?: string | null) => (u ? (getPhotoUrl(u) ?? u) : null);
 const arr = <T,>(p: BlockProps, k: string): T[] => (Array.isArray(p[k]) ? (p[k] as T[]) : []);
 
@@ -166,7 +175,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       if (bool(p, 'useLogo')) {
         const logo = img(ctx.logoUrl);
         if (!logo) return <Placeholder label="Logo" />;
-        return <div style={{ padding: '16px 16px', textAlign: 'center' }}><img src={logo} alt="" style={{ maxWidth: 200, maxHeight: 150, width: 'auto', height: 'auto', objectFit: 'contain', display: 'inline-block' }} /></div>;
+        return <div style={{ padding: '16px 16px', textAlign: 'center' }}><img src={logo} alt="" loading="lazy" decoding="async" style={{ maxWidth: 200, maxHeight: 150, width: 'auto', height: 'auto', objectFit: 'contain', display: 'inline-block' }} /></div>;
       }
       const src = img(str(p, 'url'));
       if (!src) return <Placeholder label="Image" />;
@@ -179,7 +188,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       if (showTimer) {
         return (
           <div style={{ position: 'relative', padding: rounded ? '12px 16px' : 0 }}>
-            <img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: rounded ? 16 : 0 }} />
+            <img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block', borderRadius: rounded ? 16 : 0 }} />
             <div style={{ position: 'absolute', left: rounded ? 16 : 0, right: rounded ? 16 : 0, bottom: rounded ? 12 : 0, paddingTop: 40, borderRadius: rounded ? '0 0 16px 16px' : 0, background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.28) 55%, rgba(0,0,0,0) 100%)' }}>
               <CountdownView targetAt={timerAt} label={str(p, 'timerLabel')} accent={accent} light />
             </div>
@@ -187,8 +196,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
         );
       }
       return rounded
-        ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
-        : <img src={src} alt="" style={{ width: '100%', display: 'block' }} />;
+        ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
+        : <img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block' }} />;
     }
     case 'video':
       return <VideoView p={p} />;
@@ -485,7 +494,7 @@ function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { item
             return (
               <div key={i} onClick={() => video && window.open(video, '_blank', 'noopener,noreferrer')}
                 style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '3/4', cursor: video ? 'pointer' : 'default' }}>
-                {s && <img src={s} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                {s && <img src={s} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                 {video && <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, border: '2px solid rgba(255,255,255,0.85)' }}>▶</span>}
               </div>
             );
@@ -587,7 +596,7 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
     <section style={{ padding: '16px' }}>
       <div style={{ borderRadius: 16, overflow: 'hidden', background: '#fdfcf8', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
         <div style={{ position: 'relative' }}>
-          {src ? <img src={src} alt="" style={{ width: '100%', display: 'block' }} /> : <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>{str(p, 'title', 'Promo')}</div>}
+          {src ? <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} /> : <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>{str(p, 'title', 'Promo')}</div>}
           {str(p, 'code') && <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: accent, color: '#0f0f0f', padding: '6px 18px', borderRadius: 999, fontWeight: 800, fontSize: 14 }}>{str(p, 'code')}</div>}
         </div>
         {str(p, 'subtitle') && <p style={{ margin: 0, padding: '12px 16px', fontSize: fs(12), textAlign: 'center', fontWeight: 600, color: str(p, 'textColor') || 'inherit', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{str(p, 'subtitle')}</p>}
@@ -888,7 +897,7 @@ export function VConnectFooter({ label, color }: { label: string; color?: string
       <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: ink, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', textAlign: 'center', textTransform: 'uppercase', opacity: 0.75 }}>
         {label}
       </span>
-      <img src={networkingLogoSrc} alt="V-connect" style={{ height: 60, width: 'auto' }} />
+      <img src={networkingLogoSrc} alt="V-connect" loading="lazy" decoding="async" style={{ height: 60, width: 'auto' }} />
       <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.03em', color: ink, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         V-CONNECT
       </span>

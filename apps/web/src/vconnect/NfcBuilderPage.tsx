@@ -11,6 +11,7 @@ import { translate } from '../utils/translate';
 import { buildPlaqueUrl } from '../utils/subdomain';
 import { BlockEditor } from '../blocks/BlockEditor';
 import { createBlock, type Block } from '../blocks/types';
+import { plaqueSig as sig, themePayload } from './plaqueDraft';
 import { LinkQrButton } from '../components/LinkQrButton';
 import { VC_LOGO } from './branding';
 
@@ -53,10 +54,9 @@ function errText(e: unknown): string {
   return e instanceof Error ? e.message : 'Error';
 }
 
-// A stable signature of everything persisted — drives the dirty check.
-function sig(businessName: string, slug: string, isPublished: boolean, blocks: Block[], theme: DesignTheme): string {
-  return JSON.stringify({ businessName, slug, isPublished, blocks, theme });
-}
+// How long the editor waits after the last change before persisting. Matches
+// the flyer builder.
+const AUTOSAVE_MS = 900;
 
 // ── nfc.v-connect.uz/plaques/:id — the plaque designer ───────────────────────
 // Same shared block designer the flyer tool uses, wrapped in the v-connect
@@ -89,17 +89,33 @@ export const NfcBuilderPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const savedSigRef = useRef('');
+  // Signature of the save currently in flight — see the mutationFn.
+  const pendingSigRef = useRef('');
+  // The id of a plaque this editor created. `plaqueId` comes from the route and
+  // only updates after onSuccess navigates, so between the create resolving and
+  // that re-render the mutationFn would still see an empty id and POST a SECOND
+  // plaque. That window is narrow but reachable now that saves fire on a timer
+  // rather than on a click.
+  const createdIdRef = useRef('');
+  // The signature of the last save that FAILED. Auto-save re-evaluates whenever
+  // a request settles, so without this a permanent error — a taken address, an
+  // expired session — would be retried every AUTOSAVE_MS for as long as the tab
+  // stayed open. Editing anything changes the signature and lets it try again.
+  const failedSigRef = useRef('');
 
   // Load an existing plaque, or seed a new one once.
   useEffect(() => {
     if (initialized) return;
     if (plaqueId && !existing) return;
     if (existing) {
-      setBusinessName(existing.businessName);
-      setSlug(existing.slug);
-      setSlugTouched(true);
-      setBlocks(existing.blocks ?? []);
-      setTheme({
+      // Built as a local first: the baseline signature below has to be taken
+      // from the theme being loaded, not from the `theme` state variable, which
+      // still holds the previous render's value (PLAQUE_THEME on a first load)
+      // because `setTheme` has not committed yet. Reading the state there made
+      // every plaque open dirty, and with auto-save that is an immediate
+      // pointless write on every visit to the editor.
+      const loadedBlocks = existing.blocks ?? [];
+      const loadedTheme: DesignTheme = {
         accentColor: existing.accentColor ?? undefined,
         backgroundColor: existing.backgroundColor ?? undefined,
         backgroundImageUrl: existing.backgroundImageUrl ?? undefined,
@@ -112,16 +128,19 @@ export const NfcBuilderPage = () => {
         trailTemplate: existing.trailTemplate ?? 'sparkle',
         trailColor: existing.trailColor ?? undefined,
         trailImageUrl: existing.trailImageUrl ?? undefined,
-      });
+      };
+      setBusinessName(existing.businessName);
+      setSlug(existing.slug);
+      setSlugTouched(true);
+      setBlocks(loadedBlocks);
+      setTheme(loadedTheme);
       setIsPublished(existing.isPublished);
-      savedSigRef.current = sig(existing.businessName, existing.slug, existing.isPublished, existing.blocks ?? [], theme);
+      savedSigRef.current = sig(existing.businessName, existing.slug, existing.isPublished, loadedBlocks, loadedTheme);
       setChosen(true);
     }
     // A new plaque stays empty until `applyTemplate` runs — the chooser below
     // gates the editor, so seeding here would be thrown away.
     setInitialized(true);
-    // theme is intentionally excluded: it is being initialised here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing, plaqueId, initialized]);
 
   // A new plaque derives its address from the business name until the maker
@@ -165,34 +184,70 @@ export const NfcBuilderPage = () => {
     slug,
     blocks,
     isPublished,
-    ...theme,
+    ...themePayload(theme),
   });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (plaqueId) return nfcPlaqueService.update(plaqueId, payload());
+      // The signature of exactly what this request carries. Recorded here, not
+      // in onSuccess, because an edit made WHILE the request is in flight would
+      // otherwise be marked as saved when it completes: the editor would show
+      // "saved", the button would go disabled, and that change would never be
+      // sent. Changing a block's colour and immediately pausing is the easiest
+      // way to hit it, which is what made colours look like they did not stick.
+      pendingSigRef.current = sig(businessName.trim(), slug, isPublished, blocks, theme);
+      const id = plaqueId || createdIdRef.current;
+      if (id) return nfcPlaqueService.update(id, payload());
       return nfcPlaqueService.create({ ...payload(), businessName: businessName.trim(), slug });
     },
     onMutate: () => { setSaveState('saving'); setError(null); },
     onSuccess: async (saved) => {
-      savedSigRef.current = currentSig;
+      createdIdRef.current = saved.id;
+      savedSigRef.current = pendingSigRef.current;
       setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 1800);
+      setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1800);
       await queryClient.invalidateQueries({ queryKey: ['nfc-plaques'] });
       if (!plaqueId) navigate(`/plaques/${saved.id}`, { replace: true });
     },
-    onError: (e) => { setSaveState('error'); setError(errText(e)); },
+    onError: (e) => {
+      failedSigRef.current = pendingSigRef.current;
+      setSaveState('error');
+      setError(errText(e));
+    },
   });
 
   const validSlug = /^[a-z0-9-]{3,60}$/.test(slug);
   const canSave = businessName.trim().length > 0 && validSlug && !saveMutation.isPending;
 
-  // Publishing is a save with the flag flipped, so the switch never leaves the
-  // page in a state where the public URL disagrees with what was saved.
-  const togglePublish = () => {
-    setIsPublished((v) => !v);
-    setTimeout(() => saveMutation.mutate(), 0);
-  };
+  // ── Auto-save ──────────────────────────────────────────────────────────────
+  // Same mechanism as the flyer builder: any change to the persisted signature
+  // starts a debounce, and the timer restarts on the next keystroke so a burst
+  // of edits is one write. Nothing here can fire before `initialized`, and a new
+  // plaque waits for the template chooser (`chosen`) — otherwise opening the
+  // editor would create an empty plaque nobody asked for.
+  //
+  // A save is skipped while the name or address is invalid rather than being
+  // attempted and failed: the address is typed character by character, and every
+  // prefix shorter than three characters would otherwise be a rejected request.
+  const canAutoSave = initialized && chosen && businessName.trim().length > 0 && validSlug;
+  useEffect(() => {
+    if (!canAutoSave) return;
+    if (currentSig === savedSigRef.current) return;
+    if (saveMutation.isPending) return;
+    // Do not re-attempt exactly what just failed; see failedSigRef.
+    if (currentSig === failedSigRef.current) return;
+    const h = window.setTimeout(() => saveMutation.mutate(), AUTOSAVE_MS);
+    return () => window.clearTimeout(h);
+    // saveMutation is recreated every render; depending on it would restart the
+    // debounce on each keystroke's re-render and never let it elapse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSig, canAutoSave, saveMutation.isPending]);
+
+  // Publishing just flips the flag — auto-save persists it, so the switch can no
+  // longer leave the public URL disagreeing with what was saved. It used to fire
+  // a save from a `setTimeout(…, 0)` to read the state React had not committed
+  // yet, which is a race this removes rather than tightens.
+  const togglePublish = () => setIsPublished((v) => !v);
 
   if (plaqueId && existingQuery.isLoading) {
     return (
@@ -246,6 +301,8 @@ export const NfcBuilderPage = () => {
             <button type="button" className="vc-btn vc-btn-ghost" style={{ fontSize: 12.5 }} onClick={togglePublish} disabled={!canSave}>
               {isPublished ? t('vc_unpublish') : t('vc_publish')}
             </button>
+            {/* Auto-save covers the normal case; this stays as an explicit
+                "save now" that skips the debounce. */}
             <button type="button" className="vc-btn vc-btn-primary" style={{ fontSize: 12.5 }} onClick={() => saveMutation.mutate()} disabled={!canSave || !dirty}>
               {t('save')}
             </button>

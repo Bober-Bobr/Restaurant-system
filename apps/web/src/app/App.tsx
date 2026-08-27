@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
 import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
@@ -23,7 +23,6 @@ import { FlyerRequestsPage } from '../pages/FlyerRequestsPage';
 import { TemplateEditorPage } from '../pages/TemplateEditorPage';
 import { InvitationSubdomainDispatcher } from '../pages/PublicGuestInvitationPage';
 import { PublicInvitationPage } from '../pages/PublicInvitationPage';
-import { CateringSite } from '../pages/CateringSite';
 import { EmployeeEventsPage } from '../pages/EmployeeEventsPage';
 import { EmployeeLayout } from './EmployeeLayout';
 import { CalendarPage } from '../pages/CalendarPage';
@@ -53,13 +52,36 @@ import { FoodEmployeeStatsPage } from '../pages/FoodEmployeeStatsPage';
 import { PerformerProfilePage } from '../pages/PerformerProfilePage';
 import { PerformerCalendarPage } from '../pages/PerformerCalendarPage';
 import { PerformerBookingsPage } from '../pages/PerformerBookingsPage';
-import { VInviteApp } from '../vinvite/VInviteApp';
-import { NfcApp } from '../vconnect/NfcApp';
 import { VConnectLoginPage } from '../vconnect/VConnectLoginPage';
 import { PublicPlaquePage } from '../vconnect/PublicPlaquePage';
 import '../vconnect/vconnect.css';
-import { PublicVInvitePage } from '../vinvite/PublicVInvitePage';
-import { FoodSiteApp } from '../foodsite/FoodSiteApp';
+
+// ── Code splitting ───────────────────────────────────────────────────────────
+// One SPA serves five products, and the host decides which one a visitor gets —
+// so a visitor only ever runs ONE of these. Imported eagerly they all landed in
+// the entry chunk, which is how tapping an NFC tag came to download the twelve
+// rich invitation templates: `vinvite/templates` alone is ~1.1 MB of inlined
+// HTML, and nothing outside `vinvite/` references it.
+//
+// These are the product roots, not individual routes: each is the single
+// component a host resolves to, so splitting here costs at most one extra
+// request on a path that was already fetching its own data.
+//
+// `PublicPlaquePage` is deliberately NOT split. It is the page behind an NFC
+// tag — the one load that has to be fast on a cold phone — so it stays in the
+// entry chunk rather than paying a second round trip to start rendering.
+const VInviteApp = lazy(() => import('../vinvite/VInviteApp').then((m) => ({ default: m.VInviteApp })));
+const PublicVInvitePage = lazy(() => import('../vinvite/PublicVInvitePage').then((m) => ({ default: m.PublicVInvitePage })));
+const NfcApp = lazy(() => import('../vconnect/NfcApp').then((m) => ({ default: m.NfcApp })));
+const FoodSiteApp = lazy(() => import('../foodsite/FoodSiteApp').then((m) => ({ default: m.FoodSiteApp })));
+const CateringSite = lazy(() => import('../pages/CateringSite').then((m) => ({ default: m.CateringSite })));
+
+// Nothing branded: each product paints its own background within a frame or two
+// of this appearing, and a themed splash here would be the WRONG brand for four
+// of the five.
+function Chunk({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>{children}</Suspense>;
+}
 
 export const App = () => {
   const handledRef = useRef(false);
@@ -80,10 +102,10 @@ export const App = () => {
   // <name>.v-invite.uz → a published invitation site; the root host → the app.
   const inviteSiteSlug = getInviteSiteSlug();
   if (inviteSiteSlug) {
-    return <PublicVInvitePage slug={inviteSiteSlug} />;
+    return <Chunk><PublicVInvitePage slug={inviteSiteSlug} /></Chunk>;
   }
   if (isInviteRootDomain()) {
-    return <VInviteApp />;
+    return <Chunk><VInviteApp /></Chunk>;
   }
 
   if (!handledRef.current) {
@@ -106,7 +128,7 @@ export const App = () => {
   // nfc.v-connect.uz → the builder (it consumes the _at/_rt handoff above);
   // v-connect.uz/login → sign-in; v-connect.uz/<slug> → a published plaque.
   if (isConnectHost()) {
-    if (isNfcBuilderHost()) return <NfcApp />;
+    if (isNfcBuilderHost()) return <Chunk><NfcApp /></Chunk>;
     const plaqueSlug = getPlaqueSlug();
     if (plaqueSlug) {
       return <PublicPlaquePage slug={plaqueSlug} />;
@@ -126,13 +148,13 @@ export const App = () => {
   // falling through — otherwise it would reach the RoleRoutes fallback and show
   // an admin shell to a stranger.
   if (isFoodSiteHost()) {
-    return <FoodSiteApp slug={getFoodSiteSlug()} />;
+    return <Chunk><FoodSiteApp slug={getFoodSiteSlug()} /></Chunk>;
   }
 
   // Catering site (v-menu.uz/<slug>) → the live public catering site
   const cateringSlug = getCateringSlug();
   if (cateringSlug) {
-    return <CateringSite slug={cateringSlug} />;
+    return <Chunk><CateringSite slug={cateringSlug} /></Chunk>;
   }
 
   // Flyer host (event.v-menu.uz or <restaurant>.event.v-menu.uz) → public flyer,

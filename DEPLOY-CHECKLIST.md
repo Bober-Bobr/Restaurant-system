@@ -1401,3 +1401,49 @@ The §25 cache note still applies.
   hardcoded green blob (`rgba(60,110,50,…)`) from the kiosk's old palette, so it
   ignored the restaurant's theme. Both blobs are the accent now — check the page
   on a restaurant with a custom `tabletAccentColor`.
+
+## 28. v-connect: plaque auto-save + bundle split
+
+Frontend-only. **No service-worker bump** — `vmenu-v7` from §25 has not shipped
+yet and this rides along with it. Asset filenames are content-hashed, so the new
+chunks are fetched fresh regardless; only `/index.html` matters, and §21's
+no-cache header is what makes that land.
+
+### The bundle split is the headline
+
+The entry chunk went from **736 kB to 207 kB gzip**. Five product roots
+(`VInviteApp`, `PublicVInvitePage`, `NfcApp`, `FoodSiteApp`, `CateringSite`) are
+now lazy-loaded — an NFC tap was downloading all twelve rich invitation
+templates (~1.1 MB of inlined HTML) to render a plaque.
+
+`dist/assets/` now holds several JS chunks instead of one. `deploy.sh` copies the
+whole `dist/`, so nothing changes operationally — but if anything in nginx or a
+CDN rule assumes a single bundle file, that assumption is now wrong.
+
+**After deploying, hard-reload each host once** and confirm no chunk 404s in the
+console: `v-invite.uz`, a published invitation, `nfc.v-connect.uz`,
+`test.v-menu.uz/<slug>`, `v-menu.uz/<slug>`. A missing chunk shows as a blank
+page, because the Suspense fallback is blank by design.
+
+### Plaque editor
+
+- Open an existing plaque and **change nothing**. It must NOT save. Previously
+  the dirty check compared against a stale theme, so every open was "changed" —
+  and with auto-save that is a pointless write on every visit.
+- Change a block's colour and wait ~1 s → it saves by itself. Reload → the colour
+  is there. This is the reported bug, and it had two causes: a cleared value was
+  never transmitted (undefined keys are dropped by `JSON.stringify`), and an edit
+  made during an in-flight save was marked saved without being sent.
+- **Clear** a colour or remove the background image → reload → it stays cleared.
+- Type an address already in use → it fails once and stops. It must not retry in
+  a loop; editing the address lets it try again.
+- Create a new plaque and type quickly through the name → exactly one plaque is
+  created, not several.
+- Publish/unpublish now just flips the flag and lets auto-save persist it; the
+  old `setTimeout(…, 0)` race is gone.
+
+### Not done
+
+The banquet admin app (~40 pages) is still in the entry chunk. Splitting it is
+the next lever if the public pages need to get smaller, but it touches routing
+for every role and was out of scope here.
