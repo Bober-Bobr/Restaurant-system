@@ -243,6 +243,31 @@ export const NfcBuilderPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSig, canAutoSave, saveMutation.isPending]);
 
+  // The debounce means a change can still be sitting unsaved when the maker
+  // closes the tab or switches away — and with the Save button gone there is no
+  // longer anything they could have pressed instead. Hiding the tab flushes it.
+  // `visibilitychange` rather than `beforeunload`: mobile Safari often never
+  // fires the latter, and this is a tool people use on a phone beside the tag.
+  //
+  // The values are read through a ref so the listener does not need re-binding
+  // on every keystroke.
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
+    if (!canAutoSave) return;
+    if (currentSig === savedSigRef.current) return;
+    if (saveMutation.isPending) return;
+    if (currentSig === failedSigRef.current) return;
+    saveMutation.mutate();
+  };
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushRef.current(); };
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      flushRef.current();
+    };
+  }, []);
+
   // Publishing just flips the flag — auto-save persists it, so the switch can no
   // longer leave the public URL disagreeing with what was saved. It used to fire
   // a save from a `setTimeout(…, 0)` to read the state React had not committed
@@ -301,11 +326,6 @@ export const NfcBuilderPage = () => {
             <button type="button" className="vc-btn vc-btn-ghost" style={{ fontSize: 12.5 }} onClick={togglePublish} disabled={!canSave}>
               {isPublished ? t('vc_unpublish') : t('vc_publish')}
             </button>
-            {/* Auto-save covers the normal case; this stays as an explicit
-                "save now" that skips the debounce. */}
-            <button type="button" className="vc-btn vc-btn-primary" style={{ fontSize: 12.5 }} onClick={() => saveMutation.mutate()} disabled={!canSave || !dirty}>
-              {t('save')}
-            </button>
           </div>
         </div>
 
@@ -336,8 +356,22 @@ export const NfcBuilderPage = () => {
         </div>
 
         {error && (
-          <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 18px 12px' }}>
+          <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 18px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <p style={{ margin: 0, fontSize: 12.5, color: 'var(--vc-danger)' }}>{error}</p>
+            {/* Auto-save will not re-attempt exactly what just failed (see
+                failedSigRef), so with no Save button this is the only way back
+                from a transient failure. It appears only on error. */}
+            {saveState === 'error' && (
+              <button
+                type="button"
+                className="vc-btn vc-btn-ghost"
+                style={{ fontSize: 12 }}
+                onClick={() => { failedSigRef.current = ''; saveMutation.mutate(); }}
+                disabled={!canSave}
+              >
+                {t('vc_retry')}
+              </button>
+            )}
           </div>
         )}
       </header>

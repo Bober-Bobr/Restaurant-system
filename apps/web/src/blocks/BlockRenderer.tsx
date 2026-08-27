@@ -115,6 +115,29 @@ export function readableText(bg: string | null | undefined): string {
   return luminance < 0.5 ? '#f5f5f5' : TEXT;
 }
 
+/**
+ * Several blocks are a solid pill that paints its OWN dark surface — the button,
+ * Save contact, the social rows, the menu header, the RSVP submit, the map
+ * button. Because the surface is fixed, the `color` the section wrapper sets
+ * never reached the label, so setting a block's text colour appeared to do
+ * nothing at all on exactly those blocks.
+ *
+ * `ink` is the block's EXPLICIT per-block colour, not the page-wide one — with
+ * none set every caller renders byte-identically to before, so no existing
+ * flyer or plaque changes appearance.
+ *
+ * When one is set the label takes it and the surface flips to light if the
+ * chosen ink is dark. Without that flip, picking a dark colour for one of these
+ * blocks would write near-black text onto a near-black pill: the setting would
+ * "work" and the block would go blank, which is worse than it not working.
+ */
+function pillSurface(ink: string | null, base: string, defaultFg: string): { bg: string; fg: string } {
+  if (!ink) return { bg: base, fg: defaultFg };
+  // readableText(ink) is a colour that contrasts with the ink: dark for a light
+  // ink (so the pill keeps its original dark surface), light for a dark one.
+  return { bg: readableText(ink) === TEXT ? base : '#f4f2ee', fg: ink };
+}
+
 // ── Image loading ────────────────────────────────────────────────────────────
 // Gallery tiles, promo art, the logo block and the attribution mark are
 // `loading="lazy"`: they sit below the fold, and the block wrapping them starts
@@ -153,6 +176,10 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
 function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
   const accent = ctx.accent;
+  // The block's OWN colour, if the designer set one — deliberately not falling
+  // back to ctx.text. The blocks below paint their own surface, and only an
+  // explicit choice should change it; see pillSurface.
+  const ink = str(p, 'textColor') || null;
   const fs = useFs();
   const fsH = useFsH();
   switch (block.type) {
@@ -202,7 +229,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'video':
       return <VideoView p={p} />;
     case 'button':
-      return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} /></div>;
+      return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} ink={ink} /></div>;
     case 'countdown':
       // No explicit target → count down to the linked event's start time.
       return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} accent={accent} />;
@@ -211,25 +238,25 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'gallery':
       return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} autoSlide={bool(p, 'autoSlide')} intervalMs={Math.max(1, typeof p.slideInterval === 'number' ? p.slideInterval : 4) * 1000} />;
     case 'menu':
-      return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} />;
+      return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} ink={ink} />;
     case 'link':
       return <LinkBar label={str(p, 'label', 'Link')} sublabel={str(p, 'sublabel')} action={p.action as ButtonAction | undefined} color={str(p, 'color')} accent={accent} />;
     case 'socials':
-      return <SocialsView title={str(p, 'title')} links={arr<SocialLink>(p, 'links')} accent={accent} />;
+      return <SocialsView title={str(p, 'title')} links={arr<SocialLink>(p, 'links')} accent={accent} ink={ink} />;
     case 'contacts':
       return <ContactsView p={p} accent={accent} />;
     case 'map':
-      return <MapView label={str(p, 'label', 'КАРТА')} address={str(p, 'address')} />;
+      return <MapView label={str(p, 'label', 'КАРТА')} address={str(p, 'address')} ink={ink} />;
     case 'promo':
       return <PromoCard p={p} accent={accent} />;
     case 'html':
       return <HtmlBlock html={str(p, 'html')} />;
     case 'rsvp':
-      return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} />;
+      return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} ink={ink} />;
     case 'form':
       return <LeadForm title={str(p, 'title')} subtitle={str(p, 'subtitle')} buttonLabel={str(p, 'buttonLabel')} showMessage={bool(p, 'showMessage')} accent={accent} brandName={ctx.brandName ?? null} submit={ctx.submitLead} />;
     case 'savecontact':
-      return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} />;
+      return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} ink={ink} />;
     case 'divider':
       return <Divider shape={str(p, 'shape', 'line')} text={str(p, 'text')} accent={accent} />;
     case 'vccontact':
@@ -307,7 +334,8 @@ function yandexMaps(address: string) {
   window.open(`https://yandex.com/maps/?text=${encodeURIComponent(address)}`, '_blank', 'noopener,noreferrer');
 }
 
-function ActionButton({ label, action, accent }: { label: string; action?: ButtonAction; accent: string }) {
+function ActionButton({ label, action, accent, ink }: { label: string; action?: ButtonAction; accent: string; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#000', accent);
   const fs = useFs();
   const onClick = () => {
     if (!action?.value) return;
@@ -316,15 +344,16 @@ function ActionButton({ label, action, accent }: { label: string; action?: Butto
     else window.open(action.value, '_blank', 'noopener,noreferrer');
   };
   return (
-    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#000', color: accent, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
+    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
   );
 }
 
-function MapView({ label, address }: { label: string; address: string }) {
+function MapView({ label, address, ink }: { label: string; address: string; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#000', '#fff');
   const fs = useFs();
   return (
     <div style={{ padding: '14px 24px', textAlign: 'center' }}>
-      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: '12px 40px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
+      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: '12px 40px', borderRadius: 999, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
     </div>
   );
 }
@@ -516,12 +545,13 @@ function navBtn(side: 'left' | 'right', accent: string): React.CSSProperties {
   return { position: 'absolute', top: '50%', transform: 'translateY(-50%)', [side]: 10, width: 36, height: 36, borderRadius: '50%', background: accent, color: '#fff', border: 'none', fontSize: 22, cursor: 'pointer' } as React.CSSProperties;
 }
 
-function MenuShowcase({ title, items, accent }: { title: string; items: MenuShowcaseItem[]; accent: string }) {
+function MenuShowcase({ title, items, accent, ink }: { title: string; items: MenuShowcaseItem[]; accent: string; ink?: string | null }) {
   const fs = useFs();
+  const surface = pillSurface(ink ?? null, '#000', accent);
   if (items.length === 0) return <Placeholder label="Menu" />;
   return (
     <div>
-      {title && <div style={{ background: '#000', color: accent, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: fs(14), letterSpacing: '0.3em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{title}</div>}
+      {title && <div style={{ background: surface.bg, color: surface.fg, padding: '10px 0', textAlign: 'center', fontWeight: 800, fontSize: fs(14), letterSpacing: '0.3em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{title}</div>}
       <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         {items.map((it, i) => {
           const left = i % 2 === 0;
@@ -541,8 +571,9 @@ function MenuShowcase({ title, items, accent }: { title: string; items: MenuShow
   );
 }
 
-function SocialsView({ title, links, accent }: { title: string; links: SocialLink[]; accent: string }) {
+function SocialsView({ title, links, accent, ink }: { title: string; links: SocialLink[]; accent: string; ink?: string | null }) {
   const fs = useFs();
+  const surface = pillSurface(ink ?? null, '#111', '#fff');
   const fsH = useFsH();
   return (
     <section style={{ padding: '24px 20px' }}>
@@ -550,7 +581,7 @@ function SocialsView({ title, links, accent }: { title: string; links: SocialLin
       {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fsH(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-h, system-ui, sans-serif)', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
-          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#111', borderRadius: 12, color: '#fff', textDecoration: 'none', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
+          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: surface.bg, borderRadius: 12, color: surface.fg, textDecoration: 'none', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
             <span style={{ width: 34, height: 34, borderRadius: 8, background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>@</span>
             <span style={{ fontSize: fs(13) }}>{l.label}</span>
           </a>
@@ -605,7 +636,8 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
   );
 }
 
-function RsvpForm({ title, accent, submit }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void> }) {
+function RsvpForm({ title, accent, submit, ink }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void>; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#000', '#fff');
   const fs = useFs();
   const fsH = useFsH();
   const [name, setName] = useState('');
@@ -631,7 +663,7 @@ function RsvpForm({ title, accent, submit }: { title: string; accent: string; su
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 360, margin: '0 auto' }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Напишите Имя" style={{ padding: '16px 18px', fontSize: fs(16), border: '1px solid currentColor', borderRadius: 2, outline: 'none', background: 'transparent', color: 'inherit', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'flex-start' }}>{radio(true, 'смогу присутствовать')}{radio(false, 'не смогу присутствовать')}</div>
-          <button type="button" onClick={go} disabled={state === 'sending' || !name.trim() || attending === null} style={{ alignSelf: 'center', padding: '14px 44px', borderRadius: 999, border: 'none', cursor: 'pointer', background: '#000', color: '#fff', fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', opacity: !name.trim() || attending === null ? 0.5 : 1 }}>{state === 'sending' ? '...' : 'ОТПРАВИТЬ'}</button>
+          <button type="button" onClick={go} disabled={state === 'sending' || !name.trim() || attending === null} style={{ alignSelf: 'center', padding: '14px 44px', borderRadius: 999, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', opacity: !name.trim() || attending === null ? 0.5 : 1 }}>{state === 'sending' ? '...' : 'ОТПРАВИТЬ'}</button>
           {state === 'error' && <p style={{ margin: 0, fontSize: 13, color: '#c00' }}>Не удалось отправить.</p>}
         </div>
       )}
@@ -725,7 +757,8 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName
 }
 
 // "Save contact" button — builds a vCard on the fly and downloads it.
-function SaveContactButton({ label, name, phone, accent }: { label: string; name: string; phone: string; accent: string }) {
+function SaveContactButton({ label, name, phone, accent, ink }: { label: string; name: string; phone: string; accent: string; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#0d0d0d', accent);
   const fs = useFs();
   const save = () => {
     const vcard = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${name || phone}`, phone ? `TEL;TYPE=CELL:${phone}` : '', 'END:VCARD']
@@ -743,7 +776,7 @@ function SaveContactButton({ label, name, phone, accent }: { label: string; name
   return (
     <div style={{ padding: '14px 20px' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
-      <button type="button" onClick={save} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: '#0d0d0d', color: accent, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
+      <button type="button" onClick={save} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         <Sheen opacity={0.28} />
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span style={{ textAlign: 'left' }}>

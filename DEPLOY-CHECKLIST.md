@@ -1447,3 +1447,45 @@ page, because the Suspense fallback is blank by design.
 The banquet admin app (~40 pages) is still in the entry chunk. Splitting it is
 the next lever if the public pages need to get smaller, but it touches routing
 for every role and was out of scope here.
+
+## 29. NFC builder: no Save button, per-block colour fix
+
+Frontend-only, no migration, still riding the `vmenu-v7` bump from §25.
+
+- **The Save button is gone** from `nfc.v-connect.uz/plaques/:id`. Auto-save
+  (§28) is the only path now, so two backstops were added with it: the pending
+  debounce is flushed when the tab is hidden or the editor unmounts, and a
+  **Retry** button appears in the error row. Worth exercising once: make a save
+  fail (type an address already in use), confirm it fails ONCE, then press Retry.
+- **Per-block text colour now works on the solid-pill blocks** — button, Save
+  contact, socials, menu header, RSVP submit, map button. They each hardcoded a
+  colour over the one the block sets. A block with no explicit colour renders
+  exactly as before, so no published flyer or plaque changes.
+  - Check one on a **published** plaque, not only in the builder preview.
+  - Setting a *dark* colour on one of these flips the pill to a light surface —
+    that is deliberate, not a bug: it is what stops the block going blank.
+- One new i18n key, `vc_retry`, in en/ru/uz.
+
+### Load speed, re-measured
+
+Measured with headless Chrome against a logging static server (hostnames mapped
+with `--host-resolver-rules`), so these are transferred gzip bytes, not
+estimates:
+
+| Host | Transferred | Requests |
+|---|---|---|
+| `v-connect.uz/<slug>` (an NFC tap) | **316 kB** | 8 |
+| `nfc.v-connect.uz` (the builder) | 322 kB | 9 |
+| `test.v-menu.uz/<slug>` | 330 kB | 11 |
+| `v-invite.uz` | 844 kB | 13 |
+
+Before §28's split the plaque page pulled roughly 750 kB. Every host loads its
+own chunks with no 404s — that was §28's open verification item and it is done.
+
+**Where the remaining weight is:** 205 kB of the plaque's 316 kB is the entry
+chunk, which is the banquet admin app (~40 pages across `RoleRoutes` and the
+per-subdomain branches). Splitting it would roughly halve every public page
+again. It is a contiguous move — everything from the manager-subdomain branch to
+the end of `App.tsx` — but it changes routing for nine roles, so it is not
+something to fold into an unrelated fix. Still open, and now the single biggest
+item left.
