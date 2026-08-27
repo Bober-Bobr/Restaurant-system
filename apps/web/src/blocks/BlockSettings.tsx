@@ -1,5 +1,5 @@
-import type { Block, BlockFieldDef, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { BLOCK_DEFS } from './types';
+import type { Block, BlockFieldDef, BlockType, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
+import { BLOCK_DEFS, elementScaleRange } from './types';
 import { FONT_OPTIONS, fontStack } from './fonts';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
@@ -58,6 +58,17 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
         onBody={(v) => setProp('bodyScale', v)}
         t={t}
       />
+      {/* Per-block element size — photos, videos, icons, buttons, the divider's
+          gap. Only shown for blocks that actually draw something non-text: on a
+          heading or a paragraph the slider would have nothing to move. */}
+      {hasElements(block.type) && (
+        <ElementSizeControls
+          value={typeof block.props.elementScale === 'number' ? block.props.elementScale : 1}
+          range={elementScaleRange(block.type)}
+          onChange={(v) => setProp('elementScale', v)}
+          t={t}
+        />
+      )}
       <FontControls
         heading={typeof block.props.headingFont === 'string' ? block.props.headingFont : ''}
         body={typeof block.props.bodyFont === 'string' ? block.props.bodyFont : ''}
@@ -98,6 +109,47 @@ function FontControls({ heading, body, onHeading, onBody, t }: {
       <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_fonts')}</span>
       {select(heading, onHeading, t('bf_heading_size'))}
       {select(body, onBody, t('bf_body_size'))}
+    </div>
+  );
+}
+
+// Blocks that draw something other than text. `heading`, `text` and `html` are
+// left out: the first two are pure type, and `html` is the designer's own markup
+// which we must not resize under them.
+const ELEMENT_BLOCKS = new Set<BlockType>([
+  'hero', 'image', 'video', 'gallery', 'menu', 'button', 'link', 'socials',
+  'contacts', 'savecontact', 'map', 'promo', 'divider',
+]);
+function hasElements(type: BlockType): boolean {
+  return ELEMENT_BLOCKS.has(type);
+}
+
+// One slider writing a size multiplier for everything in the block that is NOT
+// text. Its range comes from the block type: media that already fills the column
+// can only shrink, fixed-size elements go both ways. See elementScaleRange.
+function ElementSizeControls({ value, range, onChange, t }: {
+  value: number; range: { min: number; max: number }; onChange: (v: number) => void; t: T;
+}) {
+  return (
+    <div style={{ display: 'grid', gap: 8, padding: '10px 12px', borderRadius: 10, background: 'rgba(var(--adm-bg-rgb),0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ ...label, color: 'rgba(226,232,240,0.85)' }}>{t('bf_element_size')}</span>
+        <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.85)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(value * 100)}%</span>
+      </div>
+      <input
+        type="range" min={range.min} max={range.max} step={0.05} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ width: '100%', accentColor: 'var(--adm-accent)', cursor: 'pointer' }}
+      />
+      {value !== 1 && (
+        <button
+          type="button"
+          onClick={() => onChange(1)}
+          style={{ justifySelf: 'start', background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+        >
+          {t('reset_auto')}
+        </button>
+      )}
     </div>
   );
 }

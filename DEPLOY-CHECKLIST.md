@@ -1489,3 +1489,36 @@ again. It is a contiguous move — everything from the manager-subdomain branch 
 the end of `App.tsx` — but it changes routing for nine roles, so it is not
 something to fold into an unrelated fix. Still open, and now the single biggest
 item left.
+
+## 30. Per-block element size (flyer builder + NFC maker)
+
+Frontend-only, no migration. `elementScale` is a new key inside the existing
+`blocks` JSON, so nothing schema-side changes and old designs are unaffected —
+absent means 1, and a block at 1 renders byte-for-byte as before.
+
+**What it is:** a second size slider in the block settings panel, next to the
+existing font-size ones. It resizes everything in a block that is *not* text —
+photos, videos, the gallery, icons, buttons, the map and save-contact pills, the
+divider's gap. The text scales stay separate, so a photo can shrink without its
+caption shrinking with it.
+
+The slider's range depends on the block: media that already fills the column can
+only shrink (30–100%), fixed-size elements go 50–160%. That is why the slider
+looks different on an image than on a button — intended, not a bug.
+
+**After deploying:**
+
+1. Open a flyer and an NFC plaque, pick an image block, drag Element size down →
+   the photo narrows and centres, the caption underneath does not move.
+2. Same on a button / Save contact / socials block → the pill and its icon
+   resize, the label keeps its size.
+3. Publish and check the public page, not just the builder preview.
+4. Open an existing published flyer that has never been touched → **unchanged**.
+   That is the case that matters most; the tests cover it, but see it once.
+5. The slider is absent on heading/text/html blocks. Expected.
+
+One new i18n key, `bf_element_size`, in en/ru/uz.
+
+The countdown and the menu item's number badge are deliberately excluded — both
+are text-carrying chips, and scaling their container while leaving the text alone
+breaks them at the low end of the range. `blockSize.test.ts` documents this.

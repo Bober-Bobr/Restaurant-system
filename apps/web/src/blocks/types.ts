@@ -325,3 +325,28 @@ export function fontScale(p: BlockProps, key: 'headingScale' | 'bodyScale'): num
   const v = num(p, key, 1);
   return Math.max(FONT_SCALE_MIN, Math.min(FONT_SCALE_MAX, v));
 }
+
+// Per-block size multiplier for everything that is NOT text: photos, videos,
+// gallery tiles, icons, buttons, the countdown card, the divider's gap. Text has
+// its own two scales above and is deliberately untouched by this one, so a
+// designer can shrink a photo without shrinking its caption.
+//
+// The range depends on what the block actually draws, because a single one would
+// be half dead on either kind:
+//
+//  · Blocks whose main element already spans the 420px column (a photo, a video,
+//    the gallery) can only SHRINK. There is nothing wider to grow into, and
+//    bleeding past the column would put a horizontal scrollbar on a phone — so
+//    their slider stops at 100% instead of offering values that do nothing.
+//  · Everything else is a fixed pixel size — icons, buttons, the countdown card,
+//    the divider's gap — and those grow as happily as they shrink.
+const FULL_WIDTH_MEDIA = new Set<BlockType>(['image', 'video', 'gallery', 'promo', 'menu']);
+
+export function elementScaleRange(type: BlockType): { min: number; max: number } {
+  return FULL_WIDTH_MEDIA.has(type) ? { min: 0.3, max: 1 } : { min: 0.5, max: 1.6 };
+}
+
+export function elementScale(p: BlockProps, type: BlockType): number {
+  const { min, max } = elementScaleRange(type);
+  return Math.max(min, Math.min(max, num(p, 'elementScale', 1)));
+}

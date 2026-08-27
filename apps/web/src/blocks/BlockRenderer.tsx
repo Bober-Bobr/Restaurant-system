@@ -1,7 +1,7 @@
 import { Component, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool, fontScale, BLOCK_DEFS } from './types';
+import { str, bool, fontScale, elementScale, BLOCK_DEFS } from './types';
 import { fontStack } from './fonts';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -88,6 +88,28 @@ function useFsH(): (n: number) => number {
   return (n: number) => round2(n * (s.h || 1));
 }
 
+// ── Element size ─────────────────────────────────────────────────────────────
+// The per-block multiplier for everything that is NOT text: photos, videos,
+// gallery tiles, icons, buttons, the countdown card, the divider's gap. Provided
+// by BlockView from `elementScale(block.props)` and read here by `useEs` (a px
+// dimension) and `useMediaWidth` (something already the full column width).
+const ElemCtx = createContext<number>(1);
+function useEs(): (n: number) => number {
+  const es = useContext(ElemCtx);
+  return (n: number) => round2(n * (es || 1));
+}
+
+/**
+ * A width for media that is otherwise `width: 100%` of the 420px column. These
+ * blocks are capped at 1 by `elementScaleRange`, so this only ever narrows —
+ * turning a full-bleed photo into a small centred one, which is the main thing
+ * the control is for.
+ */
+function useMediaWidth(): string {
+  const es = useContext(ElemCtx) || 1;
+  return es >= 1 ? '100%' : `${round2(es * 100)}%`;
+}
+
 function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
   if (!m) return `rgba(216,180,95,${alpha})`;
@@ -159,6 +181,10 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const color = str(block.props, 'textColor') || ctx.text || TEXT;
   const base = ctx.textScale ?? 1;
   const scales = { h: base * fontScale(block.props, 'headingScale'), b: base * fontScale(block.props, 'bodyScale') };
+  // The non-text size multiplier. Deliberately NOT multiplied by ctx.textScale:
+  // the page-wide text scale is about reading, and pulling photos and icons
+  // along with it is not what a designer means by "bigger text".
+  const es = elementScale(block.props, block.type);
   const fontVars: React.CSSProperties = {};
   const hFont = fontStack(block.props.headingFont);
   const bFont = fontStack(block.props.bodyFont);
@@ -166,9 +192,11 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   if (bFont) (fontVars as Record<string, string>)['--blk-font-b'] = bFont;
   return (
     <ScaleCtx.Provider value={scales}>
-      <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color, ...fontVars }}>
-        <BlockBody block={block} ctx={ctx} />
-      </AnimatedSection>
+      <ElemCtx.Provider value={es}>
+        <AnimatedSection anim={block.anim} replay={ctx.replayAnim} style={{ color, ...fontVars }}>
+          <BlockBody block={block} ctx={ctx} />
+        </AnimatedSection>
+      </ElemCtx.Provider>
     </ScaleCtx.Provider>
   );
 }
@@ -176,6 +204,8 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
 function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
   const accent = ctx.accent;
+  const es = useEs();
+  const mw = useMediaWidth();
   // The block's OWN colour, if the designer set one — deliberately not falling
   // back to ctx.text. The blocks below paint their own surface, and only an
   // explicit choice should change it; see pillSurface.
@@ -186,7 +216,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'hero': {
       const src = img(str(p, 'imageUrl'));
       return (
-        <section style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', position: 'relative', background: src ? `linear-gradient(rgba(255,255,255,0.05),rgba(255,255,255,0.05)), url(${src}) center / cover` : 'transparent' }}>
+        <section style={{ minHeight: `${es(80)}vh`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 24px', position: 'relative', background: src ? `linear-gradient(rgba(255,255,255,0.05),rgba(255,255,255,0.05)), url(${src}) center / cover` : 'transparent' }}>
           {str(p, 'title') && <h1 style={{ fontFamily: 'var(--blk-font-h, inherit)', margin: 0, fontSize: fsH(40), lineHeight: 1.15, fontWeight: 500, letterSpacing: '0.04em', color: 'inherit' }}>{str(p, 'title')}</h1>}
           {str(p, 'subtitle') && <p style={{ position: 'absolute', bottom: 28, margin: 0, fontSize: fs(12), letterSpacing: '0.25em', color: accent, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', fontWeight: 700 }}>{str(p, 'subtitle')}</p>}
         </section>
@@ -202,7 +232,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       if (bool(p, 'useLogo')) {
         const logo = img(ctx.logoUrl);
         if (!logo) return <Placeholder label="Logo" />;
-        return <div style={{ padding: '16px 16px', textAlign: 'center' }}><img src={logo} alt="" loading="lazy" decoding="async" style={{ maxWidth: 200, maxHeight: 150, width: 'auto', height: 'auto', objectFit: 'contain', display: 'inline-block' }} /></div>;
+        return <div style={{ padding: '16px 16px', textAlign: 'center' }}><img src={logo} alt="" loading="lazy" decoding="async" style={{ maxWidth: es(200), maxHeight: es(150), width: 'auto', height: 'auto', objectFit: 'contain', display: 'inline-block' }} /></div>;
       }
       const src = img(str(p, 'url'));
       if (!src) return <Placeholder label="Image" />;
@@ -214,7 +244,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
       const timerAt = (typeof p.timerAt === 'string' && p.timerAt ? p.timerAt : null) ?? ctx.eventDate ?? null;
       if (showTimer) {
         return (
-          <div style={{ position: 'relative', padding: rounded ? '12px 16px' : 0 }}>
+          <div style={{ position: 'relative', padding: rounded ? '12px 16px' : 0, width: mw, margin: '0 auto' }}>
             <img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block', borderRadius: rounded ? 16 : 0 }} />
             <div style={{ position: 'absolute', left: rounded ? 16 : 0, right: rounded ? 16 : 0, bottom: rounded ? 12 : 0, paddingTop: 40, borderRadius: rounded ? '0 0 16px 16px' : 0, background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.28) 55%, rgba(0,0,0,0) 100%)' }}>
               <CountdownView targetAt={timerAt} label={str(p, 'timerLabel')} accent={accent} light />
@@ -223,8 +253,8 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
         );
       }
       return rounded
-        ? <div style={{ padding: '12px 16px' }}><img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
-        : <img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block' }} />;
+        ? <div style={{ padding: '12px 16px', width: mw, margin: '0 auto' }}><img src={src} alt="" decoding="async" style={{ width: '100%', display: 'block', borderRadius: 16 }} /></div>
+        : <img src={src} alt="" decoding="async" style={{ width: mw, display: 'block', margin: '0 auto' }} />;
     }
     case 'video':
       return <VideoView p={p} />;
@@ -307,13 +337,14 @@ function Placeholder({ label }: { label: string }) {
 // Self-hosted video block: plays inline within the page. autoplay requires the
 // video to be muted (browser policy), so that pairing is enforced.
 function VideoView({ p }: { p: BlockProps }) {
+  const mw = useMediaWidth();
   const src = img(str(p, 'url'));
   if (!src) return <Placeholder label="Video" />;
   const rounded = bool(p, 'rounded');
   const autoplay = bool(p, 'autoplay');
   const muted = autoplay || bool(p, 'muted');
   return (
-    <div style={{ padding: rounded ? '12px 16px' : 0 }}>
+    <div style={{ padding: rounded ? '12px 16px' : 0, width: mw, margin: '0 auto' }}>
       <video
         // React doesn't reliably reflect the `muted` prop to the attribute, which
         // browsers require before allowing muted autoplay — set it on the node.
@@ -335,6 +366,7 @@ function yandexMaps(address: string) {
 }
 
 function ActionButton({ label, action, accent, ink }: { label: string; action?: ButtonAction; accent: string; ink?: string | null }) {
+  const es = useEs();
   const surface = pillSurface(ink ?? null, '#000', accent);
   const fs = useFs();
   const onClick = () => {
@@ -344,16 +376,17 @@ function ActionButton({ label, action, accent, ink }: { label: string; action?: 
     else window.open(action.value, '_blank', 'noopener,noreferrer');
   };
   return (
-    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
+    <button type="button" onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', padding: `${es(14)}px ${es(18)}px`, borderRadius: es(14), border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
   );
 }
 
 function MapView({ label, address, ink }: { label: string; address: string; ink?: string | null }) {
+  const es = useEs();
   const surface = pillSurface(ink ?? null, '#000', '#fff');
   const fs = useFs();
   return (
     <div style={{ padding: '14px 24px', textAlign: 'center' }}>
-      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: '12px 40px', borderRadius: 999, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
+      <button type="button" onClick={() => address && yandexMaps(address)} style={{ display: 'inline-block', padding: `${es(12)}px ${es(40)}px`, borderRadius: 999, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontSize: fs(14), fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{label}</button>
     </div>
   );
 }
@@ -489,6 +522,8 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
 }
 
 function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { items: GalleryItem[]; accent: string; autoSlide?: boolean; intervalMs?: number }) {
+  const mw = useMediaWidth();
+  const es = useEs();
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
   const n = items.length;
@@ -513,7 +548,7 @@ function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { item
     else if (dx >= 40) go(-1);
   };
   return (
-    <div style={{ padding: '12px 16px' }}>
+    <div style={{ padding: '12px 16px', width: mw, margin: '0 auto' }}>
       <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {/* Sliding track: all photos in a row, shifted by translateX with a smooth transition. */}
         <div style={{ display: 'flex', transform: `translateX(-${clamped * 100}%)`, transition: 'transform 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
@@ -531,22 +566,23 @@ function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { item
         </div>
         {/* Arrows appear only when there's somewhere to go in that direction. */}
         {n > 1 && !atStart && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent)}>‹</button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent, es)}>‹</button>
         )}
         {n > 1 && !atEnd && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent)}>›</button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent, es)}>›</button>
         )}
       </div>
       {n > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === clamped ? accent : '#ccc' }} />)}</div>}
     </div>
   );
 }
-function navBtn(side: 'left' | 'right', accent: string): React.CSSProperties {
-  return { position: 'absolute', top: '50%', transform: 'translateY(-50%)', [side]: 10, width: 36, height: 36, borderRadius: '50%', background: accent, color: '#fff', border: 'none', fontSize: 22, cursor: 'pointer' } as React.CSSProperties;
+function navBtn(side: 'left' | 'right', accent: string, es: (n: number) => number): React.CSSProperties {
+  return { position: 'absolute', top: '50%', transform: 'translateY(-50%)', [side]: 10, width: es(36), height: es(36), borderRadius: '50%', background: accent, color: '#fff', border: 'none', fontSize: 22, cursor: 'pointer' } as React.CSSProperties;
 }
 
 function MenuShowcase({ title, items, accent, ink }: { title: string; items: MenuShowcaseItem[]; accent: string; ink?: string | null }) {
   const fs = useFs();
+  const es = useEs();
   const surface = pillSurface(ink ?? null, '#000', accent);
   if (items.length === 0) return <Placeholder label="Menu" />;
   return (
@@ -558,7 +594,11 @@ function MenuShowcase({ title, items, accent, ink }: { title: string; items: Men
           const src = img(it.photoUrl);
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: left ? 'row' : 'row-reverse' }}>
-              <div style={{ position: 'relative', width: 120, height: 120, flexShrink: 0 }}>
+              {/* The dish disc scales; the number badge pinned to it does NOT.
+                  It is a text chip, and scaling the disc while leaving the digit
+                  alone (as the no-resizing-text rule requires) puts a 14px
+                  numeral inside an 8px circle at the low end of the range. */}
+              <div style={{ position: 'relative', width: es(120), height: es(120), flexShrink: 0 }}>
                 <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: src ? `url(${src}) center / cover` : '#eaeaea', border: `3px solid ${accent}` }} />
                 <span style={{ position: 'absolute', top: -4, left: -4, width: 26, height: 26, borderRadius: '50%', background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', border: '2px solid #fff' }}>{it.number}</span>
               </div>
@@ -573,6 +613,7 @@ function MenuShowcase({ title, items, accent, ink }: { title: string; items: Men
 
 function SocialsView({ title, links, accent, ink }: { title: string; links: SocialLink[]; accent: string; ink?: string | null }) {
   const fs = useFs();
+  const es = useEs();
   const surface = pillSurface(ink ?? null, '#111', '#fff');
   const fsH = useFsH();
   return (
@@ -581,8 +622,8 @@ function SocialsView({ title, links, accent, ink }: { title: string; links: Soci
       {title && <h3 style={{ margin: '0 0 14px', textAlign: 'center', fontSize: fsH(17), fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'var(--blk-font-h, system-ui, sans-serif)', color: 'inherit' }}>{title}</h3>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map((l, i) => (
-          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: surface.bg, borderRadius: 12, color: surface.fg, textDecoration: 'none', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
-            <span style={{ width: 34, height: 34, borderRadius: 8, background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>@</span>
+          <a key={i} href={l.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: es(12), padding: `${es(12)}px ${es(16)}px`, background: surface.bg, borderRadius: es(12), color: surface.fg, textDecoration: 'none', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', transformOrigin: 'left center', animation: `blkTwitch ${4 + (i % 3) * 0.6}s ease-in-out ${i * 0.5}s infinite` }}>
+            <span style={{ width: es(34), height: es(34), borderRadius: es(8), background: accent, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>@</span>
             <span style={{ fontSize: fs(13) }}>{l.label}</span>
           </a>
         ))}
@@ -608,7 +649,8 @@ function ContactsView({ p }: { p: BlockProps; accent: string }) {
   );
 }
 function IconLink({ href, children, delay = 0 }: { href: string; children: React.ReactNode; delay?: number }) {
-  return <a href={href} target="_blank" rel="noreferrer" style={{ width: 52, height: 52, borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', animation: `blkBounce 2.4s ease-in-out ${delay}s infinite` }}>{children}</a>;
+  const es = useEs();
+  return <a href={href} target="_blank" rel="noreferrer" style={{ width: es(52), height: es(52), borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', animation: `blkBounce 2.4s ease-in-out ${delay}s infinite` }}>{children}</a>;
 }
 function SvgTelegram() {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>;
@@ -622,9 +664,10 @@ function SvgInstagram() {
 
 function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
   const fs = useFs();
+  const mw = useMediaWidth();
   const src = img(str(p, 'imageUrl'));
   return (
-    <section style={{ padding: '16px' }}>
+    <section style={{ padding: '16px', width: mw, margin: '0 auto' }}>
       <div style={{ borderRadius: 16, overflow: 'hidden', background: '#fdfcf8', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
         <div style={{ position: 'relative' }}>
           {src ? <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', display: 'block' }} /> : <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg, ${hexToRgba(accent, 0.25)} 0%, ${accent} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>{str(p, 'title', 'Promo')}</div>}
@@ -760,6 +803,7 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName
 function SaveContactButton({ label, name, phone, accent, ink }: { label: string; name: string; phone: string; accent: string; ink?: string | null }) {
   const surface = pillSurface(ink ?? null, '#0d0d0d', accent);
   const fs = useFs();
+  const es = useEs();
   const save = () => {
     const vcard = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${name || phone}`, phone ? `TEL;TYPE=CELL:${phone}` : '', 'END:VCARD']
       .filter(Boolean).join('\r\n');
@@ -776,9 +820,9 @@ function SaveContactButton({ label, name, phone, accent, ink }: { label: string;
   return (
     <div style={{ padding: '14px 20px' }}>
       <style>{PASSIVE_KEYFRAMES}</style>
-      <button type="button" onClick={save} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', padding: '16px 18px', borderRadius: 14, border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
+      <button type="button" onClick={save} style={{ position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: es(14), width: '100%', padding: `${es(16)}px ${es(18)}px`, borderRadius: es(14), border: 'none', cursor: 'pointer', background: surface.bg, color: surface.fg, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         <Sheen opacity={0.28} />
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <svg width={es(22)} height={es(22)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span style={{ textAlign: 'left' }}>
           <span style={{ display: 'block', fontSize: fs(13), fontWeight: 700, letterSpacing: '0.1em' }}>{label || 'СОХРАНИТЬ КОНТАКТЫ'}</span>
           {(name || phone) && <span style={{ display: 'block', fontSize: fs(11), fontWeight: 400, opacity: 0.85 }}>{name || phone}</span>}
@@ -791,12 +835,13 @@ function SaveContactButton({ label, name, phone, accent, ink }: { label: string;
 // Section divider with a selectable shape.
 function Divider({ shape, text, accent }: { shape: string; text: string; accent: string }) {
   const fs = useFs();
-  if (shape === 'spacer') return <div style={{ height: 44 }} />;
+  const es = useEs();
+  if (shape === 'spacer') return <div style={{ height: es(44) }} />;
   if (shape === 'icon') {
     return (
       <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
-        <span style={{ color: accent, fontSize: 18 }}>{text || '★'}</span>
+        <span style={{ color: accent, fontSize: es(18) }}>{text || '★'}</span>
         <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
       </div>
     );
