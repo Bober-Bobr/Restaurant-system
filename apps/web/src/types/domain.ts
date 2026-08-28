@@ -131,7 +131,10 @@ export type TableCategory = {
   packageItems?: TableCategoryPackageItem[];
 };
 
-export type TabletStatus = 'NONE' | 'FREE' | 'PAID';
+// Defined next to the rules that operate on it, and re-exported here so the two
+// can never drift apart.
+import type { TabletStatus } from '../utils/tabletStatus';
+export type { TabletStatus };
 
 export type DishI18n = { en?: string; ru?: string; uz?: string };
 

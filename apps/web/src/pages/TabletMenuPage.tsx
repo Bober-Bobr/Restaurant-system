@@ -5,7 +5,8 @@ import { MenuItemCard } from '../components/menu/MenuItemCard';
 import { usePublicDataStore } from '../store/publicData.store';
 import { useTabletStore } from '../store/tablet.store';
 import { Locale, locales, translate } from '../utils/translate';
-import type { MenuItem, TableCategory, TableCategoryPackageItem, TableEventType, TabletStatus } from '../types/domain';
+import type { MenuItem, TableCategory, TableCategoryPackageItem, TableEventType } from '../types/domain';
+import { isFreeChoice, isPaidExtra, tabletStatusOf } from '../utils/tabletStatus';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
@@ -54,13 +55,6 @@ const ADDITIONAL_CATEGORIES: MenuCategory[] = [
   'ALCOHOL', 'LEMONADES', 'NON_ALCOHOLIC_COCKTAILS', 'ALCOHOLIC_COCKTAILS',
   'MILKSHAKES', 'TEA_MENU', 'FRESH_JUICES', 'LIQUEURS',
 ];
-
-// Tablet status of a menu item, with a fallback for pre-migration items that
-// only have the old showOnTablet boolean (shown → PAID, hidden → NONE).
-function tabletStatusOf(item: MenuItem): TabletStatus {
-  if (item.tabletStatus) return item.tabletStatus;
-  return item.showOnTablet === false ? 'NONE' : 'PAID';
-}
 
 // Course categories are guest-selected (hot appetizers + first/second/third);
 // the remaining package categories are the fixed "complimentary" included dishes.
@@ -1106,12 +1100,13 @@ function IncludedDishesSection({
     )
   ).sort(([a], [b]) => (CATEGORY_ORDER[a as MenuCategory] ?? 99) - (CATEGORY_ORDER[b as MenuCategory] ?? 99));
 
-  // Every dish is free to swap in for this table unless it's a PAID extra or one
-  // of the table's own default dishes (those defaults are filtered out in
-  // getFreeAlts via packageDefaultIds). The retired "Don't show" (NONE) state no
-  // longer hides a dish from free selection — anything not marked Paid is free.
+  // A dish is free to swap in for this table when the Additional page has it
+  // marked Free — on its own or alongside Paid. "Paid only" is deliberately not
+  // free, and "neither" is not offered at all: it is simply part of whichever
+  // table packages include it. The table's own default dishes are filtered out
+  // separately in getFreeAlts via packageDefaultIds.
   const isFreeForThisTable = (m: MenuItem) =>
-    m.isActive !== false && tabletStatusOf(m) !== 'PAID';
+    m.isActive !== false && isFreeChoice(tabletStatusOf(m));
 
   // Free alternatives for a package item: same category, allowed as a free swap
   // for this table, not already part of the package and not swapped-in elsewhere.
@@ -1681,7 +1676,7 @@ export const TabletMenuPage = () => {
   const includedItemIds = new Set((selectedTableCategory?.packageItems ?? []).map((pi) => pi.menuItem.id));
   const isSelectableAdditional = (item: MenuItem) =>
     ADDITIONAL_CATEGORIES.includes(item.category) &&
-    tabletStatusOf(item) === 'PAID' &&
+    isPaidExtra(tabletStatusOf(item)) &&
     !includedItemIds.has(item.id);
 
   const sortedAndFiltered = quickSort(

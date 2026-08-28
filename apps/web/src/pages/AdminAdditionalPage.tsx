@@ -8,20 +8,26 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
 import { Lightbox } from '../components/ui/lightbox';
 import type { MenuItem, TabletStatus } from '../types/domain';
+import { isFreeChoice, isPaidExtra, showOnTabletFor, tabletStatusOf, withFree, withPaid } from '../utils/tabletStatus';
 
 type MenuCategory = MenuItem['category'];
 
-// An item created before this feature has no tabletStatus; fall back to the old
-// showOnTablet boolean (shown → PAID, hidden → NONE).
-function effectiveStatus(item: MenuItem): TabletStatus {
-  if (item.tabletStatus) return item.tabletStatus;
-  return item.showOnTablet === false ? 'NONE' : 'PAID';
-}
-
-// Card accents: PAID dishes are highlighted green (they show as paid extras on
-// the tablet); everything else is free to select, shown in a neutral card.
+// Paid is green (it charges the guest), Free is blue (it substitutes at no
+// charge). They are independent, so a card can carry both — the tint follows
+// Paid, since that is the one that affects the bill.
 const PAID_ACCENT = { solid: '#22c55e', solidText: 'var(--adm-bg)', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)' };
-const FREE_ACCENT = { bg: 'rgba(var(--adm-bg-rgb),0.5)', border: 'rgba(255,255,255,0.08)' };
+const FREE_ACCENT = { solid: '#38bdf8', solidText: 'var(--adm-bg)', bg: 'rgba(56,189,248,0.07)', border: 'rgba(56,189,248,0.28)' };
+const OFF_ACCENT  = { bg: 'rgba(var(--adm-bg-rgb),0.5)', border: 'rgba(255,255,255,0.08)' };
+
+// The one line under the switches that says what the current pair actually
+// means. This is a four-state control, and "neither ticked" in particular is
+// not self-evident from two empty boxes.
+const STATE_HELP: Record<TabletStatus, Parameters<typeof translate>[0]> = {
+  BOTH: 'additional_state_both',
+  PAID: 'additional_state_paid',
+  FREE: 'additional_state_free',
+  NONE: 'additional_state_none',
+};
 
 // The "Additional" section on the tablet shows these categories.
 const ADDITIONAL_CATEGORIES: MenuCategory[] = [
@@ -72,6 +78,37 @@ const CATEGORY_LABEL_KEY: Record<MenuCategory, Parameters<typeof translate>[0]> 
   LIQUEURS: 'liqueurs',
 };
 
+const StatusToggle = ({
+  label, on, colors, onClick,
+}: {
+  label: string;
+  on: boolean;
+  colors: { solid: string; solidText: string };
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={on}
+    style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+      padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+      fontSize: 12, fontWeight: 700, letterSpacing: '0.01em',
+      background: on ? colors.solid : 'transparent',
+      color: on ? colors.solidText : 'rgba(226,232,240,0.7)',
+      border: `1px solid ${on ? colors.solid : 'rgba(255,255,255,0.14)'}`,
+      transition: 'background 0.15s, color 0.15s',
+    }}
+  >
+    {on && (
+      <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )}
+    {label}
+  </button>
+);
+
 export const AdminAdditionalPage = () => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
@@ -103,17 +140,17 @@ export const AdminAdditionalPage = () => {
     [selectedCat]
   );
 
-  // Paid ⇄ free toggle. Non-paid dishes are FREE (guests can pick them at no
-  // charge), so turning "Paid" off sets FREE rather than the retired NONE state.
+  // The two switches write the same column: each sends the pair it produces, so
+  // flipping one can never clear the other.
   const statusMutation = useMutation({
     mutationFn: ({ id, tabletStatus }: { id: string; tabletStatus: TabletStatus }) =>
-      // Keep showOnTablet in sync for any legacy reader (true only when PAID).
-      menuService.update(id, { tabletStatus, showOnTablet: tabletStatus === 'PAID' }),
+      // Keep showOnTablet in sync for any legacy reader.
+      menuService.update(id, { tabletStatus, showOnTablet: showOnTabletFor(tabletStatus) }),
     onMutate: async ({ id, tabletStatus }) => {
       await queryClient.cancelQueries({ queryKey: ['menu-items', 'admin', 'all'] });
       const prev = queryClient.getQueryData<MenuItem[]>(['menu-items', 'admin', 'all']);
       queryClient.setQueryData<MenuItem[]>(['menu-items', 'admin', 'all'], (old) =>
-        (old ?? []).map((it) => (it.id === id ? { ...it, tabletStatus, showOnTablet: tabletStatus === 'PAID' } : it))
+        (old ?? []).map((it) => (it.id === id ? { ...it, tabletStatus, showOnTablet: showOnTabletFor(tabletStatus) } : it))
       );
       return { prev };
     },
@@ -261,9 +298,16 @@ export const AdminAdditionalPage = () => {
             <h2 className="adm-heading" style={{ margin: '0 0 12px' }}>{t(CATEGORY_LABEL_KEY[cat])}</h2>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {items.map((item) => {
-                const isPaid = effectiveStatus(item) === 'PAID';
+                const status = tabletStatusOf(item);
+                const paid = isPaidExtra(status);
+                const free = isFreeChoice(status);
                 const photo = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
-                const accent = isPaid ? PAID_ACCENT : FREE_ACCENT;
+                // The tint follows Paid — that is the switch that puts the dish
+                // on the bill. Free-only gets its own blue so it still reads as
+                // deliberately configured rather than as "off".
+                const accent = paid ? PAID_ACCENT : free ? FREE_ACCENT : OFF_ACCENT;
+                const set = (next: TabletStatus) =>
+                  statusMutation.mutate({ id: item.id, tabletStatus: next });
                 return (
                   <div key={item.id} style={{
                     display: 'flex', flexDirection: 'column', gap: 10,
@@ -282,28 +326,25 @@ export const AdminAdditionalPage = () => {
                       </div>
                     </div>
 
-                    {/* Single "Paid" toggle: on → paid extra, off → free to select. */}
-                    <button
-                      type="button"
-                      onClick={() => statusMutation.mutate({ id: item.id, tabletStatus: isPaid ? 'FREE' : 'PAID' })}
-                      aria-pressed={isPaid}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                        padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
-                        fontSize: 12, fontWeight: 700, letterSpacing: '0.01em',
-                        background: isPaid ? PAID_ACCENT.solid : 'transparent',
-                        color: isPaid ? PAID_ACCENT.solidText : 'rgba(226,232,240,0.7)',
-                        border: `1px solid ${isPaid ? PAID_ACCENT.solid : 'rgba(255,255,255,0.14)'}`,
-                        transition: 'background 0.15s, color 0.15s',
-                      }}
-                    >
-                      {isPaid && (
-                        <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                      {t('status_paid')}
-                    </button>
+                    {/* Two independent switches. Either, both or neither. */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <StatusToggle
+                        label={t('status_paid')}
+                        on={paid}
+                        colors={PAID_ACCENT}
+                        onClick={() => set(withPaid(status, !paid))}
+                      />
+                      <StatusToggle
+                        label={t('status_free')}
+                        on={free}
+                        colors={FREE_ACCENT}
+                        onClick={() => set(withFree(status, !free))}
+                      />
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.35, color: 'rgba(226,232,240,0.55)' }}>
+                      {t(STATE_HELP[status])}
+                    </p>
                   </div>
                 );
               })}

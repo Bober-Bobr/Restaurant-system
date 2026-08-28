@@ -1,0 +1,14 @@
+-- The Additional page now has two independent switches, Paid and Free, and
+-- `tabletStatus` carries all four of their combinations: NONE / FREE / PAID /
+-- BOTH. No schema change is needed — the column is already a plain String — but
+-- the meaning of one existing value does change, so its rows are converted.
+--
+-- Until now NONE and FREE were indistinguishable: the tablet asked only whether
+-- a dish was PAID, and anything else was free to swap in. NONE now means
+-- "neither switch" — not offered as a free substitute at all. Rewriting the
+-- existing NONE rows to FREE preserves exactly the behaviour those dishes have
+-- today; without it, dishes guests can currently pick for free would silently
+-- disappear from the swap lists on the deploy.
+--
+-- NONE stays reachable, but only by deliberately unticking both switches.
+UPDATE "MenuItem" SET "tabletStatus" = 'FREE' WHERE "tabletStatus" = 'NONE';

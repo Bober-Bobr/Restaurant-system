@@ -18,7 +18,9 @@ export const createMenuItemSchema = z.object({
   photoUrl: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   showOnTablet: z.boolean().optional(),
-  tabletStatus: z.enum(['NONE', 'FREE', 'PAID']).optional(),
+  // NONE / FREE / PAID / BOTH — the four combinations of the Additional page's
+  // two switches. See apps/web/src/utils/tabletStatus.ts for the table.
+  tabletStatus: z.enum(['NONE', 'FREE', 'PAID', 'BOTH']).optional(),
   isBestseller: z.boolean().optional(),
   isOutOfStock: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),

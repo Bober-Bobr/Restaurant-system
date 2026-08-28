@@ -1691,3 +1691,48 @@ scrollport. Reverting the one word fails it.
 4. Confirm no page has gained a horizontal scrollbar at the window's bottom edge —
    that is what the old `hidden` was suppressing, and `clip` should still
    suppress it.
+
+---
+
+## 35. Additional page: a "Free" switch beside "Paid" (**has a migration**)
+
+The Additional page had **one** toggle, so Paid and Free were opposites: turning
+Paid off forced the dish to Free, and turning it on stripped Free away. They are
+now two independent switches, and all four combinations mean something:
+
+| Paid | Free | stored | on the tablet |
+|---|---|---|---|
+| on | on | `BOTH` | a free substitute **and** a paid Additional item |
+| on | off | `PAID` | Additional only — never offered as a free substitute |
+| off | on | `FREE` | a free substitute — not sold under Additional |
+| off | off | `NONE` | neither; simply included in the table categories that selected it |
+
+**No schema change** — `MenuItem.tabletStatus` is already a plain String, and the
+four values map exactly onto the pair of switches, so one column cannot disagree
+with itself the way two booleans can.
+
+`migration 20260828120000_tablet_status_none_to_free` rewrites existing `NONE`
+rows to `FREE`. Until now the tablet asked only whether a dish was `PAID`, so
+`NONE` and `FREE` were indistinguishable — every `NONE` dish has actually been
+behaving as free. Without the conversion, dishes guests can pick for free today
+would silently disappear from the swap lists on the deploy. `NONE` stays
+reachable, but only by deliberately unticking both switches.
+
+The rules moved into [utils/tabletStatus.ts](Restaurant-system/apps/web/src/utils/tabletStatus.ts), shared by the Additional page and
+the tablet — the two previously carried their own copy of the fallback.
+
+**After deploying:**
+
+1. Additional page → each dish card now has **two** buttons, plus a line under
+   them saying what the current pair means.
+2. A dish that was Paid still shows Paid and nothing else; a dish that was not
+   still shows Free. Nothing should look changed until you touch a switch.
+3. Tick **both** on a dish → on the tablet it appears in the Additional list
+   **and** as a free alternative for a package dish of the same category. This
+   is the combination that was impossible before.
+4. Tick **Paid only** → in Additional, absent from the free-alternative lists.
+5. Tick **Free only** → in the free-alternative lists, absent from Additional.
+6. Untick **both** → gone from both. It still appears in any table category that
+   includes it, which is the point of that state.
+7. Flip one switch and confirm the other does not move — that was the whole
+   defect.

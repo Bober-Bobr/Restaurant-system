@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MenuCategory } from '@prisma/client';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { MenuService } from './menu.service.js';
 import { createMenuItemSchema, updateMenuItemSchema, arrangementSchema, assignSelectionSchema } from './menu.schema.js';
 import type { MenuRepository } from './menu.repository.js';
@@ -190,6 +192,35 @@ describe('menu settings', () => {
     const saved = await harness.service.saveSettings('r1', { excludedCategories: { banquet: [] }, hideSubcategories: false });
     expect(harness.menuRepo.saveHideSubcategories).toHaveBeenCalledWith('r1', false);
     expect(saved.hideSubcategories).toBe(false);
+  });
+});
+
+describe('the Additional page\'s two switches reach the database', () => {
+  // The page sends the pair Paid/Free as one of four values. A schema that does
+  // not know BOTH would 400 every save made with both switches on — the exact
+  // combination the feature was added for.
+  it('accepts all four states', () => {
+    for (const tabletStatus of ['NONE', 'FREE', 'PAID', 'BOTH']) {
+      expect(updateMenuItemSchema.safeParse({ tabletStatus }).success, tabletStatus).toBe(true);
+    }
+  });
+
+  it('refuses anything else', () => {
+    for (const junk of ['both', 'PAID_AND_FREE', '', 1, null]) {
+      expect(updateMenuItemSchema.safeParse({ tabletStatus: junk }).success).toBe(false);
+    }
+  });
+
+  it('ships the migration that keeps existing NONE dishes free', () => {
+    // NONE and FREE were indistinguishable before this change; NONE now means
+    // "offered neither way". Without the conversion, dishes guests can pick for
+    // free today would vanish from the swap lists on the deploy.
+    const dir = fileURLToPath(new URL('../../../prisma/migrations', import.meta.url));
+    const sql = readdirSync(dir)
+      .filter((d) => !d.endsWith('.toml'))
+      .map((d) => { try { return readFileSync(`${dir}/${d}/migration.sql`, 'utf8'); } catch { return ''; } })
+      .join('\n');
+    expect(sql).toMatch(/UPDATE "MenuItem" SET "tabletStatus" = 'FREE' WHERE "tabletStatus" = 'NONE'/);
   });
 });
 
