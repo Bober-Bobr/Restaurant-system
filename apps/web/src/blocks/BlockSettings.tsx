@@ -1,5 +1,5 @@
 import type { Block, BlockFieldDef, BlockType, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { BLOCK_DEFS, elementScaleRange } from './types';
+import { BLOCK_DEFS, elementScaleRange, hasElementColor } from './types';
 import { FONT_OPTIONS, fontStack } from './fonts';
 import type { SectionAnimation, AnimationType } from '../services/guestInvitation.service';
 import type { TranslationKey } from '../utils/translate';
@@ -50,6 +50,25 @@ export function BlockSettings({ block, onChange, t, restaurantId }: {
       {block.props.textColor ? (
         <button type="button" onClick={() => setProp('textColor', '')} style={{ justifySelf: 'start', marginTop: -6, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('reset_auto')}</button>
       ) : null}
+      {/* Per-block ELEMENT colour — the block's own surfaces: the gallery's
+          arrow discs, the menu badge, the social chips, the contact circles,
+          the button pill, the divider glyph. Independent of the text colour
+          above, so a dark pill can carry cream lettering. Empty = the page
+          accent. Hidden on blocks that draw nothing but type. */}
+      {hasElementColor(block.type) && (
+        <>
+          <FieldEditor
+            field={{ key: 'elementColor', labelKey: 'bf_element_color', type: 'color' }}
+            value={block.props.elementColor}
+            onChange={(v) => setProp('elementColor', v)}
+            t={t}
+            restaurantId={restaurantId}
+          />
+          {block.props.elementColor ? (
+            <button type="button" onClick={() => setProp('elementColor', '')} style={{ justifySelf: 'start', marginTop: -6, background: 'none', border: 'none', color: 'rgba(226,232,240,0.55)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>{t('reset_auto')}</button>
+          ) : null}
+        </>
+      )}
       {/* Per-block font size — headings and body text, available on every block. */}
       <FontSizeControls
         heading={typeof block.props.headingScale === 'number' ? block.props.headingScale : 1}

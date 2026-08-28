@@ -1736,3 +1736,62 @@ the tablet — the two previously carried their own copy of the fallback.
    includes it, which is the point of that state.
 7. Flip one switch and confirm the other does not move — that was the whole
    defect.
+
+---
+
+## 36. Block designer: a per-block element colour, and the gallery arrows
+
+Frontend-only, no migration. `elementColor` is a new key inside the existing
+`blocks` JSON — absent means "use the page accent", and a block without one
+renders byte-for-byte as before. Reaches every builder that mounts `BlockEditor`:
+the flyer builder and its template editor, the v-connect plaque builder and its
+template editor, and v-invite's block editor.
+
+**What it is.** Every block now has TWO colour pickers. "Text colour" sets the
+type; the new "Element colour" sets the surfaces the block paints — the gallery's
+arrow discs, the menu badge, the social chips, the contact circles, the button
+and Save-contact pills, the map button, the divider's rule and glyph, the promo
+code pill, the countdown dots, the RSVP radio. They are independent, so a dark
+green pill with cream lettering is now expressible; before, one picker drove
+both and choosing a dark colour flipped the pill light to compensate.
+
+Where a block drew its furniture from the page accent, the element colour
+replaces the accent **for that block alone**. Where it painted a fixed dark pill
+(`button`, `map`, `savecontact`, `rsvp`, `menu`, `socials`) or a fixed disc
+(`contacts`), the element colour becomes that surface — those blocks previously
+had no colour control at all.
+
+The picker is hidden on `heading`, `text`, `html`, `image` and `video`: they draw
+nothing but type or the designer's own artwork, so it would change nothing.
+
+**The gallery arrows — one deliberate visible change.** The round buttons
+followed the accent but the chevrons on them were a hardcoded white, so a pale
+accent made the arrows invisible. The chevron now takes the block's text colour,
+and with none set falls back to whatever contrasts with the disc. **On the
+platform's default tan accent that changes published pages: white chevrons
+become dark ones.** That is the reported defect being fixed, but it is the one
+thing here that alters an existing design without anyone touching it.
+
+**The link block lost its own colour picker.** The generic element colour paints
+that bar now; two pickers writing the same bar was the confusing option. Its
+legacy `color` prop is still read as the fallback, so every published link block
+keeps exactly the colour it was given.
+
+One new i18n key, `bf_element_color`, in en/ru/uz.
+
+**After deploying:**
+
+1. Flyer builder → any block → the settings panel has **Element colour** under
+   Text colour, each with its own "reset" link.
+2. Gallery block: set an element colour → discs change. Set a text colour →
+   **the chevrons change independently**. Set a pale element colour with no text
+   colour → the chevrons are dark, not invisible.
+3. Button / Save contact / Map: set an element colour → the pill takes it and
+   the label stays legible; set a text colour too → both are honoured exactly as
+   chosen.
+4. Contacts block: the three round icons take the element colour. They were
+   fixed near-black before.
+5. Open a published flyer and a published plaque that nobody has edited →
+   unchanged, **except** gallery chevrons (see above).
+6. A link block published earlier keeps its orange bar.
+7. Same checks in the NFC plaque builder — it is the same engine.

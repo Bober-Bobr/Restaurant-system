@@ -1,7 +1,7 @@
 import { Component, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Block, BlockProps, ButtonAction, GalleryItem, MenuShowcaseItem, SocialLink, TimingItem } from './types';
-import { str, bool, fontScale, elementScale, BLOCK_DEFS } from './types';
+import { str, bool, fontScale, elementScale, elementColor, BLOCK_DEFS } from './types';
 import { fontStack } from './fonts';
 import { AnimatedSection } from './AnimatedSection';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -153,11 +153,19 @@ export function readableText(bg: string | null | undefined): string {
  * blocks would write near-black text onto a near-black pill: the setting would
  * "work" and the block would go blank, which is worse than it not working.
  */
-function pillSurface(ink: string | null, base: string, defaultFg: string): { bg: string; fg: string } {
-  if (!ink) return { bg: base, fg: defaultFg };
-  // readableText(ink) is a colour that contrasts with the ink: dark for a light
-  // ink (so the pill keeps its original dark surface), light for a dark one.
-  return { bg: readableText(ink) === TEXT ? base : '#f4f2ee', fg: ink };
+function pillSurface(
+  ink: string | null,
+  base: string,
+  defaultFg: string,
+  element: string | null = null,
+): { bg: string; fg: string } {
+  // The surface: the block's own element colour when set, otherwise the old
+  // behaviour (the fixed base, lightened if a dark ink would vanish on it).
+  const bg = element ?? (ink ? (readableText(ink) === TEXT ? base : '#f4f2ee') : base);
+  // The label: the block's own text colour when set, otherwise something
+  // legible on whatever surface we ended up with.
+  const fg = ink ?? (element ? readableText(element) : defaultFg);
+  return { bg, fg };
 }
 
 // ── Image loading ────────────────────────────────────────────────────────────
@@ -203,12 +211,16 @@ export function BlockView({ block, ctx }: { block: Block; ctx: RenderCtx }) {
 
 function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
   const { props: p } = block;
-  const accent = ctx.accent;
+  // The block's own element colour REPLACES the page accent for this block, so
+  // every surface below that was drawn from the accent follows it with no
+  // further plumbing. Null when unset, so nothing already published moves.
+  const element = elementColor(p);
+  const accent = element ?? ctx.accent;
   const es = useEs();
   const mw = useMediaWidth();
-  // The block's OWN colour, if the designer set one — deliberately not falling
-  // back to ctx.text. The blocks below paint their own surface, and only an
-  // explicit choice should change it; see pillSurface.
+  // The block's OWN text colour, if the designer set one — deliberately not
+  // falling back to ctx.text. The blocks below paint their own surface, and only
+  // an explicit choice should change it; see pillSurface.
   const ink = str(p, 'textColor') || null;
   const fs = useFs();
   const fsH = useFsH();
@@ -259,36 +271,36 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
     case 'video':
       return <VideoView p={p} />;
     case 'button':
-      return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} ink={ink} /></div>;
+      return <div style={{ padding: '12px 24px', textAlign: 'center' }}><ActionButton label={str(p, 'label', 'Button')} action={p.action as ButtonAction | undefined} accent={accent} ink={ink} element={element} /></div>;
     case 'countdown':
       // No explicit target → count down to the linked event's start time.
       return <CountdownView targetAt={(typeof p.targetAt === 'string' && p.targetAt ? p.targetAt : null) ?? ctx.eventDate ?? null} label={str(p, 'label')} accent={accent} />;
     case 'timing':
       return <TimingView title={str(p, 'title', 'TIMING')} items={arr<TimingItem>(p, 'items')} accent={accent} />;
     case 'gallery':
-      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} autoSlide={bool(p, 'autoSlide')} intervalMs={Math.max(1, typeof p.slideInterval === 'number' ? p.slideInterval : 4) * 1000} />;
+      return <GalleryCarousel items={arr<GalleryItem>(p, 'items')} accent={accent} ink={ink} autoSlide={bool(p, 'autoSlide')} intervalMs={Math.max(1, typeof p.slideInterval === 'number' ? p.slideInterval : 4) * 1000} />;
     case 'menu':
-      return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} ink={ink} />;
+      return <MenuShowcase title={str(p, 'title', 'МЕНЮ')} items={arr<MenuShowcaseItem>(p, 'items')} accent={accent} ink={ink} element={element} />;
     case 'link':
-      return <LinkBar label={str(p, 'label', 'Link')} sublabel={str(p, 'sublabel')} action={p.action as ButtonAction | undefined} color={str(p, 'color')} accent={accent} />;
+      return <LinkBar label={str(p, 'label', 'Link')} sublabel={str(p, 'sublabel')} action={p.action as ButtonAction | undefined} color={str(p, 'color')} accent={accent} element={element} ink={ink} />;
     case 'socials':
-      return <SocialsView title={str(p, 'title')} links={arr<SocialLink>(p, 'links')} accent={accent} ink={ink} />;
+      return <SocialsView title={str(p, 'title')} links={arr<SocialLink>(p, 'links')} accent={accent} ink={ink} element={element} />;
     case 'contacts':
-      return <ContactsView p={p} accent={accent} />;
+      return <ContactsView p={p} element={element} />;
     case 'map':
-      return <MapView label={str(p, 'label', 'КАРТА')} address={str(p, 'address')} ink={ink} />;
+      return <MapView label={str(p, 'label', 'КАРТА')} address={str(p, 'address')} ink={ink} element={element} />;
     case 'promo':
       return <PromoCard p={p} accent={accent} />;
     case 'html':
       return <HtmlBlock html={str(p, 'html')} />;
     case 'rsvp':
-      return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} ink={ink} />;
+      return <RsvpForm title={str(p, 'title')} accent={accent} submit={ctx.submitRsvp} ink={ink} element={element} />;
     case 'form':
       return <LeadForm title={str(p, 'title')} subtitle={str(p, 'subtitle')} buttonLabel={str(p, 'buttonLabel')} showMessage={bool(p, 'showMessage')} accent={accent} brandName={ctx.brandName ?? null} submit={ctx.submitLead} />;
     case 'savecontact':
-      return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} ink={ink} />;
+      return <SaveContactButton label={str(p, 'label')} name={str(p, 'name')} phone={str(p, 'phone')} accent={accent} ink={ink} element={element} />;
     case 'divider':
-      return <Divider shape={str(p, 'shape', 'line')} text={str(p, 'text')} accent={accent} />;
+      return <Divider shape={str(p, 'shape', 'line')} text={str(p, 'text')} accent={accent} element={element} />;
     case 'vccontact':
       return (
         <VConnectContact
@@ -298,6 +310,7 @@ function BlockBody({ block, ctx }: { block: Block; ctx: RenderCtx }) {
           telegramLabel={translate('vc_telegram', 'ru')}
           instagramLabel={translate('vc_instagram', 'ru')}
           color={str(p, 'textColor') || ctx.text}
+          element={element}
         />
       );
     default:
@@ -365,9 +378,9 @@ function yandexMaps(address: string) {
   window.open(`https://yandex.com/maps/?text=${encodeURIComponent(address)}`, '_blank', 'noopener,noreferrer');
 }
 
-function ActionButton({ label, action, accent, ink }: { label: string; action?: ButtonAction; accent: string; ink?: string | null }) {
+function ActionButton({ label, action, accent, ink, element }: { label: string; action?: ButtonAction; accent: string; element?: string | null; ink?: string | null }) {
   const es = useEs();
-  const surface = pillSurface(ink ?? null, '#000', accent);
+  const surface = pillSurface(ink ?? null, '#000', accent, element ?? null);
   const fs = useFs();
   const onClick = () => {
     if (!action?.value) return;
@@ -380,9 +393,9 @@ function ActionButton({ label, action, accent, ink }: { label: string; action?: 
   );
 }
 
-function MapView({ label, address, ink }: { label: string; address: string; ink?: string | null }) {
+function MapView({ label, address, ink, element }: { label: string; address: string; element?: string | null; ink?: string | null }) {
   const es = useEs();
-  const surface = pillSurface(ink ?? null, '#000', '#fff');
+  const surface = pillSurface(ink ?? null, '#000', '#fff', element ?? null);
   const fs = useFs();
   return (
     <div style={{ padding: '14px 24px', textAlign: 'center' }}>
@@ -521,7 +534,13 @@ function TimingView({ title, items, accent }: { title: string; items: TimingItem
   );
 }
 
-function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { items: GalleryItem[]; accent: string; autoSlide?: boolean; intervalMs?: number }) {
+function GalleryCarousel({ items, accent, ink, autoSlide, intervalMs = 4000 }: { items: GalleryItem[]; accent: string; ink?: string | null; autoSlide?: boolean; intervalMs?: number }) {
+  // The disc takes the block's element colour (via `accent`); the chevron on it
+  // takes the block's text colour. They were one before — the glyph was a fixed
+  // white, so a light element colour made the arrows disappear. With no text
+  // colour set it falls back to whatever is legible on the disc rather than to
+  // white, so the two can never be the same colour by accident.
+  const arrowInk = ink || readableText(accent);
   const mw = useMediaWidth();
   const es = useEs();
   const [idx, setIdx] = useState(0);
@@ -566,24 +585,24 @@ function GalleryCarousel({ items, accent, autoSlide, intervalMs = 4000 }: { item
         </div>
         {/* Arrows appear only when there's somewhere to go in that direction. */}
         {n > 1 && !atStart && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent, es)}>‹</button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} style={navBtn('left', accent, arrowInk, es)}>‹</button>
         )}
         {n > 1 && !atEnd && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent, es)}>›</button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} style={navBtn('right', accent, arrowInk, es)}>›</button>
         )}
       </div>
       {n > 1 && <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingTop: 10 }}>{items.map((_, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i === clamped ? accent : '#ccc' }} />)}</div>}
     </div>
   );
 }
-function navBtn(side: 'left' | 'right', accent: string, es: (n: number) => number): React.CSSProperties {
-  return { position: 'absolute', top: '50%', transform: 'translateY(-50%)', [side]: 10, width: es(36), height: es(36), borderRadius: '50%', background: accent, color: '#fff', border: 'none', fontSize: 22, cursor: 'pointer' } as React.CSSProperties;
+function navBtn(side: 'left' | 'right', accent: string, arrowInk: string, es: (n: number) => number): React.CSSProperties {
+  return { position: 'absolute', top: '50%', transform: 'translateY(-50%)', [side]: 10, width: es(36), height: es(36), borderRadius: '50%', background: accent, color: arrowInk, border: 'none', fontSize: 22, cursor: 'pointer' } as React.CSSProperties;
 }
 
-function MenuShowcase({ title, items, accent, ink }: { title: string; items: MenuShowcaseItem[]; accent: string; ink?: string | null }) {
+function MenuShowcase({ title, items, accent, ink, element }: { title: string; items: MenuShowcaseItem[]; accent: string; element?: string | null; ink?: string | null }) {
   const fs = useFs();
   const es = useEs();
-  const surface = pillSurface(ink ?? null, '#000', accent);
+  const surface = pillSurface(ink ?? null, '#000', accent, element ?? null);
   if (items.length === 0) return <Placeholder label="Menu" />;
   return (
     <div>
@@ -611,10 +630,10 @@ function MenuShowcase({ title, items, accent, ink }: { title: string; items: Men
   );
 }
 
-function SocialsView({ title, links, accent, ink }: { title: string; links: SocialLink[]; accent: string; ink?: string | null }) {
+function SocialsView({ title, links, accent, ink, element }: { title: string; links: SocialLink[]; accent: string; element?: string | null; ink?: string | null }) {
   const fs = useFs();
   const es = useEs();
-  const surface = pillSurface(ink ?? null, '#111', '#fff');
+  const surface = pillSurface(ink ?? null, '#111', '#fff', element ?? null);
   const fsH = useFsH();
   return (
     <section style={{ padding: '24px 20px' }}>
@@ -632,7 +651,7 @@ function SocialsView({ title, links, accent, ink }: { title: string; links: Soci
   );
 }
 
-function ContactsView({ p }: { p: BlockProps; accent: string }) {
+function ContactsView({ p, element }: { p: BlockProps; element?: string | null }) {
   const fs = useFs();
   const fsH = useFsH();
   const phone = str(p, 'phone'); const tg = str(p, 'telegramUrl'); const ig = str(p, 'instagramUrl');
@@ -641,16 +660,18 @@ function ContactsView({ p }: { p: BlockProps; accent: string }) {
       <style>{PASSIVE_KEYFRAMES}</style>
       {str(p, 'title') && <h3 style={{ margin: '0 0 16px', fontSize: fsH(18), fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'var(--blk-font-h, system-ui, sans-serif)', color: 'inherit' }}>{str(p, 'title')}</h3>}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-        {tg && <IconLink href={tg} delay={0}><SvgTelegram /></IconLink>}
-        {phone && <IconLink href={`tel:${phone}`} delay={0.35}><SvgPhone /></IconLink>}
-        {ig && <IconLink href={ig} delay={0.7}><SvgInstagram /></IconLink>}
+        {tg && <IconLink href={tg} delay={0} element={element}><SvgTelegram /></IconLink>}
+        {phone && <IconLink href={`tel:${phone}`} delay={0.35} element={element}><SvgPhone /></IconLink>}
+        {ig && <IconLink href={ig} delay={0.7} element={element}><SvgInstagram /></IconLink>}
       </div>
     </section>
   );
 }
-function IconLink({ href, children, delay = 0 }: { href: string; children: React.ReactNode; delay?: number }) {
+function IconLink({ href, children, delay = 0, element }: { href: string; children: React.ReactNode; delay?: number; element?: string | null }) {
   const es = useEs();
-  return <a href={href} target="_blank" rel="noreferrer" style={{ width: es(52), height: es(52), borderRadius: '50%', background: '#0d0d0d', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', animation: `blkBounce 2.4s ease-in-out ${delay}s infinite` }}>{children}</a>;
+  // The disc, and a glyph that stays legible on whatever colour it is given.
+  const disc = element || '#0d0d0d';
+  return <a href={href} target="_blank" rel="noreferrer" style={{ width: es(52), height: es(52), borderRadius: '50%', background: disc, color: readableText(disc), display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', animation: `blkBounce 2.4s ease-in-out ${delay}s infinite` }}>{children}</a>;
 }
 function SvgTelegram() {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.94c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3 10.55 18.28c-.24.24-.43.45-.85.45z"/></svg>;
@@ -679,8 +700,8 @@ function PromoCard({ p, accent }: { p: BlockProps; accent: string }) {
   );
 }
 
-function RsvpForm({ title, accent, submit, ink }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void>; ink?: string | null }) {
-  const surface = pillSurface(ink ?? null, '#000', '#fff');
+function RsvpForm({ title, accent, submit, ink, element }: { title: string; accent: string; submit?: (p: { guestName: string; attending: boolean }) => Promise<void>; element?: string | null; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#000', '#fff', element ?? null);
   const fs = useFs();
   const fsH = useFsH();
   const [name, setName] = useState('');
@@ -800,8 +821,8 @@ function LeadForm({ title, subtitle, buttonLabel, showMessage, accent, brandName
 }
 
 // "Save contact" button — builds a vCard on the fly and downloads it.
-function SaveContactButton({ label, name, phone, accent, ink }: { label: string; name: string; phone: string; accent: string; ink?: string | null }) {
-  const surface = pillSurface(ink ?? null, '#0d0d0d', accent);
+function SaveContactButton({ label, name, phone, accent, ink, element }: { label: string; name: string; phone: string; accent: string; element?: string | null; ink?: string | null }) {
+  const surface = pillSurface(ink ?? null, '#0d0d0d', accent, element ?? null);
   const fs = useFs();
   const es = useEs();
   const save = () => {
@@ -833,25 +854,35 @@ function SaveContactButton({ label, name, phone, accent, ink }: { label: string;
 }
 
 // Section divider with a selectable shape.
-function Divider({ shape, text, accent }: { shape: string; text: string; accent: string }) {
+function Divider({ shape, text, accent, element }: { shape: string; text: string; accent: string; element?: string | null }) {
   const fs = useFs();
   const es = useEs();
+  // The hairlines follow the block's element colour when it has one. Without one
+  // they stay `currentColor` at the same opacity as before, so no existing
+  // divider changes — but a divider is nothing BUT its rule, so it would be an
+  // odd block to leave uncolourable.
+  const rule: React.CSSProperties = element
+    ? { background: element, opacity: 0.55 }
+    : { background: 'currentColor', opacity: 0.25 };
+  const lineRule: React.CSSProperties = element
+    ? { background: element, opacity: 0.45 }
+    : { background: 'currentColor', opacity: 0.18 };
   if (shape === 'spacer') return <div style={{ height: es(44) }} />;
   if (shape === 'icon') {
     return (
       <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ flex: 1, height: 1, ...rule }} />
         <span style={{ color: accent, fontSize: es(18) }}>{text || '★'}</span>
-        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ flex: 1, height: 1, ...rule }} />
       </div>
     );
   }
   if (shape === 'text') {
     return (
       <div style={{ padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ flex: 1, height: 1, ...rule }} />
         <span style={{ fontSize: fs(12), letterSpacing: '0.15em', opacity: 0.7, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)', color: 'inherit' }}>{text || 'или'}</span>
-        <span style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.25 }} />
+        <span style={{ flex: 1, height: 1, ...rule }} />
       </div>
     );
   }
@@ -868,7 +899,7 @@ function Divider({ shape, text, accent }: { shape: string; text: string; accent:
     );
   }
   // 'line' (default)
-  return <div style={{ padding: '14px 24px' }}><div style={{ height: 1, background: 'currentColor', opacity: 0.18 }} /></div>;
+  return <div style={{ padding: '14px 24px' }}><div style={{ height: 1, ...lineRule }} /></div>;
 }
 
 // Heading in "scrolling text" (ticker) mode: the text loops horizontally forever.
@@ -890,7 +921,11 @@ function MarqueeHeading({ text }: { text: string }) {
 }
 
 // Single wide link button with a label + sub-label and a custom background color.
-function LinkBar({ label, sublabel, action, color, accent }: { label: string; sublabel: string; action?: ButtonAction; color: string; accent: string }) {
+function LinkBar({ label, sublabel, action, color, accent, element, ink }: { label: string; sublabel: string; action?: ButtonAction; color: string; accent: string; element?: string | null; ink?: string | null }) {
+  // `color` is the link block's own legacy colour field, which the generic
+  // element colour replaces. It is still read, so every link block already
+  // published keeps the colour it was given; a new element colour wins over it.
+  const bar = element || color || accent;
   const fs = useFs();
   const onClick = () => {
     if (!action?.value) return;
@@ -900,7 +935,7 @@ function LinkBar({ label, sublabel, action, color, accent }: { label: string; su
   };
   return (
     <div style={{ padding: '10px 20px' }}>
-      <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: color || accent, color: '#fff', textAlign: 'left', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
+      <button type="button" onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', background: bar, color: ink || readableText(bar), textAlign: 'left', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>
         <span style={{ fontSize: 22, lineHeight: 1 }}>☰</span>
         <span>
           <span style={{ display: 'block', fontSize: fs(14), fontWeight: 800, letterSpacing: '0.1em' }}>{label}</span>
@@ -986,31 +1021,35 @@ export function VConnectFooter({ label, color }: { label: string; color?: string
 // "Contact us" section for reaching V-connect, rendered just below the footer
 // ad. Phone and Telegram are set per flyer in the builder (the `vccontact`
 // block). Renders nothing until at least one is filled in.
-export function VConnectContact({ phone, telegram, instagram, title, callLabel, telegramLabel, instagramLabel, color }: {
+export function VConnectContact({ phone, telegram, instagram, title, callLabel, telegramLabel, instagramLabel, color, element }: {
   phone?: string | null; telegram?: string | null; instagram?: string | null;
   title: string; callLabel: string; telegramLabel: string; instagramLabel: string;
   // The page's resolved text color; chips invert around it so they stay legible
   // on a dark theme instead of being fixed black-on-white.
   color?: string | null;
+  // The block's own element colour: the filled chip's surface and the outline
+  // chips' borders. Unset keeps the old behaviour of deriving both from `color`.
+  element?: string | null;
 }) {
   const tel = (phone || '').trim();
   const tg = (telegram || '').trim();
   const ig = (instagram || '').trim();
   if (!tel && !tg && !ig) return null;
   const ink = (color || '').trim() || '#000';
-  const onInk = readableText(ink);
+  const surface = (element || '').trim() || ink;
+  const onSurface = readableText(surface);
   const tgHref = tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/^@/, '')}`;
   const igHref = ig.startsWith('http') ? ig : `https://instagram.com/${ig.replace(/^@/, '')}`;
   const chip: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 999,
     fontSize: 14, fontWeight: 700, letterSpacing: '0.04em', fontFamily: 'var(--blk-font-b, system-ui, sans-serif)',
-    textDecoration: 'none', border: `1px solid ${softInk(ink, 0.28)}`,
+    textDecoration: 'none', border: `1px solid ${softInk(surface, 0.28)}`,
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '4px 20px 34px' }}>
       <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: ink, opacity: 0.7, fontFamily: 'var(--blk-font-b, system-ui, sans-serif)' }}>{title}</span>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: ink, color: onInk }}>{callLabel} {tel}</a>}
+        {tel && <a href={`tel:${tel.replace(/\s+/g, '')}`} style={{ ...chip, background: surface, color: onSurface }}>{callLabel} {tel}</a>}
         {tg && <a href={tgHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: 'transparent', color: ink }}>{telegramLabel}</a>}
         {ig && <a href={igHref} target="_blank" rel="noopener noreferrer" style={{ ...chip, background: 'transparent', color: ink }}>{instagramLabel}</a>}
       </div>

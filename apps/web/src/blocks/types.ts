@@ -192,7 +192,9 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
       { key: 'label', labelKey: 'bf_label', type: 'text' },
       { key: 'sublabel', labelKey: 'bf_subtitle', type: 'text' },
       { key: 'action', labelKey: 'bf_action', type: 'action' },
-      { key: 'color', labelKey: 'bf_color', type: 'color' },
+      // No colour field: the generic per-block element colour paints this bar.
+      // The legacy `color` prop is still READ as the fallback, so every link
+      // block already published keeps the colour it was given.
     ],
   },
   socials: {
@@ -349,4 +351,34 @@ export function elementScaleRange(type: BlockType): { min: number; max: number }
 export function elementScale(p: BlockProps, type: BlockType): number {
   const { min, max } = elementScaleRange(type);
   return Math.max(min, Math.min(max, num(p, 'elementScale', 1)));
+}
+
+// ── Per-block element colour ─────────────────────────────────────────────────
+// A block's OWN colour for the surfaces it paints — the gallery's arrow discs,
+// the menu badge, the social chips, the contact circles, the divider glyph, the
+// promo code pill, the countdown dots, the button's and Save contact's pill.
+// It is independent of `textColor`, which sets the type: a designer can have a
+// dark-green button with cream lettering by setting the two separately.
+//
+// Where a block draws its furniture from the page accent, this REPLACES the
+// accent for that block alone. Where it paints a fixed dark pill, this becomes
+// the pill.
+//
+// Left out are the blocks with no furniture to tint: `heading`, `text` and
+// `html` are pure type (their colour is `textColor`), and `image` and `video`
+// show the designer's own artwork with no chrome around it. Offering the
+// control there would be a picker that changes nothing.
+const NO_ELEMENT_COLOR = new Set<BlockType>(['heading', 'text', 'html', 'image', 'video']);
+
+export function hasElementColor(type: BlockType): boolean {
+  return !NO_ELEMENT_COLOR.has(type);
+}
+
+/**
+ * The chosen colour, or null for "use the page accent / the block's default".
+ * Null rather than a fallback on purpose: with none set every block renders
+ * byte-identically to before, so nothing already published changes.
+ */
+export function elementColor(p: BlockProps): string | null {
+  return str(p, 'elementColor') || null;
 }
