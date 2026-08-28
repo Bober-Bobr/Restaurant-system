@@ -270,7 +270,14 @@
   min-height: 100vh;
   color: var(--adm-text);
   position: relative;
-  overflow-x: hidden;
+  /* `clip`, NOT `hidden`. `overflow-x: hidden` makes this element a scroll
+     container, and every `position: sticky` descendant then pins to ITS
+     scrollport instead of the window — which silently unstuck both the topbar
+     and the tables' sticky scrollbar, leaving them at the foot of the page.
+     `clip` clips the aurora blobs exactly the same way without creating a
+     scrollport. Measured: with `hidden` neither sticks; with `clip` both do and
+     no horizontal page scrollbar appears. */
+  overflow-x: clip;
 }
 
 /* The two aurora blobs now drift. They are `position: fixed` and blurred to

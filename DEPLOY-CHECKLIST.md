@@ -1648,3 +1648,46 @@ at all when the table fits.
 4. Narrow the window until the table fits → the bar disappears entirely.
 5. Toggle the Subcategories / Table categories columns → the bar's length
    re-measures (a `ResizeObserver` watches the table, not just the window).
+
+---
+
+## 34. Fix: `.adm-bg` was unsticking every sticky element
+
+Frontend-only, no migration. **This is a fix to §33, and it also repairs a
+pre-existing bug nobody had reported.**
+
+`.adm-bg` carried `overflow-x: hidden`, to clip the two drifting aurora blobs.
+`overflow-x: hidden` makes an element a **scroll container**, and
+`position: sticky` pins to the nearest scrollport rather than to the window — so
+every sticky descendant was pinning to `.adm-bg`'s box, which spans the whole
+page, and came to rest at the foot of the document instead.
+
+That is why the Menu page's new scrollbar sat at the bottom of the table. It is
+also why **`.adm-topbar` has not actually been sticky in any of the five admin
+layouts** — measured at `top: -600px` after a 600px scroll. Nothing failed; the
+elements simply stopped sticking.
+
+`overflow-x: clip` clips identically and creates no scrollport. Measured in
+headless Chrome against the built stylesheet:
+
+| `.adm-bg` | sticky bar | sticky topbar | horizontal page scrollbar |
+|---|---|---|---|
+| `hidden` (before) | not pinned | **not pinned** | none |
+| removed | pinned | pinned | **appears** |
+| `clip` (now) | pinned | pinned | none |
+
+`stickyAncestors.test.ts` guards it: it parses the real stylesheets and fails if
+any scope hosting a sticky element declares an overflow value that creates a
+scrollport. Reverting the one word fails it.
+
+**After deploying:**
+
+1. Menu page, scrolled into a long table → the gold bar is at the **bottom edge
+   of the window**, not below the last row. This is the one to check first.
+2. Scroll to the end of the table → it settles under the last row.
+3. **The top navigation bar now stays put while you scroll**, on every admin
+   page and for every role. It did not before. If that is unwanted anywhere,
+   this is the change that caused it.
+4. Confirm no page has gained a horizontal scrollbar at the window's bottom edge —
+   that is what the old `hidden` was suppressing, and `clip` should still
+   suppress it.
