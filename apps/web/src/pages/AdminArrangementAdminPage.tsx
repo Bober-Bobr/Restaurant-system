@@ -66,7 +66,7 @@ const iconBtn = (disabled: boolean): React.CSSProperties => ({
 function MenuArrangementSection({ t }: { t: (k: Parameters<typeof translate>[0]) => string }) {
   const queryClient = useQueryClient();
 
-  const menuQuery = useQuery({ queryKey: ['menu'], queryFn: () => menuService.list() });
+  const menuQuery = useQuery({ queryKey: ['menu', 'banquet'], queryFn: () => menuService.list('banquet') });
   const restaurantQuery = useQuery({ queryKey: ['restaurants'], queryFn: () => restaurantService.list() });
 
   const savedOrder = restaurantQuery.data?.[0]?.categoryOrder

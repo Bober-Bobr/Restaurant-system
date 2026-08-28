@@ -15,7 +15,8 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { getPhotoUrl } from '../utils/photoUrl';
-import { useExcludedCategories, useHideSubcategories } from '../hooks/useExcludedCategories';
+import { useExcludedEverywhere, useHideSubcategories } from '../hooks/useExcludedCategories';
+import { StickyHScroll } from '../components/ui/StickyHScroll';
 import { draftOf, patchOf, mayAcceptServerValue, type DishDraft } from './adminMenuDraft';
 
 type MenuCategory = MenuItem['category'];
@@ -110,7 +111,7 @@ export const AdminMenuPage = () => {
   // The food-admin (catering) dashboard doesn't deal with banquet table
   // categories, so the per-dish "Tables" column is hidden there.
   const showTableCategories = role !== 'CATERING_ADMIN';
-  const excluded = useExcludedCategories();
+  const excluded = useExcludedEverywhere();
   // Master switch (Subcategories page): when on, hide the Subcategory column entirely.
   const showSubcategories = !useHideSubcategories();
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);
@@ -362,7 +363,10 @@ export const AdminMenuPage = () => {
 
             {/* Desktop table */}
             <div className="adm-card tablet-fade-up hidden sm:block">
-              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {/* The dish table is wider than the screen and the page is long, so
+                  its scrollbar rides the bottom of the viewport rather than
+                  sitting hundreds of rows below the columns it scrolls. */}
+              <StickyHScroll>
               <table className="adm-table" style={{ width: '100%', minWidth: 880 }}>
                 <thead>
                   <tr>
@@ -395,7 +399,7 @@ export const AdminMenuPage = () => {
                   ))}
                 </tbody>
               </table>
-              </div>
+              </StickyHScroll>
             </div>
           </>
         );

@@ -57,7 +57,7 @@ export const AdminArrangementPage = () => {
   const t = (k: Parameters<typeof translate>[0]) => translate(k, locale);
   const queryClient = useQueryClient();
 
-  const menuQuery = useQuery({ queryKey: ['menu'], queryFn: () => menuService.list() });
+  const menuQuery = useQuery({ queryKey: ['menu', 'catering'], queryFn: () => menuService.list('catering') });
   const restaurantQuery = useQuery({ queryKey: ['restaurants'], queryFn: () => restaurantService.list() });
 
   const savedOrder = useMemo(

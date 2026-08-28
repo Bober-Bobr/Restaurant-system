@@ -2,6 +2,7 @@ import createHttpError from 'http-errors';
 import { MenuCategory } from '@prisma/client';
 import { EventRepository } from '../events/event.repository.js';
 import { MenuRepository, type I18nMap } from './menu.repository.js';
+import type { MenuScope } from '../../utils/excludedCategories.js';
 
 export class MenuService {
   constructor(
@@ -9,8 +10,8 @@ export class MenuService {
     private readonly eventRepository: EventRepository
   ) {}
 
-  async listMenuItems(restaurantId: string) {
-    return this.menuRepository.listActive(restaurantId);
+  async listMenuItems(restaurantId: string, scope: MenuScope) {
+    return this.menuRepository.listActive(restaurantId, scope);
   }
 
   async listAllMenuItems(restaurantId: string) {
@@ -51,8 +52,14 @@ export class MenuService {
     };
   }
 
-  async saveSettings(restaurantId: string, payload: { excludedCategories: MenuCategory[]; hideSubcategories?: boolean }) {
-    const excludedCategories = await this.menuRepository.saveExcludedCategories(restaurantId, payload.excludedCategories);
+  async saveSettings(
+    restaurantId: string,
+    payload: { excludedCategories?: Partial<Record<MenuScope, MenuCategory[]>>; hideSubcategories?: boolean },
+  ) {
+    const excludedCategories = await this.menuRepository.saveExcludedCategories(
+      restaurantId,
+      payload.excludedCategories ?? {},
+    );
     const hideSubcategories = payload.hideSubcategories === undefined
       ? await this.menuRepository.getHideSubcategories(restaurantId)
       : await this.menuRepository.saveHideSubcategories(restaurantId, payload.hideSubcategories);

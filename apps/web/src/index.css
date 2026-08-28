@@ -656,6 +656,42 @@
   border: 3px solid transparent;
   background-clip: content-box;
 }
+
+/* The sticky horizontal scrollbar (StickyHScroll). A wide table in a tall page
+   keeps its own bar several screens below the columns it scrolls; this one is a
+   separate sticky element that rides the bottom of the viewport instead, and
+   settles under the last row once the table's end comes into view. `sticky`
+   does that positioning on its own — no scroll listener decides which.
+
+   The bar must be visible without being scrolled, so it is `overflow-x: scroll`
+   with an explicit thumb rather than `auto` with an overlay bar. */
+.adm-hscroll {
+  position: sticky;
+  z-index: 5;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  height: 14px;
+  border-top: 1px solid var(--adm-line);
+  /* The last rows scroll under it, so it cannot be transparent. */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  scrollbar-width: thin;
+}
+.adm-hscroll::-webkit-scrollbar { height: 12px; }
+.adm-hscroll::-webkit-scrollbar-track { background: transparent; }
+.adm-hscroll::-webkit-scrollbar-thumb {
+  background: rgba(var(--adm-accent-rgb), 0.45);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.adm-hscroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--adm-accent-rgb), 0.7);
+  background-clip: content-box;
+}
+/* The monochrome food-service surfaces redeclare the accent, so this follows. */
+.cadm-theme .adm-hscroll { border-top-color: rgba(255, 255, 255, 0.14); }
 .adm-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .adm-btn-sm { padding: 0.35rem 0.75rem !important; font-size: 0.75rem !important; }

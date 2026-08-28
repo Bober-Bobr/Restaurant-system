@@ -3,6 +3,7 @@ import { MenuCategory } from '@prisma/client';
 import { MenuService } from './menu.service.js';
 import { createMenuItemSchema, updateMenuItemSchema, arrangementSchema, assignSelectionSchema } from './menu.schema.js';
 import type { MenuRepository } from './menu.repository.js';
+import type { MenuScope } from '../../utils/excludedCategories.js';
 import type { EventRepository } from '../events/event.repository.js';
 
 // Adding a dish, editing one, and putting one on an event's menu — the banquet
@@ -20,8 +21,15 @@ function makeService() {
     deleteById: vi.fn(async () => {}),
     upsertSelection: vi.fn(async () => ({ id: 'sel1' })),
     saveArrangement: vi.fn(async () => {}),
-    getExcludedCategories: vi.fn(async () => [MenuCategory.SUSHI_ROLLS]),
-    saveExcludedCategories: vi.fn(async (_r: string, cats: MenuCategory[]) => cats),
+    getExcludedCategories: vi.fn(async () => ({
+      banquet: [MenuCategory.SUSHI_ROLLS],
+      catering: [MenuCategory.FIRST_COURSE],
+    })),
+    // Mirrors the repository: a scope the caller left out keeps its stored list.
+    saveExcludedCategories: vi.fn(async (_r: string, p: Partial<Record<MenuScope, MenuCategory[]>>) => ({
+      banquet: p.banquet ?? [MenuCategory.SUSHI_ROLLS],
+      catering: p.catering ?? [MenuCategory.FIRST_COURSE],
+    })),
     getHideSubcategories: vi.fn(async () => false),
     saveHideSubcategories: vi.fn(async (_r: string, v: boolean) => v),
   };
@@ -157,28 +165,67 @@ describe('putting a dish on an event\'s menu', () => {
 describe('menu settings', () => {
   it('reads both switches together', async () => {
     const settings = await harness.service.getSettings('r1');
-    expect(settings.excludedCategories).toEqual([MenuCategory.SUSHI_ROLLS]);
+    expect(settings.excludedCategories).toEqual({
+      banquet: [MenuCategory.SUSHI_ROLLS],
+      catering: [MenuCategory.FIRST_COURSE],
+    });
     expect(settings.hideSubcategories).toBe(false);
   });
 
   it('leaves the subcategory switch alone when the save does not mention it', async () => {
     // A save of the excluded-category list must not silently flip an unrelated
     // setting back to its default.
-    await harness.service.saveSettings('r1', { excludedCategories: [] });
+    await harness.service.saveSettings('r1', { excludedCategories: { banquet: [] } });
     expect(harness.menuRepo.saveHideSubcategories).not.toHaveBeenCalled();
     expect(harness.menuRepo.getHideSubcategories).toHaveBeenCalled();
   });
 
   it('writes it when the save does mention it', async () => {
-    const saved = await harness.service.saveSettings('r1', { excludedCategories: [], hideSubcategories: true });
+    const saved = await harness.service.saveSettings('r1', { excludedCategories: { banquet: [] }, hideSubcategories: true });
     expect(harness.menuRepo.saveHideSubcategories).toHaveBeenCalledWith('r1', true);
     expect(saved.hideSubcategories).toBe(true);
   });
 
   it('accepts turning it explicitly off', async () => {
-    const saved = await harness.service.saveSettings('r1', { excludedCategories: [], hideSubcategories: false });
+    const saved = await harness.service.saveSettings('r1', { excludedCategories: { banquet: [] }, hideSubcategories: false });
     expect(harness.menuRepo.saveHideSubcategories).toHaveBeenCalledWith('r1', false);
     expect(saved.hideSubcategories).toBe(false);
+  });
+});
+
+describe('the two products keep separate excluded-category lists', () => {
+  // One dish table serves banquets and the public catering menu, and each
+  // switches off the categories it has no use for. Before the split there was
+  // one list, so hiding energy drinks from a banquet package also stripped them
+  // from the public menu.
+  it('saving one product sends only that product', async () => {
+    await harness.service.saveSettings('r1', { excludedCategories: { catering: [MenuCategory.ALCOHOL] } });
+    expect(harness.menuRepo.saveExcludedCategories).toHaveBeenCalledWith('r1', {
+      catering: [MenuCategory.ALCOHOL],
+    });
+  });
+
+  it('leaves the list of the other product untouched', async () => {
+    const saved = await harness.service.saveSettings('r1', { excludedCategories: { catering: [] } });
+    expect(saved.excludedCategories.catering).toEqual([]);
+    expect(saved.excludedCategories.banquet).toEqual([MenuCategory.SUSHI_ROLLS]);
+  });
+
+  it('a save that mentions no category list clears neither', async () => {
+    // The Subcategories page flips only the master switch.
+    const saved = await harness.service.saveSettings('r1', { hideSubcategories: true });
+    expect(harness.menuRepo.saveExcludedCategories).toHaveBeenCalledWith('r1', {});
+    expect(saved.excludedCategories).toEqual({
+      banquet: [MenuCategory.SUSHI_ROLLS],
+      catering: [MenuCategory.FIRST_COURSE],
+    });
+  });
+
+  it('a menu read names the product it is reading for', async () => {
+    await harness.service.listMenuItems('r1', 'catering');
+    expect(harness.menuRepo.listActive).toHaveBeenCalledWith('r1', 'catering');
+    await harness.service.listMenuItems('r1', 'banquet');
+    expect(harness.menuRepo.listActive).toHaveBeenCalledWith('r1', 'banquet');
   });
 });
 

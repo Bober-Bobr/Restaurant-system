@@ -44,7 +44,7 @@ export const EmployeeEventsPage = () => {
   const eventsQuery = useQuery<Event[]>({ queryKey: ['events'], queryFn: () => eventService.list() });
   const hallsQuery = useQuery({ queryKey: ['halls'], queryFn: () => hallService.list() });
   const tcQuery = useQuery({ queryKey: ['tableCategories'], queryFn: () => tableCategoryService.list() });
-  const menuQuery = useQuery({ queryKey: ['menu'], queryFn: () => menuService.list() });
+  const menuQuery = useQuery({ queryKey: ['menu', 'banquet'], queryFn: () => menuService.list('banquet') });
 
   const events = eventsQuery.data ?? [];
   const halls = hallsQuery.data ?? [];

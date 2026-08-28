@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
-import { getExcludedCategories } from '../../utils/excludedCategories.js';
+import { getExcludedEverywhere } from '../../utils/excludedCategories.js';
 import { IMAGE_EXTENSIONS } from '../../utils/imageUpload.js';
 
 export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
@@ -82,9 +82,11 @@ export class PhotoService {
     }
 
     if (category === 'menu') {
-      // Hide photos belonging to dish categories the restaurant has excluded.
+      // Hide photos belonging to dish categories the restaurant has excluded
+      // from BOTH products. A category still on one menu keeps its photos —
+      // otherwise the dishes on sale there could not be given a picture.
       const excluded = restaurantId
-        ? new Set((await getExcludedCategories(restaurantId)).map((c) => c.toLowerCase()))
+        ? new Set((await getExcludedEverywhere(restaurantId)).map((c) => c.toLowerCase()))
         : new Set<string>();
       const all: string[] = await this.listFilesInDir(categoryDir, `/uploads/${slug}/${category}`);
       for (const dishCat of DISH_CATEGORIES) {

@@ -1567,3 +1567,84 @@ query (including `invitation.repository.ts`) was already scoped by
    sequence.
 4. Two different restaurants may now both hold an event 13. That is correct —
    staff have always said "event 13" meaning their own.
+
+---
+
+## 32. Split excluded dish categories: banquets vs public catering (**has a migration**)
+
+**What changed.** The Settings page had **one** list of switched-off dish
+categories applied to every surface, so a restaurant hiding energy drinks from
+its banquet packages also stripped them from its public catering menu. There
+are now two independent lists, each with its own Save button.
+
+`migration 20260828110000_split_excluded_categories` renames
+`Restaurant.excludedCategories` to `excludedCategoriesBanquet`, adds
+`excludedCategoriesCatering`, and **copies the old list into it**. That backfill
+is what makes the deploy invisible: every surface shows exactly what it showed
+before, and the two only diverge once someone edits one of them.
+
+**How the scope is decided.** Every menu read now names its product:
+
+| Surface | Scope |
+|---|---|
+| Tablet kiosk + summary (`publicData.store`) | banquet |
+| Events pages, Employee events | banquet |
+| Table categories (banquet price packages) | banquet |
+| Banquet arrangement (`AdminArrangementAdminPage`) | banquet |
+| Public catering site, food-service site, Food Employee orders | catering |
+| Catering arrangement (`AdminArrangementPage`), Subcategories | catering |
+| **Menu page, Photos page** | **both** — see below |
+
+`GET /api/public/menu-items` takes `?scope=`, defaulting to **catering**; the
+authenticated `GET /api/menu-items` takes it too, defaulting to **banquet**. An
+unrecognised or absent value falls back rather than 400ing, so a browser still
+running the bundle from before this deploy keeps working.
+
+**The Menu and Photos pages hide only what BOTH products dropped.** They manage
+the shared dish table, and a category still on the catering menu has to stay
+editable once the banquet side drops it — otherwise its dishes are on sale and
+unreachable: invisible to edit, still shown to guests.
+
+A **Food Admin sees only the catering list**; they have no banquet remit.
+
+**After deploying:**
+
+1. `prisma migrate deploy` runs it — confirm in the deploy output.
+2. Open Settings as a banquet ADMIN → **two** sections, each with its own Save,
+   both showing the same ticks the single list had before.
+3. Tick a category under **Banquets** only, save → it disappears from the tablet
+   and from table categories, and is **still on** `v-menu.uz/<slug>`.
+4. Tick a different one under **Public catering site** only → the mirror case.
+5. In both cases the category is **still listed on the Menu page**, so its
+   dishes stay editable. It disappears from the Menu page only when it is
+   ticked in both.
+6. Open Settings as a CATERING_ADMIN → only the catering section.
+7. On the Subcategories page, flip the master switch → neither category list
+   changes (that page now sends only the switch).
+
+## 33. Menu page: the horizontal scrollbar follows the screen
+
+Frontend-only, no migration.
+
+The dish table is wider than the screen, and its scrollbar sat at the bottom of
+the **table** — several screens below the columns it scrolls once a restaurant
+has a few hundred dishes. `StickyHScroll` replaces it with a
+`position: sticky; bottom: 0` bar: it rides the bottom of the viewport while the
+table is on screen, and comes to rest under the last row once the table's end
+scrolls into view. A short table therefore still gets an ordinary scrollbar in
+the ordinary place, and no scroll listener decides which — CSS does.
+
+The table's own bar is hidden **only once the sticky one is up**, so a
+mis-measurement can never leave the columns unreachable. The bar is not rendered
+at all when the table fits.
+
+**After deploying:**
+
+1. Menu page on a desktop, with enough dishes to fill several screens → the gold
+   bar sits at the bottom edge of the window; dragging it moves the columns.
+2. Scroll to the end of the table → the bar settles under the last row rather
+   than staying pinned.
+3. A restaurant with three dishes → the bar is just under the table, as before.
+4. Narrow the window until the table fits → the bar disappears entirely.
+5. Toggle the Subcategories / Table categories columns → the bar's length
+   re-measures (a `ResizeObserver` watches the table, not just the window).

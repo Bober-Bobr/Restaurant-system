@@ -59,7 +59,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
 
     try {
       const [menuItems, halls, tableCategories, restaurant, extraServices] = await Promise.all([
-        publicMenuService.listActive(restaurantId),
+        publicMenuService.listActive(restaurantId, 'banquet'),
         publicHallService.listActive(restaurantId),
         publicTableCategoryService.listActive(restaurantId),
         publicRestaurantService.get(restaurantId),

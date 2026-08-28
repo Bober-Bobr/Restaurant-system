@@ -36,8 +36,14 @@ export const arrangementSchema = z.object({
   }))
 });
 
+// Each product's exclusions are optional and saved independently: the Settings
+// page edits one at a time, and the Subcategories page sends neither. A scope
+// that is absent keeps whatever it already held.
 export const settingsSchema = z.object({
-  excludedCategories: z.array(z.nativeEnum(MenuCategory)),
+  excludedCategories: z.object({
+    banquet: z.array(z.nativeEnum(MenuCategory)).optional(),
+    catering: z.array(z.nativeEnum(MenuCategory)).optional(),
+  }).optional(),
   hideSubcategories: z.boolean().optional()
 });
 

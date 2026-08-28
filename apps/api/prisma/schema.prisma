@@ -363,7 +363,14 @@ model Restaurant {
   logoUrl         String?
   backgroundImageUrl String?
   categoryOrder   String?
-  excludedCategories String?
+  // Dish categories the restaurant has switched off, as a JSON array of
+  // MenuCategory names. There are TWO lists because the two products sell
+  // different things from one dish table: a banquet package has no place for
+  // energy drinks, and a public menu has no place for the tablet's course
+  // groupings. Switching a category off for one must not remove it from the
+  // other. Null means "nothing excluded".
+  excludedCategoriesBanquet  String?
+  excludedCategoriesCatering String?
   // Per-restaurant tablet/summary color palette (hex). Null → default gold theme.
   tabletAccentColor String?
   tabletBgColor     String?

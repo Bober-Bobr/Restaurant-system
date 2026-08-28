@@ -1,13 +1,22 @@
 import { MenuCategory } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
-import { getExcludedCategories, parseExcludedCategories } from '../../utils/excludedCategories.js';
+import {
+  getExcludedCategories,
+  getExcludedCategoriesBoth,
+  getExcludedEverywhere,
+  type ExcludedCategories,
+  type MenuScope,
+} from '../../utils/excludedCategories.js';
 
 // Per-language overrides for a dish's name/description (any locale optional).
 export type I18nMap = { en?: string; ru?: string; uz?: string };
 
 export class MenuRepository {
+  // The management view. It hides only what BOTH products have switched off —
+  // a category still on the catering menu has to stay editable even once the
+  // banquet side has dropped it, or its dishes are on sale and unreachable.
   async listAll(restaurantId: string) {
-    const excluded = await getExcludedCategories(restaurantId);
+    const excluded = await getExcludedEverywhere(restaurantId);
     return prisma.menuItem.findMany({
       where: { restaurantId, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
@@ -15,8 +24,9 @@ export class MenuRepository {
     });
   }
 
-  async listActive(restaurantId: string) {
-    const excluded = await getExcludedCategories(restaurantId);
+  // What a guest actually sees, and therefore scoped to one product.
+  async listActive(restaurantId: string, scope: MenuScope) {
+    const excluded = await getExcludedCategories(restaurantId, scope);
     return prisma.menuItem.findMany({
       where: { restaurantId, isActive: true, category: { notIn: excluded } },
       orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
@@ -24,17 +34,27 @@ export class MenuRepository {
     });
   }
 
-  // Settings: the list of dish categories the restaurant has hidden everywhere.
-  async getExcludedCategories(restaurantId: string): Promise<MenuCategory[]> {
-    return getExcludedCategories(restaurantId);
+  // Settings: both lists of switched-off dish categories.
+  async getExcludedCategories(restaurantId: string): Promise<ExcludedCategories> {
+    return getExcludedCategoriesBoth(restaurantId);
   }
 
-  async saveExcludedCategories(restaurantId: string, categories: MenuCategory[]) {
-    await prisma.restaurant.update({
-      where: { id: restaurantId },
-      data: { excludedCategories: JSON.stringify(categories) },
-    });
-    return parseExcludedCategories(JSON.stringify(categories));
+  /**
+   * Each scope is written only when the caller sent it. The Settings page edits
+   * one product at a time and the Subcategories page sends neither, so a save
+   * that always wrote both would clear the list the caller never saw.
+   */
+  async saveExcludedCategories(
+    restaurantId: string,
+    payload: Partial<Record<MenuScope, MenuCategory[]>>,
+  ): Promise<ExcludedCategories> {
+    const data: Record<string, string> = {};
+    if (payload.banquet) data.excludedCategoriesBanquet = JSON.stringify(payload.banquet);
+    if (payload.catering) data.excludedCategoriesCatering = JSON.stringify(payload.catering);
+    if (Object.keys(data).length > 0) {
+      await prisma.restaurant.update({ where: { id: restaurantId }, data });
+    }
+    return getExcludedCategoriesBoth(restaurantId);
   }
 
   // Master switch: hide all subcategories everywhere for this restaurant.

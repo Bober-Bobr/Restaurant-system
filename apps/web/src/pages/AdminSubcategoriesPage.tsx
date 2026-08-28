@@ -38,7 +38,7 @@ export const AdminSubcategoriesPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-  const excluded = useExcludedCategories();
+  const excluded = useExcludedCategories('catering');
 
   const { data: subcategories = [], isLoading } = useQuery({
     queryKey: ['subcategories'],
@@ -54,7 +54,9 @@ export const AdminSubcategoriesPage = () => {
 
   const toggleMasterMutation = useMutation({
     mutationFn: (next: boolean) =>
-      menuService.saveSettings({ excludedCategories: settingsQuery.data?.excludedCategories ?? [], hideSubcategories: next }),
+      // Only the master switch: sending no `excludedCategories` leaves both
+      // products' lists exactly as they are.
+      menuService.saveSettings({ hideSubcategories: next }),
     onSuccess: () => queryClient.invalidateQueries(),
   });
 

@@ -6,6 +6,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { MenuRepository } from '../menu/menu.repository.js';
+import { resolveMenuScope } from '../../utils/excludedCategories.js';
 import { HallRepository } from '../hall/hall.repository.js';
 import { ExtraServiceRepository } from '../extraService/extraService.repository.js';
 import { TableCategoryRepository } from '../tableCategory/tableCategory.repository.js';
@@ -258,7 +259,12 @@ router.get('/menu-items', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');
     if (!restaurantId) { response.json([]); return; }
-    response.json(await menuRepository.listActive(restaurantId));
+    // Unauthenticated, and serves BOTH products: the catering and food-service
+    // sites, and also the banquet tablet (which loads its menu through the
+    // public endpoint). So the caller has to say which — defaulting to the
+    // public sites, which are the majority and the anonymous ones.
+    const scope = resolveMenuScope(request.query.scope, 'catering');
+    response.json(await menuRepository.listActive(restaurantId, scope));
   } catch (error) { next(error); }
 });
 

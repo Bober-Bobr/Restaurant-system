@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MenuCategory } from '@prisma/client';
 import { toSubdomainSlug } from './slug.js';
 import { formatSom, tiyinToSom } from './currency.js';
-import { parseExcludedCategories } from './excludedCategories.js';
+import { excludedEverywhere, isMenuScope, parseExcludedCategories, resolveMenuScope } from './excludedCategories.js';
 import { isAllowedImage, IMAGE_EXTENSIONS } from './imageUpload.js';
 
 describe('restaurant slugs', () => {
@@ -62,6 +62,47 @@ describe('money is counted in tiyin', () => {
   it('rounds rather than truncating a stray half-tiyin', () => {
     expect(tiyinToSom(150)).toBe(2);
     expect(tiyinToSom(149)).toBe(1);
+  });
+});
+
+describe('the two products keep separate excluded-category lists', () => {
+  // Banquets and the public catering menu sell from one dish table, and each
+  // switches off the categories it has no use for. Switching one off for one
+  // product must leave the other alone.
+  const excluded = {
+    banquet: [MenuCategory.SUSHI_ROLLS, MenuCategory.ALCOHOL],
+    catering: [MenuCategory.FIRST_COURSE, MenuCategory.ALCOHOL],
+  };
+
+  it('hides from a management screen only what BOTH have dropped', () => {
+    // A category still on the catering menu has to stay editable even once the
+    // banquet side has dropped it — otherwise its dishes are on sale and
+    // unreachable: invisible to edit, still shown to guests.
+    expect(excludedEverywhere(excluded)).toEqual([MenuCategory.ALCOHOL]);
+  });
+
+  it('hides nothing when the two lists have nothing in common', () => {
+    expect(excludedEverywhere({ banquet: [MenuCategory.SOUPS], catering: [MenuCategory.GRILL] })).toEqual([]);
+  });
+
+  it('hides everything when the two lists agree, as they did before the split', () => {
+    const same = [MenuCategory.SUSHI_ROLLS, MenuCategory.ALCOHOL];
+    expect(excludedEverywhere({ banquet: same, catering: [...same] })).toEqual(same);
+  });
+
+  it('recognises the two scopes and nothing else', () => {
+    expect(isMenuScope('banquet')).toBe(true);
+    expect(isMenuScope('catering')).toBe(true);
+    for (const junk of ['BANQUET', 'tablet', '', null, undefined, 1]) expect(isMenuScope(junk)).toBe(false);
+  });
+
+  it('falls back rather than refusing an unknown scope', () => {
+    // The parameter is new. A browser still running the bundle from before this
+    // deploy sends none at all, and must not get an error page.
+    expect(resolveMenuScope('banquet', 'catering')).toBe('banquet');
+    expect(resolveMenuScope(undefined, 'catering')).toBe('catering');
+    expect(resolveMenuScope('nonsense', 'banquet')).toBe('banquet');
+    expect(resolveMenuScope(['banquet'], 'catering')).toBe('catering');
   });
 });
 

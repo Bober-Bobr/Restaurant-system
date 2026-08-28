@@ -120,8 +120,8 @@ export const AdminEventsPage = () => {
   });
 
   const { data: menuItems } = useQuery({
-    queryKey: ['menuItems'],
-    queryFn: () => menuService.list()
+    queryKey: ['menuItems', 'banquet'],
+    queryFn: () => menuService.list('banquet')
   });
 
   // Download the banquet summary PDF for a single event, rebuilt from its saved

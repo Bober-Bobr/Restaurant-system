@@ -1,9 +1,13 @@
-import type { MenuItem } from '../types/domain';
+import type { ExcludedCategories, MenuItem, MenuScope } from '../types/domain';
 import { httpClient } from './http';
 
+export type MenuSettings = { excludedCategories: ExcludedCategories; hideSubcategories: boolean };
+
 export const menuService = {
-  async list() {
-    const { data } = await httpClient.get<MenuItem[]>('/menu-items');
+  // `scope` picks which product's excluded-category list applies — the banquet
+  // surfaces (events, tablet flow) or the catering arrangement screen.
+  async list(scope: MenuScope = 'banquet') {
+    const { data } = await httpClient.get<MenuItem[]>('/menu-items', { params: { scope } });
     return data;
   },
   async listAllForAdmin() {
@@ -31,11 +35,16 @@ export const menuService = {
     await httpClient.put('/menu-items/arrangement', payload);
   },
   async getSettings() {
-    const { data } = await httpClient.get<{ excludedCategories: MenuItem['category'][]; hideSubcategories: boolean }>('/menu-items/settings');
+    const { data } = await httpClient.get<MenuSettings>('/menu-items/settings');
     return data;
   },
-  async saveSettings(payload: { excludedCategories: MenuItem['category'][]; hideSubcategories?: boolean }) {
-    const { data } = await httpClient.put<{ excludedCategories: MenuItem['category'][]; hideSubcategories: boolean }>('/menu-items/settings', payload);
+  // A scope left out of `excludedCategories` keeps whatever it already held, so
+  // saving one product's list never touches the other's.
+  async saveSettings(payload: {
+    excludedCategories?: Partial<ExcludedCategories>;
+    hideSubcategories?: boolean;
+  }) {
+    const { data } = await httpClient.put<MenuSettings>('/menu-items/settings', payload);
     return data;
   }
 };

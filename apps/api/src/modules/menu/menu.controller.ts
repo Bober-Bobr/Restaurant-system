@@ -4,12 +4,18 @@ import { eventIdSchema } from '../events/event.schema.js';
 import { arrangementSchema, assignSelectionSchema, createMenuItemSchema, menuItemIdSchema, settingsSchema, updateMenuItemSchema } from './menu.schema.js';
 import { MenuRepository } from './menu.repository.js';
 import { MenuService } from './menu.service.js';
+import { resolveMenuScope } from '../../utils/excludedCategories.js';
 
 const menuService = new MenuService(new MenuRepository(), new EventRepository());
 
+// The authenticated menu list serves the banquet surfaces (the tablet's event
+// flow, the events pages); the catering arrangement screen asks for its own
+// product explicitly.
+const menuScopeOf = (request: Request) => resolveMenuScope(request.query.scope, 'banquet');
+
 export class MenuController {
   async list(request: Request, response: Response) {
-    response.json(await menuService.listMenuItems(request.restaurantId!));
+    response.json(await menuService.listMenuItems(request.restaurantId!, menuScopeOf(request)));
   }
 
   async listAll(request: Request, response: Response) {

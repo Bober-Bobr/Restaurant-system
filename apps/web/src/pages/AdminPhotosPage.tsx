@@ -8,7 +8,7 @@ import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 import { Button } from '../components/ui/button';
 import { Select } from '../components/ui/select';
 import { Lightbox } from '../components/ui/lightbox';
-import { useExcludedCategories, type MenuCategory } from '../hooks/useExcludedCategories';
+import { useExcludedEverywhere, type MenuCategory } from '../hooks/useExcludedCategories';
 
 type DishCategory =
   | 'soups' | 'pizza' | 'cold_appetizers' | 'grill' | 'pastry' | 'hot_appetizers'
@@ -79,7 +79,7 @@ export const AdminPhotosPage = () => {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
   // Hide excluded dish categories from the photo browser/uploader.
-  const excluded = useExcludedCategories();
+  const excluded = useExcludedEverywhere();
   const dishCategories = DISH_CATEGORIES.filter((dc) => !excluded.has(dc.toUpperCase() as MenuCategory));
 
   const effectiveDishCategory = category === 'menu' && dishCategory ? dishCategory : undefined;

@@ -125,7 +125,7 @@ function FoodPackageSection({
   locale: 'en' | 'ru' | 'uz';
 }) {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-  const excluded = useExcludedCategories();
+  const excluded = useExcludedCategories('banquet');
   const categories = FOOD_PACKAGE_CATEGORIES.filter((cat) => !excluded.has(cat));
   // Full-screen preview of a dish photo when its thumbnail is tapped.
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
