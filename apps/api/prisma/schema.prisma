@@ -84,7 +84,10 @@ enum Region {
 
 model Event {
   id              String            @id @default(cuid())
-  eventNumber     Int               @unique @default(0)
+  // The number staff say out loud, and the id the API exposes. It is counted
+  // PER RESTAURANT (see EventRepository.create), so its uniqueness must be
+  // scoped the same way — see @@unique below.
+  eventNumber     Int               @default(0)
   customerName    String
   customerPhone   String?
   // Optional second contact person for the event.
@@ -126,6 +129,12 @@ model Event {
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
   restaurant      Restaurant?       @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
+  // Event numbers restart at 1 for every restaurant, so two restaurants both
+  // holding an event 13 is normal and correct. A global unique on eventNumber
+  // made the second restaurant to reach 13 fail to create ANY event, for good —
+  // the next number is derived from that restaurant's own maximum, so every
+  // retry recomputed the same colliding number.
+  @@unique([restaurantId, eventNumber])
   @@index([hallId])
   @@index([tableCategoryId])
   @@index([restaurantId])

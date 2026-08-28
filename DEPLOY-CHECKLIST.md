@@ -1522,3 +1522,48 @@ One new i18n key, `bf_element_size`, in en/ru/uz.
 The countdown and the menu item's number badge are deliberately excluded — both
 are text-carrying chips, and scaling their container while leaving the text alone
 breaks them at the low end of the range. `blockSize.test.ts` documents this.
+
+---
+
+## 31. Fix: some restaurants could not create a booking (**has a migration**)
+
+**The bug.** Staff at certain restaurants got "Failed to create event. Please try
+again" on the tablet's Summary screen no matter what they entered, and trying
+again never worked.
+
+**The cause.** `Event.eventNumber` is counted **per restaurant** —
+`EventRepository.create` reads that restaurant's own highest number and adds one
+— but the column carried a **global** `@unique`. Restaurant A booking its 40th
+event owns the numbers 1–40 platform-wide, so restaurant B's 13th booking asked
+for a number restaurant A already held, Postgres refused the insert, and the API
+returned a plain 500. Because the number is recomputed from the same maximum
+every time, the failure was permanent for that restaurant, not intermittent.
+
+The client shows the generic message rather than a reason because it only
+elaborates on Zod field errors; a unique violation arrives as a 500.
+
+**The fix.**
+
+- `migration 20260828100000_event_number_per_restaurant` drops
+  `Event_eventNumber_key` and creates `Event_restaurantId_eventNumber_key`. The
+  new constraint is strictly weaker than the one it replaces, so **no existing
+  row can violate it** and the migration cannot fail on data.
+- `EventRepository.create` now retries (5 attempts) when it loses the read/write
+  race to a concurrent booking in the same restaurant — a real race that the old
+  global constraint merely disguised as the same generic failure.
+
+Nothing else in the codebase looked events up by `eventNumber` alone; every
+query (including `invitation.repository.ts`) was already scoped by
+`restaurantId`, which is why the global constraint was pure liability.
+
+**After deploying:**
+
+1. `prisma migrate deploy` runs it — confirm in the deploy output.
+2. Sanity-check the index swap:
+   `\d "Event"` in psql should show `Event_restaurantId_eventNumber_key` and
+   **no** `Event_eventNumber_key`.
+3. On a restaurant that was failing, take a booking through the tablet end to
+   end → it succeeds, and the event number continues that restaurant's own
+   sequence.
+4. Two different restaurants may now both hold an event 13. That is correct —
+   staff have always said "event 13" meaning their own.
