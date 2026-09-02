@@ -66,9 +66,12 @@ function resolveUploadPath(url: string | null | undefined): string | null {
   return full;
 }
 
+/**
+ * The restaurant's OWN logo, or nothing. `uploadsDir` used to be a second
+ * parameter, needed only to locate the bundled fallback that no longer exists.
+ */
 export async function loadLogoBuffer(
   restaurantLogoUrl: string | null | undefined,
-  uploadsDir: string,
 ): Promise<Buffer | null> {
   const localPath = resolveUploadPath(restaurantLogoUrl);
   if (localPath) {
@@ -83,18 +86,16 @@ export async function loadLogoBuffer(
       }
     } catch { /* fall through */ }
   }
-  const candidates = [
-    path.resolve(uploadsDir, '..', 'src', 'assets', 'logo.png'),
-    path.join(process.cwd(), 'apps', 'api', 'src', 'assets', 'logo.png'),
-  ];
-  for (const c of candidates) {
-    try { return fs.readFileSync(c); } catch { /* try next */ }
-  }
+  // No fallback image, deliberately. There used to be a bundled
+  // `src/assets/logo.png` here, and it was ONE RESTAURANT'S logo — so every
+  // tenant whose own logo was missing or unresolvable had a competitor's brand
+  // stamped on their invoice. A document with no logo is merely plain; a
+  // document with the wrong company's logo is wrong.
   return null;
 }
 
 export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
-  const logoImage = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
+  const logoImage = await loadLogoBuffer(data.restaurantLogoUrl);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
     const buffers: Buffer[] = [];

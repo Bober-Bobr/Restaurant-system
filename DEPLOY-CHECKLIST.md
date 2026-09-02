@@ -1839,3 +1839,56 @@ endpoints — a separate change, say the word.
    children's-table button, the free-substitute picker on included dishes, the
    dish steppers and the sticky "View summary" button are all present. Those were
    the controls hidden in view-only mode; none should have gone with it.
+
+---
+
+## 38. Fix: exported PDFs carried one restaurant's logo on every tenant's document
+
+Frontend + backend, no migration. **Deletes a file from the repo** —
+`apps/api/src/assets/logo.png`.
+
+**The bug.** Three faults compounded:
+
+1. `loadLogoBuffer` fell back to a bundled `apps/api/src/assets/logo.png`
+   whenever a restaurant's own logo could not be resolved — and **that file was
+   Madinabek's logo**, checked into the repository as the "default".
+2. `AdminEventsPage` sent `restaurantLogoUrl: null` outright, so **every PDF
+   downloaded from the banquet Events page** hit the fallback.
+3. `EmployeeEventsPage` sent no logo and an empty restaurant name, so its
+   exports did the same.
+
+Between them, that is nearly every exported document on the platform. Only the
+tablet Summary screen ever sent the right logo. The Excel exporter shares the
+same loader, so its files were affected identically.
+
+**The fix.**
+
+- **The fallback is gone**, and the asset is deleted. A missing logo now yields
+  a plain document. A document with no logo is merely plain; one carrying
+  another company's mark is wrong.
+- Both Events screens now send the signed-in restaurant's real logo, through a
+  new `useRestaurantBranding()` hook — one place that answers "which logo belongs
+  on this document", so a fourth export screen cannot quietly ship with `null`.
+- `loadLogoBuffer` lost its `uploadsDir` parameter, which existed only to locate
+  the fallback.
+
+Measured by generating the PDFs: a restaurant with its own logo embeds **1**
+image; no logo and a broken path embed **0** — previously both embedded
+Madinabek's.
+
+**After deploying:**
+
+1. As a banquet ADMIN of a restaurant that is **not** Madinabek, download an
+   event PDF from the Events page → its own logo, or none. **Never Madinabek's.**
+   This is the check that matters.
+2. Same as an EMPLOYEE from the employee Events page, and same for the Excel
+   download on both.
+3. A restaurant that has uploaded no logo → the PDF header shows the name with
+   no image, correctly laid out (the title shifts left).
+4. Madinabek itself still gets its own logo — it is now coming from its
+   restaurant record rather than from the bundled file.
+5. Tablet Summary → unchanged; it was always correct.
+
+**If a restaurant now has no logo where it used to show one**, its
+`Restaurant.logoUrl` is empty or points at a missing file. Upload the logo on
+its settings page — it was never really that restaurant's logo before.

@@ -5,6 +5,7 @@ import { tableCategoryService } from '../services/tableCategory.service';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
+import { useRestaurantBranding } from '../hooks/useRestaurantBranding';
 import { translate } from '../utils/translate';
 import type { Event } from '../types/domain';
 import { httpClient } from '../services/http';
@@ -38,6 +39,7 @@ const formatDate = (iso: string, locale: string) => {
 export const EmployeeEventsPage = () => {
   const { locale } = useAdminStore();
   const role = useAuthStore((s) => s.role);
+  const { name: restaurantName, logoUrl: restaurantLogoUrl } = useRestaurantBranding();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
 
@@ -70,7 +72,11 @@ export const EmployeeEventsPage = () => {
       menuItems,
       pricing: { subtotalCents: 0, serviceFeeCents: 0, taxCents: 0, perGuestCents: 0, totalCents: 0 },
       locale,
-      restaurantName: '',
+      // The employee export carries the restaurant's own brand like every
+      // other one. It used to send an empty name and no logo at all, which is
+      // how it ended up wearing another restaurant's.
+      restaurantName: restaurantName ?? '',
+      restaurantLogoUrl,
       excludeFinancial: true,
     };
 

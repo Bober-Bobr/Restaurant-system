@@ -9,6 +9,7 @@ import { menuService } from '../services/menu.service';
 import { httpClient } from '../services/http';
 import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
+import { useRestaurantBranding } from '../hooks/useRestaurantBranding';
 import { useTabletStore } from '../store/tablet.store';
 import { translate } from '../utils/translate';
 import { buildEventExportPayload } from '../utils/eventPdf';
@@ -102,7 +103,8 @@ export const AdminEventsPage = () => {
   const navigate = useNavigate();
   const { locale } = useAdminStore();
   const tabletRestaurantId = useAuthStore((s) => s.restaurantId) ?? '';
-  const restaurantName = useAuthStore((s) => s.restaurantName);
+  // The brand that goes on an exported PDF — see useRestaurantBranding.
+  const { name: restaurantName, logoUrl: restaurantLogoUrl } = useRestaurantBranding();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const { data: events, isLoading, isError } = useQuery({
     queryKey: ['events'],
@@ -133,7 +135,7 @@ export const AdminEventsPage = () => {
         tableCategories: tableCategories ?? [],
         halls: halls ?? [],
         restaurantName,
-        restaurantLogoUrl: null,
+        restaurantLogoUrl,
         locale,
         t,
       });

@@ -1,12 +1,7 @@
 import ExcelJS from 'exceljs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { translate, type Locale } from '../../utils/translate.js';
 import { tiyinToSom, formatSom } from '../../utils/currency.js';
 import { loadLogoBuffer } from './pdf.service.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.resolve(__dirname, '..', '..', '..', 'uploads');
 
 interface MenuItem {
   id: string;
@@ -48,7 +43,7 @@ export async function generateSummaryExcel(data: SummaryData): Promise<Buffer> {
   const worksheet = workbook.addWorksheet('Selection Summary');
 
   // Load logo — prefer the restaurant's own, fall back to system logo
-  const logoBuffer = await loadLogoBuffer(data.restaurantLogoUrl, UPLOADS_DIR);
+  const logoBuffer = await loadLogoBuffer(data.restaurantLogoUrl);
   const logoExt: 'png' | 'jpeg' = /\.jpe?g$/i.test(data.restaurantLogoUrl ?? '') ? 'jpeg' : 'png';
 
   let logoImageId: number | undefined;
