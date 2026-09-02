@@ -12,7 +12,6 @@ type MenuItemCardProps = {
   quantity: number;
   onQuantityChange: (nextQuantity: number) => void;
   dark?: boolean;
-  viewOnly?: boolean;
   locale?: Locale;
   // Toggle mode: select/deselect only, no quantity counter (used for Extras,
   // which are priced per guest rather than by an entered quantity).
@@ -28,7 +27,7 @@ type MenuItemCardProps = {
   };
 };
 
-export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, viewOnly = false, locale = defaultLocale, toggleMode = false, replace }: MenuItemCardProps) => {
+export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, locale = defaultLocale, toggleMode = false, replace }: MenuItemCardProps) => {
   const localizedName = dishName(item, locale);
   const localizedDescription = dishDescription(item, locale);
   // Localized category label for the chip. Falls back to the humanized enum when
@@ -133,8 +132,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
           )}
         </div>
 
-        {/* Controls — hidden in view-only mode */}
-        {!viewOnly && toggleMode && (
+        {toggleMode && (
         <div className="mt-3 flex flex-col gap-2">
           {replace?.activeTargetName ? (
             // This paid dish is currently replacing an included complimentary dish
@@ -184,8 +182,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, v
         </div>
         )}
 
-        {/* Controls — hidden in view-only mode */}
-        {!viewOnly && !toggleMode && (
+        {!toggleMode && (
         <div className="mt-3">
           {quantity === 0 ? (
             <button

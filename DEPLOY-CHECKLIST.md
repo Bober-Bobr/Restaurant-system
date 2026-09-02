@@ -1795,3 +1795,47 @@ One new i18n key, `bf_element_color`, in en/ru/uz.
    unchanged, **except** gallery chevrons (see above).
 6. A link block published earlier keeps its orange bar.
 7. Same checks in the NFC plaque builder — it is the same engine.
+
+---
+
+## 37. Remove the public "View tablet menu" mode
+
+Frontend-only, no migration.
+
+**What went.** The login page's "View tablet menu" button, the restaurant-picker
+modal behind it, the `viewOnly` URL parameter and every branch it gated (in
+`TabletMenuPage`, `IncludedDishesSection`, `ChildrenTableSection` and
+`MenuItemCard`), and four now-orphaned i18n keys in all three locales.
+
+**The part that actually closes it.** On the root domain, `/tablet`,
+`/tablet/summary` and `/tablet/additional-services` were served with **no session
+check** — that route table is what the view-only mode ran on. Deleting the button
+alone would have left the mode alive to anyone who typed the URL, so those routes
+are now gated on an access token; without one everything falls through to
+`/login`.
+
+Nothing legitimate used them. Every real entry point to the kiosk is a link from
+an authenticated layout (`AdminLayout`, `EmployeeLayout`, `AdminEventsPage`), and
+those run on `banquet.v-menu.uz/<slug>`, where the same routes sit inside the
+authenticated tree. An authenticated ADMIN/EMPLOYEE landing on the root domain is
+already redirected to the banquet host before the route table is reached.
+
+**What did NOT change, and is worth knowing.** The public menu endpoints
+(`GET /api/public/menu-items`, `/restaurant`, `/restaurants`) are still
+unauthenticated, because the public catering site and the food-service site are
+built on them. The *interface* for browsing a restaurant's banquet menu without
+signing in is gone; the underlying JSON is still fetchable by anyone who knows a
+restaurant id. Closing that too would mean moving the tablet onto authenticated
+endpoints — a separate change, say the word.
+
+**After deploying:**
+
+1. `v-menu.uz/login` → no "View tablet menu" button, no restaurant picker.
+2. Signed out, open `v-menu.uz/tablet?restaurantId=<a real id>` → the login page.
+   Same for `/tablet/summary`. This is the check that matters.
+3. Sign in as EMPLOYEE or ADMIN → you land on `banquet.v-menu.uz/<slug>`; the
+   Tablet link in the top bar opens the kiosk exactly as before.
+4. In the kiosk: the room/table settings section, the guest-count field, the
+   children's-table button, the free-substitute picker on included dishes, the
+   dish steppers and the sticky "View summary" button are all present. Those were
+   the controls hidden in view-only mode; none should have gone with it.

@@ -258,7 +258,7 @@ export const App = () => {
     );
   }
 
-  // On root domain, only /login, /tablet and /tablet/summary are accessible
+  // On root domain, only /login and the (signed-in) tablet kiosk are accessible
   if (isRootDomain() && window.location.hostname !== 'localhost') {
     const { accessToken, role, restaurantName } = useAuthStore.getState();
     // CHIEF_ADMIN → admin.v-menu.uz
@@ -294,11 +294,20 @@ export const App = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route element={<TabletLayout />}>
-          <Route path="/tablet" element={<TabletMenuPage />} />
-          <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        {/* The kiosk needs a signed-in device. There used to be an anonymous
+            "view menu" mode reachable from the login page, and these routes
+            were what it ran on; removing only the button would have left the
+            mode alive to anyone who typed the URL. Staff reach the kiosk from
+            banquet.v-menu.uz, where these same routes sit inside the
+            authenticated tree. Without a token everything falls through to
+            /login below. */}
+        {accessToken && (
+          <Route element={<TabletLayout />}>
+            <Route path="/tablet" element={<TabletMenuPage />} />
+            <Route path="/tablet/summary" element={<TabletSummaryPage />} />
             <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
-        </Route>
+          </Route>
+        )}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );

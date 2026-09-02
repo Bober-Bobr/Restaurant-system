@@ -1071,7 +1071,7 @@ function ExtraReplaceModal({
 // ── Reusable: included dishes (non-course categories) with free swaps ──────
 
 function IncludedDishesSection({
-  tableCategory, menuItems, t, locale, onLightbox, viewOnly, card = false, showName = true,
+  tableCategory, menuItems, t, locale, onLightbox, card = false, showName = true,
   replacements, onReplacement,
 }: {
   tableCategory: TableCategory;
@@ -1079,7 +1079,6 @@ function IncludedDishesSection({
   t: TFn;
   locale: Locale;
   onLightbox: (src: string | null) => void;
-  viewOnly: boolean;
   card?: boolean;
   showName?: boolean;
   replacements: Record<string, string>;
@@ -1182,7 +1181,7 @@ function IncludedDishesSection({
             )}
             <div className="flex flex-1 flex-col p-2.5">
               <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
-              {!viewOnly && freeAlts.length > 0 && (
+              {freeAlts.length > 0 && (
                 <button type="button" onClick={() => setEditingPiId(pi.id)}
                   className="mt-auto pt-2.5"
                   style={{
@@ -1283,14 +1282,13 @@ function IncludedDishesSection({
 // ── Optional children's table: toggle + count + full course/dish selection ──
 
 function ChildrenTableSection({
-  tableCategory, menuItems, t, locale, onLightbox, viewOnly,
+  tableCategory, menuItems, t, locale, onLightbox,
 }: {
   tableCategory: TableCategory;
   menuItems: MenuItem[];
   t: TFn;
   locale: Locale;
   onLightbox: (src: string | null) => void;
-  viewOnly: boolean;
 }) {
   const {
     childrenTableSelected, childrenCount,
@@ -1313,8 +1311,7 @@ function ChildrenTableSection({
             {formatSum(tableCategory.ratePerPerson)} / {t('person')}
           </p>
         </div>
-        {!viewOnly && (
-          <button type="button"
+        <button type="button"
             onClick={() => setChildrenTableSelected(!childrenTableSelected)}
             className="rounded-xl px-5 py-2.5 text-sm font-bold transition-all"
             style={childrenTableSelected
@@ -1322,7 +1319,6 @@ function ChildrenTableSection({
               : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.2)' }}>
             {childrenTableSelected ? `✓ ${t('children_table_included')}` : t('add_children_table')}
           </button>
-        )}
       </div>
 
       {childrenTableSelected && (
@@ -1331,7 +1327,6 @@ function ChildrenTableSection({
           <div className="mb-6" style={{ maxWidth: 260 }}>
             <p className="rg-label" style={{ marginBottom: 6 }}>{t('children_count')}</p>
             <input type="number" min={0} value={childrenCount || ''}
-              disabled={viewOnly}
               onChange={(e) => setChildrenCount(e.target.value === '' ? 0 : Number(e.target.value))}
               className="rg-input" />
           </div>
@@ -1352,7 +1347,7 @@ function ChildrenTableSection({
           <div className="mt-6">
             <IncludedDishesSection
               tableCategory={tableCategory} menuItems={menuItems} t={t} locale={locale} onLightbox={onLightbox}
-              viewOnly={viewOnly} showName={false}
+              showName={false}
               replacements={childReplacements} onReplacement={setChildReplacement}
             />
           </div>
@@ -1609,7 +1604,6 @@ export const TabletMenuPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const viewOnly = searchParams.get('viewOnly') === '1' || searchParams.get('viewOnly') === 'true';
   const {
     selectedItems, selectedHallId, selectedTableCategoryId, guestCount,
     selectedHotAppetizerIds, selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
@@ -1877,8 +1871,6 @@ export const TabletMenuPage = () => {
           {/* ── Content column ── */}
           <div className="min-w-0 space-y-4 lg:space-y-6">
 
-            {/* Settings — hidden in view-only mode */}
-            {!viewOnly && (
             <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading">{t('room_table_settings')}</p>
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -1926,7 +1918,6 @@ export const TabletMenuPage = () => {
                 </div>
               )}
             </section>
-            )}
 
             {/* Table category photos */}
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
@@ -1999,7 +1990,7 @@ export const TabletMenuPage = () => {
             {selectedTableCategory && (
               <IncludedDishesSection
                 tableCategory={selectedTableCategory} menuItems={menuItems ?? []} t={t} locale={locale}
-                onLightbox={setLightboxSrc} viewOnly={viewOnly} card
+                onLightbox={setLightboxSrc} card
                 replacements={replacements} onReplacement={setReplacement}
               />
             )}
@@ -2008,7 +1999,7 @@ export const TabletMenuPage = () => {
             {selectedTableCategory && childrenTableCategory && (
               <ChildrenTableSection
                 tableCategory={childrenTableCategory} menuItems={menuItems ?? []} t={t} locale={locale}
-                onLightbox={setLightboxSrc} viewOnly={viewOnly}
+                onLightbox={setLightboxSrc}
               />
             )}
 
@@ -2077,7 +2068,7 @@ export const TabletMenuPage = () => {
                     return (
                     <div key={item.id} className="tablet-fade-up h-full" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark viewOnly={viewOnly} locale={locale} toggleMode
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark locale={locale} toggleMode
                         replace={selectedTableCategory ? {
                           canReplace: candidates.length > 0,
                           activeTargetName: replacedPi ? dishName(replacedPi.menuItem, locale) : null,
@@ -2103,9 +2094,8 @@ export const TabletMenuPage = () => {
         </section>
       </div>
 
-      {/* ── Sticky bottom CTA — all screen sizes, hidden in view-only mode ── */}
-      {!viewOnly && (
-        <div
+      {/* ── Sticky bottom CTA — all screen sizes ── */}
+      <div
           style={{
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
             padding: '10px 12px calc(10px + env(safe-area-inset-bottom))',
@@ -2120,7 +2110,6 @@ export const TabletMenuPage = () => {
             </button>
           </div>
         </div>
-      )}
     </main>
   );
 };
