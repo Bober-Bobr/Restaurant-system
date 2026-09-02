@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcludedCategories';
-import { useAuthStore } from '../store/auth.store';
+import { useAuthStore, type AdminRole } from '../store/auth.store';
 import type { MenuItem, MenuScope } from '../types/domain';
 
 type MenuCategory = MenuItem['category'];
@@ -68,17 +68,25 @@ const ScopeSection = ({
   const [excluded, setExcluded] = useState<Set<MenuCategory>>(new Set(saved));
 
   // Adopt the server's list whenever it changes, but leave a section the user is
-  // part-way through editing alone — a refetch triggered by saving the OTHER
-  // section would otherwise throw away their unsaved ticks.
+  // part-way through editing alone: the query refetches on window focus, and
+  // that would otherwise replace their unsaved ticks with the stored list.
   const savedKey = saved.join(',');
-  const dirtyRef = useRef(false);
+  const [touched, setTouched] = useState(false);
   useEffect(() => {
-    if (!dirtyRef.current) setExcluded(new Set(saved));
+    if (!touched) setExcluded(new Set(saved));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedKey]);
+  }, [savedKey, touched]);
+
+  // Cleared only once the SERVER has confirmed the save — not when the button is
+  // pressed. Clearing it on the click meant a save that failed left the section
+  // willing to adopt the server's unchanged list, so the next refetch threw the
+  // edits away and the error message was the only trace of them.
+  useEffect(() => {
+    if (isSaved) setTouched(false);
+  }, [isSaved]);
 
   const toggle = (cat: MenuCategory) => {
-    dirtyRef.current = true;
+    setTouched(true);
     setExcluded((prev) => {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat);
@@ -103,7 +111,7 @@ const ScopeSection = ({
         </div>
         <button
           type="button"
-          onClick={() => { dirtyRef.current = false; onSave(scope, [...excluded]); }}
+          onClick={() => onSave(scope, [...excluded])}
           disabled={!isDirty || isSaving}
           className="adm-btn-primary"
           style={{ fontSize: 13 }}
@@ -150,6 +158,32 @@ const ScopeSection = ({
   );
 };
 
+/**
+ * Which product's list of switched-off categories a role may edit.
+ *
+ * One table per role, and only their own: a banquet ADMIN manages what banquets
+ * do not serve, a Food Admin manages what the public food-service menu does not.
+ * The two staff sides do not overlap anywhere else in the product either — a
+ * banquet ADMIN cannot so much as create a Food Employee — and the lists are
+ * stored in separate columns, so a save from one screen cannot reach the other.
+ *
+ * An explicit map rather than a default, so a role added later shows nothing
+ * until someone decides what it should see. Silently inheriting the wrong
+ * product's switches is how a restaurant loses dishes it never touched.
+ */
+const SETTINGS_SCOPES: Partial<Record<NonNullable<AdminRole>, Scope[]>> = {
+  ADMIN: ['banquet'],
+  CATERING_ADMIN: ['catering'],
+  // Platform roles do not reach this page today; if they ever do, both lists
+  // are theirs to see.
+  CHIEF_ADMIN: ['banquet', 'catering'],
+  OWNER: ['banquet', 'catering'],
+};
+
+export function settingsScopesFor(role: AdminRole | null | undefined): Scope[] {
+  return (role && SETTINGS_SCOPES[role]) || [];
+}
+
 export const AdminSettingsPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -172,9 +206,7 @@ export const AdminSettingsPage = () => {
     },
   });
 
-  // A Food Admin has no banquet remit, so they are not shown that list at all —
-  // it is not theirs to switch off.
-  const scopes: Scope[] = role === 'CATERING_ADMIN' ? ['catering'] : ['banquet', 'catering'];
+  const scopes = settingsScopesFor(role);
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
@@ -185,13 +217,15 @@ export const AdminSettingsPage = () => {
       <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 12, marginBottom: 6, marginTop: 0, maxWidth: 620 }}>
         {t('excluded_categories_help')}
       </p>
-      {scopes.length > 1 && (
-        <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 12, marginBottom: 20, marginTop: 0, maxWidth: 620 }}>
-          {t('excluded_categories_split_note')}
-        </p>
-      )}
+      <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 12, marginBottom: 20, marginTop: 0, maxWidth: 620 }}>
+        {t('excluded_categories_split_note')}
+      </p>
 
       {settingsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_menu')}</p>}
+
+      {scopes.length === 0 && (
+        <p className="adm-empty" style={{ padding: 18 }}>{t('settings_not_for_role')}</p>
+      )}
 
       {settingsQuery.data && scopes.map((scope) => (
         <ScopeSection

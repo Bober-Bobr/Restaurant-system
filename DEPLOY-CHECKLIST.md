@@ -1892,3 +1892,53 @@ Madinabek's.
 **If a restaurant now has no logo where it used to show one**, its
 `Restaurant.logoUrl` is empty or points at a missing file. Upload the logo on
 its settings page — it was never really that restaurant's logo before.
+
+---
+
+## 39. Settings: one category table per role (**amends §32**)
+
+Frontend-only, no migration. §32 split the excluded-category list into two
+independent lists and gave the page two sections; this decides **who sees which**
+and fixes a way unsaved edits could be lost.
+
+**What changed since §32.**
+
+- A banquet `ADMIN` used to see **both** tables. Now each role sees only its own
+  product: `ADMIN` → banquet, `CATERING_ADMIN` → food service. Those are the only
+  two roles the page is routed to.
+- The mapping is an explicit table (`settingsScopesFor`), not a default. A role
+  added later sees no table until someone decides what it should manage —
+  inheriting the wrong product's switches silently is the failure worth avoiding.
+- **Fixed:** a section was marked clean the moment Save was pressed, not when the
+  server confirmed. A failed save therefore left the section willing to adopt the
+  server's unchanged list, and the next refetch (the query refetches on window
+  focus) discarded the edits with only the error line as a trace.
+- The **Subcategories** page is reached by both roles but filtered by the catering
+  list alone. It now uses the intersection, like the Menu and Photos pages —
+  those manage shared tables and must not hide a category the other product still
+  sells. Table categories are unchanged: banquet price packages on a
+  banquet-only page, so they keep the banquet list.
+
+**Independence, verified by driving the real service:**
+
+| action | banquet column | catering column |
+|---|---|---|
+| start | `["ENERGY_DRINKS"]` | `["FIRST_COURSE"]` |
+| ADMIN adds ALCOHOL | `["ENERGY_DRINKS","ALCOHOL"]` | unchanged |
+| Food Admin clears its list | unchanged | `[]` |
+| Food Admin adds SUSHI_ROLLS | unchanged | `["SUSHI_ROLLS"]` |
+| Subcategories master switch | unchanged | unchanged |
+
+**After deploying:**
+
+1. Sign in as a banquet `ADMIN` → Settings shows **one** table, "Banquets".
+   No catering table.
+2. Sign in as a `CATERING_ADMIN` → **one** table, "Public catering site".
+3. Switch a category off as the ADMIN and save. Sign in as the Food Admin →
+   that category is **still on** in their table. Then the mirror case.
+4. Both categories remain listed on the **Menu** page, so their dishes stay
+   editable. A category disappears from the Menu page only when both roles have
+   switched it off. This is intended — see §32.
+5. Tick a category, then reload without saving → the tick is gone (nothing was
+   saved). Tick, save while the API is down, switch tabs and back → **the ticks
+   are still there** and the error is still shown.
