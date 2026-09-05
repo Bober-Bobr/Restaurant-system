@@ -1942,3 +1942,83 @@ and fixes a way unsaved edits could be lost.
 5. Tick a category, then reload without saving → the tick is gone (nothing was
    saved). Tick, save while the API is down, switch tabs and back → **the ticks
    are still there** and the error is still shown.
+
+## 40. Banquet: default hall, kiosk field states, and the table price everywhere
+
+**No migration.** Front-end only — three separate changes, all in the banquet
+product.
+
+### The only hall is filled in for you
+
+`soleHallId()` ([apps/web/src/utils/soleHall.ts](apps/web/src/utils/soleHall.ts)) answers "is there a hall to
+choose?", and both hall pickers — the admin event form and the kiosk — apply it
+to an empty field. Most restaurants on the platform have exactly one hall, and
+for them that dropdown was a one-item list that still opened blank; an event
+saved with no hall is the commonest way that form is got wrong.
+
+Three rules are deliberate and are what the tests hold:
+
+- **Only ACTIVE halls count.** A retired hall is not bookable, so one active hall
+  and two retired ones is still no choice. The admin form keeps LISTING the
+  retired ones, so an event already assigned to one can still be opened.
+- **A missing `isActive` reads as active** — the kiosk's public payload has
+  already filtered by it, and reading an absent flag as "off" would make the sole
+  hall invisible and silently do nothing.
+- **The default is applied once, never re-asserted.** Both effects are keyed on
+  the halls alone and check the field is empty first. An effect that also watched
+  the selection would put the hall straight back every time someone cleared it,
+  and no amount of tapping could undo that.
+
+The admin form's reset paths set the default rather than `''`, or the default
+would apply to the first event of a session only. Opening an **existing** event
+that has no hall also lands on the default: with one hall there is no wrong
+answer to fill in, and saving then attaches it.
+
+### The kiosk says which settings have been answered
+
+Hall, table category and guest count sit at the top of the kiosk and everything
+below is derived from them, but they were three identical grey fields — a guest
+halfway through could not tell at a glance which they had already given.
+
+Each is now wrapped in `PickField`, which carries `is-set` / `is-empty` on the
+wrapper so the caption, the field and a tick all move together. `is-empty` is a
+dashed accent frame, not an error colour: nothing is wrong, the guest simply has
+not got there yet. Focus still overrides the answered state — a field that looked
+the same focused and unfocused would be worse than the grey one it replaces.
+
+The state is painted entirely from `--rg-accent`, so a restaurant that has themed
+its kiosk gets its own colour; `tabletSettings.test.ts` fails on a hex literal in
+that block. The wrapper is a `<label>` around its control, which is also the
+first time these three had a caption association at all.
+
+### A table category is never named without its price
+
+A table category IS a price package — `ratePerPerson × guests` is the whole event
+total. The big chooser slide showed the rate and every screen after it dropped
+it, so from the moment a guest picked a package the figure they picked it for was
+off the screen. `tableCategoryLabel()` / `tableCategoryPrice()`
+([apps/web/src/utils/tableCategoryLabel.ts](apps/web/src/utils/tableCategoryLabel.ts)) now supply it in all six places: the
+dropdown, the confirmation chip, the table-photos heading, the course and
+included-dish section headings, and the summary's event overview (for the
+children's table too).
+
+Two things deliberately keep a bare name: the two full-screen chooser slides,
+which set the price as their own display element at their own size, and the
+**export snapshot** (`tableCategoryName`), which is a data field — the PDF
+itemises the rate on its own line, and the invitation request built from it is a
+guest's dish list, not a quote.
+
+**After deploying:**
+
+1. A restaurant with **one** hall: open Events → New. The hall is already
+   selected. Create the event, and the form comes back with it still selected.
+2. Clear the hall back to "Select hall" — it **stays** cleared.
+3. A restaurant with **two or more** halls: the field opens blank, as before.
+4. Switch all but one hall off in Halls → the event form now defaults to the one
+   left, and still lists the switched-off ones.
+5. Open the kiosk: the three top fields are dashed until answered, then take the
+   restaurant's accent and grow a tick. Tap a caption — it focuses the field.
+6. On a restaurant with a saved tablet accent, check the answered fields use
+   **that** colour and not the platform gold.
+7. Pick a table category: its price appears in the dropdown, the chip, the
+   photos heading, the "courses"/"included" headings, and on the Summary page.

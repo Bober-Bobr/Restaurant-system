@@ -18,6 +18,7 @@ import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
+import { soleHallId } from '../utils/soleHall';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -164,6 +165,17 @@ export const AdminEventsPage = () => {
   const [eventType, setEventType] = useState<NonNullable<Event['eventType']>>('RESERVATION');
   const [status, setStatus] = useState<NonNullable<Event['status']>>('MENU_NOT_SELECTED');
   const [hallId, setHallId] = useState('');
+  // With exactly one bookable hall the picker is a formality, so the field
+  // starts filled in — an event saved with no hall is the commonest way this
+  // form is got wrong, and for these restaurants there was never a choice to
+  // make. See soleHall.ts for what counts as "one".
+  const defaultHallId = useMemo(() => soleHallId(halls ?? []) ?? '', [halls]);
+  // Applied when the halls arrive, and only to a field still empty. Keyed on
+  // the default alone — an effect that also watched `hallId` would put the hall
+  // straight back every time someone cleared it.
+  useEffect(() => {
+    if (defaultHallId) setHallId((current) => current || defaultHallId);
+  }, [defaultHallId]);
   const [tableCategoryId, setTableCategoryId] = useState('');
   const [notes, setNotes] = useState('');
   const [birthdayPersonName, setBirthdayPersonName] = useState('');
@@ -265,7 +277,7 @@ export const AdminEventsPage = () => {
       setGuestCountText('50');
       setStatus('MENU_NOT_SELECTED');
       setEventType('RESERVATION');
-      setHallId('');
+      setHallId(defaultHallId);
       setTableCategoryId('');
       setNotes('');
       setBirthdayPersonName('');
@@ -292,7 +304,7 @@ export const AdminEventsPage = () => {
       setGuestCountText('50');
       setStatus('MENU_NOT_SELECTED');
       setEventType('RESERVATION');
-      setHallId('');
+      setHallId(defaultHallId);
       setTableCategoryId('');
       setNotes('');
       setBirthdayPersonName('');
@@ -380,7 +392,9 @@ export const AdminEventsPage = () => {
     setGuestCountText(event.guestCount.toString());
     setEventType(event.eventType ?? 'RESERVATION');
     setStatus(event.status);
-    setHallId(event.hallId ?? '');
+    // An event saved before the restaurant had a hall reopens on the default
+    // too: with a single hall there is no wrong answer to fill in.
+    setHallId(event.hallId || defaultHallId);
     setTableCategoryId(event.tableCategoryId ?? '');
     setNotes(event.notes ?? '');
     setBirthdayPersonName(event.birthdayPersonName ?? '');
@@ -673,7 +687,7 @@ export const AdminEventsPage = () => {
                   setGuestCountText('50');
                   setStatus('MENU_NOT_SELECTED');
                   setEventType('RESERVATION');
-                  setHallId('');
+                  setHallId(defaultHallId);
                   setTableCategoryId('');
                   setNotes('');
                   setBirthdayPersonName('');

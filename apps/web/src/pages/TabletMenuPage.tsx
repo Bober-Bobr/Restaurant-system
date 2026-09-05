@@ -12,6 +12,8 @@ import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
+import { tableCategoryLabel, tableCategoryPrice } from '../utils/tableCategoryLabel';
+import { soleHallId } from '../utils/soleHall';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTabletMusicStarted, pauseTabletMusic, resumeTabletMusic } from '../utils/tabletMusic';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { ParticleField, type ParticleKind } from '../blocks/ParticleField';
@@ -80,6 +82,42 @@ function BestsellerBadge({ t }: { t: TFn }) {
       color: 'var(--rg-bg)', background: 'linear-gradient(135deg, var(--rg-accent-soft) 0%, var(--rg-accent) 100%)',
       boxShadow: '0 3px 10px rgba(var(--rg-accent-rgb),0.5)',
     }}>★ {t('bestseller')}</span>
+  );
+}
+
+/** A table category's rate, set beside its name wherever the name is shown.
+ *
+ *  A table category is a price package, so its name on its own is half the
+ *  answer. `textTransform: none` because it rides inside `.rg-label`, which is
+ *  uppercase — a price in small caps reads as a part number. */
+function TablePrice({ category, t }: { category: TableCategory; t: TFn }) {
+  return (
+    <span style={{ marginLeft: 8, color: 'var(--rg-accent)', textTransform: 'none', letterSpacing: 0 }}>
+      {tableCategoryPrice(category, t('person'))}
+    </span>
+  );
+}
+
+/** One of the three settings at the top of the kiosk, drawn in one of two
+ *  states: answered, or still waiting.
+ *
+ *  The waiting state is a dashed accent frame rather than an error colour —
+ *  nothing is wrong, the guest simply has not got there yet. The whole thing is
+ *  a `<label>` wrapping its control, so the caption is also the control's hit
+ *  area and its accessible name; the three fields previously had neither. */
+function PickField({ label, answered, children }: {
+  label: string;
+  answered: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`rg-pick block space-y-1.5 ${answered ? 'is-set' : 'is-empty'}`}>
+      <span className="rg-label flex items-center gap-1.5">
+        {label}
+        {answered && <span className="rg-pick-mark" aria-hidden="true">✓</span>}
+      </span>
+      {children}
+    </label>
   );
 }
 
@@ -707,7 +745,12 @@ function CourseChoiceSection({
   const inner = (
     <>
       <div className="mb-6" style={{ textAlign: 'center' }}>
-        {showName && <p className="rg-label">{tableCategory.name}</p>}
+        {showName && (
+          <p className="rg-label">
+            {tableCategory.name}
+            <TablePrice category={tableCategory} t={t} />
+          </p>
+        )}
         <h2 className="rg-display rg-shine" style={{
           margin: '6px 0 0', fontSize: 28,
           letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -1212,7 +1255,12 @@ function IncludedDishesSection({
   const inner = (
     <>
       <div className="mb-5">
-        {showName && <p className="rg-label">{tableCategory.name}</p>}
+        {showName && (
+          <p className="rg-label">
+            {tableCategory.name}
+            <TablePrice category={tableCategory} t={t} />
+          </p>
+        )}
         <p className="rg-heading mt-1">{t('included_with_table')}</p>
       </div>
 
@@ -1645,6 +1693,16 @@ export const TabletMenuPage = () => {
     if (restaurantId) loadPublicData(restaurantId);
   }, [loadPublicData, restaurantId]);
 
+  // A restaurant with a single hall gives the guest no choice to make, so the
+  // field is answered for them as soon as the halls arrive. Keyed on the halls
+  // list ALONE, and read through getState() rather than the render's value: an
+  // effect that also watched the selection would re-assert the default the
+  // moment anyone cleared the field, which no amount of tapping could undo.
+  useEffect(() => {
+    const only = soleHallId(halls);
+    if (only && !useTabletStore.getState().selectedHallId) setHall(only);
+  }, [halls]);
+
   // Reset table-category selection on every mount so the slide reappears
   // each time a guest navigates back to this page (kiosk behavior). Two cases
   // keep the current selection instead: the admin Events page hands off a draft
@@ -1876,29 +1934,36 @@ export const TabletMenuPage = () => {
               <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {t('choose_room_table_details')}
               </p>
+              {/* The three answers everything below is built from. They used to be
+                  three identical grey fields, so at a glance a guest could not
+                  tell which they had already given — each now carries its own
+                  answered / waiting state (see `.rg-pick` in index.css). */}
               <div className="grid gap-4 lg:grid-cols-3">
-                {[
-                  { label: t('select_room'), value: selectedHallId || '', onChange: setHall,
-                    options: [{ value: '', label: t('choose_room') },
-                      ...halls.filter((h) => h.isActive).map((h) => ({ value: h.id, label: `${h.name} · ${t('capacity')}: ${h.capacity}` }))] },
-                  { label: t('select_table_category'), value: selectedTableCategoryId || '', onChange: setTableCategory,
-                    options: [{ value: '', label: t('choose_table_category') },
-                      ...tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN').map((tc) => ({ value: tc.id, label: tc.name }))] },
-                ].map(({ label, value, onChange, options }) => (
-                  <div key={label} className="space-y-1.5">
-                    <p className="rg-label">{label}</p>
-                    <select value={value} onChange={(e) => onChange(e.target.value)}
-                      disabled={isLoading} className="rg-input">
-                      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                ))}
-                <div className="space-y-1.5">
-                  <p className="rg-label">{t('guests')}</p>
+                <PickField label={t('select_room')} answered={!!selectedHallId}>
+                  <select value={selectedHallId || ''} onChange={(e) => setHall(e.target.value)}
+                    disabled={isLoading} className="rg-input">
+                    <option value="">{t('choose_room')}</option>
+                    {halls.filter((h) => h.isActive).map((h) => (
+                      <option key={h.id} value={h.id}>{h.name} · {t('capacity')}: {h.capacity}</option>
+                    ))}
+                  </select>
+                </PickField>
+
+                <PickField label={t('select_table_category')} answered={!!selectedTableCategoryId}>
+                  <select value={selectedTableCategoryId || ''} onChange={(e) => setTableCategory(e.target.value)}
+                    disabled={isLoading} className="rg-input">
+                    <option value="">{t('choose_table_category')}</option>
+                    {tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN').map((tc) => (
+                      <option key={tc.id} value={tc.id}>{tableCategoryLabel(tc, t('person'))}</option>
+                    ))}
+                  </select>
+                </PickField>
+
+                <PickField label={t('guests')} answered={guestCount > 0}>
                   <input type="number" min={0} value={guestCount || ''}
                     onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="rg-input" />
-                </div>
+                </PickField>
               </div>
               {selectedHallId && selectedTableCategoryId && (
                 <div className="mt-5 flex flex-wrap gap-2 tablet-fade-in">
@@ -1909,7 +1974,7 @@ export const TabletMenuPage = () => {
                   </span>
                   <span className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium"
                     style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}>
-                    {tableCategories.find((tc) => tc.id === selectedTableCategoryId)?.name}
+                    {selectedTableCategory ? tableCategoryLabel(selectedTableCategory, t('person')) : null}
                   </span>
                   <span className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium"
                     style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}>
@@ -1923,7 +1988,10 @@ export const TabletMenuPage = () => {
             {selectedTableCategory && (selectedTableCategory.photos ?? []).length > 0 && (
               <section className="rg-card overflow-hidden reveal">
                 <div className="px-6 pt-5 pb-3">
-                  <p className="rg-label">{selectedTableCategory.name}</p>
+                  <p className="rg-label">
+                    {selectedTableCategory.name}
+                    <TablePrice category={selectedTableCategory} t={t} />
+                  </p>
                   <p className="rg-heading mt-1">{t('table_photos')}</p>
                 </div>
                 <div className="scrollbar-none flex gap-3 overflow-x-auto px-6 pb-5">

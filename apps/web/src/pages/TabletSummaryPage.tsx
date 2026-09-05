@@ -12,6 +12,7 @@ import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
+import { tableCategoryLabel } from '../utils/tableCategoryLabel';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
@@ -840,9 +841,11 @@ export const TabletSummaryPage = () => {
                 {[
                   { label: t('event_type'), value: t(`event_type_${eventType.toLowerCase()}` as Parameters<typeof t>[0]) },
                   { label: t('hall'), value: selectedHall?.name || t('not_selected') },
-                  { label: t('table_category'), value: selectedTableCategory?.name || t('not_selected') },
+                  // A table category is a price package: naming it without its
+                  // rate leaves the guest confirming a total they cannot check.
+                  { label: t('table_category'), value: selectedTableCategory ? tableCategoryLabel(selectedTableCategory, t('person')) : t('not_selected') },
                   { label: t('guest_count'), value: String(guestCount) },
-                  ...(childrenActive ? [{ label: t('children_table'), value: `${childrenTableCategory!.name} · ${childrenCount}` }] : []),
+                  ...(childrenActive ? [{ label: t('children_table'), value: `${tableCategoryLabel(childrenTableCategory!, t('person'))} · ${childrenCount}` }] : []),
                   ...(eventDate ? [{ label: t('event_date'), value: new Date(eventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) }] : []),
                   ...(eventTime ? [{ label: t('event_time'), value: eventTime }] : []),
                   ...(eventType === 'BIRTHDAY' && birthdayPersonName ? [{ label: t('birthday_person_name'), value: birthdayPersonName }] : []),
