@@ -1114,48 +1114,127 @@
 
    The state lives on the wrapper, not on the control, so the caption, the field
    and the tick all move together and a fourth setting added later inherits the
-   treatment by wrapping. `is-empty` is a dashed accent frame rather than an
-   error colour: nothing is wrong, the guest simply has not got there yet. */
-.rg-pick > .rg-label { transition: color 0.18s; }
-.rg-pick.is-set > .rg-label { color: var(--rg-accent); }
+   treatment by wrapping.
 
-.rg-pick.is-empty .rg-input {
-  border-style: dashed;
-  border-color: rgba(var(--rg-accent-rgb), 0.42);
+   A tint inside the input was not enough: this is read across a table, at a
+   glance, by someone who is not looking for it. So each setting is a PANEL that
+   changes as a whole — ground, frame, an accent spine down its edge, the caption
+   and a badge — and the two states differ in five ways at once rather than in
+   one shade of border. */
+.rg-pick {
+  position: relative;
+  padding: 12px 14px 14px;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
+.rg-pick-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  transition: color 0.18s;
+}
+
+/* Kiosk-sized: these three are tapped with a thumb, from standing. */
+.rg-pick .rg-input {
+  height: 48px;
+  font-size: 0.95rem;
+}
+
+/* ── Waiting ──────────────────────────────────────────────────────────────
+   Not an error colour — nothing is wrong, the guest simply has not got there
+   yet. The dashed frame reads as an outline waiting to be filled, and the slow
+   halo is what draws the eye to the NEXT thing to answer. */
+.rg-pick.is-empty {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.rg-pick.is-empty .rg-input {
+  border-style: dashed;
+  border-color: rgba(var(--rg-accent-rgb), 0.45);
+  /* Stated rather than inherited: a prompt should be dimmer than an answer, and
+     leaving it to the control means the browser gets a say in a select. */
+  color: rgba(255, 255, 255, 0.72);
+  animation: rgPickWaiting 2.8s ease-in-out infinite;
+}
+.rg-pick.is-empty .rg-pick-mark {
+  color: transparent;
+  background: transparent;
+  border: 2px dashed rgba(var(--rg-accent-rgb), 0.55);
+}
+
+@keyframes rgPickWaiting {
+  0%, 100% { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28), 0 0 0 0 rgba(var(--rg-accent-rgb), 0); }
+  50%      { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.28), 0 0 0 4px rgba(var(--rg-accent-rgb), 0.12); }
+}
+
+/* ── Answered ─────────────────────────────────────────────────────────────
+   The panel lights up, the caption takes the accent, the value is set in it in
+   bold, and a spine runs down the left edge — that last one is the cue that
+   survives being seen from across the room. */
+.rg-pick.is-set {
+  background: linear-gradient(180deg, rgba(var(--rg-accent-rgb), 0.15) 0%, rgba(var(--rg-accent-rgb), 0.04) 100%);
+  border-color: rgba(var(--rg-accent-rgb), 0.5);
+  box-shadow: 0 10px 30px rgba(var(--rg-accent-rgb), 0.14);
+}
+.rg-pick.is-set::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--rg-accent-soft) 0%, var(--rg-accent-deep) 100%);
+}
+.rg-pick.is-set > .rg-label { color: var(--rg-accent); }
+
 .rg-pick.is-set .rg-input {
-  border-color: rgba(var(--rg-accent-rgb), 0.85);
+  border-color: var(--rg-accent);
   background:
-    linear-gradient(180deg, rgba(var(--rg-accent-rgb), 0.17) 0%, rgba(var(--rg-accent-rgb), 0.06) 100%),
+    linear-gradient(180deg, rgba(var(--rg-accent-rgb), 0.2) 0%, rgba(var(--rg-accent-rgb), 0.07) 100%),
     rgba(255, 255, 255, 0.06);
-  font-weight: 600;
+  color: var(--rg-accent-soft);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(var(--rg-accent-rgb), 0.3),
-    0 8px 22px rgba(var(--rg-accent-rgb), 0.16);
+    0 0 0 1px rgba(var(--rg-accent-rgb), 0.45),
+    0 8px 22px rgba(var(--rg-accent-rgb), 0.18);
 }
 /* Focus still wins over the answered state — it is the stronger signal, and a
    field that looked identical focused and unfocused would be worse than the
-   grey one this replaces. */
-.rg-pick.is-set .rg-input:focus {
+   grey one this replaces. The waiting halo stands down for the same reason. */
+.rg-pick.is-set .rg-input:focus,
+.rg-pick.is-empty .rg-input:focus {
+  animation: none;
   border-color: var(--rg-accent);
   box-shadow:
     inset 0 1px 3px rgba(0, 0, 0, 0.28),
-    0 0 0 3px rgba(var(--rg-accent-rgb), 0.28);
+    0 0 0 3px rgba(var(--rg-accent-rgb), 0.32);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The halo is the one animated cue here; the frame stays dashed without it. */
+  .rg-pick.is-empty .rg-input { animation: none; }
 }
 
 .rg-pick-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
-  font-size: 9px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
   color: var(--rg-bg);
   background: var(--rg-accent);
+  box-shadow: 0 2px 8px rgba(var(--rg-accent-rgb), 0.45);
 }
 
 .rg-shimmer {

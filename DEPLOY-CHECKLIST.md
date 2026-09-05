@@ -2086,3 +2086,88 @@ and the date as two more fields to skip past; they are now folded behind
    Confirm, then check the saved event carries no second contact.
 6. Open an existing event with a second contact from the Events page → "Change
    Menu" → the Summary shows both fields already filled in and expanded.
+
+## 42. Fix: the events list only ever returned the first twenty rows
+
+**No migration.** This is the "bookings created on the tablet are not saved — I
+cannot find them on the Events page" report. **They were saved.** Nothing ever
+asked for them.
+
+`GET /api/events` runs through `getPagination`, which defaults a missing page to
+the **first 20 rows**, and the list is ordered by `eventDate` **ascending**. Six
+screens list events — the Events page, the calendar, invoices, notifications, the
+employee list and the layout's badge — and **not one of them passes a page**, or
+has a pager to turn. So past its twentieth booking a restaurant saw the twenty
+with the earliest dates, permanently, and each new booking — always the furthest
+in the future — fell off the end of a page nothing would ever request.
+
+Nothing about this was tablet-specific; a booking made on the Events page itself
+vanished the same way. It shows up on the tablet because that flow ends by
+navigating away and coming back to look for it.
+
+**The fix** is `getOptionalPagination` ([apps/api/src/utils/http.ts](apps/api/src/utils/http.ts)): an explicit
+`page`/`pageSize` still pages, and their absence now means the whole set.
+Truncating is a decision a caller has to make, rather than a default dressed up
+as one. `getPagination` itself is unchanged for anything that genuinely wants a
+default page.
+
+**The same defect was in three more endpoints**, and they are fixed with it —
+this is a deliberate widening, because it is one helper, one rule, and the other
+three break the same booking flow:
+
+| Endpoint | What was silently lost past 20 |
+|---|---|
+| `/events` | every booking after the twentieth |
+| `/table-categories` | price packages — missing from the tablet picker and the event form |
+| `/halls` | rooms, including from `soleHallId`'s idea of "only one" |
+| `/extra-services` | additional services on the Summary page |
+
+`extraService.service.ts` had been sending `pageSize: 100` to work around this;
+that workaround is removed, because asking for a page size is now asking to be
+truncated at it.
+
+**Known follow-up, deliberately not done here:** these lists are now unbounded,
+and the screens that read them hold the complete set in the browser by design
+(month filter, calendar mapping, invoice totals). A restaurant with several
+thousand events would want server-side filtering by month rather than a page
+size. That is a real piece of work; a silent cap is not a substitute for it,
+because a cap is invisible and this was the result.
+
+**After deploying:**
+
+1. On a restaurant with **more than 20 events**, open the Events page → the
+   newest bookings are listed. Before, the list stopped at the twentieth
+   earliest.
+2. Create a booking on the tablet, then open the Events page → **it is there.**
+3. The month filter offers months beyond the earliest twenty events.
+4. The calendar shows bookings in future months.
+5. `GET /api/events?pageSize=5` still returns 5 — explicit paging is untouched.
+
+## 43. Kiosk: the answered / waiting fields, made legible at a distance
+
+**No migration.** §40 gave the kiosk's three top settings an answered state, but
+the difference lived *inside* the input — a border tint and a slightly warmer
+ground — which is not enough for something read across a table, at a glance, by
+someone not looking for it.
+
+Each setting is now a **panel** that changes as a whole, and the two states
+differ in five ways at once rather than in one shade of border:
+
+| | Waiting | Answered |
+|---|---|---|
+| panel | neutral, faint frame | accent-tinted, accent frame, soft glow |
+| left edge | — | a 3px accent spine |
+| field | dashed frame + a slow halo | solid accent frame, accent-lit ground |
+| value | dimmed | accent, bold |
+| badge | a dashed empty ring | a filled accent disc with a tick |
+| caption | muted | accent |
+
+- The badge is now present in **both** states — a ring that fills in. An
+  indicator that appears from nowhere reads as decoration; a ring with two
+  settings reads as a control.
+- The halo is the only animated cue, and it stands down under
+  `prefers-reduced-motion` **and on focus**. Everything it signals is also
+  carried by the dashed frame, so switching it off loses nothing.
+- Still painted entirely from `--rg-accent`, so a themed restaurant gets its own
+  colour; `tabletSettings.test.ts` still fails on a hex literal in that block.
+- Fields are 48px tall here: these three are tapped with a thumb, from standing.

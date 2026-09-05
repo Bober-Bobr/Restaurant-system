@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getPagination } from '../../utils/http.js';
+import { getOptionalPagination } from '../../utils/http.js';
 import { HallRepository } from './hall.repository.js';
 import { createHallSchema, hallIdSchema, updateHallSchema } from './hall.schema.js';
 import { HallService } from './hall.service.js';
@@ -8,7 +8,8 @@ const hallService = new HallService(new HallRepository());
 
 export class HallController {
   async list(request: Request, response: Response) {
-    const pagination = getPagination(request);
+    // No page asked for means the whole set — see getOptionalPagination.
+    const pagination = getOptionalPagination(request);
     response.json(await hallService.listHalls(request.restaurantId!, pagination));
   }
 

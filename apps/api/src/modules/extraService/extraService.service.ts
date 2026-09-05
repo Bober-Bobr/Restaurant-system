@@ -4,7 +4,7 @@ import { ExtraServiceRepository, type CreateExtraServiceData } from './extraServ
 export class ExtraServiceService {
   constructor(private readonly repository: ExtraServiceRepository) {}
 
-  async listServices(restaurantId: string, params: { skip: number; take: number }) {
+  async listServices(restaurantId: string, params?: { skip: number; take: number }) {
     return this.repository.list(restaurantId, params);
   }
 

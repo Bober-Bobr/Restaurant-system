@@ -10,9 +10,9 @@ export type CreateExtraServiceData = {
 };
 
 export class ExtraServiceRepository {
-  async list(restaurantId: string, params: { skip: number; take: number }) {
+  async list(restaurantId: string, params?: { skip: number; take: number }) {
     return prisma.extraService.findMany({
-      ...params,
+      ...(params ?? {}),
       where: { restaurantId },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });

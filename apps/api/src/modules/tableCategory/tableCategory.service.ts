@@ -20,7 +20,7 @@ function resolvePackageItems(payload: PackageItemsPayload): PackageItemInput[] |
 export class TableCategoryService {
   constructor(private readonly tableCategoryRepository: TableCategoryRepository) {}
 
-  async listTableCategories(restaurantId: string, params: { skip: number; take: number }) {
+  async listTableCategories(restaurantId: string, params?: { skip: number; take: number }) {
     return this.tableCategoryRepository.list(restaurantId, params);
   }
 

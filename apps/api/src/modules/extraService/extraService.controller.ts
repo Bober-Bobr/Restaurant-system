@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getPagination } from '../../utils/http.js';
+import { getOptionalPagination } from '../../utils/http.js';
 import { ExtraServiceRepository } from './extraService.repository.js';
 import { createExtraServiceSchema, extraServiceIdSchema, updateExtraServiceSchema } from './extraService.schema.js';
 import { ExtraServiceService } from './extraService.service.js';
@@ -8,7 +8,8 @@ const extraServiceService = new ExtraServiceService(new ExtraServiceRepository()
 
 export class ExtraServiceController {
   async list(request: Request, response: Response) {
-    const pagination = getPagination(request);
+    // No page asked for means the whole set — see getOptionalPagination.
+    const pagination = getOptionalPagination(request);
     response.json(await extraServiceService.listServices(request.restaurantId!, pagination));
   }
 

@@ -10,7 +10,7 @@ export class EventService {
     return { ...rest, id: eventNumber };
   }
 
-  async listEvents(restaurantId: string, params: { skip: number; take: number }) {
+  async listEvents(restaurantId: string, params?: { skip: number; take: number }) {
     const events = await this.eventRepository.list(restaurantId, params);
     return events.map((event) => this.mapEventToExternalId(event));
   }

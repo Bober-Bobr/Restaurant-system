@@ -12,7 +12,10 @@ export type ExtraServicePayload = {
 
 export const extraServiceService = {
   async list() {
-    const { data } = await httpClient.get<ExtraService[]>('/extra-services', { params: { pageSize: 100 } });
+    // No `pageSize`: asking for one is now asking to be truncated, and this
+    // used to send 100 precisely to work around the server's silent default of
+    // 20. The endpoint returns the whole set when no page is requested.
+    const { data } = await httpClient.get<ExtraService[]>('/extra-services');
     return data;
   },
   async create(payload: ExtraServicePayload & { name: string }) {

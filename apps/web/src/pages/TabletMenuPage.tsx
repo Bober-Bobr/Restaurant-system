@@ -111,10 +111,13 @@ function PickField({ label, answered, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <label className={`rg-pick block space-y-1.5 ${answered ? 'is-set' : 'is-empty'}`}>
-      <span className="rg-label flex items-center gap-1.5">
+    <label className={`rg-pick block ${answered ? 'is-set' : 'is-empty'}`}>
+      <span className="rg-label rg-pick-caption">
+        {/* The badge is present in BOTH states — an empty ring that fills in —
+            so the pair reads as one control with two settings rather than as a
+            decoration that sometimes appears. */}
+        <span className="rg-pick-mark" aria-hidden="true">{answered ? '✓' : ''}</span>
         {label}
-        {answered && <span className="rg-pick-mark" aria-hidden="true">✓</span>}
       </span>
       {children}
     </label>

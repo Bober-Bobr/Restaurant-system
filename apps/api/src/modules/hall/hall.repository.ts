@@ -11,8 +11,8 @@ export type CreateHallData = {
 };
 
 export class HallRepository {
-  async list(restaurantId: string, params: { skip: number; take: number }) {
-    return prisma.hall.findMany({ ...params, where: { restaurantId }, orderBy: { name: 'asc' } });
+  async list(restaurantId: string, params?: { skip: number; take: number }) {
+    return prisma.hall.findMany({ ...(params ?? {}), where: { restaurantId }, orderBy: { name: 'asc' } });
   }
 
   async listActive(restaurantId: string) {

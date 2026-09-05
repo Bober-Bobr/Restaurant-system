@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getPagination } from '../../utils/http.js';
+import { getOptionalPagination } from '../../utils/http.js';
 import { EventRepository } from './event.repository.js';
 import { addPaymentSchema, createEventSchema, eventIdSchema, paymentIdSchema, rescheduleEventSchema, updateEventSchema } from './event.schema.js';
 import { EventService } from './event.service.js';
@@ -9,8 +9,9 @@ const eventService = new EventService(new EventRepository());
 export class EventController {
   async list(request: Request, response: Response) {
     const restaurantId = request.restaurantId!;
-    const pagination = getPagination(request);
-    response.json(await eventService.listEvents(restaurantId, pagination));
+    // No page asked for means the whole set: every screen that lists events
+    // holds the complete list and filters it in the browser.
+    response.json(await eventService.listEvents(restaurantId, getOptionalPagination(request)));
   }
 
   async create(request: Request, response: Response) {

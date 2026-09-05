@@ -27,9 +27,9 @@ const packageItemsInclude = {
 } as const;
 
 export class TableCategoryRepository {
-  async list(restaurantId: string, params: { skip: number; take: number }) {
+  async list(restaurantId: string, params?: { skip: number; take: number }) {
     return prisma.tableCategory.findMany({
-      ...params,
+      ...(params ?? {}),
       where: { restaurantId },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude

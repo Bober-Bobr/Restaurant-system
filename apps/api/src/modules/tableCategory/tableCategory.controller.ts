@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getPagination } from '../../utils/http.js';
+import { getOptionalPagination } from '../../utils/http.js';
 import { TableCategoryRepository } from './tableCategory.repository.js';
 import {
   createTableCategorySchema,
@@ -13,7 +13,8 @@ const tableCategoryService = new TableCategoryService(new TableCategoryRepositor
 
 export class TableCategoryController {
   async list(request: Request, response: Response) {
-    const pagination = getPagination(request);
+    // No page asked for means the whole set — see getOptionalPagination.
+    const pagination = getOptionalPagination(request);
     response.json(await tableCategoryService.listTableCategories(request.restaurantId!, pagination));
   }
 

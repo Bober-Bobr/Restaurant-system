@@ -4,7 +4,7 @@ import { HallRepository, type CreateHallData } from './hall.repository.js';
 export class HallService {
   constructor(private readonly hallRepository: HallRepository) {}
 
-  async listHalls(restaurantId: string, params: { skip: number; take: number }) {
+  async listHalls(restaurantId: string, params?: { skip: number; take: number }) {
     return this.hallRepository.list(restaurantId, params);
   }
 

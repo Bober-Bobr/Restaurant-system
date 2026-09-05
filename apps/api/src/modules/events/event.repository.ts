@@ -48,9 +48,14 @@ const eventInclude = {
 } as const;
 
 export class EventRepository {
-  async list(restaurantId: string, params: { skip: number; take: number }) {
+  // `params` undefined means every event this restaurant has, which is what all
+  // six screens listing events actually need: they filter by month, map onto a
+  // calendar, total invoices or count badges in the browser, and none of them
+  // has a pager. A default page here returned the twenty EARLIEST events and
+  // hid every booking made since — see getOptionalPagination.
+  async list(restaurantId: string, params?: { skip: number; take: number }) {
     return prisma.event.findMany({
-      ...params,
+      ...(params ?? {}),
       where: { restaurantId },
       orderBy: { eventDate: 'asc' },
       include: eventInclude

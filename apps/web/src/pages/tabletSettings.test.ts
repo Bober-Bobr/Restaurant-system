@@ -34,13 +34,37 @@ describe('the kiosk says which settings have been answered', () => {
     // These three had no caption association at all: tapping the caption did
     // nothing and a screen reader read the control unnamed. Wrapping is what
     // fixes both, and is free here because the caption was already adjacent.
-    expect(menu).toMatch(/<label className=\{`rg-pick block space-y-1\.5 \$\{answered \? 'is-set' : 'is-empty'\}`\}>/);
+    expect(menu).toMatch(/<label className=\{`rg-pick[^`]*\$\{answered \? 'is-set' : 'is-empty'\}`\}>/);
+  });
+
+  it('the badge is present in both states, not only when answered', () => {
+    // An indicator that appears from nowhere reads as decoration. A ring that
+    // fills in reads as a control with two settings.
+    expect(menu).toMatch(/<span className="rg-pick-mark" aria-hidden="true">\{answered \? '✓' : ''\}<\/span>/);
+    expect(css).toContain('.rg-pick.is-empty .rg-pick-mark');
   });
 
   it('the stylesheet draws both states, and the tick', () => {
     for (const rule of ['.rg-pick.is-set .rg-input', '.rg-pick.is-empty .rg-input', '.rg-pick-mark']) {
       expect(css, `${rule} is not styled`).toContain(rule);
     }
+  });
+
+  it('the two states differ in more than one thing', () => {
+    // The first attempt changed a border tint inside the input and nothing
+    // else, which is not legible at kiosk distance. The panel itself, its
+    // frame, the accent spine and the badge all move as well.
+    for (const rule of ['.rg-pick.is-set::before', '.rg-pick.is-empty {', '.rg-pick.is-set {']) {
+      expect(css, `${rule} is missing — the states differ only inside the field again`).toContain(rule);
+    }
+  });
+
+  it('the waiting halo stands down under reduced motion, and on focus', () => {
+    // It is the one animated cue here. Everything it signals is also carried by
+    // the dashed frame, so switching it off loses nothing.
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)', css.indexOf('.rg-pick {')));
+    expect(reduced.slice(0, 200)).toContain('.rg-pick.is-empty .rg-input { animation: none; }');
+    expect(css).toContain('.rg-pick.is-empty .rg-input:focus');
   });
 
   it('the answered state is painted from the restaurant\'s own accent', () => {
