@@ -232,6 +232,13 @@ export const TabletSummaryPage = () => {
   const [customerPhone, setCustomerPhone]           = useState(draftCustomerPhone);
   const [secondCustomerName, setSecondCustomerName] = useState(draftSecondCustomerName);
   const [secondCustomerPhone, setSecondCustomerPhone] = useState(draftSecondCustomerPhone);
+  // Most bookings have one contact, so the second pair is folded away behind a
+  // button. It starts OPEN when the draft already carries one — an event opened
+  // from the Events page for a couple must not hide half its contacts while
+  // still submitting them.
+  const [showSecondCustomer, setShowSecondCustomer] = useState(
+    !!draftSecondCustomerName.trim() || !!draftSecondCustomerPhone.trim(),
+  );
   const [depositText, setDepositText] = useState(draftDepositCents ? String(Math.round(draftDepositCents / 100)) : '');
   const [eventDate, setEventDate]                   = useState(draftEventDate);
   const [eventTime, setEventTime]                   = useState(draftEventTime);
@@ -292,7 +299,13 @@ export const TabletSummaryPage = () => {
   }, [selectedItems, guestCount]);
 
   const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount);
-  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime || guestCount < 1;
+  // Who the booking is for and when it is — nothing else. The guest count used
+  // to be required here too, which blocked the one thing the rest of the system
+  // explicitly allows: taking a booking before the head count is known (the API
+  // defaults it to 0, and the Events page creates an entirely blank event for
+  // later editing). A figure the restaurant does not have yet is not a figure
+  // worth inventing to get past a button.
+  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime;
 
   // The export lists the dishes that make up the table: the non-course included
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
@@ -737,17 +750,40 @@ export const TabletSummaryPage = () => {
                     value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
                 </div>
 
-                <div className="grid gap-1.5">
-                  <label className="rg-label">{t('second_customer_name')}</label>
-                  <input className="rg-input" placeholder={t('second_customer_name')}
-                    value={secondCustomerName} onChange={(e) => setSecondCustomerName(e.target.value)} />
-                </div>
+                {/* A second contact is the exception — a wedding's two families,
+                    a company booking with a deputy — so it is folded away rather
+                    than sitting between the caller and the date as two more
+                    fields to skip past. Closing it CLEARS both, or hidden values
+                    would still be submitted with the booking. */}
+                {!showSecondCustomer ? (
+                  <button type="button" onClick={() => setShowSecondCustomer(true)}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.75)', border: '1px dashed rgba(var(--rg-accent-rgb),0.45)' }}>
+                    <span aria-hidden="true" style={{ color: 'var(--rg-accent)', fontSize: 16, lineHeight: 1 }}>+</span>
+                    {t('add_second_customer')}
+                  </button>
+                ) : (
+                  <div className="grid gap-4 tablet-fade-in">
+                    <div className="grid gap-1.5">
+                      <label className="rg-label">{t('second_customer_name')}</label>
+                      <input className="rg-input" placeholder={t('second_customer_name')}
+                        value={secondCustomerName} onChange={(e) => setSecondCustomerName(e.target.value)} />
+                    </div>
 
-                <div className="grid gap-1.5">
-                  <label className="rg-label">{t('second_customer_phone')}</label>
-                  <input className="rg-input" type="tel" placeholder={t('second_customer_phone')}
-                    value={secondCustomerPhone} onChange={(e) => setSecondCustomerPhone(e.target.value)} />
-                </div>
+                    <div className="grid gap-1.5">
+                      <label className="rg-label">{t('second_customer_phone')}</label>
+                      <input className="rg-input" type="tel" placeholder={t('second_customer_phone')}
+                        value={secondCustomerPhone} onChange={(e) => setSecondCustomerPhone(e.target.value)} />
+                    </div>
+
+                    <button type="button"
+                      onClick={() => { setSecondCustomerName(''); setSecondCustomerPhone(''); setShowSecondCustomer(false); }}
+                      className="justify-self-start text-xs font-medium underline underline-offset-4"
+                      style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      {t('remove_second_customer')}
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1.5">
@@ -763,15 +799,14 @@ export const TabletSummaryPage = () => {
                 </div>
 
                 <div className="grid gap-1.5">
-                  <label className="rg-label">
-                    {t('guest_count')}
-                    {guestCount < 1 && (
-                      <span className="ml-2 normal-case font-normal text-xs" style={{ color: '#fca5a5' }}>
-                        — {t('required')}
-                      </span>
-                    )}
-                  </label>
-                  <input className="rg-input" type="number" min={1} max={5000}
+                  <label className="rg-label">{t('guest_count')}</label>
+                  {/* No `min`/`max`: the count is not required to confirm, and the
+                      5000 ceiling was a guess enforced only by the API, so a
+                      bigger event failed with a generic error naming nothing.
+                      Negatives are still clamped — the store does it too, but a
+                      number typed here reaches the totals before it reaches the
+                      store. */}
+                  <input className="rg-input" type="number"
                     value={guestCount || ''}
                     onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
                     placeholder="0" />

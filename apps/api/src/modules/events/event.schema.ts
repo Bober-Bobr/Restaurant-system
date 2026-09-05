@@ -20,6 +20,18 @@ const phoneValidators: Record<Region, RegExp> = {
 
 const phoneValidator = z.string().optional();
 
+/**
+ * The only cap left on a head count is the one the `Int` column imposes.
+ *
+ * It used to be a flat 5000 — a guess at "no banquet is bigger than this",
+ * enforced nowhere but here, so a restaurant that typed a larger figure on the
+ * tablet got "Unable to create event" with nothing on screen naming the field
+ * that was refused. A number Postgres cannot store still has to be rejected
+ * (an overflow is a 500, not a 400), so the bound is the column's rather than a
+ * policy invented in this file.
+ */
+const MAX_INT4 = 2_147_483_647;
+
 export const createEventSchema = z
   .object({
     // All core fields are optional so a completely blank event can be created
@@ -29,7 +41,7 @@ export const createEventSchema = z
     secondCustomerName: z.string().max(120).optional(),
     secondCustomerPhone: z.string().max(40).optional(),
     eventDate: z.string().datetime().optional(),
-    guestCount: z.number().int().min(0).max(5000).optional(),
+    guestCount: z.number().int().min(0).max(MAX_INT4).optional(),
     depositCents: z.number().int().min(0).optional(),
     status: z.nativeEnum(EventStatus).optional(),
     eventType: z.nativeEnum(EventType).optional(),
@@ -37,7 +49,7 @@ export const createEventSchema = z
     hallId: z.string().cuid().optional(),
     tableCategoryId: z.string().cuid().optional(),
     childrenTableCategoryId: z.string().cuid().optional(),
-    childrenCount: z.number().int().min(0).max(5000).optional(),
+    childrenCount: z.number().int().min(0).max(MAX_INT4).optional(),
     menuConfig: z.record(z.string(), z.any()).optional(),
     notes: z.string().max(2000).optional(),
     birthdayPersonName: z.string().max(120).optional(),
@@ -65,7 +77,7 @@ export const updateEventSchema = z
     secondCustomerName: z.string().max(120).optional(),
     secondCustomerPhone: z.string().max(40).optional(),
     eventDate: z.string().datetime().optional(),
-    guestCount: z.number().int().min(0).max(5000).optional(),
+    guestCount: z.number().int().min(0).max(MAX_INT4).optional(),
     depositCents: z.number().int().min(0).optional(),
     // Debt deadline: ISO datetime to set, null to clear.
     debtDeadline: z.string().datetime().nullable().optional(),
@@ -75,7 +87,7 @@ export const updateEventSchema = z
     hallId: z.string().cuid().optional(),
     tableCategoryId: z.string().cuid().optional(),
     childrenTableCategoryId: z.string().cuid().optional(),
-    childrenCount: z.number().int().min(0).max(5000).optional(),
+    childrenCount: z.number().int().min(0).max(MAX_INT4).optional(),
     menuConfig: z.record(z.string(), z.any()).optional(),
     notes: z.string().max(2000).optional(),
     birthdayPersonName: z.string().max(120).optional(),

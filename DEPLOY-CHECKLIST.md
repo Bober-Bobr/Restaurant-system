@@ -2022,3 +2022,67 @@ guest's dish list, not a quote.
    **that** colour and not the platform gold.
 7. Pick a table category: its price appears in the dropdown, the chip, the
    photos heading, the "courses"/"included" headings, and on the Summary page.
+
+## 41. Tablet: confirm without a head count, and a folded-away second contact
+
+**No migration.** Two changes on the kiosk's Summary page, plus the API cap that
+made the first of them only half-work.
+
+### Nothing numeric blocks Confirm any more
+
+The rest of the system is explicit that a head count is not needed to take a
+booking — the API defaults `guestCount` to 0, and the Events page creates an
+entirely blank event for later editing. The tablet contradicted it: Confirm
+stayed disabled until someone typed a figure, so a restaurant taking a booking
+before the count was known had to invent one. **An invented head count is worse
+than a missing one, because it prices the event.**
+
+- `confirmDisabled` no longer mentions `guestCount`, and the red "— required"
+  note beside the caption is gone with it (it would otherwise say the button is
+  blocked when it is not).
+- The guest input's `min={1}` and `max={5000}` are gone. `min` was the same rule
+  written twice; `max` mirrored an API cap.
+- **The API's `max(5000)` on `guestCount` / `childrenCount` is lifted** to the
+  `Int` column's own ceiling. That cap was a guess at "no banquet is bigger than
+  this", enforced nowhere but the schema, so a larger figure came back to the
+  tablet as a generic *Unable to create event* naming no field — the same failure
+  shape as the event-number bug in §31. A number Postgres cannot store is still
+  refused, because an overflow is a 500 rather than a 400.
+
+**Deliberately unchanged:** the caller's **name, phone, date and time** are still
+required — those are not numbers, and a booking without them is not a booking.
+Negative counts are still clamped in the input (the totals read the typed value
+before the store does). The **Events page** keeps its own "positive integer, 5000
+or less" rule; it is a different page and was not in scope, so it is now the
+stricter of the two doors.
+
+Zero guests is now a reachable state, so the two divisions by `guestCount` — the
+manual-total per-guest figure and `usePriceCalculator` — matter: both already
+guarded, and the tests hold them there.
+
+### The second contact is behind a button
+
+Most bookings have one caller. The second name and phone sat between the caller
+and the date as two more fields to skip past; they are now folded behind
+**"Add a second person"**.
+
+- Closing it **clears both fields** — otherwise a name typed and then hidden
+  would still be submitted, invisible on screen and present in the record.
+- It opens **by itself** when the draft handed over from the Events page already
+  carries a second contact; an event for a couple must not hide half its contacts
+  behind a button labelled "add".
+- The submitted payload is unchanged (`.trim() || undefined`), so an event with
+  no second contact looks exactly as it did.
+
+**After deploying:**
+
+1. On the kiosk Summary, fill in name, phone, date and time and leave guests
+   empty → **Confirm is enabled**, and the event is created with 0 guests.
+2. Clear the name → Confirm disabled again.
+3. Type 8000 guests → the event is created (previously: "Unable to create event").
+4. Type `-5` → the field holds 0.
+5. The second-person fields are **not** shown; press "Add a second person", type
+   a name, press "Remove second person" → both fields are gone **and empty**.
+   Confirm, then check the saved event carries no second contact.
+6. Open an existing event with a second contact from the Events page → "Change
+   Menu" → the Summary shows both fields already filled in and expanded.

@@ -7,7 +7,7 @@ const ledgerSync = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('./event.ledgerSync.js', () => ({ syncEventToLedger: ledgerSync }));
 
 const { EventService } = await import('./event.service.js');
-const { createEventSchema } = await import('./event.schema.js');
+const { createEventSchema, updateEventSchema } = await import('./event.schema.js');
 import type { EventRepository } from './event.repository.js';
 
 const EVENT = {
@@ -198,6 +198,31 @@ describe('the event payload', () => {
   it('will not take a fractional or negative guest count', () => {
     expect(createEventSchema.safeParse({ ...valid, guestCount: 12.5 }).success).toBe(false);
     expect(createEventSchema.safeParse({ ...valid, guestCount: -1 }).success).toBe(false);
+  });
+
+  it('takes a head count of zero — the count often is not known yet', () => {
+    // The tablet's Confirm button no longer requires one, so this is the shape
+    // a booking taken over the phone actually arrives in.
+    expect(createEventSchema.safeParse({ ...valid, guestCount: 0 }).success).toBe(true);
+    expect(createEventSchema.safeParse({ ...valid, childrenCount: 0 }).success).toBe(true);
+  });
+
+  it('no longer stops at the old 5000 guess', () => {
+    // That cap lived only here, so a bigger figure came back to the tablet as a
+    // generic "Unable to create event" naming no field.
+    for (const guestCount of [5001, 20_000, 2_147_483_647]) {
+      expect(createEventSchema.safeParse({ ...valid, guestCount }).success, String(guestCount)).toBe(true);
+      expect(updateEventSchema.safeParse({ guestCount }).success, `update ${guestCount}`).toBe(true);
+    }
+  });
+
+  it('still refuses a number the Int column cannot hold', () => {
+    // The remaining bound is the column's, not a policy: an overflow would be a
+    // 500 with a Postgres message, which is worse than a 400.
+    for (const guestCount of [2_147_483_648, Number.MAX_SAFE_INTEGER]) {
+      expect(createEventSchema.safeParse({ ...valid, guestCount }).success, String(guestCount)).toBe(false);
+      expect(createEventSchema.safeParse({ ...valid, childrenCount: guestCount }).success, String(guestCount)).toBe(false);
+    }
   });
 
   it('takes money as whole tiyin only', () => {
