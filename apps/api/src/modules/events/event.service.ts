@@ -6,9 +6,28 @@ import { syncEventToLedger } from './event.ledgerSync.js';
 export class EventService {
   constructor(private readonly eventRepository: EventRepository) {}
 
+  /**
+   * The shape the API hands out: the event number as `id`, and the two money
+   * columns as plain numbers.
+   *
+   * `depositCents` and `EventPayment.amountCents` are BIGINT (see the schema —
+   * a 32-bit tiyin column stops at 21 474 836 so'm), and Prisma hands a BigInt
+   * column back as a JavaScript `bigint`. `JSON.stringify` throws outright on
+   * one, so leaving them would turn every event response into a 500. A Number is
+   * exact to 2^53 tiyin — ninety trillion so'm — so nothing is lost converting
+   * at the boundary, and every caller keeps the `number` it already expected.
+   */
   private mapEventToExternalId(event: any) {
+    if (!event) return event;
     const { eventNumber, ...rest } = event;
-    return { ...rest, id: eventNumber };
+    return {
+      ...rest,
+      id: eventNumber,
+      depositCents: Number(rest.depositCents ?? 0),
+      payments: Array.isArray(rest.payments)
+        ? rest.payments.map((p: any) => ({ ...p, amountCents: Number(p.amountCents) }))
+        : rest.payments,
+    };
   }
 
   async listEvents(restaurantId: string, params?: { skip: number; take: number }) {

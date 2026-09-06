@@ -2653,3 +2653,57 @@ agreement and start refusing valid payments.
 4. Press "Pay the rest" → the box fills with the exact outstanding figure.
 5. `POST /api/events/:id/payments` with an over-large amount → **400**, even
    though the page would not have sent it.
+
+## 51. Fix: "Add payment" did nothing above ~21.5 million (**has a migration**)
+
+**`20260906120000_money_bigint`** — and it must run before this deploy is any
+use.
+
+### The ceiling
+
+`Event.depositCents` and `EventPayment.amountCents` stored **tiyin** in a 32-bit
+integer. `2 147 483 647` tiyin is **21 474 836 so'm** — precisely the
+"20 000 000–30 000 000" that was reported.
+
+A 200-guest banquet at 250 000 a head is 50 000 000 so'm, so these are not
+outlying amounts: **any payment or deposit big enough to matter was refused by
+Postgres outright.** They are the only two money columns in the schema that hold
+a whole invoice rather than a unit price, which is why nothing else hit it — a
+dish price or a per-person rate is nowhere near the limit.
+
+Both are `BIGINT` now. Widening is lossless (every existing value fits), but
+int4 → int8 changes the on-disk width, so **Postgres rewrites each table under an
+ACCESS EXCLUSIVE lock**. One row per event and a handful per invoice, so it is a
+moment rather than an outage — worth knowing rather than assuming.
+
+**The second half of that fix:** Prisma hands a `BIGINT` column back as a
+JavaScript `bigint`, and `JSON.stringify` **throws** on one. Left alone, that
+would turn every event response into a 500 — a worse bug than the one being
+fixed. `mapEventToExternalId` converts both on the way out, and the invoice math
+accepts either (a row straight from Prisma carries bigints; one that has been
+mapped carries numbers). A Number is exact to 2^53 tiyin — ninety trillion so'm —
+so nothing is lost at that boundary.
+
+### Why it looked like a dead button
+
+`addPaymentMutation` **had no `onError`**. The request failed, and the page said
+nothing at all: no message, no spinner change, the amount still sitting in the
+box. That is the whole of "clicking the button simply doesn't work".
+
+It now shows what went wrong, preferring **the server's own message** when there
+is one — the payment cap from §50 names the maximum, which a generic string
+cannot — and falling back to `payment_failed`.
+
+**After deploying:**
+
+1. `prisma migrate deploy` must have run. Check:
+   `\d "EventPayment"` shows `amountCents | bigint`.
+2. Add a payment of **25 000 000** to a large invoice → it saves.
+3. Add one of 50 000 000 to an invoice that big → it saves, and the invoice can
+   then be closed (§49).
+4. Set a deposit of 30 000 000 on the Events page → it saves.
+5. Open any event, and the Invoices page: no 500s. (This is the bigint
+   serialisation check — it fails loudly if `mapEventToExternalId` missed a
+   field.)
+6. Try to overpay → the refusal from §50 appears **as a message**, not as
+   silence.

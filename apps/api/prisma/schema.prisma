@@ -99,7 +99,9 @@ model Event {
   originalEventDate DateTime?
   guestCount      Int
   // Prepaid deposit in tiyin (1/100 so'm); subtracted from the event total.
-  depositCents    Int               @default(0)
+  // BigInt, not Int: a 32-bit column tops out at 2 147 483 647 tiyin, which is
+  // 21 474 836 so'm — under half of what one banquet costs. See EventPayment.
+  depositCents    BigInt            @default(0)
   // Deadline for settling the remaining balance once the event has started with
   // an outstanding amount (a "debt"). Past-due debts surface as notifications.
   debtDeadline    DateTime?
@@ -145,7 +147,12 @@ model Event {
 model EventPayment {
   id          String   @id @default(cuid())
   eventId     String
-  amountCents Int
+  // BigInt, not Int. These two columns are the only money in the schema that
+  // holds a WHOLE INVOICE rather than a unit price, and a 32-bit integer of
+  // tiyin stops at 21 474 836 so'm. A 200-guest banquet at 250 000 a head is
+  // 50 000 000, so every payment big enough to matter was refused by Postgres —
+  // and the page had no error handler, so the button simply did nothing.
+  amountCents BigInt
   note        String?
   createdAt   DateTime @default(now())
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)

@@ -110,12 +110,23 @@ export const AdminInvoicesPage = () => {
   const [paymentDrafts, setPaymentDrafts] = useState<Record<number, string>>({});
   const [deadlineDrafts, setDeadlineDrafts] = useState<Record<number, string>>({});
 
+  // Which invoice's payment was refused by the server, and what it said.
+  const [payError, setPayError] = useState<{ id: number; message: string } | null>(null);
+
   const addPaymentMutation = useMutation({
     mutationFn: ({ eventId, amountCents }: { eventId: number; amountCents: number }) =>
       eventService.addPayment(eventId, amountCents),
     onSuccess: (_data, { eventId }) => {
+      setPayError(null);
       setPaymentDrafts((prev) => ({ ...prev, [eventId]: '' }));
       queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+    // There was NO error handler here, which is why a refused payment looked
+    // like a button that did nothing at all — the request 500'd on a column
+    // overflow and the page said not a word. A write that fails has to say so.
+    onError: (error: unknown, { eventId }) => {
+      const response = (error as { response?: { data?: { message?: string } } })?.response;
+      setPayError({ id: eventId, message: response?.data?.message || t('payment_failed') });
     },
   });
 
@@ -142,6 +153,7 @@ export const AdminInvoicesPage = () => {
     if (!amountCents || amountCents <= 0 || addPaymentMutation.isPending) return;
     if (amountCents > invoiceOutstandingCents(event)) { setPayTooMuch(event.id); return; }
     setPayTooMuch(null);
+    setPayError(null);
     addPaymentMutation.mutate({ eventId: event.id, amountCents });
   };
 
@@ -379,6 +391,16 @@ export const AdminInvoicesPage = () => {
                       {t('pay_the_rest', { amount: formatSum(amountDue) })}
                     </button>
                   </div>
+                )}
+
+                {payError?.id === event.id && (
+                  <p style={{
+                    margin: '8px 0 0', padding: '9px 12px', borderRadius: 10,
+                    fontSize: 13, fontWeight: 600, color: '#fca5a5',
+                    background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.35)',
+                  }}>
+                    {payError.message}
+                  </p>
                 )}
 
                 {payTooMuch === event.id && (

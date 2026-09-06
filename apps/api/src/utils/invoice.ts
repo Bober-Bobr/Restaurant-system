@@ -19,10 +19,14 @@
  */
 export type InvoiceEvent = {
   guestCount: number;
-  depositCents: number | null;
+  // `bigint` because these two columns are BIGINT (see the schema): Prisma hands
+  // them back as bigints when the row comes straight from the database, and as
+  // numbers once `mapEventToExternalId` has been through them. This is called
+  // with both, so it takes both.
+  depositCents: number | bigint | null;
   tableCategory: { ratePerPerson: number } | null;
   selections: { quantity: number; unitPriceCents: number }[];
-  payments: { amountCents: number }[];
+  payments: { amountCents: number | bigint }[];
 };
 
 /** Total billable price: table package (rate × guests) + selected dishes. */
@@ -34,8 +38,8 @@ export function invoiceTotalCents(event: InvoiceEvent): number {
 
 /** Everything already in: the deposit plus every partial payment. */
 export function invoicePaidCents(event: InvoiceEvent): number {
-  const deposit = event.depositCents ?? 0;
-  const payments = (event.payments ?? []).reduce((sum, p) => sum + p.amountCents, 0);
+  const deposit = Number(event.depositCents ?? 0);
+  const payments = (event.payments ?? []).reduce((sum, p) => sum + Number(p.amountCents), 0);
   return deposit + payments;
 }
 
