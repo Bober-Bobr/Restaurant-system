@@ -2237,3 +2237,64 @@ covers, and a children's table.
    included ones — not under a repeated heading further down.
 4. The children's section shows its hot appetizers at the **children's** count.
 5. The pricing block, deposit and amount due are unchanged.
+
+## 45. Kiosk: a way back, paid courses in context, and the Extras filter on the left
+
+**No migration.** All three are in [TabletMenuPage.tsx](apps/web/src/pages/TabletMenuPage.tsx).
+
+### The table-category chooser had no way out
+
+`TableCategoryFullscreen` is a `position: fixed` overlay above the menu page, so
+the page's own "← events" button is **behind it**. Its only back button appeared
+on the second step of a *gated* chooser (event type → tables) — so on a
+restaurant whose tables are all one event type there was none at all, and
+choosing a table was the only way out of the kiosk.
+
+There is now one Back button, always present, that undoes the last step: from the
+table list back to the event types, and from the first step out of the chooser
+(`navigate('/')`, the same destination as the header). Every other overlay on the
+page — both dish modals and the lightbox — already closed; the chooser was the
+only gap.
+
+### A paid course is offered where the course is chosen
+
+`CourseChoiceSection` now takes `paidOptions` / `paidSelectedIds` /
+`onTogglePaid`, and renders the paid dishes of each course category **in the same
+grid** as the complimentary ones, with `+ <price>` under the name. They are the
+same rows the Additional section sells — one selection shown in two places, so
+adding a premium main here ticks it there too.
+
+Four rules make it an addition rather than an alternative:
+
+- it toggles as a paid extra (`setQuantity`) and **never touches the free course
+  choice**;
+- it draws a **checkbox**, not a radio, even inside a single-select course;
+- it does not count toward `full`, so buying one does not collapse the list as
+  though the guest had chosen;
+- a chosen paid dish **stays visible when the list collapses**, or it would look
+  as though the dish just paid for had been dropped.
+
+A dish the package already includes is not also sold. The **children's table
+passes none** — `CourseChoiceSection` is shared, and a paid adult extra is not a
+children's course.
+
+### The Extras category filter runs down the left
+
+The list runs to thirty-odd categories and was a horizontal scroller above the
+dishes whose far end nobody found. It is now a 190px column on the left with the
+dish grid beside it. **Below `sm` it stays a strip** — a rail that width beside a
+phone-width grid leaves one dish per row.
+
+**After deploying:**
+
+1. Open the kiosk on a restaurant with **one** table event type → the chooser
+   shows a **Back** button that returns to the login/events page.
+2. On a restaurant with two event types → Back goes to the event-type list
+   first, and only then out.
+3. Pick a table whose second-course category also has paid dishes → they appear
+   in the same grid with their price. Tick one: the free course stays chosen,
+   and the dish appears ticked in Additional too.
+4. Choose the free course → the list collapses to the chosen dish **plus** any
+   paid dish that was ticked.
+5. The Extras filter is a column on the left on a tablet/desktop, and a strip
+   across the top on a phone.

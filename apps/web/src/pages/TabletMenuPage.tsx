@@ -154,10 +154,14 @@ function PageBackground() {
 // ── TableCategoryFullscreen ───────────────────────────────────────────────
 
 function TableCategoryFullscreen({
-  tableCategories, onSelect, onLightbox, locale, setLocale, t,
+  tableCategories, onSelect, onBack, onLightbox, locale, setLocale, t,
 }: {
   tableCategories: TableCategory[];
   onSelect: (id: string) => void;
+  // Leave the chooser entirely. It is a full-screen overlay above the menu page,
+  // so the page's own "← events" button is behind it and unreachable: without
+  // this, picking a table was the ONLY way out of the tablet.
+  onBack: () => void;
   onLightbox: (src: string) => void;
   locale: Locale;
   setLocale: (l: Locale) => void;
@@ -236,18 +240,22 @@ function TableCategoryFullscreen({
         backdropFilter: 'blur(12px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-          {gated && eventType && (
-            <button type="button" onClick={() => setEventType(null)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
-                padding: '5px 11px', borderRadius: 8, cursor: 'pointer',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-                color: 'var(--rg-accent)', background: 'rgba(var(--rg-accent-rgb),0.12)',
-                border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
-              }}>
-              ‹ {t(EVENT_TYPE_LABEL[eventType])}
-            </button>
-          )}
+          {/* One Back button, always present, that undoes the last step: from the
+              table list back to the event types, and from the first step out of
+              the chooser altogether. It used to appear only on the second step of
+              a gated chooser, so on a restaurant with a single event type there
+              was no way back at all. */}
+          <button type="button"
+            onClick={() => { if (gated && eventType) setEventType(null); else onBack(); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+              padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, letterSpacing: '0.04em',
+              color: 'var(--rg-accent)', background: 'rgba(var(--rg-accent-rgb),0.12)',
+              border: '1px solid rgba(var(--rg-accent-rgb),0.4)',
+            }}>
+            ‹ {gated && eventType ? t(EVENT_TYPE_LABEL[eventType]) : t('back')}
+          </button>
           <p style={{
             margin: 0, color: 'rgba(255,255,255,0.55)',
             fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase',
@@ -700,6 +708,11 @@ function CategorySlide({
   );
 }
 
+/** One option in a course list: a dish the package includes, or a paid dish of
+ *  the same category offered beside it. The item type is the package item's —
+ *  narrower than `MenuItem` — so both kinds fit one list. */
+type CourseOption = { item: TableCategoryPackageItem['menuItem']; paid: boolean };
+
 // ── Reusable: course choice (first/second/third) for a table category ─────
 // Shared by the adult table and the optional children's table so both behave
 // identically. `card` wraps the content in its own rg-card section.
@@ -708,6 +721,7 @@ function CourseChoiceSection({
   tableCategory, t, locale, onLightbox, card = false, showName = true, hotAppetizerMax = 3,
   hotAppetizerSelectedIds, firstSelectedId, secondSelectedIds, thirdSelectedIds,
   onToggleHotAppetizer, onFirst, onToggleSecond, onToggleThird,
+  paidOptions = [], paidSelectedIds = [], onTogglePaid,
 }: {
   tableCategory: TableCategory;
   t: TFn;
@@ -724,6 +738,13 @@ function CourseChoiceSection({
   onFirst: (id: string) => void;
   onToggleSecond: (id: string) => void;
   onToggleThird: (id: string) => void;
+  // Paid dishes from the SAME course categories, shown beside the complimentary
+  // ones so a guest sees the upgrade while they are choosing rather than having
+  // to find it in the Additional section further down. Optional: the children's
+  // table passes none — a paid adult extra is not a children's course.
+  paidOptions?: MenuItem[];
+  paidSelectedIds?: string[];
+  onTogglePaid?: (id: string) => void;
 }) {
   // Hot appetizers come first — multi-select, up to three. The three courses that
   // follow are each single-select (exactly one dish).
@@ -737,8 +758,23 @@ function CourseChoiceSection({
     { category: 'THIRD_COURSE' as const, labelKey: 'choose_third_course' as const, changeKey: 'change_third_course' as const,
       multi: false, isSelected: (id: string) => thirdSelectedIds.includes(id), onToggle: onToggleThird },
   ]
-    .map((cfg) => ({ ...cfg, items: bestsellerFirst((tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category)) }))
-    .filter((group) => group.items.length > 0);
+    .map((cfg) => {
+      // Two kinds of option in one grid: what the package includes, and what the
+      // guest can pay to add. `paid` decides the price line, the control shape
+      // and which handler runs — a paid dish is an addition, so choosing one
+      // never replaces the free course the guest also picked.
+      const free: CourseOption[] = bestsellerFirst(
+        (tableCategory.packageItems ?? []).filter((pi) => pi.menuItem.category === cfg.category),
+      ).map((pi) => ({ item: pi.menuItem, paid: false }));
+      const includedIds = new Set(free.map((o) => o.item.id));
+      const paid: CourseOption[] = bestsellerFirst(
+        paidOptions
+          .filter((m) => m.category === cfg.category && !includedIds.has(m.id))
+          .map((menuItem) => ({ menuItem })),
+      ).map(({ menuItem }) => ({ item: menuItem, paid: true }));
+      return { ...cfg, free, options: [...free, ...paid] };
+    })
+    .filter((group) => group.options.length > 0);
   if (courseGroups.length === 0) return null;
 
   // Each course is single-select: once chosen, collapse its list to just the
@@ -770,14 +806,19 @@ function CourseChoiceSection({
       </div>
 
       {courseGroups.map((group, gi) => {
-        const selectedCount = group.items.filter((pi) => group.isSelected(pi.menuItem.id)).length;
+        const isChosen = (o: CourseOption) =>
+          o.paid ? paidSelectedIds.includes(o.item.id) : group.isSelected(o.item.id);
+        // "Full" is about the FREE course only — a paid addition is not one of
+        // the picks the package allows, so buying one must not collapse the list
+        // as though the guest had chosen.
+        const selectedCount = group.free.filter((o) => group.isSelected(o.item.id)).length;
         // Single-select courses collapse once their one dish is chosen; the
         // multi-select hot appetizers only collapse after every allowed pick is made.
         const full = group.multi ? selectedCount >= hotAppetizerMax : selectedCount >= 1;
         const collapsed = full && !expandedCats[group.category];
-        const displayItems = collapsed
-          ? group.items.filter((pi) => group.isSelected(pi.menuItem.id))
-          : group.items;
+        // Collapsed, the list keeps everything chosen — including a paid dish,
+        // which would otherwise look as though it had been dropped.
+        const displayItems = collapsed ? group.options.filter(isChosen) : group.options;
         return (
         <div key={group.category} className={gi < courseGroups.length - 1 ? 'mb-8' : ''}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -808,10 +849,13 @@ function CourseChoiceSection({
             </div>
           </div>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
-            {displayItems.map((pi, i) => {
-              const item = pi.menuItem;
-              const selected = group.isSelected(item.id);
+            {displayItems.map((option, i) => {
+              const item = option.item;
+              const selected = isChosen(option);
               const photoSrc = item.photoUrl ? getPhotoUrl(item.photoUrl) : null;
+              // A paid dish is added, not chosen instead of something, so it
+              // always gets the checkbox shape even inside a single-select course.
+              const checkbox = option.paid || group.multi;
               return (
                 <div key={item.id}
                   className="tablet-fade-up"
@@ -840,7 +884,11 @@ function CourseChoiceSection({
                     </div>
                   )}
                   <button type="button"
-                    onClick={() => { group.onToggle(item.id); if (!group.multi) setExpandedCats((e) => ({ ...e, [group.category]: false })); }}
+                    onClick={() => {
+                      if (option.paid) { onTogglePaid?.(item.id); return; }
+                      group.onToggle(item.id);
+                      if (!group.multi) setExpandedCats((e) => ({ ...e, [group.category]: false }));
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto',
                       width: '100%', padding: '8px 10px',
@@ -848,7 +896,7 @@ function CourseChoiceSection({
                     }}>
                     <div style={{
                       flexShrink: 0,
-                      width: 20, height: 20, borderRadius: group.multi ? 6 : '50%',
+                      width: 20, height: 20, borderRadius: checkbox ? 6 : '50%',
                       border: `2px solid ${selected ? 'var(--rg-accent)' : 'rgba(255,255,255,0.3)'}`,
                       background: selected ? 'var(--rg-accent)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -862,6 +910,14 @@ function CourseChoiceSection({
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: selected ? 'var(--rg-accent)' : '#fff', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dishName(item, locale)}</p>
+                      {/* The price is the whole difference between the two kinds
+                          of option, so it is stated rather than implied — an
+                          included dish carries no price line at all. */}
+                      {option.paid && (
+                        <p style={{ margin: '2px 0 0', fontSize: 12.5, fontWeight: 700, color: 'var(--rg-accent)', lineHeight: 1.2 }}>
+                          + {formatSum(item.priceCents)}
+                        </p>
+                      )}
                     </div>
                   </button>
                 </div>
@@ -870,7 +926,7 @@ function CourseChoiceSection({
           </div>
 
           {/* Once the picks are complete, collapse the options; button re-expands. */}
-          {(full || expandedCats[group.category]) && group.items.length > 1 && (
+          {(full || expandedCats[group.category]) && group.options.length > 1 && (
             <div style={{ marginTop: 14, textAlign: 'center' }}>
               <button type="button"
                 onClick={() => setExpandedCats((e) => ({ ...e, [group.category]: !e[group.category] }))}
@@ -1740,6 +1796,16 @@ export const TabletMenuPage = () => {
         (activeCategory === null || item.category === activeCategory)
     )
   );
+  // Paid dishes that belong to a COURSE category, offered beside the
+  // complimentary options while the guest is picking their courses. They are the
+  // same rows the Additional section sells — one selection, shown twice, so
+  // adding a premium main here also ticks it there.
+  const paidCourseOptions = (menuItems ?? []).filter(
+    (item) => COURSE_CATEGORIES.includes(item.category) && isSelectableAdditional(item),
+  );
+  const paidSelectedIds = Object.keys(selectedItems).filter((id) => (selectedItems[id] ?? 0) > 0);
+  const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : 1);
+
   // Single active children's table (if any) — shown as an optional add-on table.
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
@@ -1853,6 +1919,7 @@ export const TabletMenuPage = () => {
           <TableCategoryFullscreen
             tableCategories={tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN')}
             onSelect={(id) => setTableCategory(id)}
+            onBack={() => navigate('/')}
             onLightbox={setLightboxSrc}
             locale={locale}
             setLocale={setLocale}
@@ -2054,6 +2121,9 @@ export const TabletMenuPage = () => {
                 onFirst={setFirstCourse}
                 onToggleSecond={toggleSecondCourse}
                 onToggleThird={toggleThirdCourse}
+                paidOptions={paidCourseOptions}
+                paidSelectedIds={paidSelectedIds}
+                onTogglePaid={togglePaid}
               />
             )}
 
@@ -2103,19 +2173,25 @@ export const TabletMenuPage = () => {
               </div>
               <div style={{ height: 1, marginBottom: 18, background: 'linear-gradient(90deg, rgba(var(--rg-accent-rgb),0.7) 0%, rgba(var(--rg-accent-rgb),0.08) 70%, transparent 100%)' }} />
 
-              {/* Category pills */}
-              <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1">
-                {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && isSelectableAdditional(item)))].map((cat) => (
-                  <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
-                    className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200"
-                    style={activeCategory === cat
-                      ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 4px 14px rgba(var(--rg-accent-rgb),0.35)' }
-                      : { background: 'rgba(var(--rg-accent-rgb),0.08)', color: 'rgba(217,184,74,0.9)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)' }}>
-                    {cat === null ? t('filter_all') : t(cat.toLowerCase() as Parameters<typeof translate>[0])}
-                  </button>
-                ))}
-              </div>
+              {/* The category filter is a column down the LEFT on anything wider
+                  than a phone: this list runs to thirty-odd categories, and as a
+                  horizontal strip above the dishes it was a scroller whose far
+                  end nobody found. Below `sm` it stays a strip — a 190px rail on
+                  a phone would leave the dish grid a single column. */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
+                <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1 sm:w-[190px] sm:shrink-0 sm:flex-col sm:overflow-visible sm:pb-0">
+                  {[null, ...ADDITIONAL_CATEGORIES.filter((cat) => (menuItems ?? []).some((item) => item.category === cat && isSelectableAdditional(item)))].map((cat) => (
+                    <button key={cat ?? 'all'} type="button" onClick={() => setActiveCategory(cat)}
+                      className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 sm:w-full sm:whitespace-normal sm:rounded-xl sm:px-3.5 sm:py-2 sm:text-left"
+                      style={activeCategory === cat
+                        ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 4px 14px rgba(var(--rg-accent-rgb),0.35)' }
+                        : { background: 'rgba(var(--rg-accent-rgb),0.08)', color: 'rgba(217,184,74,0.9)', border: '1px solid rgba(var(--rg-accent-rgb),0.28)' }}>
+                      {cat === null ? t('filter_all') : t(cat.toLowerCase() as Parameters<typeof translate>[0])}
+                    </button>
+                  ))}
+                </div>
 
+                <div className="min-w-0 flex-1">
               {isLoading ? (
                 <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))' }}>
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -2160,6 +2236,8 @@ export const TabletMenuPage = () => {
                   <p className="text-sm">No items in this category</p>
                 </div>
               )}
+                </div>
+              </div>
             </section>
           </div>
         </section>
