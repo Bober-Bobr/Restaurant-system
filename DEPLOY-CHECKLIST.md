@@ -2171,3 +2171,69 @@ differ in five ways at once rather than in one shade of border:
 - Still painted entirely from `--rg-accent`, so a themed restaurant gets its own
   colour; `tabletSettings.test.ts` still fails on a hex literal in that block.
 - Fields are 48px tall here: these three are tapped with a thumb, from standing.
+
+## 44. Banquet PDF: two tables, merged categories, per-guest hot appetizers
+
+**No migration.** All three changes are in [apps/api/src/modules/public/pdf.service.ts](apps/api/src/modules/public/pdf.service.ts), so both
+callers — the tablet Summary and the Events page — get them at once, **including
+browsers still running an old bundle**. The Excel export is a pricing sheet that
+never listed the included dishes at all, so none of this applies to it.
+
+### A hot appetizer is one per guest
+
+`servedPortions()`. The quantity column took `servings` from the package item,
+which is what the package declares for a dish, not a head count — so a banquet
+for two hundred asked the kitchen for **one** plate of kebab. Hot appetizers are
+plated per head and are the only included dish that is: a salad shared by a table
+of ten is one bowl, not ten, so every other dish keeps its declared servings.
+
+The children's table passes its **own** count, so nuggets for twenty children are
+twenty, not two hundred. Zero guests gives zero rather than one — the Summary
+page no longer requires a head count (§41), so that is reachable.
+
+### Paid dishes sit in the category they belong to
+
+`groupDishesByCategory()`. Included and paid dishes were two separate passes, so
+a category with both — the salads the package gives you and a salad the guest
+paid to add — was printed **twice, under the same heading, in two different
+halves of the document**. Whoever plates the salads now reads one heading and
+gets one list: what the package gives first, then what was added.
+
+A category with only paid dishes still gets its own block, where it first
+appears.
+
+### What is served leads, in its own table
+
+`SERVED_CATEGORIES` / `splitServedBlocks()`. Hot appetizers, first, main and
+third course now print in a table of their own at the top, captioned
+`served_dishes`, **in serving order**; everything else follows in a second table
+under `other_dishes`. Previously the payload's order put hot appetizers at the
+very top and the three courses at the very bottom, with the entire cold table in
+between — the four things the kitchen sends out during the evening were the
+hardest to find.
+
+`SECOND_COURSE` is the main course; the enum is named for when it is served. A
+course nobody chose prints no heading, and a **paid** course joins the top table
+too, since it is served the same way.
+
+The children's table keeps its own place as an add-on section, but applies both
+rules inside it.
+
+Two smaller things fixed on the way: a category heading now falls back to the
+**server's** translation instead of the raw `HOT_APPETIZERS` enum when a caller
+omits `categoryLabel` (which is what the paid dishes always did), and each
+table's caption, header and first section are kept together so a table cannot
+begin with its heading stranded at the foot of a page.
+
+**After deploying:** download a banquet PDF for an event with a chosen table
+package, at least one paid Additional dish in a category the package also
+covers, and a children's table.
+
+1. The **first table** is captioned "ПОДАЧА К СТОЛУ" and holds only hot
+   appetizers → first → main → third, in that order.
+2. Hot appetizer quantities equal the **guest count**; salads and pastry keep
+   their package servings.
+3. The paid dish appears **once**, inside its category's block, after the
+   included ones — not under a repeated heading further down.
+4. The children's section shows its hot appetizers at the **children's** count.
+5. The pricing block, deposit and amount due are unchanged.

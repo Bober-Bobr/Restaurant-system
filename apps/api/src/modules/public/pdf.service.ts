@@ -54,6 +54,111 @@ interface SummaryData {
   restaurantLogoUrl?: string | null;
 }
 
+/**
+ * The four categories that are carried out to the table during the banquet, in
+ * the order they are served. They go in a table of their own at the top of the
+ * document: the kitchen reads that table on the night, and it used to be
+ * scattered through the whole list — hot appetizers at the front, the three
+ * courses at the very bottom, with every salad and pastry in between.
+ *
+ * `SECOND_COURSE` is the main course. The enum is named for the order it is
+ * served in, not for what it is.
+ */
+export const SERVED_CATEGORIES = ['HOT_APPETIZERS', 'FIRST_COURSE', 'SECOND_COURSE', 'THIRD_COURSE'] as const;
+export type ServedCategory = (typeof SERVED_CATEGORIES)[number];
+
+export const isServedCategory = (category: string): category is ServedCategory =>
+  (SERVED_CATEGORIES as readonly string[]).includes(category);
+
+/**
+ * How many portions of an included dish to write in the quantity column.
+ *
+ * A hot appetizer is one per guest — it is the only included dish that is, and
+ * the package item's `servings` is not the head count, so a banquet for 200 was
+ * asking the kitchen for a single portion. Every other included dish keeps the
+ * servings the package declares: a salad shared by a table of ten is one bowl,
+ * not ten.
+ *
+ * `guests` is the head count the row belongs to, so the children's table passes
+ * its own count rather than the adults'.
+ */
+export function servedPortions(
+  dish: { category: string; servings?: number },
+  guests: number,
+): number {
+  if (dish.category === 'HOT_APPETIZERS') return Math.max(guests, 0);
+  return dish.servings ?? 1;
+}
+
+type DishRow = { name: string; category: string; categoryLabel?: string; servings?: number };
+type MenuRow = { name: string; category: string; qty: string };
+type CategoryBlock = { category: string; label: string; rows: MenuRow[] };
+
+/**
+ * Included dishes and the paid Additional dishes, grouped into ONE block per
+ * category.
+ *
+ * They used to be two separate passes, so a category with both — salads that
+ * come with the package and a salad the guest paid to add — was printed twice,
+ * under the same heading, in two different halves of the document. Whoever
+ * plates the salads reads one heading and gets one list.
+ *
+ * Included dishes come first inside a block and the paid ones follow, so the
+ * order within a category is still "what the package gives you, then what was
+ * added". First-seen order decides the blocks themselves; a category with only
+ * paid dishes gets its block where it first appears.
+ */
+export function groupDishesByCategory(
+  included: DishRow[],
+  additional: { name: string; category: string; qty: number }[],
+  guests: number,
+  labelFor: (category: string) => string,
+): CategoryBlock[] {
+  const blocks: CategoryBlock[] = [];
+  const byCategory = new Map<string, CategoryBlock>();
+  const blockFor = (category: string, label: string) => {
+    let block = byCategory.get(category);
+    if (!block) {
+      block = { category, label, rows: [] };
+      byCategory.set(category, block);
+      blocks.push(block);
+    }
+    return block;
+  };
+
+  for (const dish of included) {
+    // The client sends a translated label; falling back to the server's own
+    // translation rather than to the raw enum means a caller that omits it gets
+    // "Горячие закуски" and not "HOT_APPETIZERS" — which is also what the paid
+    // dishes in the same block have always shown.
+    blockFor(dish.category, dish.categoryLabel || labelFor(dish.category)).rows.push({
+      name: dish.name,
+      category: dish.category,
+      qty: String(servedPortions(dish, guests)),
+    });
+  }
+  for (const item of additional) {
+    blockFor(item.category, labelFor(item.category)).rows.push({
+      name: item.name,
+      category: item.category,
+      qty: String(item.qty),
+    });
+  }
+  return blocks;
+}
+
+/**
+ * Split the blocks into the two tables: what is served during the evening, in
+ * serving order, and everything else in the order it was built.
+ */
+export function splitServedBlocks(blocks: CategoryBlock[]): { served: CategoryBlock[]; rest: CategoryBlock[] } {
+  const served = SERVED_CATEGORIES
+    .map((category) => blocks.find((b) => b.category === category))
+    .filter((b): b is CategoryBlock => !!b && b.rows.length > 0);
+  const rest = blocks.filter((b) => !isServedCategory(b.category) && b.rows.length > 0);
+  return { served, rest };
+}
+
 function resolveUploadPath(url: string | null | undefined): string | null {
   if (!url) return null;
   const marker = '/uploads/';
@@ -234,65 +339,57 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
 
     curY += 8;
 
-    // ── Main table ────────────────────────────────────────────────────────
+    // ── The dishes ────────────────────────────────────────────────────────
+    //
+    // Two tables. The first is what is carried out during the evening — hot
+    // appetizers, then the first, main and third courses — because that is the
+    // list the kitchen works from on the night, and it used to be split across
+    // the top and the bottom of one long table with the whole cold table in
+    // between. Everything else follows in the second.
+    //
+    // In both, the paid Additional dishes sit inside the category block they
+    // belong to rather than in a second run of the same headings.
 
-    tableHeader(t('dish_name'), t('qty_pcs'));
+    const labelFor = (category: string) => {
+      const key = category.toLowerCase() as Parameters<typeof translate>[0];
+      try { return translate(key, data.locale); } catch { return category; }
+    };
 
-    // Group included dishes by category
-    const includedDishes = data.includedDishes ?? [];
-    type Block = { label: string; dishes: typeof includedDishes };
-    const blocks: Block[] = [];
-    const blockByCat = new Map<string, Block>();
-    for (const dish of includedDishes) {
-      let block = blockByCat.get(dish.category);
-      if (!block) {
-        block = { label: dish.categoryLabel || dish.category, dishes: [] };
-        blockByCat.set(dish.category, block);
-        blocks.push(block);
-      }
-      block.dishes.push(dish);
-    }
+    const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id]! > 0);
+    const { served, rest } = splitServedBlocks(groupDishesByCategory(
+      data.includedDishes ?? [],
+      selectedMenuItems.map((item) => ({
+        name: item.name,
+        category: item.category,
+        qty: data.selectedItems[item.id]!,
+      })),
+      data.guestCount,
+      labelFor,
+    ));
 
-    // Render included dish blocks
     let shade = false;
-    if (blocks.length > 0) {
+    const renderBlocks = (caption: string | null, blocks: CategoryBlock[]) => {
+      if (blocks.length === 0) return;
+      // A caption plus its header and first section, kept together: a table that
+      // starts with its heading alone at the foot of a page is unreadable.
+      ensureSpace((caption ? SECTION_H : 0) + HEADER_H + SECTION_H + ROW_H);
+      if (caption) sectionRow(caption);
+      tableHeader(t('dish_name'), t('qty_pcs'));
       for (const block of blocks) {
         sectionRow(block.label.toUpperCase());
-        for (const dish of block.dishes) {
-          dataRow(dish.name, String(dish.servings ?? 1), shade);
+        for (const row of block.rows) {
+          dataRow(row.name, row.qty, shade);
           shade = !shade;
         }
       }
-    }
+    };
 
-    // Additional paid items
-    const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id] > 0);
-    if (selectedMenuItems.length > 0) {
-      // Group by category label
-      type AdditionalBlock = { label: string; items: typeof selectedMenuItems };
-      const addBlocks: AdditionalBlock[] = [];
-      const addByCat = new Map<string, AdditionalBlock>();
-      for (const item of selectedMenuItems) {
-        let block = addByCat.get(item.category);
-        if (!block) {
-          // Use the translated category key from the category enum
-          const catKey = item.category.toLowerCase() as Parameters<typeof translate>[0];
-          let catLabel = item.category;
-          try { catLabel = translate(catKey, data.locale); } catch { /* keep enum */ }
-          block = { label: catLabel, items: [] };
-          addByCat.set(item.category, block);
-          addBlocks.push(block);
-        }
-        block.items.push(item);
-      }
-      for (const block of addBlocks) {
-        sectionRow(block.label.toUpperCase());
-        for (const item of block.items) {
-          dataRow(item.name, String(data.selectedItems[item.id]), shade);
-          shade = !shade;
-        }
-      }
-    }
+    renderBlocks(served.length > 0 ? t('served_dishes') : null, served);
+    if (served.length > 0 && rest.length > 0) curY += 10;
+    renderBlocks(served.length > 0 ? t('other_dishes') : null, rest);
+    // Neither table exists on an empty booking, and the pricing below still
+    // needs a header to sit under.
+    if (served.length === 0 && rest.length === 0) tableHeader(t('dish_name'), t('qty_pcs'));
 
     // ── Children's table section (optional add-on) ────────────────────────
     const childrenDishes = data.childrenDishes ?? [];
@@ -300,23 +397,16 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
       const heading = `${t('children_table')} — ${data.childrenTableName}` +
         ((data.childrenCount ?? 0) > 0 ? ` (${t('children_count')}: ${data.childrenCount})` : '');
       sectionRow(heading.toUpperCase());
-      // Group children's dishes by category label.
-      type CBlock = { label: string; dishes: typeof childrenDishes };
-      const cBlocks: CBlock[] = [];
-      const cByCat = new Map<string, CBlock>();
-      for (const dish of childrenDishes) {
-        let block = cByCat.get(dish.category);
-        if (!block) {
-          block = { label: dish.categoryLabel || dish.category, dishes: [] };
-          cByCat.set(dish.category, block);
-          cBlocks.push(block);
-        }
-        block.dishes.push(dish);
-      }
-      for (const block of cBlocks) {
+      // Its own add-on section, so it keeps its place rather than being folded
+      // into the two tables above — but the same two rules apply inside it: the
+      // served courses lead, and a hot appetizer is one per CHILD, counted from
+      // the children's own head count and not the adults'.
+      const childBlocks = groupDishesByCategory(childrenDishes, [], data.childrenCount ?? 0, labelFor);
+      const childSplit = splitServedBlocks(childBlocks);
+      for (const block of [...childSplit.served, ...childSplit.rest]) {
         sectionRow(block.label.toUpperCase());
-        for (const dish of block.dishes) {
-          dataRow(dish.name, String(dish.servings ?? 1), shade);
+        for (const row of block.rows) {
+          dataRow(row.name, row.qty, shade);
           shade = !shade;
         }
       }

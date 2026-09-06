@@ -8,6 +8,8 @@ const resources = {
   en: {
     selection_summary: 'Selection Summary',
     menu_for_banquet: 'MENU FOR BANQUET',
+    served_dishes: 'DISHES SERVED AT THE TABLE',
+    other_dishes: 'THE REST OF THE TABLE',
     dish_name: 'Dish name',
     qty_pcs: 'Qty (pcs)',
     date: 'Date',
@@ -81,6 +83,8 @@ const resources = {
   ru: {
     selection_summary: 'Сводка выбора',
     menu_for_banquet: 'МЕНЮ НА БАНКЕТ',
+    served_dishes: 'ПОДАЧА К СТОЛУ',
+    other_dishes: 'ОСТАЛЬНОЙ СТОЛ',
     dish_name: 'Наименование',
     qty_pcs: 'Количество (шт)',
     date: 'Дата',
@@ -154,6 +158,8 @@ const resources = {
   uz: {
     selection_summary: 'Tanlov xulosasi',
     menu_for_banquet: 'BANKET MENYUSI',
+    served_dishes: 'DASTURXONGA BERILADIGAN TAOMLAR',
+    other_dishes: 'DASTURXONNING QOLGAN QISMI',
     dish_name: 'Taom nomi',
     qty_pcs: 'Miqdor (dona)',
     date: 'Sana',
