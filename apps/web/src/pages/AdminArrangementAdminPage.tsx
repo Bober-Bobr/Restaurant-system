@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { menuService } from '../services/menu.service';
 import { tableCategoryService } from '../services/tableCategory.service';
@@ -8,6 +8,8 @@ import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum } from '../utils/currency';
 import type { MenuItem, TableCategory } from '../types/domain';
+import { AutosaveStatus } from '../components/ui/AutosaveStatus';
+import { useAutosave } from '../hooks/useAutosave';
 
 type MenuCategory = MenuItem['category'];
 
@@ -75,7 +77,11 @@ function MenuArrangementSection({ t }: { t: (k: Parameters<typeof translate>[0])
 
   const [groups, setGroups] = useState<CatGroup[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+  // Mirrored into a ref so the query effect can consult it without listing it as
+  // a dependency — depending on it would re-run the effect the moment a drag
+  // sets it, which is precisely the overwrite being prevented.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
 
   useEffect(() => {
     const items = menuQuery.data;
@@ -91,27 +97,34 @@ function MenuArrangementSection({ t }: { t: (k: Parameters<typeof translate>[0])
       ...savedOrder.filter((c): c is MenuCategory => byCat.has(c as MenuCategory)),
       ...present.filter((c) => !savedOrder.includes(c)),
     ];
+    // Same rule as section two: a refetch (which a save triggers) must not
+    // overwrite an order the writer has since dragged further.
+    if (dirtyRef.current) return;
     setGroups(ordered.map((cat) => ({ cat, dishes: byCat.get(cat)! })));
-    setDirty(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuQuery.data, restaurantQuery.data]);
 
   const saveMutation = useMutation({
-    mutationFn: () => menuService.saveArrangement({
-      categoryOrder: groups.map((g) => g.cat),
-      dishOrder: groups.flatMap((g) => g.dishes.map((d, i) => ({ id: d.id, sortOrder: i }))),
-    }),
+    mutationFn: (order: { categoryOrder: MenuCategory[]; dishOrder: { id: string; sortOrder: number }[] }) =>
+      menuService.saveArrangement(order),
     onSuccess: () => {
-      setDirty(false);
-      setToast({ kind: 'ok', msg: t('arrangement_saved') });
       queryClient.invalidateQueries({ queryKey: ['menu'] });
       queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-      setTimeout(() => setToast(null), 2500);
     },
-    onError: () => {
-      setToast({ kind: 'err', msg: t('arrangement_save_failed') });
-      setTimeout(() => setToast(null), 3000);
-    },
+  });
+
+  // The order as it stands. `null` until something has actually been dragged —
+  // an arrangement page writes the order it was HANDED otherwise, on every visit,
+  // which is a write nobody asked for on a table several people share.
+  const order = useMemo(() => (dirty && groups.length > 0 ? {
+    categoryOrder: groups.map((g) => g.cat),
+    dishOrder: groups.flatMap((g) => g.dishes.map((d, i) => ({ id: d.id, sortOrder: i }))),
+  } : null), [dirty, groups]);
+
+  const autosave = useAutosave({
+    value: order,
+    enabled: order !== null,
+    save: (value) => (value ? saveMutation.mutateAsync(value) : Promise.resolve()),
   });
 
   const dragCat = useRef<number | null>(null);
@@ -132,14 +145,9 @@ function MenuArrangementSection({ t }: { t: (k: Parameters<typeof translate>[0])
             {t('arrangement_help')}
           </p>
         </div>
-        <button
-          type="button" className="adm-btn-primary"
-          disabled={!dirty || saveMutation.isPending}
-          onClick={() => saveMutation.mutate()}
-          style={{ opacity: !dirty || saveMutation.isPending ? 0.5 : 1, whiteSpace: 'nowrap' }}
-        >
-          {saveMutation.isPending ? t('saving') : t('save_arrangement')}
-        </button>
+        {/* No Save: a drag IS the edit, so there is nothing left for a button to
+            confirm. The status is what tells the writer it landed. */}
+        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
       </div>
 
       {menuQuery.isLoading && <p style={{ color: 'rgba(255,255,255,0.45)' }}>{t('loading_menu')}</p>}
@@ -212,11 +220,6 @@ function MenuArrangementSection({ t }: { t: (k: Parameters<typeof translate>[0])
         ))}
       </div>
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 50, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: '#fff', background: toast.kind === 'ok' ? 'rgba(22,163,74,0.95)' : 'rgba(220,38,38,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-          {toast.msg}
-        </div>
-      )}
     </section>
   );
 }
@@ -233,24 +236,33 @@ function TableCategoryArrangementSection({ t }: { t: (k: Parameters<typeof trans
 
   const [items, setItems] = useState<TableCategory[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+  // Mirrored into a ref so the query effect can consult it without listing it as
+  // a dependency — depending on it would re-run the effect the moment a drag
+  // sets it, which is precisely the overwrite being prevented.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
 
+  // Saving invalidates the query, so this fires again with the server's copy.
+  // Refusing it while the local order is dirty is the same rule as
+  // `mayAcceptServerValue` on the Menu page: a refetch must not overwrite an
+  // order the writer has since dragged further.
   useEffect(() => {
-    if (tcQuery.data) { setItems([...tcQuery.data]); setDirty(false); }
+    if (tcQuery.data && !dirtyRef.current) setItems([...tcQuery.data]);
   }, [tcQuery.data]);
 
   const saveMutation = useMutation({
-    mutationFn: () => tableCategoryService.saveArrangement(items.map((tc, i) => ({ id: tc.id, sortOrder: i }))),
-    onSuccess: () => {
-      setDirty(false);
-      setToast({ kind: 'ok', msg: t('arrangement_saved') });
-      queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
-      setTimeout(() => setToast(null), 2500);
-    },
-    onError: () => {
-      setToast({ kind: 'err', msg: t('arrangement_save_failed') });
-      setTimeout(() => setToast(null), 3000);
-    },
+    mutationFn: (order: { id: string; sortOrder: number }[]) => tableCategoryService.saveArrangement(order),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tableCategories'] }); },
+  });
+
+  const order = useMemo(
+    () => (dirty && items.length > 0 ? items.map((tc, i) => ({ id: tc.id, sortOrder: i })) : null),
+    [dirty, items],
+  );
+  const autosave = useAutosave({
+    value: order,
+    enabled: order !== null,
+    save: (value) => (value ? saveMutation.mutateAsync(value) : Promise.resolve()),
   });
 
   const reorder = (from: number, to: number) => { setItems((arr) => move(arr, from, to)); setDirty(true); };
@@ -265,14 +277,9 @@ function TableCategoryArrangementSection({ t }: { t: (k: Parameters<typeof trans
             {t('arrangement_tc_help')}
           </p>
         </div>
-        <button
-          type="button" className="adm-btn-primary"
-          disabled={!dirty || saveMutation.isPending}
-          onClick={() => saveMutation.mutate()}
-          style={{ opacity: !dirty || saveMutation.isPending ? 0.5 : 1, whiteSpace: 'nowrap' }}
-        >
-          {saveMutation.isPending ? t('saving') : t('save_arrangement')}
-        </button>
+        {/* No Save: a drag IS the edit, so there is nothing left for a button to
+            confirm. The status is what tells the writer it landed. */}
+        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
       </div>
 
       {tcQuery.isLoading && <p style={{ color: 'rgba(255,255,255,0.45)' }}>{t('loading_table_categories')}</p>}
@@ -318,11 +325,6 @@ function TableCategoryArrangementSection({ t }: { t: (k: Parameters<typeof trans
         })}
       </div>
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 50, padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: '#fff', background: toast.kind === 'ok' ? 'rgba(22,163,74,0.95)' : 'rgba(220,38,38,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-          {toast.msg}
-        </div>
-      )}
     </section>
   );
 }

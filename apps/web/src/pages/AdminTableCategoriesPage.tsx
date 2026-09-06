@@ -13,6 +13,8 @@ import { Lightbox } from '../components/ui/lightbox';
 import { useExcludedCategories } from '../hooks/useExcludedCategories';
 import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
 import { NumberField } from '../components/ui/NumberField';
+import { AutosaveStatus } from '../components/ui/AutosaveStatus';
+import { useAutosave } from '../hooks/useAutosave';
 
 /**
  * How many hot appetizers a table lets a guest pick: at least one, at most
@@ -452,8 +454,9 @@ export const AdminTableCategoriesPage = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<TableCategory, 'packageItems'>> & { packageItems?: { menuItemId: string; servings: number }[] } }) =>
       tableCategoryService.update(id, data),
+    // Autosaved, so a write no longer closes the editor: this form is long
+    // enough that being thrown out of it on each save would be unusable.
     onSuccess: async () => {
-      setEditingId(null);
       await queryClient.invalidateQueries({ queryKey: ['tableCategories'] });
     },
   });
@@ -481,9 +484,13 @@ export const AdminTableCategoriesPage = () => {
     setEditIsActive(category.isActive);
   };
 
-  const saveEdit = () => {
-    if (!editingId || editValidation.errors.length > 0) return;
-    updateMutation.mutate({
+  // Null while the package is not writable — an empty name, or a rate that is
+  // still being typed. This is a PRICE, and autosave sees every keystroke on the
+  // way to it: `parseSumToTiyin('')` is 0, so without the guard, clearing the
+  // rate to retype it would publish a free banquet package for a second.
+  const editPayload = useMemo(() => {
+    if (!editingId || editValidation.errors.length > 0) return null;
+    return {
       id: editingId,
       data: {
         name: editName.trim(),
@@ -497,11 +504,18 @@ export const AdminTableCategoriesPage = () => {
         photos: editPhotos,
         isActive: editIsActive,
       },
-    });
-  };
+    };
+  }, [editingId, editValidation, editName, editSelectedCats, editSelectedItemIds, editServingsById,
+      editRatePerPersonText, editTableType, editEventType, editHotAppetizerCount,
+      editDescription, editPhotos, editIsActive]);
+
+  const autosave = useAutosave({
+    value: editPayload,
+    enabled: editPayload !== null,
+    save: (payload) => (payload ? updateMutation.mutateAsync(payload) : Promise.resolve()),
+  });
 
   const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
-  const canSaveEdit = editValidation.errors.length === 0 && !updateMutation.isPending;
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
@@ -556,7 +570,7 @@ export const AdminTableCategoriesPage = () => {
             {/* NumberField, not a raw <input>: bound straight to the number and
                 clamped on every keystroke, the box could not be emptied — the
                 pre-filled "3" survived every backspace, so typing 5 gave 35. */}
-            <NumberField min={1} max={20} value={hotAppetizerCount}
+            <NumberField min={1} max={20} className="adm-input" value={hotAppetizerCount}
               onChange={(n) => setHotAppetizerCount(clampHotAppetizers(n))} />
           </label>
 
@@ -640,7 +654,7 @@ export const AdminTableCategoriesPage = () => {
 
                       <label style={{ display: 'grid', gap: 4, maxWidth: 240 }}>
                         {t('hot_appetizer_count')}
-                        <NumberField min={1} max={20} value={editHotAppetizerCount}
+                        <NumberField min={1} max={20} className="adm-input" value={editHotAppetizerCount}
                           onChange={(n) => setEditHotAppetizerCount(clampHotAppetizers(n))} />
                       </label>
 
@@ -666,13 +680,11 @@ export const AdminTableCategoriesPage = () => {
                         <input type="checkbox" checked={editIsActive} onChange={(e) => setEditIsActive(e.target.checked)} />
                         {t('active')}
                       </label>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <Button onClick={saveEdit} disabled={!canSaveEdit}>
-                          {updateMutation.isPending ? t('saving') : t('save')}
-                        </Button>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <Button variant="secondary" onClick={() => setEditingId(null)}>
-                          {t('cancel')}
+                          {t('done')}
                         </Button>
+                        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
                       </div>
                       {editValidation.errors.length > 0 && (
                         <div style={{ color: '#b00020', fontSize: '0.9em' }}>{editValidation.errors[0]}</div>

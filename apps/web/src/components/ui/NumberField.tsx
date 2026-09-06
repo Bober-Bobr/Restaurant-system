@@ -25,7 +25,7 @@ export function commitValue(text: string): number | null {
 }
 
 export function NumberField({
-  value, onChange, min, max, step, style, disabled, ariaLabel,
+  value, onChange, min, max, step, style, className, disabled, ariaLabel,
 }: {
   value: number;
   onChange: (n: number) => void;
@@ -33,6 +33,11 @@ export function NumberField({
   max?: number;
   step?: number;
   style?: CSSProperties;
+  // The field is a plain `<input>`, so it carries whatever class the surrounding
+  // form uses — `adm-input` on the admin pages, `rg-input` on the kiosk. Without
+  // this it dropped to the browser's default chrome the moment a styled input
+  // was replaced by one of these, which is what happened on Table categories.
+  className?: string;
   disabled?: boolean;
   ariaLabel?: string;
 }) {
@@ -47,6 +52,7 @@ export function NumberField({
       max={max}
       step={step}
       style={style}
+      className={className}
       disabled={disabled}
       aria-label={ariaLabel}
       value={draft ?? String(value)}

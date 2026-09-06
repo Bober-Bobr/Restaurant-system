@@ -143,8 +143,33 @@ describe('the hook wires those rules to a real form', () => {
   });
 });
 
+describe('a NumberField still looks like the form it is in', () => {
+  it('forwards a className, because it is otherwise unstyled', () => {
+    // It renders a bare `<input>`. Replacing a styled input with one of these
+    // dropped the field to the browser's default chrome — which is what happened
+    // to the Hot appetizer count when it stopped being an `.adm-input`.
+    const src = read('components/ui/NumberField.tsx');
+    expect(src).toContain('className?: string;');
+    expect(src).toContain('className={className}');
+  });
+
+  it('and every admin call site passes one', () => {
+    const src = read('pages/AdminTableCategoriesPage.tsx');
+    const fields = src.match(/<NumberField[^>]*>/g) ?? [];
+    expect(fields.length).toBeGreaterThan(0);
+    for (const field of fields) expect(field, field).toContain('className="adm-input"');
+  });
+});
+
 describe('the pages converted so far', () => {
-  const PAGES = ['pages/AdminHallsPage.tsx', 'pages/AdminExtraServicesPage.tsx'];
+  // Every page whose EDIT form is autosaved. The arrangement page is covered
+  // separately below: it has no editor to open, so a drag is the edit.
+  const PAGES = [
+    'pages/AdminHallsPage.tsx',
+    'pages/AdminExtraServicesPage.tsx',
+    'pages/AdminTableCategoriesPage.tsx',
+    'pages/AdminSubcategoriesPage.tsx',
+  ];
 
   for (const page of PAGES) {
     it(`${page} autosaves its editor and has no Save button`, () => {
@@ -158,9 +183,11 @@ describe('the pages converted so far', () => {
       // Autosave sees every keystroke on the way to a value; a Save button only
       // ever saw the finished one.
       const src = read(page);
-      const guard = src.slice(src.indexOf('const editPayload = useMemo('));
-      expect(guard.slice(0, guard.indexOf('return {'))).toContain('return null;');
-      // …and the hook is told, so nothing is written while it is null.
+      // The payload is computed, can be null, and the hook is told — so nothing
+      // is written while the row is mid-edit. How the guard is spelled (an early
+      // `return null` or a ternary) is the page's business.
+      expect(src).toContain('const editPayload = useMemo(');
+      expect(src, 'the payload can never be null').toMatch(/(return null;|: null)/);
       expect(src).toContain('enabled: editPayload !== null,');
     });
 
@@ -171,6 +198,24 @@ describe('the pages converted so far', () => {
       expect(mutation.slice(0, mutation.indexOf('});'))).not.toContain('setEditingId(null)');
     });
   }
+
+  it('the arrangement page saves a drag, and only a real one', () => {
+    // Both sections. `dirty` gates the payload, because an arrangement page that
+    // wrote on mount would rewrite the order it was handed on every visit — a
+    // write nobody asked for, on a table several people share.
+    const src = read('pages/AdminArrangementAdminPage.tsx');
+    expect((src.match(/useAutosave\(\{/g) ?? []).length).toBe(2);
+    expect((src.match(/<AutosaveStatus/g) ?? []).length).toBe(2);
+    expect(src).not.toMatch(/t\('save_arrangement'\)/);
+    expect((src.match(/dirty && /g) ?? []).length).toBe(2);
+  });
+
+  it('a refetch cannot overwrite an order still being dragged', () => {
+    // Saving invalidates the query, so the reset effect fires again with the
+    // server's copy. Same rule as `mayAcceptServerValue` on the Menu page.
+    const src = read('pages/AdminArrangementAdminPage.tsx');
+    expect((src.match(/dirtyRef\.current/g) ?? []).length).toBeGreaterThanOrEqual(4);
+  });
 
   it('the CREATE forms keep their button, deliberately', () => {
     // A create form that wrote on a keystroke would leave a trail of half-typed

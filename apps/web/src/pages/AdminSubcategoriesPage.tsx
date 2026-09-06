@@ -8,6 +8,8 @@ import { useExcludedEverywhere, EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcl
 import type { MenuItem, Subcategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { AutosaveStatus } from '../components/ui/AutosaveStatus';
+import { useAutosave } from '../hooks/useAutosave';
 
 type FoodCategory = MenuItem['category'];
 
@@ -82,9 +84,24 @@ export const AdminSubcategoriesPage = () => {
     onSuccess: async () => { setNewName(''); await invalidate(); },
   });
 
+  // Autosaved, so the write no longer closes the editor: renaming and being
+  // finished with the row are separate events now.
   const updateMutation = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => subcategoryService.update(id, { name }),
-    onSuccess: async () => { setEditingId(null); await invalidate(); },
+    onSuccess: async () => { await invalidate(); },
+  });
+
+  // Null while the name is empty — clearing the field to retype it must not
+  // write the empty string, and autosave sees that keystroke where a Save button
+  // never did. A subcategory with no name is unreachable in every picker.
+  const editPayload = useMemo(
+    () => (editingId && editName.trim() ? { id: editingId, name: editName.trim() } : null),
+    [editingId, editName],
+  );
+  const autosave = useAutosave({
+    value: editPayload,
+    enabled: editPayload !== null,
+    save: (payload) => (payload ? updateMutation.mutateAsync(payload) : Promise.resolve()),
   });
 
   const toggleHiddenMutation = useMutation({
@@ -212,12 +229,9 @@ export const AdminSubcategoriesPage = () => {
                       <>
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)}
                           style={{ flex: 1 }} autoFocus />
-                        <Button type="button" disabled={!editName.trim() || updateMutation.isPending}
-                          onClick={() => updateMutation.mutate({ id: sc.id, name: editName.trim() })}>
-                          {t('save')}
-                        </Button>
+                        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
                         <button type="button" className="adm-btn-ghost" onClick={() => setEditingId(null)}>
-                          {t('cancel')}
+                          {t('done')}
                         </button>
                       </>
                     ) : (
