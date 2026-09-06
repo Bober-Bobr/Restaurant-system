@@ -14,6 +14,7 @@ import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { tableCategoryLabel, tableCategoryPrice } from '../utils/tableCategoryLabel';
 import { soleHallId } from '../utils/soleHall';
+import { shouldKeepSelection } from '../store/tabletDraft';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTabletMusicStarted, pauseTabletMusic, resumeTabletMusic } from '../utils/tabletMusic';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
@@ -1267,16 +1268,22 @@ function IncludedDishesSection({
         const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
         const isSwapped = displayItem.id !== pi.menuItem.id;
         const removed = removedIds.includes(pi.id);
+        // A dish taken off the table: its photo goes grey and dark, so the card
+        // reads as "not being served" from across the room while the name, the
+        // price and the button that puts it back stay at full contrast.
+        const removedPhoto = removed
+          ? { filter: 'grayscale(1) brightness(0.45)', transition: 'filter 0.25s' }
+          : { transition: 'filter 0.25s' };
         return (
           <div key={pi.id}
             className="group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
             style={{ position: 'relative', height: '100%', animationDelay: `${i * 50}ms`,
               background: 'rgba(255,255,255,0.06)',
               border: `1px solid ${removed ? 'rgba(255,255,255,0.10)' : isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`,
-              // Dimmed rather than hidden: the guest has to see what they took
-              // off in order to put it back, and to recognise the deduction on
-              // the running total.
-              opacity: removed ? 0.45 : 1,
+              // The card stays fully legible — the guest has to read what they
+              // took off in order to put it back. It is the PHOTO that greys out
+              // and darkens (see `removedPhoto`), which reads as "off the table"
+              // at a glance without dimming the price they just saved.
               ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
             {displayItem.isBestseller && <BestsellerBadge t={t} />}
             {displayItem.photoUrl ? (
@@ -1284,10 +1291,12 @@ function IncludedDishesSection({
                 onClick={() => onLightbox(getPhotoUrl(displayItem.photoUrl) ?? null)}
                 className="block w-full overflow-hidden">
                 <img src={getPhotoUrl(displayItem.photoUrl)} alt={displayItem.name}
-                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+                  style={removedPhoto} />
               </button>
             ) : (
-              <div className="flex h-32 items-center justify-center" style={{ background: 'rgba(0,0,0,0.2)' }}>
+              <div className="flex h-32 items-center justify-center"
+                style={{ background: 'rgba(0,0,0,0.2)', ...removedPhoto }}>
                 <svg className="h-8 w-8" style={{ color: 'rgba(255,255,255,0.15)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1812,7 +1821,7 @@ export const TabletMenuPage = () => {
     setQuantity, setHall, setTableCategory, toggleHotAppetizer, setFirstCourse, toggleSecondCourse, toggleThirdCourse,
     replacements, setReplacement,
     removedPackageItemIds, toggleRemovedPackageItem,
-    setGuestCount, locale, setLocale,
+    setGuestCount, locale, setLocale, reset, setRestaurantId,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -1858,16 +1867,20 @@ export const TabletMenuPage = () => {
     if (only && !useTabletStore.getState().selectedHallId) setHall(only);
   }, [halls]);
 
-  // Reset table-category selection on every mount so the slide reappears
-  // each time a guest navigates back to this page (kiosk behavior). Two cases
-  // keep the current selection instead: the admin Events page hands off a draft
-  // (prefill=1), and returning from the Summary page to edit the selection
-  // (fromSummary state) — there the guest's saved settings/dishes must persist.
+  // Whether this mount continues a booking or starts a new guest's. The rule is
+  // in store/tabletDraft.ts; the third case — a draft in session storage — is
+  // what makes a page reload or a browser Back keep the guest's work, which a
+  // plain "clear on mount" could not tell apart from the next guest walking up.
   useEffect(() => {
-    const keepSelection =
-      searchParams.get('prefill') === '1' ||
-      !!(location.state as { fromSummary?: boolean } | null)?.fromSummary;
-    if (!keepSelection) setTableCategory('');
+    const draft = useTabletStore.getState();
+    const keep = shouldKeepSelection({
+      prefill: searchParams.get('prefill') === '1',
+      fromSummary: !!(location.state as { fromSummary?: boolean } | null)?.fromSummary,
+      storedDraft: !!draft.selectedTableCategoryId,
+      sameRestaurant: !draft.restaurantId || draft.restaurantId === restaurantId,
+    });
+    if (keep) setRestaurantId(restaurantId);
+    else { reset(); setRestaurantId(restaurantId); }
   }, []);
 
   const dismissWelcome = () => {
@@ -1916,6 +1929,16 @@ export const TabletMenuPage = () => {
   const pricing = usePriceCalculator(
     menuItems ?? [], pricedSelections, selectedTableCategory, Math.max(guestCount, 1), removedPackageItemIds,
   );
+
+  // What still has to be answered before the booking can go to the Summary, or
+  // null when nothing does. Named as a translation key so the button can say
+  // which field it is waiting on rather than only going grey. The table category
+  // is not checked: the full-screen chooser makes it impossible to be here
+  // without one.
+  const settingsMissing: Parameters<typeof translate>[0] | null =
+    !selectedHallId ? 'select_room_required'
+      : guestCount < 1 ? 'guest_count_required'
+      : null;
 
   // Single active children's table (if any) — shown as an optional add-on table.
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
@@ -2038,7 +2061,7 @@ export const TabletMenuPage = () => {
           <TableCategoryFullscreen
             tableCategories={tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN')}
             onSelect={(id) => setTableCategory(id)}
-            onBack={() => navigate('/')}
+            onBack={() => { reset(); navigate('/'); }}
             onLightbox={setLightboxSrc}
             locale={locale}
             setLocale={setLocale}
@@ -2103,7 +2126,11 @@ export const TabletMenuPage = () => {
                   </option>
                 ))}
               </select>
-              <button type="button" onClick={() => navigate('/')}
+              {/* Leaving the kiosk is the "I am done" gesture, so it clears the
+                  draft. A reload keeps it (that is the whole point of persisting
+                  it); a draft that outlived the guest who made it would greet the
+                  next one with somebody else's order. */}
+              <button type="button" onClick={() => { reset(); navigate('/'); }}
                 className="inline-flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap"
                 style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}>
                 ← {t('events')}
@@ -2372,17 +2399,18 @@ export const TabletMenuPage = () => {
             borderTop: '1px solid rgba(255,255,255,0.1)',
           }}>
           <div className="mx-auto max-w-7xl">
-            {/* The hall is required to book, and the Summary has no hall
-                picker — it is chosen in the settings block at the top of this
-                page. Blocking here rather than only at Confirm means the guest
-                is stopped where the field they need is, not a page later. */}
+            {/* The hall and the head count are required to book, and the Summary
+                has no picker for either — both live in the settings block at the
+                top of this page. Blocking here rather than only at Confirm means
+                the guest is stopped where the fields are, not a page later. The
+                button says which one is missing rather than just going grey. */}
             <button type="button" onClick={() => navigate('/tablet/summary')}
-              disabled={!selectedHallId}
+              disabled={!!settingsMissing}
               className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99] disabled:cursor-not-allowed"
-              style={selectedHallId
-                ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)' }
-                : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.16)' }}>
-              {selectedHallId ? `${t('view_summary')} →` : t('select_room_required')}
+              style={settingsMissing
+                ? { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.16)' }
+                : { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)' }}>
+              {settingsMissing ? t(settingsMissing) : `${t('view_summary')} →`}
             </button>
           </div>
         </div>

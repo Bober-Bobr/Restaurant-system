@@ -2385,3 +2385,124 @@ defaults every core field.
    Summary is disabled too, naming what is missing.
 7. Create an event on the **Events** page with no hall and no table → still
    allowed.
+
+## 47. Autosave groundwork, drafts that survive a reload, and three kiosk fixes
+
+**No migration.** Front-end only.
+
+### The number field you could not empty (§Table categories)
+
+The Hot Appetizers count was a raw `<input type="number">` bound straight to a
+number and **clamped on every keystroke**. Clearing it gave `Number('') || 1`,
+so the pre-filled "3" survived every backspace and typing 5 produced 35.
+
+`NumberField` ([components/ui/NumberField.tsx](apps/web/src/components/ui/NumberField.tsx)) already existed for exactly this and
+was only used in the invitation editors; both hot-appetizer fields now use it,
+and the clamp moved to `clampHotAppetizers()` — applied on **commit**, not on
+each keystroke. A partially typed number is not an invalid number, it is an
+unfinished one.
+
+**I audited the other 15 number inputs in the app: none has this bug.** They all
+hold a text draft (`capacityText`, `priceText`, `paymentDrafts`) or bind
+`value={x || ''}`. This was the only one.
+
+### A removed dish greys its photo
+
+§46 dimmed the whole card to 45%, which also dimmed the name and the saving. The
+card now stays at full contrast and the **photo** goes
+`grayscale(1) brightness(0.45)` — "not being served" reads from across the room,
+while what the guest needs in order to put it back stays legible. The
+no-photo placeholder greys too.
+
+### Hall, table AND head count required — kiosk only
+
+§46 required the hall and the package; the head count joins them. The package is
+a **per-person price**, so a kiosk booking without one has no total, and quoting
+one is what the kiosk is for.
+
+The kiosk's "View summary" button now names the missing field
+(`settingsMissing`) rather than only going grey, since neither field can be set
+from the Summary. **The Events page is still ungated and the API still defaults
+`guestCount` to 0** — §41's finding holds one level down: the requirement belongs
+to this screen, not to the record.
+
+### The booking survives a reload and a browser Back
+
+Two mechanisms, deliberately different:
+
+**The kiosk** persists its store to **session storage**
+([store/tabletDraft.ts](apps/web/src/store/tabletDraft.ts)). The menu page has always cleared the table selection
+on mount, because a shared device must not hand the next guest the last one's
+order — but that threw away the *current* guest's work on a reload, which React
+cannot tell apart from a new visit. `shouldKeepSelection()` is that distinction:
+a draft in session storage means a reload or a Back **within one visit**, since
+session storage dies with the tab. A draft from another restaurant's kiosk is
+refused; an explicit handoff (`prefill`, `fromSummary`) always wins.
+
+The Summary's fields moved **out of that page's `useState` and into the store**,
+which is what makes them survive at all — component state does not. The deposit
+keeps a local text draft over the stored number, for the same reason
+`adminMenuDraft` does: "1" on the way to "150" is an unfinished number.
+
+**Leaving the kiosk clears it** — "← events" and the chooser's Back are the "I am
+done" gesture, as is confirming. An accidental tap costs the guest their picks;
+a draft that outlives the guest who made it hands the next guest somebody else's
+order, which is worse.
+
+**The Events form** gets `useSessionDraft` instead: it is a *create* form, so it
+must not write on a keystroke. One effect mirrors all 19 fields as a unit
+(including `editingId`, or restoring an edit's fields into a closed create form
+would silently retarget the save), and the draft is cleared whenever the form
+closes.
+
+### Autosave: the mechanism, and the first two pages
+
+`autosave.ts` + `useAutosave.ts` + `AutosaveStatus.tsx`. Removing a Save button
+removes the moment the writer said "now", so the hook recovers what that moment
+guaranteed — the same four rules `adminMenuDraft` and `plaqueDraft` each reached
+separately, now written down once and tested pure:
+
+1. don't write when nothing changed;
+2. don't write bytes already in flight;
+3. **mark saved the signature the REQUEST carried**, never the one on screen —
+   otherwise everything typed during the request is silently discarded under a
+   "Saved" label;
+4. **don't retry a refusal** until the writer changes something — a taken name
+   would otherwise be retried every 900 ms for as long as the tab is open. The
+   status carries the Retry, which is the only way back.
+
+Plus: flush on unmount and `pagehide`/`visibilitychange` (`beforeunload` is
+unreliable on mobile Safari), read the value from a ref rather than the render
+that scheduled the write, and write nothing when `enabled` is false.
+
+**Converted: `AdminHallsPage` and `AdminExtraServicesPage` edit forms.** Their
+Save button is gone, replaced by "Done" plus a live status. Their mutations no
+longer close the editor — saving and being finished with a row stopped being the
+same event — and each computes a payload that is **null while invalid**, because
+autosave sees every keystroke on the way to a value where a button only ever saw
+the finished one.
+
+**Not converted, and why.** This is the part of the request I have not finished:
+
+| Page | Status |
+|---|---|
+| Halls, Extra services | **done** |
+| Menu page, NFC plaque builder | already autosaved (§ earlier) |
+| Table categories, Subcategories, Performer profile/calendar | mechanical — same shape, not yet done |
+| **Create forms everywhere** | deliberately keep their button; a create form writing on a keystroke leaves a trail of half-typed rows. They get session drafts instead |
+| **Settings (excluded categories)** | deliberately kept — §39 built it around an explicit Save because switching a category off hides dishes across a whole product |
+| **Users / credentials / module entitlements** (`EditCredentialsForm`, Owner cabinet, Chief admin) | deliberately kept — a half-typed password or a role autosaved mid-edit is a security event, not a convenience |
+
+**After deploying:**
+
+1. Table categories → Hot appetizers: select the field and type `5` → it reads 5,
+   not 35. Backspace empties it.
+2. Halls → Edit a hall, change the capacity, wait a second → "Saved". Reload:
+   the change is there. No Save button.
+3. Kill the API, edit a hall → "Not saved" with **Retry**; it does not hammer.
+4. Kiosk: pick a table, choose dishes, **reload** → everything is still there.
+   Press "← events" then return → clean.
+5. Events page: half-fill the create form, reload → still there. Submit or
+   cancel → the draft is gone.
+6. Kiosk with no head count: "View summary" says so; Confirm on the Summary is
+   disabled and names it.

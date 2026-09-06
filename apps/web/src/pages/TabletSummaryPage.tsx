@@ -205,10 +205,18 @@ export const TabletSummaryPage = () => {
     editingEventId,
     selectedExtraServiceIds, toggleExtraService,
     locale, setLocale, setGuestCount, reset,
-    customerName: draftCustomerName, customerPhone: draftCustomerPhone,
-    secondCustomerName: draftSecondCustomerName, secondCustomerPhone: draftSecondCustomerPhone,
-    depositCents: draftDepositCents,
-    eventDate: draftEventDate, eventTime: draftEventTime } = useTabletStore();
+    // Every field below lives in the STORE rather than in this page's useState,
+    // so a reload or a browser Back keeps it: the store is persisted to session
+    // storage, component state is not. They were local until a guest lost a
+    // half-filled booking to a stray refresh.
+    customerName, setCustomerName, customerPhone, setCustomerPhone,
+    secondCustomerName, setSecondCustomerName, secondCustomerPhone, setSecondCustomerPhone,
+    depositCents: draftDepositCents, setDepositCents,
+    eventDate, setEventDate, eventTime, setEventTime,
+    eventType, setEventType, eventNotes, setEventNotes,
+    birthdayPersonName, setBirthdayPersonName,
+    brideName, setBrideName, groomName, setGroomName,
+    honoreePersonName, setHonoreePersonName } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -226,28 +234,18 @@ export const TabletSummaryPage = () => {
   // Reveal-on-scroll: re-scan once data finishes loading and sections render.
   const revealRef = useScrollReveal<HTMLDivElement>([isLoading]);
 
-  // Pre-fill contact + date/time when they were entered on the admin Events page
-  // and handed off via "Change Menu" (falls back to empty in the normal flow).
-  const [customerName, setCustomerName]             = useState(draftCustomerName);
-  const [customerPhone, setCustomerPhone]           = useState(draftCustomerPhone);
-  const [secondCustomerName, setSecondCustomerName] = useState(draftSecondCustomerName);
-  const [secondCustomerPhone, setSecondCustomerPhone] = useState(draftSecondCustomerPhone);
   // Most bookings have one contact, so the second pair is folded away behind a
   // button. It starts OPEN when the draft already carries one — an event opened
-  // from the Events page for a couple must not hide half its contacts while
-  // still submitting them.
+  // from the Events page for a couple, or a reload mid-edit, must not hide half
+  // its contacts while still submitting them.
   const [showSecondCustomer, setShowSecondCustomer] = useState(
-    !!draftSecondCustomerName.trim() || !!draftSecondCustomerPhone.trim(),
+    !!secondCustomerName.trim() || !!secondCustomerPhone.trim(),
   );
+  // The deposit keeps a local TEXT draft over the store's number, for the same
+  // reason `adminMenuDraft` does: "1" on the way to "150" is an unfinished
+  // number, not a commitment to a deposit of one so'm.
   const [depositText, setDepositText] = useState(draftDepositCents ? String(Math.round(draftDepositCents / 100)) : '');
-  const [eventDate, setEventDate]                   = useState(draftEventDate);
-  const [eventTime, setEventTime]                   = useState(draftEventTime);
-  const [eventNotes, setEventNotes]                 = useState('');
-  const [eventType, setEventType]                   = useState<EventType>('RESERVATION');
-  const [birthdayPersonName, setBirthdayPersonName] = useState('');
-  const [brideName, setBrideName]                   = useState('');
-  const [groomName, setGroomName]                   = useState('');
-  const [honoreePersonName, setHonoreeName]         = useState('');
+  useEffect(() => { setDepositCents(parseSumToTiyin(depositText) ?? 0); }, [depositText, setDepositCents]);
   const [isSubmitting, setIsSubmitting]             = useState(false);
   const [confirmedEventId, setConfirmedEventId]     = useState<number | null>(null);
   const [submitError, setSubmitError]               = useState<string | null>(null);
@@ -299,18 +297,17 @@ export const TabletSummaryPage = () => {
   }, [selectedItems, guestCount]);
 
   const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount, removedPackageItemIds);
-  // Who the booking is for and when it is — nothing else. The guest count used
-  // to be required here too, which blocked the one thing the rest of the system
-  // explicitly allows: taking a booking before the head count is known (the API
-  // defaults it to 0, and the Events page creates an entirely blank event for
-  // later editing). A figure the restaurant does not have yet is not a figure
-  // worth inventing to get past a button.
-  // The hall and the table package are required: an event with neither is not
-  // schedulable (nothing to reserve) and not priceable (the package IS the
-  // price). This is the kiosk booking flow only — the Events page still creates
-  // a blank event for staff to fill in later.
+  // Who the booking is for, when it is, where it is, what package, and for how
+  // many. The hall makes it schedulable, the package makes it priceable, and the
+  // package is a PER-PERSON price — so a booking with no head count has no total,
+  // and quoting one is what the kiosk is for.
+  //
+  // This is the kiosk booking flow ONLY. The Events page still creates an
+  // entirely blank event for staff to fill in later, which is why the API keeps
+  // defaulting `guestCount` to 0 rather than requiring it (§41): the requirement
+  // belongs to this screen, not to the record.
   const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime
-    || !selectedHallId || !selectedTableCategoryId;
+    || !selectedHallId || !selectedTableCategoryId || guestCount < 1;
 
   // The export lists the dishes that make up the table: the non-course included
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
@@ -695,7 +692,7 @@ export const TabletSummaryPage = () => {
                   setConfirmedEventId(null);
                   setCustomerName(''); setCustomerPhone(''); setSecondCustomerName(''); setSecondCustomerPhone(''); setDepositText(''); setEventDate(''); setEventTime('');
                   setEventNotes(''); setEventType('RESERVATION');
-                  setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreeName('');
+                  setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreePersonName('');
                   navigate('/tablet');
                 }}
                 className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:shadow-lg"
@@ -810,13 +807,20 @@ export const TabletSummaryPage = () => {
                 </div>
 
                 <div className="grid gap-1.5">
-                  <label className="rg-label">{t('guest_count')}</label>
-                  {/* No `min`/`max`: the count is not required to confirm, and the
-                      5000 ceiling was a guess enforced only by the API, so a
-                      bigger event failed with a generic error naming nothing.
-                      Negatives are still clamped — the store does it too, but a
-                      number typed here reaches the totals before it reaches the
-                      store. */}
+                  <label className="rg-label">
+                    {t('guest_count')}
+                    {guestCount < 1 && (
+                      <span className="ml-2 normal-case font-normal text-xs" style={{ color: '#fca5a5' }}>
+                        — {t('required')}
+                      </span>
+                    )}
+                  </label>
+                  {/* Required, but still no `min`/`max` on the input: the 5000
+                      ceiling was a guess enforced only by the API, so a bigger
+                      event failed with a generic error naming nothing, and a
+                      `min` would fight the typing rather than the empty value.
+                      Negatives are clamped — the store does it too, but a number
+                      typed here reaches the totals before it reaches the store. */}
                   <input className="rg-input" type="number"
                     value={guestCount || ''}
                     onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
@@ -862,7 +866,7 @@ export const TabletSummaryPage = () => {
                   <div className="grid gap-1.5 tablet-fade-in">
                     <label className="rg-label">{t('honoree_person_name')}</label>
                     <input className="rg-input" placeholder={t('honoree_person_name_placeholder')}
-                      value={honoreePersonName} onChange={(e) => setHonoreeName(e.target.value)} />
+                      value={honoreePersonName} onChange={(e) => setHonoreePersonName(e.target.value)} />
                   </div>
                 )}
 
@@ -1174,9 +1178,11 @@ export const TabletSummaryPage = () => {
               </button>
 
               {/* Neither can be chosen from this page, so say where to go. */}
-              {(!selectedHallId || !selectedTableCategoryId) && (
+              {(!selectedHallId || !selectedTableCategoryId || guestCount < 1) && (
                 <p className="text-center text-xs" style={{ color: '#fca5a5' }}>
-                  {!selectedHallId ? t('select_room_required') : t('choose_table_category')}
+                  {!selectedHallId ? t('select_room_required')
+                    : !selectedTableCategoryId ? t('choose_table_category')
+                    : t('guest_count_required')}
                 </p>
               )}
 

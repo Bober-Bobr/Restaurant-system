@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Locale, defaultLocale } from '../utils/translate';
-import type { EventMenuConfig } from '../types/domain';
+import type { Event, EventMenuConfig } from '../types/domain';
+import { TABLET_DRAFT_KEY } from './tabletDraft';
 
 // Draft handed to the tablet when the admin Events page opens the menu flow for
 // an event (new or existing). `config` restores the exact prior selections.
@@ -52,6 +54,18 @@ type SelectionState = {
   eventTime: string;
   // Prepaid deposit in tiyin, subtracted from the total on the summary + PDF.
   depositCents: number;
+  // The rest of what the Summary page collects. They live here, not in that
+  // page's useState, so a reload or a browser Back does not throw them away —
+  // the store is persisted; component state is not.
+  eventType: NonNullable<Event['eventType']>;
+  eventNotes: string;
+  birthdayPersonName: string;
+  brideName: string;
+  groomName: string;
+  honoreePersonName: string;
+  // Which restaurant's kiosk this draft belongs to. A draft restored on another
+  // restaurant's kiosk names dishes and packages that do not exist there.
+  restaurantId: string;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
@@ -84,6 +98,13 @@ type SelectionState = {
   setSecondCustomerName: (value: string) => void;
   setSecondCustomerPhone: (value: string) => void;
   setDepositCents: (value: number) => void;
+  setEventType: (value: NonNullable<Event['eventType']>) => void;
+  setEventNotes: (value: string) => void;
+  setBirthdayPersonName: (value: string) => void;
+  setBrideName: (value: string) => void;
+  setGroomName: (value: string) => void;
+  setHonoreePersonName: (value: string) => void;
+  setRestaurantId: (value: string) => void;
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
@@ -92,7 +113,7 @@ type SelectionState = {
   reset: () => void;
 };
 
-export const useTabletStore = create<SelectionState>((set) => ({
+export const useTabletStore = create<SelectionState>()(persist((set) => ({
   selectedItems: {},
   selectedHallId: undefined,
   selectedTableCategoryId: undefined,
@@ -112,6 +133,13 @@ export const useTabletStore = create<SelectionState>((set) => ({
   eventDate: '',
   eventTime: '',
   depositCents: 0,
+  eventType: 'RESERVATION',
+  eventNotes: '',
+  birthdayPersonName: '',
+  brideName: '',
+  groomName: '',
+  honoreePersonName: '',
+  restaurantId: '',
   childrenTableSelected: false,
   childrenCount: 0,
   childHotAppetizerIds: [],
@@ -272,6 +300,13 @@ export const useTabletStore = create<SelectionState>((set) => ({
   setDepositCents: (value) => {
     set({ depositCents: Math.max(value, 0) });
   },
+  setEventType: (value) => { set({ eventType: value }); },
+  setEventNotes: (value) => { set({ eventNotes: value }); },
+  setBirthdayPersonName: (value) => { set({ birthdayPersonName: value }); },
+  setBrideName: (value) => { set({ brideName: value }); },
+  setGroomName: (value) => { set({ groomName: value }); },
+  setHonoreePersonName: (value) => { set({ honoreePersonName: value }); },
+  setRestaurantId: (value) => { set((s) => (s.restaurantId === value ? {} : { restaurantId: value })); },
   setEventDate: (value) => {
     set({ eventDate: value });
   },
@@ -342,6 +377,12 @@ export const useTabletStore = create<SelectionState>((set) => ({
       eventDate: '',
       eventTime: '',
       depositCents: 0,
+      eventType: 'RESERVATION',
+      eventNotes: '',
+      birthdayPersonName: '',
+      brideName: '',
+      groomName: '',
+      honoreePersonName: '',
       childrenTableSelected: false,
       childrenCount: 0,
       childHotAppetizerIds: [],
@@ -352,4 +393,20 @@ export const useTabletStore = create<SelectionState>((set) => ({
       locale: defaultLocale
     });
   }
+}), {
+  /**
+   * The kiosk booking survives a reload and a browser Back.
+   *
+   * SESSION storage on purpose. The tablet is a shared device, so a draft that
+   * outlived the tab would greet the next guest with somebody else's order;
+   * session storage dies with the tab, and nothing has to remember to clear it.
+   * Within one visit it is exactly what a reload needs. See store/tabletDraft.ts
+   * for the rule that decides whether a restored draft is resumed.
+   *
+   * `locale` is left out: it is a preference of the person standing there, not
+   * part of the booking, and it is already re-chosen from the header.
+   */
+  name: TABLET_DRAFT_KEY,
+  storage: createJSONStorage(() => sessionStorage),
+  partialize: ({ locale, ...draft }) => draft,
 }));

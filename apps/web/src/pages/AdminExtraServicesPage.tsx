@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { extraServiceService } from '../services/extraService.service';
 import { photoService } from '../services/photo.service';
 import { useAdminStore } from '../store/admin.store';
@@ -8,6 +8,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { AutosaveStatus } from '../components/ui/AutosaveStatus';
+import { useAutosave } from '../hooks/useAutosave';
 import type { ExtraService } from '../types/domain';
 
 const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
@@ -137,8 +139,9 @@ export const AdminExtraServicesPage = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof extraServiceService.update>[1] }) =>
       extraServiceService.update(id, data),
+    // Autosaved, so saving no longer closes the editor — the writer decides when
+    // they are finished with the row.
     onSuccess: async () => {
-      setEditingId(null);
       await queryClient.invalidateQueries({ queryKey: ['extra-services'] });
     },
   });
@@ -159,9 +162,12 @@ export const AdminExtraServicesPage = () => {
     setEditIsActive(service.isActive);
   };
 
-  const saveEdit = () => {
-    if (!editingId || !editName.trim()) return;
-    updateMutation.mutate({
+  // Null while the row is not writable. A service with no name is not a service,
+  // and autosave would otherwise write the empty string the instant the field is
+  // cleared to retype it.
+  const editPayload = useMemo(() => {
+    if (!editingId || !editName.trim()) return null;
+    return {
       id: editingId,
       data: {
         name: editName.trim(),
@@ -170,8 +176,14 @@ export const AdminExtraServicesPage = () => {
         media: editMedia,
         isActive: editIsActive,
       },
-    });
-  };
+    };
+  }, [editingId, editName, editDescription, editPriceText, editMedia, editIsActive]);
+
+  const autosave = useAutosave({
+    value: editPayload,
+    enabled: editPayload !== null,
+    save: (payload) => (payload ? updateMutation.mutateAsync(payload) : Promise.resolve()),
+  });
 
   const canSubmit = name.trim().length > 0 && !createMutation.isPending;
 
@@ -280,11 +292,9 @@ export const AdminExtraServicesPage = () => {
                       <div style={{ marginBottom: 12 }}>
                         <MediaField media={editMedia} onChange={setEditMedia} t={t} />
                       </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <Button onClick={saveEdit} disabled={updateMutation.isPending || !editName.trim()}>
-                          {updateMutation.isPending ? t('saving') : t('save')}
-                        </Button>
-                        <Button variant="secondary" onClick={() => setEditingId(null)}>{t('cancel')}</Button>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Button variant="secondary" onClick={() => setEditingId(null)}>{t('done')}</Button>
+                        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
                       </div>
                     </div>
                   ) : (

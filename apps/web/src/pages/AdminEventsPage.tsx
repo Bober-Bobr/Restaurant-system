@@ -19,6 +19,31 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { soleHallId } from '../utils/soleHall';
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../hooks/useSessionDraft';
+
+/**
+ * The create/edit event form, kept across a reload or a browser Back.
+ *
+ * Not an autosave: nothing here reaches the database until the form is
+ * submitted. A create form that wrote on a keystroke would leave a trail of
+ * half-typed events, so what it gets instead is a draft that outlives a
+ * navigation and dies with the tab.
+ *
+ * `editingId` and `showForm` are part of it: restoring the fields of an edit
+ * into a closed create form would silently retarget the save.
+ */
+export const EVENT_FORM_DRAFT_KEY = 'vmenu-event-form-draft';
+
+export type EventFormDraft = {
+  customerName: string; customerPhone: string;
+  secondCustomerName: string; secondCustomerPhone: string;
+  depositText: string; eventDate: string; eventTime: string; guestCountText: string;
+  eventType: NonNullable<Event['eventType']>;
+  status: NonNullable<Event['status']>;
+  hallId: string; tableCategoryId: string; notes: string;
+  birthdayPersonName: string; brideName: string; groomName: string; honoreePersonName: string;
+  editingId: number | null; showForm: boolean;
+};
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -154,17 +179,24 @@ export const AdminEventsPage = () => {
     }
   };
 
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [secondCustomerName, setSecondCustomerName] = useState('');
-  const [secondCustomerPhone, setSecondCustomerPhone] = useState('');
-  const [depositText, setDepositText] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [eventTime, setEventTime] = useState('');
-  const [guestCountText, setGuestCountText] = useState('50');
-  const [eventType, setEventType] = useState<NonNullable<Event['eventType']>>('RESERVATION');
-  const [status, setStatus] = useState<NonNullable<Event['status']>>('MENU_NOT_SELECTED');
-  const [hallId, setHallId] = useState('');
+  // The half-filled form survives a reload and a browser Back. Read ONCE, in a
+  // state initialiser: reading it from an effect would render the empty form
+  // first and overwrite anything typed in that frame. See useSessionDraft.
+  const [restoredForm] = useState(() => readSessionDraft<Partial<EventFormDraft>>(EVENT_FORM_DRAFT_KEY));
+  const draft = <K extends keyof EventFormDraft>(key: K, fallback: EventFormDraft[K]) =>
+    (restoredForm?.[key] ?? fallback) as EventFormDraft[K];
+
+  const [customerName, setCustomerName] = useState(draft('customerName', ''));
+  const [customerPhone, setCustomerPhone] = useState(draft('customerPhone', ''));
+  const [secondCustomerName, setSecondCustomerName] = useState(draft('secondCustomerName', ''));
+  const [secondCustomerPhone, setSecondCustomerPhone] = useState(draft('secondCustomerPhone', ''));
+  const [depositText, setDepositText] = useState(draft('depositText', ''));
+  const [eventDate, setEventDate] = useState(draft('eventDate', ''));
+  const [eventTime, setEventTime] = useState(draft('eventTime', ''));
+  const [guestCountText, setGuestCountText] = useState(draft('guestCountText', '50'));
+  const [eventType, setEventType] = useState<NonNullable<Event['eventType']>>(draft('eventType', 'RESERVATION'));
+  const [status, setStatus] = useState<NonNullable<Event['status']>>(draft('status', 'MENU_NOT_SELECTED'));
+  const [hallId, setHallId] = useState(draft('hallId', ''));
   // With exactly one bookable hall the picker is a formality, so the field
   // starts filled in — an event saved with no hall is the commonest way this
   // form is got wrong, and for these restaurants there was never a choice to
@@ -176,16 +208,32 @@ export const AdminEventsPage = () => {
   useEffect(() => {
     if (defaultHallId) setHallId((current) => current || defaultHallId);
   }, [defaultHallId]);
-  const [tableCategoryId, setTableCategoryId] = useState('');
-  const [notes, setNotes] = useState('');
-  const [birthdayPersonName, setBirthdayPersonName] = useState('');
-  const [brideName, setBrideName] = useState('');
-  const [groomName, setGroomName] = useState('');
-  const [honoreePersonName, setHonoreeName] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [tableCategoryId, setTableCategoryId] = useState(draft('tableCategoryId', ''));
+  const [notes, setNotes] = useState(draft('notes', ''));
+  const [birthdayPersonName, setBirthdayPersonName] = useState(draft('birthdayPersonName', ''));
+  const [brideName, setBrideName] = useState(draft('brideName', ''));
+  const [groomName, setGroomName] = useState(draft('groomName', ''));
+  const [honoreePersonName, setHonoreeName] = useState(draft('honoreePersonName', ''));
+  const [editingId, setEditingId] = useState<number | null>(draft('editingId', null));
   // The create/edit panel is hidden by default and revealed via a button.
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(draft('showForm', false));
   // Reschedule modal state (separate from the text-based date edit in the form).
+  // One effect mirrors the whole form, rather than nineteen fields each writing
+  // their own key: the form is restored as a unit, so it has to be stored as one.
+  useEffect(() => {
+    if (!showForm) return;   // a closed form has nothing worth keeping
+    writeSessionDraft(EVENT_FORM_DRAFT_KEY, {
+      customerName, customerPhone, secondCustomerName, secondCustomerPhone,
+      depositText, eventDate, eventTime, guestCountText, eventType, status,
+      hallId, tableCategoryId, notes,
+      birthdayPersonName, brideName, groomName, honoreePersonName,
+      editingId, showForm,
+    } satisfies EventFormDraft);
+  }, [customerName, customerPhone, secondCustomerName, secondCustomerPhone,
+      depositText, eventDate, eventTime, guestCountText, eventType, status,
+      hallId, tableCategoryId, notes,
+      birthdayPersonName, brideName, groomName, honoreePersonName, editingId, showForm]);
+
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleTime, setRescheduleTime] = useState('');
@@ -285,6 +333,9 @@ export const AdminEventsPage = () => {
       setGroomName('');
       setHonoreeName('');
       setShowForm(false);
+      // The form is finished with, so the draft goes: a kept draft would
+      // reopen an event that has already been saved or abandoned.
+      clearSessionDraft(EVENT_FORM_DRAFT_KEY);
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -312,6 +363,9 @@ export const AdminEventsPage = () => {
       setGroomName('');
       setHonoreeName('');
       setShowForm(false);
+      // The form is finished with, so the draft goes: a kept draft would
+      // reopen an event that has already been saved or abandoned.
+      clearSessionDraft(EVENT_FORM_DRAFT_KEY);
       await queryClient.invalidateQueries({ queryKey: ['events'] });
     }
   });
@@ -458,6 +512,9 @@ export const AdminEventsPage = () => {
           onClick={() => {
             if (showForm) {
               setShowForm(false);
+              // The form is finished with, so the draft goes: a kept draft would
+              // reopen an event that has already been saved or abandoned.
+              clearSessionDraft(EVENT_FORM_DRAFT_KEY);
             } else {
               // Opening fresh for a NEW event — clear any leftover edit state.
               setEditingId(null);
@@ -695,6 +752,9 @@ export const AdminEventsPage = () => {
                   setGroomName('');
                   setHonoreeName('');
                   setShowForm(false);
+                  // The form is finished with, so the draft goes: a kept draft would
+                  // reopen an event that has already been saved or abandoned.
+                  clearSessionDraft(EVENT_FORM_DRAFT_KEY);
                 }}
               >
                 {t('cancel')}

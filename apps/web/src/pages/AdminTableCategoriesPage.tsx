@@ -12,6 +12,21 @@ import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
 import { useExcludedCategories } from '../hooks/useExcludedCategories';
 import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
+import { NumberField } from '../components/ui/NumberField';
+
+/**
+ * How many hot appetizers a table lets a guest pick: at least one, at most
+ * twenty, whole numbers only.
+ *
+ * Clamped on commit rather than on every keystroke. Clamping as the visitor
+ * typed is what made the field impossible to edit — a partially typed number is
+ * not an invalid number, it is an unfinished one, and forcing it back to 1 put a
+ * digit in front of everything typed next.
+ */
+export function clampHotAppetizers(n: number): number {
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(1, Math.min(20, Math.floor(n)));
+}
 
 type FoodCategory = MenuItem['category'];
 
@@ -538,8 +553,11 @@ export const AdminTableCategoriesPage = () => {
 
           <label style={{ display: 'grid', gap: 6, maxWidth: 240 }}>
             {t('hot_appetizer_count')}
-            <input type="number" min={1} max={20} className="adm-input" value={hotAppetizerCount}
-              onChange={(e) => setHotAppetizerCount(Math.max(1, Math.min(20, Math.floor(Number(e.target.value) || 1))))} />
+            {/* NumberField, not a raw <input>: bound straight to the number and
+                clamped on every keystroke, the box could not be emptied — the
+                pre-filled "3" survived every backspace, so typing 5 gave 35. */}
+            <NumberField min={1} max={20} value={hotAppetizerCount}
+              onChange={(n) => setHotAppetizerCount(clampHotAppetizers(n))} />
           </label>
 
           <FoodPackageSection
@@ -622,8 +640,8 @@ export const AdminTableCategoriesPage = () => {
 
                       <label style={{ display: 'grid', gap: 4, maxWidth: 240 }}>
                         {t('hot_appetizer_count')}
-                        <input type="number" min={1} max={20} className="adm-input" value={editHotAppetizerCount}
-                          onChange={(e) => setEditHotAppetizerCount(Math.max(1, Math.min(20, Math.floor(Number(e.target.value) || 1))))} />
+                        <NumberField min={1} max={20} value={editHotAppetizerCount}
+                          onChange={(n) => setEditHotAppetizerCount(clampHotAppetizers(n))} />
                       </label>
 
                       <FoodPackageSection

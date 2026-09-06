@@ -7,6 +7,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
+import { AutosaveStatus } from '../components/ui/AutosaveStatus';
+import { useAutosave } from '../hooks/useAutosave';
 
 const parsePositiveInt = (value: string): number | null => {
   const trimmed = value.trim();
@@ -86,10 +88,11 @@ export const AdminHallsPage = () => {
     }
   });
 
+  // Autosaved, so the mutation no longer closes the editor: a row saving and the
+  // writer being finished with it are no longer the same event.
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => hallService.update(id, data),
     onSuccess: async () => {
-      setEditingId(null);
       await queryClient.invalidateQueries({ queryKey: ['halls'] });
     }
   });
@@ -110,27 +113,34 @@ export const AdminHallsPage = () => {
     setEditIsActive(hall.isActive);
   };
 
-  const saveEdit = () => {
-    if (!editingId || editValidation.errors.length > 0 || editValidation.capacity === null) return;
-
-    updateMutation.mutate({
+  // What the open editor would write, or null while it is not writable. A
+  // capacity of "" on the way to "120" is an unfinished number, not a hall for
+  // nobody — and autosave sees every keystroke on the way, where a Save button
+  // only ever saw the finished value. Same rule as `patchOf` on the Menu page:
+  // omit a half-typed value rather than write it.
+  const editPayload = useMemo(() => {
+    if (!editingId || editValidation.errors.length > 0 || editValidation.capacity === null) return null;
+    return {
       id: editingId,
       data: {
         name: editName.trim(),
         capacity: editValidation.capacity,
         description: editDescription.trim() || undefined,
         photoUrl: editPhotoUrl.trim() ? editPhotoUrl.trim() : undefined,
-        isActive: editIsActive
-      }
-    });
-  };
+        isActive: editIsActive,
+      },
+    };
+  }, [editingId, editValidation, editName, editDescription, editPhotoUrl, editIsActive]);
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
+  const autosave = useAutosave({
+    value: editPayload,
+    enabled: editPayload !== null,
+    save: (payload) => (payload ? updateMutation.mutateAsync(payload) : Promise.resolve()),
+  });
+
+  const closeEdit = () => setEditingId(null);
 
   const canSubmit = validation.errors.length === 0 && !createMutation.isPending;
-  const canSaveEdit = editValidation.errors.length === 0 && !updateMutation.isPending;
 
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
@@ -248,19 +258,16 @@ export const AdminHallsPage = () => {
                           placeholder={t('select_hall_photo')}
                         />
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <Button
-                          onClick={saveEdit}
-                          disabled={!canSaveEdit}
-                        >
-                          {updateMutation.isPending ? t('saving') : t('save')}
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {/* No Save button: edits are written on their own. What
+                            is left is "I am finished with this row", and — when a
+                            write fails — the one way back, since autosave
+                            deliberately does not re-attempt a payload that just
+                            failed. */}
+                        <Button variant="secondary" onClick={closeEdit}>
+                          {t('done')}
                         </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={cancelEdit}
-                        >
-                          {t('cancel')}
-                        </Button>
+                        <AutosaveStatus state={autosave.state} onRetry={autosave.retry} t={t} />
                       </div>
                       {editValidation.errors.length > 0 && (
                         <div style={{ gridColumn: '1 / -1', color: '#b00020', fontSize: '0.9em' }}>

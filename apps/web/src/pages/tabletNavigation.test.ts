@@ -20,7 +20,8 @@ describe('there is always a way back', () => {
     // "← events" button is behind it: without this, choosing a table was the
     // only way out of the kiosk.
     expect(menu).toContain('onBack: () => void;');
-    expect(menu).toMatch(/onBack=\{\(\) => navigate\('\/'\)\}/);
+    // Leaving clears the draft — see store/tabletDraft.ts.
+    expect(menu).toMatch(/onBack=\{\(\) => \{ reset\(\); navigate\('\/'\); \}\}/);
   });
 
   it('the button is rendered unconditionally, not only on the second step', () => {

@@ -3,15 +3,19 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * What the Summary page requires before a booking can be confirmed, and what it
- * no longer does.
+ * What the Summary page requires before a booking can be confirmed.
  *
- * The rest of the system is explicit that a head count is not needed to take a
- * booking: the API defaults `guestCount` to 0, and the Events page creates an
- * entirely blank event for later editing. The tablet contradicted that — the
- * Confirm button stayed disabled until someone typed a figure, so a restaurant
- * taking a booking before the count was known had to invent one, and an invented
- * head count is worse than a missing one because it prices the event.
+ * Two rules that look contradictory and are not. §41 took the head count OUT of
+ * the requirements, because the API defaults `guestCount` to 0 and the Events
+ * page creates an entirely blank event — a figure the restaurant does not have
+ * yet is not worth inventing to get past a button. It is now required again, but
+ * only HERE: a table package is a per-person price, so a kiosk booking with no
+ * head count has no total, and quoting one is what the kiosk is for.
+ *
+ * What survived from §41 is the level the rule lives at. Nothing caps or clamps
+ * the number, and the API still does not require it — so the Events page is
+ * unaffected, which is the whole point of putting the requirement on the screen
+ * rather than in the record.
  *
  * Source-reading, in the style of `translate.test.ts` and `settingsScopes.test.ts`:
  * the web suite has no DOM, and what is asserted is which conditions a call site
@@ -21,26 +25,27 @@ const SRC = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(SRC, rel), 'utf8');
 const summary = read('pages/TabletSummaryPage.tsx');
 
+// The whole statement, not one line: the condition spans several.
 const confirmDisabled = (() => {
-  const line = summary.split('\n').find((l) => l.includes('const confirmDisabled ='));
-  if (!line) throw new Error('confirmDisabled is gone — this suite needs rewriting');
-  return line;
+  const at = summary.indexOf('const confirmDisabled =');
+  if (at === -1) throw new Error('confirmDisabled is gone — this suite needs rewriting');
+  return summary.slice(at, summary.indexOf(';', at));
 })();
 
-describe('nothing numeric blocks confirming a booking', () => {
-  it('the guest count is not required', () => {
-    expect(confirmDisabled).not.toContain('guestCount');
+describe('what the Confirm button waits for', () => {
+  it('the guest count IS required again, but only on this screen', () => {
+    // §41 removed it; it is back because a table package is a PER-PERSON price,
+    // so a kiosk booking with no head count has no total. What §41 established
+    // still holds one level down: the API does not require it, because the
+    // Events page still creates an entirely blank event.
+    expect(confirmDisabled).toContain('guestCount < 1');
+    expect(summary).toMatch(/guestCount < 1 && \(/);
   });
 
-  it('and the field no longer marks itself required', () => {
-    // The red "— required" note beside the caption was the other half of the
-    // same rule; leaving it would say the button is blocked when it is not.
-    expect(summary).not.toMatch(/guestCount < 1 && \(/);
-  });
-
-  it('the guest input carries no floor and no ceiling', () => {
-    // `max={5000}` mirrored an API cap that has been lifted; `min={1}` was the
-    // same rule as the disabled button, written twice.
+  it('the guest input still carries no floor and no ceiling', () => {
+    // Required is not the same as clamped. `max={5000}` mirrored an API cap that
+    // has been lifted, and a `min` would fight the typing rather than the empty
+    // value — the disabled button is what states the requirement.
     const field = summary.slice(summary.indexOf("t('guest_count')"));
     const input = field.slice(0, field.indexOf('/>'));
     expect(input).toContain('type="number"');
@@ -63,8 +68,8 @@ describe('nothing numeric blocks confirming a booking', () => {
   });
 
   it('the per-guest figures still guard against dividing by zero', () => {
-    // Zero guests is now reachable, so the division that was previously
-    // unreachable with a zero denominator is now on a live path.
+    // Confirm now needs a head count, but every figure on the page is computed
+    // BEFORE the guest supplies one, so zero is still on a live path.
     expect(summary).toContain('guestCount > 0 ? Math.round(manualTotalCents / guestCount)');
     expect(read('hooks/usePriceCalculator.ts')).toContain('guestCount > 0 ?');
   });
@@ -86,10 +91,10 @@ describe('the second contact is folded away', () => {
   });
 
   it('it opens by itself when the draft already has one', () => {
-    // An event opened from the Events page for a couple must not hide half its
-    // contacts behind a button that says "add".
+    // An event opened from the Events page for a couple — or a reload mid-edit —
+    // must not hide half its contacts behind a button that says "add".
     expect(summary).toMatch(
-      /useState\(\s*!!draftSecondCustomerName\.trim\(\) \|\| !!draftSecondCustomerPhone\.trim\(\),?\s*\)/,
+      /useState\(\s*!!secondCustomerName\.trim\(\) \|\| !!secondCustomerPhone\.trim\(\),?\s*\)/,
     );
   });
 

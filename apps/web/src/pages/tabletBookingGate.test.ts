@@ -50,20 +50,34 @@ describe('the running total is always on screen', () => {
 });
 
 describe('a kiosk booking needs a hall and a table', () => {
-  it('Confirm requires both', () => {
+  it('Confirm requires the hall and the table', () => {
     const line = summary.slice(summary.indexOf('const confirmDisabled ='));
     expect(line.slice(0, line.indexOf(';'))).toMatch(/!selectedHallId \|\| !selectedTableCategoryId/);
   });
 
   it('the kiosk stops the guest at the field they need, not a page later', () => {
-    // The Summary has no hall picker — it is chosen in the settings block on the
-    // menu page — so blocking only at Confirm would strand the guest.
-    expect(menu).toContain('disabled={!selectedHallId}');
-    expect(menu).toContain("{selectedHallId ? `${t('view_summary')} →` : t('select_room_required')}");
+    // The Summary has pickers for neither the hall nor the head count — both are
+    // in the settings block on the menu page — so blocking only at Confirm would
+    // strand the guest a page away from the field.
+    expect(menu).toContain('disabled={!!settingsMissing}');
+    expect(menu).toContain("{settingsMissing ? t(settingsMissing) : `${t('view_summary')} →`}");
+  });
+
+  it('and names the field it is waiting on', () => {
+    // A button that only goes grey does not say what to do.
+    expect(menu).toMatch(
+      /!selectedHallId \? 'select_room_required'\s*\n\s*: guestCount < 1 \? 'guest_count_required'\s*\n\s*: null;/,
+    );
+  });
+
+  it('the head count is required too, on both screens', () => {
+    const line = summary.slice(summary.indexOf('const confirmDisabled ='));
+    expect(line.slice(0, line.indexOf(';'))).toContain('guestCount < 1');
+    expect(summary).toContain("t('guest_count_required')");
   });
 
   it('and the Summary says which one is missing', () => {
-    expect(summary).toMatch(/\(!selectedHallId \|\| !selectedTableCategoryId\) && \(/);
+    expect(summary).toMatch(/\(!selectedHallId \|\| !selectedTableCategoryId \|\| guestCount < 1\) && \(/);
   });
 
   it('the Events page is deliberately NOT gated', () => {
@@ -76,7 +90,7 @@ describe('a kiosk booking needs a hall and a table', () => {
 
   it('the required labels are translated in all three locales', () => {
     const translations = read('utils/translate.ts');
-    for (const key of ['select_room_required', 'remove_dish', 'restore_dish']) {
+    for (const key of ['select_room_required', 'guest_count_required', 'remove_dish', 'restore_dish']) {
       expect((translations.match(new RegExp(`\\b${key}:`, 'g')) ?? []).length, key).toBe(3);
     }
   });
@@ -88,10 +102,18 @@ describe('taking a dish off the table', () => {
     expect(menu).toContain('{formatSum(pi.menuItem.priceCents)}');
   });
 
-  it('dims the card rather than hiding it', () => {
-    // The guest has to see what they took off in order to put it back.
-    expect(menu).toContain('opacity: removed ? 0.45 : 1,');
+  it('greys and darkens the PHOTO, leaving the card readable', () => {
+    // The guest has to read what they took off in order to put it back, and to
+    // recognise the saving on the button — so dimming the whole card was wrong.
+    // The photo carries the "not being served" signal on its own.
+    expect(menu).toContain("filter: 'grayscale(1) brightness(0.45)'");
+    expect(menu).not.toContain('opacity: removed ? 0.45 : 1,');
     expect(menu).toContain("textDecoration: 'line-through'");
+  });
+
+  it('greys the placeholder too, not only a real photo', () => {
+    // A dish with no photo still has to read as removed.
+    expect(menu).toContain("style={{ background: 'rgba(0,0,0,0.2)', ...removedPhoto }}");
   });
 
   it('hides the free-swap button on a removed dish', () => {
