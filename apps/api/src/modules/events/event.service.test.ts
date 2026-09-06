@@ -165,6 +165,74 @@ describe('editing an event', () => {
   });
 });
 
+describe('a payment can never exceed the balance', () => {
+  /**
+   * Pushing an invoice past its total leaves it at a negative balance — money
+   * the restaurant appears to owe the customer, arrived at by a typo. The cap is
+   * computed from the STORED event, not from anything the caller sends: a client
+   * that reports its own total is a client that sets its own limit.
+   */
+  const invoiced = (over: Record<string, unknown> = {}) => ({
+    ...EVENT,
+    guestCount: 100,
+    depositCents: 0,
+    tableCategory: { ratePerPerson: 10_000 },   // 100 × 10 000 = 1 000 000 tiyin
+    selections: [],
+    payments: [],
+    ...over,
+  });
+
+  const serviceFor = (event: unknown) => {
+    const repo = {
+      getByNumber: vi.fn(async () => event),
+      addPayment: vi.fn(async () => {}),
+    } as unknown as EventRepository;
+    return { service: new EventService(repo), repo: repo as unknown as { addPayment: ReturnType<typeof vi.fn> } };
+  };
+
+  it('takes a payment for exactly the outstanding balance', () => {
+    const { service } = serviceFor(invoiced());
+    return expect(service.addPayment('r1', 42, 1_000_000)).resolves.toBeDefined();
+  });
+
+  it('takes a smaller instalment', () => {
+    const { service } = serviceFor(invoiced());
+    return expect(service.addPayment('r1', 42, 400_000)).resolves.toBeDefined();
+  });
+
+  it('refuses one so'.concat("'", 'm over'), async () => {
+    const { service, repo } = serviceFor(invoiced());
+    await expect(service.addPayment('r1', 42, 1_000_100)).rejects.toMatchObject({ status: 400 });
+    expect(repo.addPayment, 'the payment was written anyway').not.toHaveBeenCalled();
+  });
+
+  it('counts the deposit and earlier instalments towards the cap', () => {
+    // 1 000 000 total, 300 000 deposit, 200 000 already paid → 500 000 left.
+    const event = invoiced({ depositCents: 300_000, payments: [{ amountCents: 200_000 }] });
+    const { service } = serviceFor(event);
+    return Promise.all([
+      expect(service.addPayment('r1', 42, 500_000)).resolves.toBeDefined(),
+      expect(serviceFor(event).service.addPayment('r1', 42, 500_001)).rejects.toMatchObject({ status: 400 }),
+    ]);
+  });
+
+  it('counts priced dish selections into the total', () => {
+    const event = invoiced({ selections: [{ quantity: 2, unitPriceCents: 50_000 }] });   // +100 000
+    const { service } = serviceFor(event);
+    return expect(service.addPayment('r1', 42, 1_100_000)).resolves.toBeDefined();
+  });
+
+  it('refuses anything at all once the invoice is settled', async () => {
+    const event = invoiced({ depositCents: 1_000_000 });
+    await expect(serviceFor(event).service.addPayment('r1', 42, 1)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('still 404s for an event that does not exist, before any of this', () => {
+    const { service } = serviceFor(null);
+    return expect(service.addPayment('r1', 42, 1)).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe('the event payload', () => {
   const valid = {
     customerName: 'Aziz Karimov',

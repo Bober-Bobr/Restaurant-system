@@ -2594,3 +2594,62 @@ is not a quantity.
    with no settlement date.
 5. Type `2500000` into any price, rate, deposit, capacity or payment box → it
    reads `2 500 000`, and saving stores 2 500 000.
+
+## 50. Closed invoices are not debts; a payment cannot exceed the balance
+
+**No migration.** Amends §49.
+
+### "Not overdue" was listing closed invoices
+
+`isDebt` excluded CANCELLED but not COMPLETED, while the Invoices page's own row
+badge had always added `&& event.status !== 'COMPLETED'` on top of it. The two
+disagreed, and §49's new filters used the looser one — so every invoice closed
+before §49's "pay in full first" rule existed, and still carrying a stale
+balance, turned up under **Debt** and **Not overdue**, and on Notifications.
+
+The COMPLETED exclusion moved into `isDebt` itself and the page now just calls
+it. The filter is what it was asked to be: **the event date has passed, the
+invoice is still short, and its deadline is either unset or still ahead.**
+
+### A payment is capped at exactly what is left
+
+Nothing stopped a payment larger than the balance, which pushes an invoice past
+its total and leaves it at a **negative** balance — money the restaurant appears
+to owe the customer, arrived at by a typo.
+
+Refused in **two** places, deliberately:
+
+- **The page** checks first, so the operator gets a sentence naming the maximum
+  rather than a raw 400. It also gains a **"Pay the rest"** button that fills the
+  box with the exact figure printed two lines above — settling up is the
+  commonest payment there is, and it should not be a number copied by hand.
+- **`EventService.addPayment`** enforces it too, computed from the **stored**
+  event. A client that reports its own total is a client that sets its own limit,
+  and this page is not the only thing that can reach that endpoint.
+
+That means the invoice total is now computed on both sides
+([apps/api/src/utils/invoice.ts](apps/api/src/utils/invoice.ts) mirrors the web copy). The duplication is
+forced — the API cannot import from the web app — so
+`invoiceAgreement.test.ts` **imports both implementations and runs one set of
+cases through each**, the same guard the web suite already puts on
+`toSubdomainSlug`. If they ever drift, a payment the page shows as valid gets
+refused by the server, which is a worse failure than the overpayment being
+prevented.
+
+Both copies read the same inputs — table package plus `EventMenuSelection` rows —
+and **neither reads `menuConfig`**, so a kiosk booking's paid extras sit outside
+the invoice total on both sides. That is a pre-existing question about what an
+invoice totals, not about this cap; changing it on one side alone would break the
+agreement and start refusing valid payments.
+
+**After deploying:**
+
+1. An invoice closed earlier with a stale balance no longer appears under Debt,
+   Not overdue, or on Notifications.
+2. Not overdue lists only past events that still owe money and whose deadline is
+   unset or in the future.
+3. Try to pay 1 so'm more than the balance → refused, with the maximum named.
+   Exactly the balance → accepted, and the invoice can then be closed.
+4. Press "Pay the rest" → the box fills with the exact outstanding figure.
+5. `POST /api/events/:id/payments` with an over-large amount → **400**, even
+   though the page would not have sent it.

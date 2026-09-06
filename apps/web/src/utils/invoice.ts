@@ -22,9 +22,21 @@ export function invoiceOutstandingCents(event: Event): number {
   return Math.max(0, invoiceTotalCents(event) - invoicePaidCents(event));
 }
 
-/** The event has started (or passed) and still has an outstanding balance. */
+/**
+ * The event has happened and its invoice is still short.
+ *
+ * A **closed** invoice is not a debt, whatever its arithmetic says. Closing now
+ * requires the money to be in (`isFullyPaid`), but invoices closed before that
+ * rule existed can still carry a stale balance, and those were turning up under
+ * both debt filters and on the Notifications page. The Invoices page had always
+ * excluded them from its own row badge; the rule belongs here, once, so every
+ * caller agrees.
+ *
+ * Cancelled is excluded for the plainer reason that nobody owes for an event
+ * that did not happen.
+ */
 export function isDebt(event: Event, now: Date = new Date()): boolean {
-  if (event.status === 'CANCELLED') return false;
+  if (event.status === 'CANCELLED' || event.status === 'COMPLETED') return false;
   return new Date(event.eventDate).getTime() <= now.getTime() && invoiceOutstandingCents(event) > 0;
 }
 

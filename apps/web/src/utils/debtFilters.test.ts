@@ -47,9 +47,26 @@ describe('what counts as a debt', () => {
     expect(isDebt(event({ eventDate: day('2026-08-01T18:00:00.000Z') }), NOW)).toBe(false);
   });
 
-  it('not a cancelled one, and not a settled one', () => {
+  it('not a cancelled one, and not one that is paid off', () => {
     expect(isDebt(event({ status: 'CANCELLED' }), NOW)).toBe(false);
     expect(isDebt(event({ depositCents: 100_000_00 }), NOW)).toBe(false);
+  });
+
+  it('and not a CLOSED invoice, whatever its arithmetic says', () => {
+    // Closing now requires the money to be in, but invoices closed before that
+    // rule can still carry a stale balance — and those were turning up under
+    // both debt filters and on Notifications. The Invoices page had always
+    // excluded them from its own row badge, so the two disagreed.
+    expect(isDebt(event({ status: 'COMPLETED' }), NOW)).toBe(false);
+    expect(isOverdueDebt(event({ status: 'COMPLETED', debtDeadline: day('2026-01-01T00:00:00.000Z') }), NOW)).toBe(false);
+    expect(isPendingDebt(event({ status: 'COMPLETED' }), NOW)).toBe(false);
+  });
+
+  it('the page reads that rule rather than repeating it', () => {
+    const src = read('pages/AdminInvoicesPage.tsx');
+    expect(src).toContain('const debt = isDebt(event);');
+    expect(src, 'the COMPLETED check is duplicated again')
+      .not.toContain("isDebt(event) && amountDue > 0 && event.status !== 'COMPLETED'");
   });
 });
 
@@ -135,6 +152,20 @@ describe('the pages use those rules', () => {
       .not.toContain('onClick={() => closeMutation.mutate(event.id)}');
   });
 
+  it('a payment is capped at the balance, on both sides', () => {
+    // Client first, so the operator is told rather than shown a raw 400 — and
+    // the API too, because this page is not the only caller of that endpoint.
+    expect(invoices).toContain('if (amountCents > invoiceOutstandingCents(event)) { setPayTooMuch(event.id); return; }');
+    expect(invoices).toContain("t('payment_exceeds_balance', { amount: formatSum(amountDue) })");
+    const service = readFileSync(join(SRC, '..', '..', 'api', 'src', 'modules', 'events', 'event.service.ts'), 'utf8');
+    expect(service).toContain('const outstanding = invoiceOutstandingCents(event);');
+    expect(service).toContain('if (amountCents > outstanding) {');
+  });
+
+  it('and settling the rest is one press, not a figure to copy', () => {
+    expect(invoices).toContain("t('pay_the_rest', { amount: formatSum(amountDue) })");
+  });
+
   it('the notifications page shows both groups', () => {
     const page = read('pages/AdminNotificationsPage.tsx');
     expect(page).toContain('pendingDebtEvents(');
@@ -149,7 +180,8 @@ describe('the pages use those rules', () => {
   it('every new label is translated in all three locales', () => {
     const translations = read('utils/translate.ts');
     for (const key of ['invoices_debt', 'invoices_debt_pending', 'close_needs_full_payment',
-                       'debts_pending_heading', 'debt_pending_notice', 'debt_no_deadline', 'debt_due_on']) {
+                       'debts_pending_heading', 'debt_pending_notice', 'debt_no_deadline', 'debt_due_on',
+                       'payment_exceeds_balance', 'pay_the_rest']) {
       expect((translations.match(new RegExp(`\\b${key}:`, 'g')) ?? []).length, key).toBe(3);
     }
   });

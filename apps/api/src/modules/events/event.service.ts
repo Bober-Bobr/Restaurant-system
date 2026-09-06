@@ -1,4 +1,5 @@
 import createHttpError from 'http-errors';
+import { invoiceOutstandingCents } from '../../utils/invoice.js';
 import { EventRepository, type CreateEventData } from './event.repository.js';
 import { syncEventToLedger } from './event.ledgerSync.js';
 
@@ -76,6 +77,20 @@ export class EventService {
   async addPayment(restaurantId: string, eventId: number, amountCents: number, note?: string) {
     const event = await this.eventRepository.getByNumber(restaurantId, eventId);
     if (!event) throw createHttpError(404, 'Event not found');
+    // A payment can never exceed what is left to pay. Without this an invoice
+    // could be pushed past its total and sit at a negative balance — money the
+    // restaurant appears to owe the customer, arrived at by a typo. The cap is
+    // computed HERE, from the stored event, rather than trusted from the caller:
+    // a client that reports its own total can raise its own limit.
+    const outstanding = invoiceOutstandingCents(event);
+    if (amountCents > outstanding) {
+      throw createHttpError(
+        400,
+        outstanding === 0
+          ? 'This invoice is already paid in full.'
+          : `A payment cannot exceed the outstanding balance (${outstanding} tiyin).`,
+      );
+    }
     await this.eventRepository.addPayment(event.id, amountCents, note);
     const updated = await this.eventRepository.getByNumber(restaurantId, eventId);
     return this.mapEventToExternalId(updated);

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { formatSum, parseSumToTiyin } from '../utils/currency';
+import { formatSum, groupDigits, parseSumToTiyin } from '../utils/currency';
 import { MoneyInput } from '../components/ui/MoneyInput';
 import { invoiceOutstandingCents, invoiceTotalCents, isDebt, isFullyPaid, isOverdueDebt, isPendingDebt } from '../utils/invoice';
 import type { Event } from '../types/domain';
@@ -131,10 +131,18 @@ export const AdminInvoicesPage = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
 
-  const submitPayment = (eventId: number) => {
-    const amountCents = parseSumToTiyin(paymentDrafts[eventId] ?? '');
+  // A payment larger than what is left would push the invoice past its total and
+  // leave it at a negative balance — money the restaurant appears to owe the
+  // customer, arrived at by a typo. Refused here AND in the API, because this
+  // page is not the only thing that can call that endpoint.
+  const [payTooMuch, setPayTooMuch] = useState<number | null>(null);
+
+  const submitPayment = (event: Event) => {
+    const amountCents = parseSumToTiyin(paymentDrafts[event.id] ?? '');
     if (!amountCents || amountCents <= 0 || addPaymentMutation.isPending) return;
-    addPaymentMutation.mutate({ eventId, amountCents });
+    if (amountCents > invoiceOutstandingCents(event)) { setPayTooMuch(event.id); return; }
+    setPayTooMuch(null);
+    addPaymentMutation.mutate({ eventId: event.id, amountCents });
   };
 
   const saveDeadline = (event: Event) => {
@@ -241,7 +249,9 @@ export const AdminInvoicesPage = () => {
           const paymentsSum = payments.reduce((s, p) => s + p.amountCents, 0);
           const amountDue = Math.max(0, shownTotal - deposit - paymentsSum);
           // Debt: the event has started but the invoice still isn't settled.
-          const debt = isDebt(event) && amountDue > 0 && event.status !== 'COMPLETED';
+          // `isDebt` now carries the COMPLETED exclusion this line used to add
+          // on its own — which is exactly why the two disagreed.
+          const debt = isDebt(event);
           const deadlineDraft = deadlineDrafts[event.id] ?? (event.debtDeadline ? event.debtDeadline.slice(0, 10) : '');
           const overdue = debt && !!event.debtDeadline && new Date(event.debtDeadline).getTime() < Date.now();
           const isPaid = event.status === 'COMPLETED';
@@ -337,7 +347,7 @@ export const AdminInvoicesPage = () => {
                       placeholder={t('payment_amount')}
                       value={paymentDrafts[event.id] ?? ''}
                       onChange={(next) => setPaymentDrafts((prev) => ({ ...prev, [event.id]: next }))}
-                      onKeyDown={(e) => { if (e.key === 'Enter') submitPayment(event.id); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') submitPayment(event); }}
                       style={{
                         width: 170, padding: '7px 10px', borderRadius: 8, fontSize: 13,
                         background: 'rgba(255,255,255,0.05)', color: '#e2e8f0',
@@ -348,13 +358,37 @@ export const AdminInvoicesPage = () => {
                     <button
                       type="button"
                       className="adm-btn-ghost"
-                      onClick={() => submitPayment(event.id)}
+                      onClick={() => submitPayment(event)}
                       disabled={addPaymentMutation.isPending || !(parseSumToTiyin(paymentDrafts[event.id] ?? '') ?? 0)}
                       style={{ fontSize: 13 }}
                     >
                       + {t('add_payment')}
                     </button>
+                    {/* Settling the invoice is the commonest payment there is, and
+                        it is the exact figure printed two lines above — so it is
+                        one press rather than a number to copy by hand. */}
+                    <button
+                      type="button"
+                      className="adm-btn-ghost"
+                      onClick={() => {
+                        setPayTooMuch(null);
+                        setPaymentDrafts((prev) => ({ ...prev, [event.id]: groupDigits(String(Math.round(amountDue / 100))) }));
+                      }}
+                      style={{ fontSize: 13 }}
+                    >
+                      {t('pay_the_rest', { amount: formatSum(amountDue) })}
+                    </button>
                   </div>
+                )}
+
+                {payTooMuch === event.id && (
+                  <p style={{
+                    margin: '8px 0 0', padding: '9px 12px', borderRadius: 10,
+                    fontSize: 13, fontWeight: 600, color: '#fca5a5',
+                    background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.35)',
+                  }}>
+                    {t('payment_exceeds_balance', { amount: formatSum(amountDue) })}
+                  </p>
                 )}
 
                 {/* Debt: settlement deadline set by the administrator */}
