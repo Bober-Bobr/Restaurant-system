@@ -11,8 +11,9 @@ import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
 import { useExcludedCategories } from '../hooks/useExcludedCategories';
-import { formatSum, formatSumInput, parseSumToTiyin } from '../utils/currency';
+import { formatSum, formatSumInput, parseSumToTiyin, parseWholeSum } from '../utils/currency';
 import { NumberField } from '../components/ui/NumberField';
+import { MoneyInput } from '../components/ui/MoneyInput';
 import { AutosaveStatus } from '../components/ui/AutosaveStatus';
 import { useAutosave } from '../hooks/useAutosave';
 
@@ -406,8 +407,11 @@ export const AdminTableCategoriesPage = () => {
     const errors: string[] = [];
     if (name.trim().length < 1) errors.push('Name is required.');
     if (name.trim().length > 100) errors.push('Name must be 100 characters or less.');
-    const rate = Number(ratePerPersonText);
-    if (!Number.isFinite(rate) || rate < 0) errors.push('Rate per person must be a non-negative number.');
+    // `parseWholeSum`, not `Number`: the field groups its digits now, and
+    // `Number('250 000')` is NaN — which would have called every real rate
+    // invalid and, with the editor autosaved, refused to write any of them.
+    const rate = parseWholeSum(ratePerPersonText);
+    if (rate === null) errors.push('Rate per person must be a non-negative number.');
     return { errors };
   }, [name, ratePerPersonText]);
 
@@ -415,8 +419,11 @@ export const AdminTableCategoriesPage = () => {
     const errors: string[] = [];
     if (editName.trim().length < 1) errors.push('Name is required.');
     if (editName.trim().length > 100) errors.push('Name must be 100 characters or less.');
-    const rate = Number(editRatePerPersonText);
-    if (!Number.isFinite(rate) || rate < 0) errors.push('Rate per person must be a non-negative number.');
+    // `parseWholeSum`, not `Number`: the field groups its digits now, and
+    // `Number('250 000')` is NaN — which would have called every real rate
+    // invalid and, with the editor autosaved, refused to write any of them.
+    const rate = parseWholeSum(editRatePerPersonText);
+    if (rate === null) errors.push('Rate per person must be a non-negative number.');
     return { errors };
   }, [editName, editRatePerPersonText]);
 
@@ -542,7 +549,7 @@ export const AdminTableCategoriesPage = () => {
             </label>
             <label style={{ display: 'grid', gap: 6 }}>
               {t('rate_per_person')}
-              <Input value={ratePerPersonText} onChange={(e) => setRatePerPersonText(e.target.value)} />
+              <MoneyInput value={ratePerPersonText} onChange={setRatePerPersonText} />
             </label>
           </div>
 
@@ -629,7 +636,7 @@ export const AdminTableCategoriesPage = () => {
                         </label>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('rate_dollar')}
-                          <Input value={editRatePerPersonText} onChange={(e) => setEditRatePerPersonText(e.target.value)} />
+                          <MoneyInput value={editRatePerPersonText} onChange={setEditRatePerPersonText} />
                         </label>
                       </div>
 

@@ -35,7 +35,40 @@ export function isOverdueDebt(event: Event, now: Date = new Date()): boolean {
   return new Date(event.debtDeadline).getTime() < now.getTime();
 }
 
+/**
+ * A debt that is not late yet: the deadline is still ahead, or nobody set one.
+ *
+ * **No deadline counts as not-yet-due, not as overdue.** A debt nobody has put a
+ * date on is money still owed, and it used to appear nowhere at all — it was
+ * invisible to the Notifications page, which asks only for overdue ones, and it
+ * cannot become overdue on its own because `isOverdueDebt` needs a date to
+ * compare. Those are the debts most likely to be forgotten, which is exactly why
+ * they belong on the same screen.
+ *
+ * Together with `isOverdueDebt` this partitions the debts: every debt is one or
+ * the other, and never both.
+ */
+export function isPendingDebt(event: Event, now: Date = new Date()): boolean {
+  if (!isDebt(event, now)) return false;
+  return !isOverdueDebt(event, now);
+}
+
 /** All events with a past-due, unpaid debt (for the Notifications page/bell). */
 export function overdueDebtEvents(events: Event[], now: Date = new Date()): Event[] {
   return events.filter((e) => isOverdueDebt(e, now));
+}
+
+/** Debts still within their deadline, or with none set (Notifications page). */
+export function pendingDebtEvents(events: Event[], now: Date = new Date()): Event[] {
+  return events.filter((e) => isPendingDebt(e, now));
+}
+
+/**
+ * Is the invoice settled in full?
+ *
+ * An invoice is closed when the money is in, not when someone says so. The
+ * deposit and every partial payment count towards it — see `invoicePaidCents`.
+ */
+export function isFullyPaid(event: Event): boolean {
+  return invoiceOutstandingCents(event) === 0;
 }

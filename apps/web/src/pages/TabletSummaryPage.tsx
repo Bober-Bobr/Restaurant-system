@@ -11,7 +11,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
-import { formatSum, parseSumToTiyin } from '../utils/currency';
+import { formatSum, groupDigits, parseSumToTiyin } from '../utils/currency';
+import { MoneyInput } from '../components/ui/MoneyInput';
 import { tableCategoryLabel } from '../utils/tableCategoryLabel';
 import { FingerTrail } from '../components/FingerTrail';
 import { useScrollReveal } from '../utils/useScrollReveal';
@@ -1030,12 +1031,10 @@ export const TabletSummaryPage = () => {
                 </label>
                 {manualTotalEnabled && (
                   <div className="mt-3 flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
+                    <MoneyInput
                       value={manualTotalText}
-                      onChange={(e) => setManualTotalText(e.target.value)}
-                      placeholder={String(Math.round(computedTotalCents / 100))}
+                      onChange={setManualTotalText}
+                      placeholder={groupDigits(String(Math.round(computedTotalCents / 100)))}
                       className="rg-input"
                       style={{ width: 200 }}
                     />
@@ -1047,11 +1046,9 @@ export const TabletSummaryPage = () => {
                 <div className="mt-3">
                   <label className="rg-label">{t('deposit')}</label>
                   <div className="mt-1.5 flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
+                    <MoneyInput
                       value={depositText}
-                      onChange={(e) => setDepositText(e.target.value)}
+                      onChange={setDepositText}
                       placeholder="0"
                       className="rg-input"
                       style={{ width: 160 }}

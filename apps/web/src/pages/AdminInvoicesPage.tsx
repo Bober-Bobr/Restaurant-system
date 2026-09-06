@@ -4,7 +4,8 @@ import { eventService } from '../services/event.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
-import { invoiceOutstandingCents, invoiceTotalCents, isDebt } from '../utils/invoice';
+import { MoneyInput } from '../components/ui/MoneyInput';
+import { invoiceOutstandingCents, invoiceTotalCents, isDebt, isFullyPaid, isOverdueDebt, isPendingDebt } from '../utils/invoice';
 import type { Event } from '../types/domain';
 
 // 1,000,000 so'm expressed in tiyin (amounts are stored as tiyin = 1/100 so'm).
@@ -26,7 +27,22 @@ const formatDate = (iso: string, locale: string) =>
     year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
-type InvoiceFilter = 'ALL' | 'OPEN' | 'OUTSTANDING' | 'PAID';
+/**
+ * `OUTSTANDING` split in two. It showed every non-cancelled invoice with a
+ * balance, which lumped a wedding six months out together with a bill that
+ * should have been settled a fortnight ago — the same list, no way to tell them
+ * apart, and the second is the only one anybody needs to act on.
+ *
+ * The two are a partition of the DEBTS (an event that has already happened and
+ * still owes money — see `isDebt`): `DEBT_OVERDUE` is past its settlement
+ * deadline, `DEBT_PENDING` is not, which includes every debt nobody has put a
+ * date on. Between them they cover each debt exactly once.
+ *
+ * Note this deliberately no longer lists a FUTURE event with an unpaid balance:
+ * that is a deposit not yet taken, not a debt, and calling it one on a screen
+ * labelled "Debt" is how a manager chases a customer who owes nothing yet.
+ */
+type InvoiceFilter = 'ALL' | 'OPEN' | 'DEBT_OVERDUE' | 'DEBT_PENDING' | 'PAID';
 
 // Month-of-year keys for labelling the month filter (index 0 = January).
 const MONTH_KEYS: Parameters<typeof translate>[0][] = [
@@ -68,6 +84,26 @@ export const AdminInvoicesPage = () => {
     mutationFn: (eventId: number) => eventService.update(eventId, { status: 'COMPLETED' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
+
+  // Which invoice was someone told they cannot close yet, and why.
+  const [closeBlocked, setCloseBlocked] = useState<number | null>(null);
+
+  /**
+   * Closing an invoice means the money is in. It used to be a button that set
+   * the status and nothing else, so an invoice could be marked settled with the
+   * balance still outstanding — and the debt then vanished from every debt
+   * filter and from Notifications, because both skip COMPLETED events. The money
+   * was still owed; nothing in the system said so any more.
+   *
+   * The button stays PRESSABLE on an unpaid invoice, deliberately: a disabled
+   * control with no explanation is the same dead end, and the person pressing it
+   * needs to be told what to do instead.
+   */
+  const tryClose = (event: Event) => {
+    if (!isFullyPaid(event)) { setCloseBlocked(event.id); return; }
+    setCloseBlocked(null);
+    closeMutation.mutate(event.id);
+  };
 
   // ── Partial payments + debt deadline ──
   // Per-invoice input drafts (amount in so'm / deadline date string).
@@ -129,15 +165,16 @@ export const AdminInvoicesPage = () => {
     if (monthFilter) list = list.filter((e) => eventMonthKey(e.eventDate) === monthFilter);
     if (filter === 'OPEN') return list.filter((e) => e.status !== 'COMPLETED' && e.status !== 'CANCELLED');
     if (filter === 'PAID') return list.filter((e) => e.status === 'COMPLETED');
-    // Outstanding: any non-cancelled invoice that still has a balance left to pay.
-    if (filter === 'OUTSTANDING') return list.filter((e) => e.status !== 'CANCELLED' && invoiceOutstandingCents(e) > 0);
+    if (filter === 'DEBT_OVERDUE') return list.filter((e) => isOverdueDebt(e));
+    if (filter === 'DEBT_PENDING') return list.filter((e) => isPendingDebt(e));
     return list;
   }, [events, filter, monthFilter]);
 
   const filters: { id: InvoiceFilter; label: string }[] = [
     { id: 'ALL', label: t('filter_all') },
     { id: 'OPEN', label: t('invoices_open') },
-    { id: 'OUTSTANDING', label: t('invoices_outstanding') },
+    { id: 'DEBT_OVERDUE', label: t('invoices_debt') },
+    { id: 'DEBT_PENDING', label: t('invoices_debt_pending') },
     { id: 'PAID', label: t('invoices_paid') },
   ];
 
@@ -295,12 +332,11 @@ export const AdminInvoicesPage = () => {
                 {/* Record a new partial payment */}
                 {!isCancelled && !isPaid && amountDue > 0 && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
-                    <input
-                      type="number"
-                      min={0}
+                    <MoneyInput
+                      className=""
                       placeholder={t('payment_amount')}
                       value={paymentDrafts[event.id] ?? ''}
-                      onChange={(e) => setPaymentDrafts((prev) => ({ ...prev, [event.id]: e.target.value }))}
+                      onChange={(next) => setPaymentDrafts((prev) => ({ ...prev, [event.id]: next }))}
                       onKeyDown={(e) => { if (e.key === 'Enter') submitPayment(event.id); }}
                       style={{
                         width: 170, padding: '7px 10px', borderRadius: 8, fontSize: 13,
@@ -375,7 +411,7 @@ export const AdminInvoicesPage = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => closeMutation.mutate(event.id)}
+                    onClick={() => tryClose(event)}
                     disabled={closeMutation.isPending && closeMutation.variables === event.id}
                     className="adm-btn-primary"
                     style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -387,6 +423,17 @@ export const AdminInvoicesPage = () => {
                   </button>
                 )}
               </div>
+
+              {/* Says what is missing and how much, rather than only refusing. */}
+              {closeBlocked === event.id && !isPaid && !isCancelled && (
+                <p style={{
+                  margin: '10px 0 0', padding: '9px 12px', borderRadius: 10,
+                  fontSize: 13, fontWeight: 600, color: '#fca5a5',
+                  background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.35)',
+                }}>
+                  {t('close_needs_full_payment', { amount: formatSum(amountDue) })}
+                </p>
+              )}
             </div>
           );
         })}

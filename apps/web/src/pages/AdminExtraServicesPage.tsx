@@ -8,6 +8,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { MoneyInput } from '../components/ui/MoneyInput';
 import { AutosaveStatus } from '../components/ui/AutosaveStatus';
 import { useAutosave } from '../hooks/useAutosave';
 import type { ExtraService } from '../types/domain';
@@ -210,8 +211,7 @@ export const AdminExtraServicesPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('service_price')}
-            <Input type="number" min={0} inputMode="numeric" value={priceText}
-              onChange={(e) => setPriceText(e.target.value)} placeholder="0" />
+            <MoneyInput value={priceText} onChange={setPriceText} placeholder="0" />
           </label>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             {t('description_optional')}
@@ -267,8 +267,7 @@ export const AdminExtraServicesPage = () => {
                         </label>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('service_price')}
-                          <Input type="number" min={0} value={editPriceText}
-                            onChange={(e) => setEditPriceText(e.target.value)} />
+                          <MoneyInput value={editPriceText} onChange={setEditPriceText} />
                         </label>
                         <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
                           {t('description_optional')}

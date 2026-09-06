@@ -2506,3 +2506,91 @@ the finished one.
    cancel → the draft is gone.
 6. Kiosk with no head count: "View summary" says so; Confirm on the Summary is
    disabled and names it.
+
+## 49. Invoices: two debt filters, a close that needs the money, grouped amounts
+
+**No migration.** Front-end only.
+
+### "With outstanding balance" becomes two filters
+
+It listed every non-cancelled invoice with a balance — a wedding six months out
+beside a bill overdue by a fortnight, in one list, with no way to tell them
+apart. It is now **Debt** (past its settlement date) and **Not overdue** (the
+date is still ahead, or nobody set one).
+
+The two are a **partition of the debts**: `isOverdueDebt` and `isPendingDebt` in
+[utils/invoice.ts](apps/web/src/utils/invoice.ts) cover each debt exactly once and never both, and
+`debtFilters.test.ts` asserts that rather than trusting it.
+
+**Deliberate behaviour change:** a FUTURE event with an unpaid balance no longer
+appears. That is a deposit not yet taken, not a debt — `isDebt` requires the
+event to have happened — and chasing it under a heading that says "Debt" has a
+manager ringing a customer who owes nothing yet.
+
+### Debts with no deadline finally appear somewhere
+
+**A debt nobody had put a date on was on no screen at all.** Notifications asks
+for overdue debts, and `isOverdueDebt` needs a date to compare against, so such
+a debt could never become overdue and never surfaced — and it is exactly the
+debt most likely to be forgotten.
+
+The Notifications page now has a second, amber block below the red one: debts
+still within their deadline **and** debts with none set, which say so in place of
+the date. The empty state appears only when both groups are empty.
+
+The bell badge in the layout still counts **overdue only** — it is the "act now"
+number, and inflating it with debts that are not late yet would make people stop
+reading it.
+
+### An invoice can only be closed once it is paid
+
+Closing was a button that set `status: COMPLETED` and nothing else, so an invoice
+could be marked settled with the balance outstanding — after which the debt
+**disappeared from every debt filter and from Notifications**, because all of
+them skip completed events. The money was still owed; nothing in the system said
+so any more.
+
+`tryClose` refuses unless `isFullyPaid`, and the button **stays pressable** on
+purpose: a disabled control with no explanation is the same dead end. Pressing it
+shows what is missing and how much. The deposit and every instalment count
+towards the total, so it can be settled in one payment or in parts.
+
+Enforced on this page, not in the API: `status` is a general event field that the
+kiosk and the Events page also set, and gating it in the schema would block
+paths that have nothing to do with invoicing.
+
+### Amounts group their digits
+
+`MoneyInput` ([components/ui/MoneyInput.tsx](apps/web/src/components/ui/MoneyInput.tsx)) — `250 000`, not `250000`. Six or
+seven digits with no separators cannot be read at a glance, and the difference
+between 250000 and 2500000 is one character in the middle of a blur, on a price
+or a payment. The expense ledger already did this inline; every other amount
+field was a bare number box.
+
+It is `type="text"` with `inputMode="numeric"`, because **a `type="number"` input
+rejects the space outright** — the grouping cannot exist inside one. Applied to:
+the event deposit and guest count, both extra-service prices, both table-category
+rates, both hall capacities, the kiosk's manual total and deposit, and the
+invoice payment box.
+
+**The parsers had to move with the fields**, and this is the half that fails
+silently: `Number('250 000')` is NaN, so the table-category rate validation would
+have called every real rate invalid — and, with that editor now autosaved (§48),
+refused to save the row at all. `parseWholeSum` and the two `parsePositiveInt`
+helpers strip spaces; `parseSumToTiyin` already did.
+
+Left alone deliberately: **servings** (1–20), the **discount percent** (0–100)
+and the event-id search box — a separator gains nothing on two digits, and an id
+is not a quantity.
+
+**After deploying:**
+
+1. Invoices → the filter row reads All · Open · **Debt** · **Not overdue** · Paid.
+2. An event that has passed with a deadline last week appears under Debt; one
+   with no deadline, or a future deadline, under Not overdue.
+3. Press "Close invoice" on an unpaid one → it stays open and says how much is
+   missing. Pay the rest in one go or in parts → it closes.
+4. Notifications shows the amber "Debts not yet overdue" block, including debts
+   with no settlement date.
+5. Type `2500000` into any price, rate, deposit, capacity or payment box → it
+   reads `2 500 000`, and saving stores 2 500 000.

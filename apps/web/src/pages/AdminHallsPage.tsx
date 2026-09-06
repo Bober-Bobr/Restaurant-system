@@ -6,12 +6,20 @@ import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { MoneyInput } from '../components/ui/MoneyInput';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { AutosaveStatus } from '../components/ui/AutosaveStatus';
 import { useAutosave } from '../hooks/useAutosave';
 
+/**
+ * A whole positive count typed by a person, or null.
+ *
+ * Spaces are stripped before parsing because these fields group their digits by
+ * place value now — `Number('1 200')` is NaN, which would have called every
+ * four-figure count invalid.
+ */
 const parsePositiveInt = (value: string): number | null => {
-  const trimmed = value.trim();
+  const trimmed = value.replace(/\s/g, '').trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   if (!Number.isInteger(parsed) || parsed <= 0) return null;
@@ -162,14 +170,7 @@ export const AdminHallsPage = () => {
           </label>
           <label style={{ display: 'grid', gap: 6 }}>
             {t('hall_capacity')}
-            <Input
-              type="number"
-              min={1}
-              max={5000}
-              inputMode="numeric"
-              value={capacityText}
-              onChange={(e) => setCapacityText(e.target.value)}
-            />
+            <MoneyInput value={capacityText} onChange={setCapacityText} />
           </label>
           <div style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             <PhotoSelector
@@ -229,13 +230,7 @@ export const AdminHallsPage = () => {
                         </label>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('hall_capacity')}
-                          <Input
-                            type="number"
-                            min={1}
-                            max={5000}
-                            value={editCapacityText}
-                            onChange={(e) => setEditCapacityText(e.target.value)}
-                          />
+                          <MoneyInput value={editCapacityText} onChange={setEditCapacityText} />
                         </label>
                         <label style={{ display: 'grid', gap: 4 }}>
                           {t('hall_description')}

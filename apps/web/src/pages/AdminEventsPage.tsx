@@ -15,6 +15,7 @@ import { translate } from '../utils/translate';
 import { buildEventExportPayload } from '../utils/eventPdf';
 import type { Event } from '../types/domain';
 import { Input } from '../components/ui/input';
+import { MoneyInput } from '../components/ui/MoneyInput';
 import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
@@ -45,8 +46,15 @@ export type EventFormDraft = {
   editingId: number | null; showForm: boolean;
 };
 
+/**
+ * A whole positive count typed by a person, or null.
+ *
+ * Spaces are stripped before parsing because these fields group their digits by
+ * place value now — `Number('1 200')` is NaN, which would have called every
+ * four-figure count invalid.
+ */
 const parsePositiveInt = (value: string): number | null => {
-  const trimmed = value.trim();
+  const trimmed = value.replace(/\s/g, '').trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   if (!Number.isInteger(parsed) || parsed <= 0) return null;
@@ -623,14 +631,7 @@ export const AdminEventsPage = () => {
           <GroupHeading>{t('event_details')}</GroupHeading>
           <label style={fieldLabelStyle}>
             {t('guests')}
-            <Input
-              type="number"
-              min={1}
-              max={5000}
-              inputMode="numeric"
-              value={guestCountText}
-              onChange={(e) => setGuestCountText(e.target.value)}
-            />
+            <MoneyInput value={guestCountText} onChange={setGuestCountText} />
           </label>
           <label style={fieldLabelStyle}>
             {t('event_type')}
@@ -709,14 +710,7 @@ export const AdminEventsPage = () => {
           <GroupHeading>{t('payment')}</GroupHeading>
           <label style={fieldLabelStyle}>
             {t('deposit_optional')}
-            <Input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              placeholder="0"
-              value={depositText}
-              onChange={(e) => setDepositText(e.target.value)}
-            />
+            <MoneyInput value={depositText} onChange={setDepositText} placeholder="0" />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, alignItems: 'center' }}>
             <Button type="submit" disabled={editingId ? !canSave : !canSubmit}>
