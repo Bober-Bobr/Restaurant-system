@@ -2298,3 +2298,90 @@ phone-width grid leaves one dish per row.
    paid dish that was ticked.
 5. The Extras filter is a column on the left on a tablet/desktop, and a strip
    across the top on a phone.
+
+## 46. Kiosk: remove an included dish, a running total, and a required hall
+
+**No migration** — `menuConfig` is a free-form JSON column, so the new
+`removedPackageItemIds` field needs no DDL and an old booking without it reads as
+an empty list.
+
+### Taking a dish off the table takes its price off the rate
+
+A table package is sold at a flat `ratePerPerson` covering everything in it. A
+guest who does not want one of those dishes should not pay for it, so each
+included dish now carries a **Remove** button showing what it saves, and the
+per-person rate drops by that dish's own menu price.
+
+`effectiveRatePerPerson()` ([apps/web/src/utils/tablePricing.ts](apps/web/src/utils/tablePricing.ts)) is the only copy of
+that arithmetic, because **four screens have to agree on it**: the kiosk's
+running total, the Summary's pricing block, the exported PDF and the Events page
+rebuilding an old booking. The last two recompute from the stored `menuConfig`
+rather than from anything the tablet sent, so a second copy would quote a
+different figure on the invoice than the guest agreed to.
+
+Rules worth knowing:
+
+- **Floored at zero.** A package is normally priced *below* the sum of its dishes
+  — that is the point of a package — so removing enough of them would otherwise
+  turn the rate negative and hand the guest money.
+- **Keyed on the package ITEM, not the dish.** The same dish can sit in two
+  slots; removing one is not removing both.
+- Removing a dish **drops any free swap made on that slot**, and hides the swap
+  button: choosing a replacement for a dish nobody is serving prices nothing.
+- The card is **dimmed and struck through, not hidden** — the guest has to see
+  what they took off in order to put it back.
+- The removal is **cleared when the table package changes** (the ids belong to
+  one package), and a removed dish is **left out of the PDF**: it has been
+  deducted, so listing it would tell the kitchen to cook something unpaid for.
+- The **children's table does not offer it** — shared component, separate rate.
+
+Verified by driving the real store and the real export builder end to end:
+
+| action | rate / person | × 100 guests |
+|---|---|---|
+| start | 250 000 | 25 000 000 |
+| − Achichuk (30 000) | 220 000 | 22 000 000 |
+| − Somsa (12 000) | 208 000 | 20 800 000 |
+| + Achichuk back | 238 000 | 23 800 000 |
+| **rebuilt from the stored config** | **208 000** | **20 800 000** |
+
+### A running total beside the music toggle
+
+`RunningTotal` — fixed at `bottom: calc(84px + safe-area); right: 82`, sharing
+the music toggle's row (the toggle is 52px at `right: 18`) and clearing the
+"View summary" bar. It shows the per-guest price and the order total, and moves
+with every dish added or removed. Every price on this page used to live a page
+away on the Summary, so a guest choosing a premium main or dropping a salad could
+not see what it did until they had finished.
+
+It appears only once a table is chosen (before that there is no rate), and the
+**total half is dropped when the head count is zero** — reachable since §41, and
+a "total" equal to the per-guest figure would be a lie rather than a blank.
+
+### The hall and the table package are required — in the kiosk only
+
+An event with no hall is not schedulable and one with no package is not
+priceable. `confirmDisabled` on the Summary now requires both, and the kiosk's
+**"View summary" button is disabled until a hall is chosen**, reading
+"Choose a room to continue" — the Summary has no hall picker (it is in the
+settings block on the menu page), so blocking only at Confirm would strand the
+guest a page away from the field they need.
+
+**The Events page is deliberately NOT gated.** Staff pencil a date in and fill
+the rest in later; a blank event is documented behaviour there and the API
+defaults every core field.
+
+**After deploying:**
+
+1. Pick a table, then Remove an included dish → the card dims and strikes
+   through, and the panel's per-guest figure drops by that dish's price.
+2. Put it back → the figure returns exactly.
+3. Remove several, confirm the booking, then download the PDF from the **Events**
+   page → the removed dishes are absent and the price matches what the kiosk
+   showed.
+4. Reopen that event via "Change Menu" → the removals are still ticked.
+5. Switch to a different table package → the removals are cleared.
+6. Clear the hall → "View summary" is disabled and says so. Confirm on the
+   Summary is disabled too, naming what is missing.
+7. Create an event on the **Events** page with no hall and no table → still
+   allowed.

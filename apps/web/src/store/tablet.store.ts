@@ -32,6 +32,10 @@ type SelectionState = {
   selectedThirdCourseIds: string[];
   // Free replacements: included package-item id → chosen FREE menu-item id.
   replacements: Record<string, string>;
+  // Included package items the guest has taken OFF the table. Their price comes
+  // off the per-person rate (see utils/tablePricing.ts), so this is priced state
+  // and not only a display filter.
+  removedPackageItemIds: string[];
   // Additional paid restaurant services the guest picked on the Summary page.
   selectedExtraServiceIds: string[];
   guestCount: number;
@@ -65,6 +69,7 @@ type SelectionState = {
   toggleThirdCourse: (menuItemId: string) => void;
   toggleHotAppetizer: (menuItemId: string, max?: number) => void;
   setReplacement: (packageItemId: string, menuItemId: string | null) => void;
+  toggleRemovedPackageItem: (packageItemId: string) => void;
   toggleExtraService: (serviceId: string) => void;
   setChildrenTableSelected: (selected: boolean) => void;
   setChildrenCount: (count: number) => void;
@@ -96,6 +101,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
   selectedSecondCourseIds: [],
   selectedThirdCourseIds: [],
   replacements: {},
+  removedPackageItemIds: [],
   selectedExtraServiceIds: [],
   guestCount: 0,
   editingEventId: undefined,
@@ -133,6 +139,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
       replacements: {},
+      removedPackageItemIds: [],
       selectedExtraServiceIds: [],
       // Reset the children's-table add-on whenever the main table changes.
       childrenTableSelected: false,
@@ -175,6 +182,22 @@ export const useTabletStore = create<SelectionState>((set) => ({
       if (menuItemId === null) delete next[packageItemId];
       else next[packageItemId] = menuItemId;
       return { replacements: next };
+    });
+  },
+  // Taking a dish off the table, or putting it back. Removing also drops any
+  // free swap made on that slot: the swap is a choice about a dish that is no
+  // longer being served, and leaving it would price a replacement for nothing.
+  toggleRemovedPackageItem: (packageItemId) => {
+    set((state) => {
+      const removing = !state.removedPackageItemIds.includes(packageItemId);
+      const replacements = { ...state.replacements };
+      if (removing) delete replacements[packageItemId];
+      return {
+        removedPackageItemIds: removing
+          ? [...state.removedPackageItemIds, packageItemId]
+          : state.removedPackageItemIds.filter((id) => id !== packageItemId),
+        replacements,
+      };
     });
   },
   toggleExtraService: (serviceId) => {
@@ -285,6 +308,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedSecondCourseIds: cfg?.secondCourseIds ?? [],
       selectedThirdCourseIds: cfg?.thirdCourseIds ?? [],
       replacements: cfg?.replacements ?? {},
+      removedPackageItemIds: cfg?.removedPackageItemIds ?? [],
       selectedItems: cfg?.extras ?? {},
       selectedExtraServiceIds: cfg?.extraServiceIds ?? [],
       // Children's table.
@@ -307,6 +331,7 @@ export const useTabletStore = create<SelectionState>((set) => ({
       selectedSecondCourseIds: [],
       selectedThirdCourseIds: [],
       replacements: {},
+      removedPackageItemIds: [],
       selectedExtraServiceIds: [],
       guestCount: 0,
       editingEventId: undefined,

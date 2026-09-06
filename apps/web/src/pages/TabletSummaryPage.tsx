@@ -197,7 +197,7 @@ export const TabletSummaryPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurantId') ?? '';
-  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements,
+  const { selectedItems, selectedHallId, selectedTableCategoryId, guestCount, replacements, removedPackageItemIds,
     childrenTableSelected, childrenCount, childReplacements,
     selectedHotAppetizerIds, childHotAppetizerIds,
     selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
@@ -298,14 +298,19 @@ export const TabletSummaryPage = () => {
     return out;
   }, [selectedItems, guestCount]);
 
-  const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount);
+  const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount, removedPackageItemIds);
   // Who the booking is for and when it is — nothing else. The guest count used
   // to be required here too, which blocked the one thing the rest of the system
   // explicitly allows: taking a booking before the head count is known (the API
   // defaults it to 0, and the Events page creates an entirely blank event for
   // later editing). A figure the restaurant does not have yet is not a figure
   // worth inventing to get past a button.
-  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime;
+  // The hall and the table package are required: an event with neither is not
+  // schedulable (nothing to reserve) and not priceable (the package IS the
+  // price). This is the kiosk booking flow only — the Events page still creates
+  // a blank event for staff to fill in later.
+  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime
+    || !selectedHallId || !selectedTableCategoryId;
 
   // The export lists the dishes that make up the table: the non-course included
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
@@ -328,10 +333,14 @@ export const TabletSummaryPage = () => {
     secondIds: string[],
     thirdIds: string[],
     hotAppetizerIds: string[],
+    removed: string[] = [],
   ) => {
     // Fixed included dishes (salads, appetizers, …), with free swaps applied.
+    // Dishes the guest took off the table are gone from the document too — they
+    // have already been deducted from the price, so listing them would tell the
+    // kitchen to cook something nobody is paying for.
     const included = packageItems
-      .filter((pi) => !COURSE_CATEGORIES.includes(pi.menuItem.category))
+      .filter((pi) => !COURSE_CATEGORIES.includes(pi.menuItem.category) && !removed.includes(pi.id))
       .map((pi) => {
         const swapId = swaps[pi.id];
         const dish = swapId ? ((menuItems ?? []).find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
@@ -356,6 +365,7 @@ export const TabletSummaryPage = () => {
       selectedTableCategory?.packageItems ?? [], replacements,
       selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
       selectedHotAppetizerIds,
+      removedPackageItemIds,
     );
 
   // Ad-hoc discount entered here on the Summary page (not stored on the table category).
@@ -451,6 +461,7 @@ export const TabletSummaryPage = () => {
     secondCourseIds: selectedSecondCourseIds,
     thirdCourseIds: selectedThirdCourseIds,
     replacements,
+    removedPackageItemIds,
     childHotAppetizerIds: childrenActive ? childHotAppetizerIds : [],
     childFirstCourseId: childrenActive ? childFirstCourseId : undefined,
     childSecondCourseIds: childrenActive ? childSecondCourseIds : [],
@@ -1161,6 +1172,13 @@ export const TabletSummaryPage = () => {
                 style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}>
                 {isSubmitting ? t('submitting') : t('confirm')}
               </button>
+
+              {/* Neither can be chosen from this page, so say where to go. */}
+              {(!selectedHallId || !selectedTableCategoryId) && (
+                <p className="text-center text-xs" style={{ color: '#fca5a5' }}>
+                  {!selectedHallId ? t('select_room_required') : t('choose_table_category')}
+                </p>
+              )}
 
               {submitError && (
                 <p className="text-center text-xs" style={{ color: '#fca5a5' }}>{submitError}</p>

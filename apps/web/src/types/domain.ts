@@ -31,6 +31,9 @@ export type EventMenuConfig = {
   secondCourseIds: string[];
   thirdCourseIds: string[];
   replacements: Record<string, string>;
+  // Included package items the guest took off the table. Their price comes off
+  // the per-person rate — see utils/tablePricing.ts.
+  removedPackageItemIds?: string[];
   childHotAppetizerIds?: string[];
   childFirstCourseId?: string;
   childSecondCourseIds: string[];

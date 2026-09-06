@@ -1,5 +1,6 @@
 import type { Event, MenuItem, TableCategory, TableCategoryPackageItem, Hall } from '../types/domain';
 import type { Locale, translate } from './translate';
+import { effectiveRatePerPerson } from './tablePricing';
 
 type TranslateFn = (key: Parameters<typeof translate>[0]) => string;
 
@@ -20,10 +21,11 @@ function buildTableDishes(
   hotAppetizerIds: string[],
   menuItems: MenuItem[],
   t: TranslateFn,
+  removed: string[] = [],
 ): DishRow[] {
   const label = (category: string) => t(category.toLowerCase() as Parameters<typeof translate>[0]);
   const included = packageItems
-    .filter((pi) => !COURSE_CATEGORIES.includes(pi.menuItem.category))
+    .filter((pi) => !COURSE_CATEGORIES.includes(pi.menuItem.category) && !removed.includes(pi.id))
     .map((pi) => {
       const swapId = swaps[pi.id];
       const dish = swapId ? (menuItems.find((m) => m.id === swapId) ?? pi.menuItem) : pi.menuItem;
@@ -76,6 +78,7 @@ export function buildEventExportPayload(
         cfg?.firstCourseId, cfg?.secondCourseIds ?? [], cfg?.thirdCourseIds ?? [],
         cfg?.hotAppetizerIds ?? [],
         menuItems, t,
+        cfg?.removedPackageItemIds ?? [],
       )
     : [];
 
@@ -83,7 +86,10 @@ export function buildEventExportPayload(
   const menuSubtotalCents = menuItems.reduce(
     (sum, item) => sum + item.priceCents * (selectedItems[item.id] ?? 0), 0,
   );
-  const tableRateCents = tableCategory ? tableCategory.ratePerPerson * guestCount : 0;
+  // Dishes the guest took off the table came off the rate when they booked, so
+  // the rebuilt document has to price it the same way — see utils/tablePricing.
+  const ratePerPerson = effectiveRatePerPerson(tableCategory, cfg?.removedPackageItemIds ?? []);
+  const tableRateCents = tableCategory ? ratePerPerson * guestCount : 0;
   const subtotalCents = menuSubtotalCents + tableRateCents;
   const perGuestCents = guestCount > 0 ? Math.round(subtotalCents / guestCount) : subtotalCents;
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { MenuItemCard } from '../components/menu/MenuItemCard';
@@ -14,6 +14,7 @@ import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
 import { tableCategoryLabel, tableCategoryPrice } from '../utils/tableCategoryLabel';
 import { soleHallId } from '../utils/soleHall';
+import { usePriceCalculator } from '../hooks/usePriceCalculator';
 import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTabletMusicStarted, pauseTabletMusic, resumeTabletMusic } from '../utils/tabletMusic';
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { ParticleField, type ParticleKind } from '../blocks/ParticleField';
@@ -1174,7 +1175,7 @@ function ExtraReplaceModal({
 
 function IncludedDishesSection({
   tableCategory, menuItems, t, locale, onLightbox, card = false, showName = true,
-  replacements, onReplacement,
+  replacements, onReplacement, removedIds = [], onToggleRemoved,
 }: {
   tableCategory: TableCategory;
   menuItems: MenuItem[];
@@ -1185,6 +1186,10 @@ function IncludedDishesSection({
   showName?: boolean;
   replacements: Record<string, string>;
   onReplacement: (packageItemId: string, menuItemId: string | null) => void;
+  // Taking a dish off the table takes its price off the per-person rate. Optional:
+  // the children's table does not offer it, since its own rate is separate.
+  removedIds?: string[];
+  onToggleRemoved?: (packageItemId: string) => void;
 }) {
   const [editingPiId, setEditingPiId] = useState<string | null>(null);
   const includedItems = (tableCategory.packageItems ?? []).filter(
@@ -1261,10 +1266,18 @@ function IncludedDishesSection({
         const chosenId = replacements[pi.id];
         const displayItem = chosenId ? ((menuItems ?? []).find((m) => m.id === chosenId) ?? pi.menuItem) : pi.menuItem;
         const isSwapped = displayItem.id !== pi.menuItem.id;
+        const removed = removedIds.includes(pi.id);
         return (
           <div key={pi.id}
             className="group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg tablet-fade-up"
-            style={{ position: 'relative', height: '100%', animationDelay: `${i * 50}ms`, background: 'rgba(255,255,255,0.06)', border: `1px solid ${isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`, ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
+            style={{ position: 'relative', height: '100%', animationDelay: `${i * 50}ms`,
+              background: 'rgba(255,255,255,0.06)',
+              border: `1px solid ${removed ? 'rgba(255,255,255,0.10)' : isSwapped ? 'rgba(59,130,246,0.45)' : 'rgba(255,255,255,0.12)'}`,
+              // Dimmed rather than hidden: the guest has to see what they took
+              // off in order to put it back, and to recognise the deduction on
+              // the running total.
+              opacity: removed ? 0.45 : 1,
+              ...(fixedWidth ? { width: fixedWidth, flexShrink: 0 } : {}) }}>
             {displayItem.isBestseller && <BestsellerBadge t={t} />}
             {displayItem.photoUrl ? (
               <button type="button"
@@ -1282,8 +1295,11 @@ function IncludedDishesSection({
               </div>
             )}
             <div className="flex flex-1 flex-col p-2.5">
-              <p className="text-sm font-semibold leading-snug text-white">{dishName(displayItem, locale)}</p>
-              {freeAlts.length > 0 && (
+              <p className="text-sm font-semibold leading-snug text-white"
+                style={removed ? { textDecoration: 'line-through', color: 'rgba(255,255,255,0.6)' } : undefined}>
+                {dishName(displayItem, locale)}
+              </p>
+              {freeAlts.length > 0 && !removed && (
                 <button type="button" onClick={() => setEditingPiId(pi.id)}
                   className="mt-auto pt-2.5"
                   style={{
@@ -1298,6 +1314,29 @@ function IncludedDishesSection({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   {t('edit')}
+                </button>
+              )}
+              {/* Taking the dish off the table, with what that saves stated on
+                  the button — the deduction is the reason to press it. */}
+              {onToggleRemoved && (
+                <button type="button" onClick={() => onToggleRemoved(pi.id)}
+                  className={freeAlts.length > 0 && !removed ? 'mt-2' : 'mt-auto pt-2.5'}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+                    width: '100%', padding: '7px 10px', borderRadius: 9, cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
+                    color: removed ? 'var(--rg-accent)' : 'rgba(255,255,255,0.7)',
+                    background: removed ? 'rgba(var(--rg-accent-rgb),0.12)' : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${removed ? 'rgba(var(--rg-accent-rgb),0.4)' : 'rgba(255,255,255,0.18)'}`,
+                  }}>
+                  {/* The price must survive on a 150px card even where the
+                      label is long ("Olib tashlash"), so the label yields. */}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {removed ? t('restore_dish') : t('remove_dish')}
+                  </span>
+                  <span style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    {removed ? '+' : '\u2212'}{formatSum(pi.menuItem.priceCents)}
+                  </span>
                 </button>
               )}
             </div>
@@ -1674,6 +1713,62 @@ function SelectedDishesBar({
 }
 
 // Fixed bottom-right button to toggle the kiosk background music on/off.
+/**
+ * The running total, parked beside the music toggle at the foot of the screen.
+ *
+ * Every price on this page was previously only visible on the Summary, a page
+ * away: a guest picking a premium main or taking a salad off the table had no
+ * way to see what it did until they had finished choosing. It is fixed rather
+ * than in the flow because that is the whole point — it has to be readable while
+ * the guest is scrolling through dishes, which is when the figure changes.
+ */
+function RunningTotal({ perGuestCents, totalCents, guestCount, t }: {
+  perGuestCents: number;
+  totalCents: number;
+  guestCount: number;
+  t: TFn;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      style={{
+        // Same row as the music toggle, which is 52px wide at right: 18.
+        position: 'fixed', bottom: 'calc(84px + env(safe-area-inset-bottom))', right: 82, zIndex: 61,
+        padding: '9px 14px', borderRadius: 14,
+        background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(var(--rg-accent-rgb),0.45)',
+        boxShadow: '0 6px 22px rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', gap: 14,
+        maxWidth: 'calc(100vw - 110px)',
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
+          {t('price_per_guest')}
+        </p>
+        <p style={{ margin: '1px 0 0', fontSize: 15, fontWeight: 800, color: 'var(--rg-accent)', whiteSpace: 'nowrap' }}>
+          {formatSum(perGuestCents)}
+        </p>
+      </div>
+      {/* The total is only a total when there is a head count to multiply by;
+          with none entered it would just repeat the per-guest figure. */}
+      {guestCount > 0 && (
+        <>
+          <span style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.14)' }} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
+              {t('total')} · {guestCount}
+            </p>
+            <p style={{ margin: '1px 0 0', fontSize: 15, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap' }}>
+              {formatSum(totalCents)}
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TabletMusicToggle() {
   const [playing, setPlaying] = useState(isTabletMusicStarted());
   const toggle = () => {
@@ -1716,6 +1811,7 @@ export const TabletMenuPage = () => {
     selectedHotAppetizerIds, selectedFirstCourseId, selectedSecondCourseIds, selectedThirdCourseIds,
     setQuantity, setHall, setTableCategory, toggleHotAppetizer, setFirstCourse, toggleSecondCourse, toggleThirdCourse,
     replacements, setReplacement,
+    removedPackageItemIds, toggleRemovedPackageItem,
     setGuestCount, locale, setLocale,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
@@ -1806,6 +1902,21 @@ export const TabletMenuPage = () => {
   const paidSelectedIds = Object.keys(selectedItems).filter((id) => (selectedItems[id] ?? 0) > 0);
   const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : 1);
 
+  // The running total, shown at the foot of the screen while the guest chooses.
+  // Extras are served to every guest, so each is priced × the head count — the
+  // same rule the Summary and the exports use. With no head count entered the
+  // table rate is still a per-person figure, so the panel shows that alone.
+  const pricedSelections = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const id of Object.keys(selectedItems)) {
+      if ((selectedItems[id] ?? 0) > 0) out[id] = Math.max(guestCount, 1);
+    }
+    return out;
+  }, [selectedItems, guestCount]);
+  const pricing = usePriceCalculator(
+    menuItems ?? [], pricedSelections, selectedTableCategory, Math.max(guestCount, 1), removedPackageItemIds,
+  );
+
   // Single active children's table (if any) — shown as an optional add-on table.
   const childrenTableCategory = tableCategories?.find((tc) => tc.isActive && tc.tableType === 'CHILDREN');
 
@@ -1814,6 +1925,14 @@ export const TabletMenuPage = () => {
       style={tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties}>
       {/* Bottom-right music on/off toggle, like the catering site. */}
       {welcomeShown && <TabletMusicToggle />}
+      {welcomeShown && selectedTableCategory && (
+        <RunningTotal
+          perGuestCents={pricing.perGuestCents}
+          totalCents={pricing.perGuestCents * guestCount}
+          guestCount={guestCount}
+          t={t}
+        />
+      )}
       {!welcomeShown && (
         <div
           style={{
@@ -2133,6 +2252,7 @@ export const TabletMenuPage = () => {
                 tableCategory={selectedTableCategory} menuItems={menuItems ?? []} t={t} locale={locale}
                 onLightbox={setLightboxSrc} card
                 replacements={replacements} onReplacement={setReplacement}
+                removedIds={removedPackageItemIds} onToggleRemoved={toggleRemovedPackageItem}
               />
             )}
 
@@ -2252,10 +2372,17 @@ export const TabletMenuPage = () => {
             borderTop: '1px solid rgba(255,255,255,0.1)',
           }}>
           <div className="mx-auto max-w-7xl">
+            {/* The hall is required to book, and the Summary has no hall
+                picker — it is chosen in the settings block at the top of this
+                page. Blocking here rather than only at Confirm means the guest
+                is stopped where the field they need is, not a page later. */}
             <button type="button" onClick={() => navigate('/tablet/summary')}
-              className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99]"
-              style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)' }}>
-              {t('view_summary')} →
+              disabled={!selectedHallId}
+              className="w-full rounded-xl py-3 text-sm font-bold transition-all duration-200 active:scale-[0.99] disabled:cursor-not-allowed"
+              style={selectedHallId
+                ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)', boxShadow: '0 6px 20px rgba(var(--rg-accent-rgb),0.35)' }
+                : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.16)' }}>
+              {selectedHallId ? `${t('view_summary')} →` : t('select_room_required')}
             </button>
           </div>
         </div>
