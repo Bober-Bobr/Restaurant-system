@@ -51,6 +51,7 @@ export class MenuRepository {
     const data: Record<string, string> = {};
     if (payload.banquet) data.excludedCategoriesBanquet = JSON.stringify(payload.banquet);
     if (payload.catering) data.excludedCategoriesCatering = JSON.stringify(payload.catering);
+    if (payload.smallBanquet) data.excludedCategoriesSmallBanquet = JSON.stringify(payload.smallBanquet);
     if (Object.keys(data).length > 0) {
       await prisma.restaurant.update({ where: { id: restaurantId }, data });
     }

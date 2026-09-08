@@ -3,6 +3,7 @@ import { MenuCategory } from '@prisma/client';
 import { EventRepository } from '../events/event.repository.js';
 import { MenuRepository, type I18nMap } from './menu.repository.js';
 import type { MenuScope } from '../../utils/excludedCategories.js';
+import type { Section } from '../../utils/section.js';
 
 export class MenuService {
   constructor(
@@ -93,9 +94,11 @@ export class MenuService {
     await this.menuRepository.deleteById(menuItemId);
   }
 
-  async assignMenuItemToEvent(restaurantId: string, eventId: number, payload: { menuItemId: string; quantity: number }) {
+  // Section-scoped like every other event read: a supervisor attaching a dish
+  // must not be able to reach a banquet booking by sending its number.
+  async assignMenuItemToEvent(restaurantId: string, section: Section, eventId: number, payload: { menuItemId: string; quantity: number }) {
     const [event, menuItem] = await Promise.all([
-      this.eventRepository.getByNumber(restaurantId, eventId),
+      this.eventRepository.getByNumber(restaurantId, section, eventId),
       this.menuRepository.getById(payload.menuItemId)
     ]);
 

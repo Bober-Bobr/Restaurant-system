@@ -138,24 +138,24 @@ describe('putting a dish on an event\'s menu', () => {
   it('snapshots the price at the moment it is chosen', async () => {
     // Same reasoning as an order line: what was agreed must not move when the
     // restaurant edits the menu later.
-    await harness.service.assignMenuItemToEvent('r1', 42, { menuItemId: 'm1', quantity: 3 });
+    await harness.service.assignMenuItemToEvent('r1', 'BANQUET', 42, { menuItemId: 'm1', quantity: 3 });
     expect(harness.menuRepo.upsertSelection).toHaveBeenCalledWith('event-cuid', 'm1', 3, 4500000);
   });
 
   it('resolves the event by NUMBER inside the caller\'s restaurant', async () => {
     // Event numbers are per-restaurant, so the pair is what identifies one.
-    await harness.service.assignMenuItemToEvent('r1', 42, { menuItemId: 'm1', quantity: 1 });
-    expect(harness.eventRepo.getByNumber).toHaveBeenCalledWith('r1', 42);
+    await harness.service.assignMenuItemToEvent('r1', 'BANQUET', 42, { menuItemId: 'm1', quantity: 1 });
+    expect(harness.eventRepo.getByNumber).toHaveBeenCalledWith('r1', 'BANQUET', 42);
   });
 
   it('404s when the event is not this restaurant\'s', async () => {
     harness.eventRepo.getByNumber.mockResolvedValue(null as never);
-    expect(await statusOf(() => harness.service.assignMenuItemToEvent('r1', 42, { menuItemId: 'm1', quantity: 1 }))).toBe(404);
+    expect(await statusOf(() => harness.service.assignMenuItemToEvent('r1', 'BANQUET', 42, { menuItemId: 'm1', quantity: 1 }))).toBe(404);
   });
 
   it('refuses a dish that has been deactivated', async () => {
     harness.menuRepo.getById.mockResolvedValue({ ...DISH, isActive: false } as never);
-    expect(await statusOf(() => harness.service.assignMenuItemToEvent('r1', 42, { menuItemId: 'm1', quantity: 1 }))).toBe(404);
+    expect(await statusOf(() => harness.service.assignMenuItemToEvent('r1', 'BANQUET', 42, { menuItemId: 'm1', quantity: 1 }))).toBe(404);
   });
 
   it('requires a positive quantity', () => {

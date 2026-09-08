@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DEFAULT_SECTION, type Section } from '../utils/section';
 import type { ExtraService } from '../types/domain';
 
 const publicExtraServicesUrl = (): string => {
@@ -7,8 +8,8 @@ const publicExtraServicesUrl = (): string => {
 };
 
 export const publicExtraServiceService = {
-  async listActive(restaurantId: string): Promise<ExtraService[]> {
-    const { data } = await axios.get<ExtraService[]>(publicExtraServicesUrl(), { params: { restaurantId } });
+  async listActive(restaurantId: string, section: Section = DEFAULT_SECTION): Promise<ExtraService[]> {
+    const { data } = await axios.get<ExtraService[]>(publicExtraServicesUrl(), { params: { restaurantId, section } });
     return data;
   }
 };

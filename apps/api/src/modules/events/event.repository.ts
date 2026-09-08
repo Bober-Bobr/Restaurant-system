@@ -1,5 +1,6 @@
 import { type EventStatus, type EventType, type Region, Prisma } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
+import type { Section } from '../../utils/section.js';
 
 export type CreateEventData = {
   customerName: string;
@@ -47,28 +48,42 @@ const eventInclude = {
   payments: { orderBy: { createdAt: 'asc' } }
 } as const;
 
+/**
+ * Events belong to a restaurant AND to a section — Banquet bookings and Small
+ * Banquets bookings are separate books. Every read is filtered by both and every
+ * write stamps the section.
+ *
+ * `eventNumber` is deliberately NOT re-sequenced per section: it stays unique
+ * across the whole restaurant, so the number staff say out loud identifies one
+ * booking in that venue. Two bookings both called "13" in one restaurant — one
+ * per section — is an operational hazard, and the Chief Admin sees both books.
+ */
 export class EventRepository {
   // `params` undefined means every event this restaurant has, which is what all
   // six screens listing events actually need: they filter by month, map onto a
   // calendar, total invoices or count badges in the browser, and none of them
   // has a pager. A default page here returned the twenty EARLIEST events and
   // hid every booking made since — see getOptionalPagination.
-  async list(restaurantId: string, params?: { skip: number; take: number }) {
+  async list(restaurantId: string, section: Section, params?: { skip: number; take: number }) {
     return prisma.event.findMany({
       ...(params ?? {}),
-      where: { restaurantId },
+      where: { restaurantId, section },
       orderBy: { eventDate: 'asc' },
       include: eventInclude
     });
   }
 
-  async create(restaurantId: string, payload: CreateEventData) {
+  async create(restaurantId: string, section: Section, payload: CreateEventData) {
     // The next number is read, then written, so two people booking at the same
     // desk in the same second can both compute it. Postgres refuses the second
     // insert (the number is unique within the restaurant) — take the next one
     // and try again rather than showing a receptionist a failure they cannot
     // act on. Bounded, so a genuinely broken constraint still surfaces.
     for (let attempt = 0; attempt < CREATE_RETRIES; attempt += 1) {
+      // Across the WHOLE restaurant, not just this section — see the note on
+      // the class. The unique constraint is [restaurantId, eventNumber], so
+      // counting within one section would collide with the other's numbers on
+      // every insert and burn all the retries below.
       const lastEvent = await prisma.event.findFirst({
         where: { restaurantId },
         orderBy: { eventNumber: 'desc' }
@@ -76,7 +91,7 @@ export class EventRepository {
       const nextEventNumber = lastEvent ? lastEvent.eventNumber + 1 : 1;
       try {
         return await prisma.event.create({
-          data: { ...payload, restaurantId, eventNumber: nextEventNumber },
+          data: { ...payload, restaurantId, section, eventNumber: nextEventNumber },
           include: eventInclude
         });
       } catch (error) {
@@ -87,20 +102,20 @@ export class EventRepository {
     throw new Error('Failed to allocate an event number');
   }
 
-  async updateByNumber(restaurantId: string, eventNumber: number, payload: Prisma.EventUncheckedUpdateManyInput) {
-    await prisma.event.updateMany({ where: { eventNumber, restaurantId }, data: payload });
-    return prisma.event.findFirst({ where: { eventNumber, restaurantId }, include: eventInclude });
+  async updateByNumber(restaurantId: string, section: Section, eventNumber: number, payload: Prisma.EventUncheckedUpdateManyInput) {
+    await prisma.event.updateMany({ where: { eventNumber, restaurantId, section }, data: payload });
+    return prisma.event.findFirst({ where: { eventNumber, restaurantId, section }, include: eventInclude });
   }
 
-  async getByNumber(restaurantId: string, eventNumber: number) {
+  async getByNumber(restaurantId: string, section: Section, eventNumber: number) {
     return prisma.event.findFirst({
-      where: { eventNumber, restaurantId },
+      where: { eventNumber, restaurantId, section },
       include: eventInclude
     });
   }
 
-  async deleteByNumber(restaurantId: string, eventNumber: number) {
-    return prisma.event.deleteMany({ where: { eventNumber, restaurantId } });
+  async deleteByNumber(restaurantId: string, section: Section, eventNumber: number) {
+    return prisma.event.deleteMany({ where: { eventNumber, restaurantId, section } });
   }
 
   // ── Partial (installment) payments towards the event invoice ──

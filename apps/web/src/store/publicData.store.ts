@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { useAuthStore } from './auth.store';
+import { sectionOfRole } from '../utils/section';
 import { publicHallService } from '../services/publicHall.service';
 import { publicMenuService } from '../services/publicMenu.service';
 import { publicTableCategoryService } from '../services/publicTableCategory.service';
@@ -58,12 +60,24 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
     set({ isLoading: true, error: undefined });
 
     try {
+      // Which SECTION's furniture the kiosk shows — Banquet or Small Banquets.
+      // Derived here from the signed-in role rather than passed in by the two
+      // pages that call this: there is exactly one right answer for a given
+      // session, and a parameter is a thing one of the two call sites
+      // eventually forgets. The kiosk requires a session, so there is always a
+      // role to read; `sectionOfRole` falls back to Banquet regardless.
+      //
+      // The menu SCOPE moves with it (see utils/excludedCategories on the API):
+      // each section reads the shared dish table through its own list of
+      // switched-off categories.
+      const section = sectionOfRole(useAuthStore.getState().role);
+      const menuScope = section === 'SMALL_BANQUET' ? 'smallBanquet' : 'banquet';
       const [menuItems, halls, tableCategories, restaurant, extraServices] = await Promise.all([
-        publicMenuService.listActive(restaurantId, 'banquet'),
-        publicHallService.listActive(restaurantId),
-        publicTableCategoryService.listActive(restaurantId),
+        publicMenuService.listActive(restaurantId, menuScope),
+        publicHallService.listActive(restaurantId, section),
+        publicTableCategoryService.listActive(restaurantId, section),
         publicRestaurantService.get(restaurantId),
-        publicExtraServiceService.listActive(restaurantId).catch(() => [] as ExtraService[]),
+        publicExtraServiceService.listActive(restaurantId, section).catch(() => [] as ExtraService[]),
       ]);
 
       set({

@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { MenuRepository } from '../menu/menu.repository.js';
 import { resolveMenuScope } from '../../utils/excludedCategories.js';
+import { DEFAULT_SECTION, isSection, type Section } from '../../utils/section.js';
 import { HallRepository } from '../hall/hall.repository.js';
 import { ExtraServiceRepository } from '../extraService/extraService.repository.js';
 import { TableCategoryRepository } from '../tableCategory/tableCategory.repository.js';
@@ -268,11 +269,25 @@ router.get('/menu-items', async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
+// The kiosk loads halls, packages and extra services through these three
+// unauthenticated endpoints, and each SECTION has its own set. Unlike the
+// authenticated routes — where the section comes from the caller's role and a
+// crafted request cannot cross it — there is no role here to derive it from, so
+// the kiosk says which section it is running as.
+//
+// That is not a security boundary and is not pretending to be one: these three
+// lists are the restaurant's own public menu furniture, readable by anyone with
+// the restaurant id either way. It decides WHICH set a kiosk shows, and an
+// unrecognised or absent value falls back to Banquet so a bundle cached from
+// before this deploy keeps working.
+const sectionOf = (request: { query: Record<string, unknown> }): Section =>
+  isSection(request.query.section) ? request.query.section : DEFAULT_SECTION;
+
 router.get('/halls', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');
     if (!restaurantId) { response.json([]); return; }
-    response.json(await hallRepository.listActive(restaurantId));
+    response.json(await hallRepository.listActive(restaurantId, sectionOf(request)));
   } catch (error) { next(error); }
 });
 
@@ -280,7 +295,7 @@ router.get('/table-categories', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');
     if (!restaurantId) { response.json([]); return; }
-    response.json(await tableCategoryRepository.listActive(restaurantId));
+    response.json(await tableCategoryRepository.listActive(restaurantId, sectionOf(request)));
   } catch (error) { next(error); }
 });
 
@@ -289,7 +304,7 @@ router.get('/extra-services', async (request, response, next) => {
   try {
     const restaurantId = String(request.query.restaurantId ?? '');
     if (!restaurantId) { response.json([]); return; }
-    response.json(await extraServiceRepository.listActive(restaurantId));
+    response.json(await extraServiceRepository.listActive(restaurantId, sectionOf(request)));
   } catch (error) { next(error); }
 });
 

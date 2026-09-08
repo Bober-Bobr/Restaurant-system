@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
+import type { Section } from '../../utils/section.js';
 
 export type CreateTableCategoryData = {
   name: string;
@@ -26,51 +27,60 @@ const packageItemsInclude = {
   }
 } as const;
 
+/**
+ * Table packages belong to a restaurant AND to a section. They are the whole
+ * commercial difference between Banquet and Small Banquets — a package IS the
+ * price — so `section` is required on every read and write here rather than an
+ * optional filter a caller could omit.
+ */
 export class TableCategoryRepository {
-  async list(restaurantId: string, params?: { skip: number; take: number }) {
+  async list(restaurantId: string, section: Section, params?: { skip: number; take: number }) {
     return prisma.tableCategory.findMany({
       ...(params ?? {}),
-      where: { restaurantId },
+      where: { restaurantId, section },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude
     });
   }
 
-  async listActive(restaurantId: string) {
+  async listActive(restaurantId: string, section: Section) {
     return prisma.tableCategory.findMany({
-      where: { restaurantId, isActive: true },
+      where: { restaurantId, section, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude
     });
   }
 
-  async listAll(restaurantId: string) {
+  async listAll(restaurantId: string, section: Section) {
     return prisma.tableCategory.findMany({
-      where: { restaurantId },
+      where: { restaurantId, section },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: packageItemsInclude
     });
   }
 
-  async saveArrangement(restaurantId: string, order: { id: string; sortOrder: number }[]) {
+  // `updateMany` with the scope in the WHERE is what makes this safe: an id
+  // from the other section matches nothing and is silently skipped, rather than
+  // being reordered by a caller who cannot even see it.
+  async saveArrangement(restaurantId: string, section: Section, order: { id: string; sortOrder: number }[]) {
     await prisma.$transaction(
       order.map((item) =>
         prisma.tableCategory.updateMany({
-          where: { id: item.id, restaurantId },
+          where: { id: item.id, restaurantId, section },
           data: { sortOrder: item.sortOrder },
         })
       )
     );
   }
 
-  async count(restaurantId: string) {
-    return prisma.tableCategory.count({ where: { restaurantId } });
+  async count(restaurantId: string, section: Section) {
+    return prisma.tableCategory.count({ where: { restaurantId, section } });
   }
 
-  async create(restaurantId: string, payload: CreateTableCategoryData) {
+  async create(restaurantId: string, section: Section, payload: CreateTableCategoryData) {
     const { photos, ...rest } = payload;
     return prisma.tableCategory.create({
-      data: { ...rest, photos: photos ?? [], restaurantId },
+      data: { ...rest, photos: photos ?? [], restaurantId, section },
       include: packageItemsInclude
     });
   }
@@ -93,8 +103,8 @@ export class TableCategoryRepository {
     return prisma.tableCategory.findUnique({ where: { id }, include: packageItemsInclude });
   }
 
-  async getByName(restaurantId: string, name: string) {
-    return prisma.tableCategory.findFirst({ where: { restaurantId, name } });
+  async getByName(restaurantId: string, section: Section, name: string) {
+    return prisma.tableCategory.findFirst({ where: { restaurantId, section, name } });
   }
 
   async deleteById(id: string) {

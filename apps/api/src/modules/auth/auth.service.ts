@@ -24,6 +24,11 @@ export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null 
 // Roles that only exist because a restaurant bought the matching module. The
 // platform roles (CHIEF_ADMIN, MANAGER, OWNER, RESTAURANT_MANAGER, NFC_MAKER)
 // are not restaurant-scoped and are never gated here.
+//
+// SUPERVISOR is deliberately absent: Small Banquets ships without an entitlement
+// of its own, so there is no column to gate it on and inventing one silently
+// would lock the section behind a switch nobody was told to turn on. When the
+// section is sold separately this is the line that changes.
 const MODULE_BY_ROLE: Partial<Record<AdminRole, 'moduleBanquet' | 'moduleCatering'>> = {
   [AdminRole.ADMIN]: 'moduleBanquet',
   [AdminRole.EMPLOYEE]: 'moduleBanquet',
@@ -53,6 +58,18 @@ const FOOD_EMPLOYEE_MANAGERS: AdminRole[] = [
 
 export function canManageFoodEmployees(role: AdminRole): boolean {
   return FOOD_EMPLOYEE_MANAGERS.includes(role);
+}
+
+// A Small Banquets supervisor is created by the platform or by the restaurant's
+// owner, and by nobody else — a banquet ADMIN runs the other section and has no
+// business over this one. Same shape as the rule above, and enforced on the
+// create path AND the list path for the same reason: a banquet ADMIN sharing a
+// restaurant with a supervisor should not see the account at all, rather than
+// see one every action on it returns 403 for.
+const SUPERVISOR_MANAGERS: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.OWNER];
+
+export function canManageSupervisors(role: AdminRole): boolean {
+  return SUPERVISOR_MANAGERS.includes(role);
 }
 
 export class AuthService {
@@ -177,7 +194,7 @@ export class AuthService {
         payload.role === AdminRole.CHIEF_ADMIN ||
         payload.role === AdminRole.MANAGER
       ) {
-        throw createHttpError(403, 'Owners can only create Administrator, Food Admin, Restaurant Manager, Employee, or Kitchen accounts.');
+        throw createHttpError(403, 'Owners can only create Administrator, Supervisor, Food Admin, Restaurant Manager, Employee, or Kitchen accounts.');
       }
       // Any restaurant an owner assigns must be one they actually own.
       if (payload.restaurantId) {
@@ -190,10 +207,25 @@ export class AuthService {
       if (payload.role === AdminRole.RESTAURANT_MANAGER && !payload.restaurantId) {
         throw createHttpError(400, 'Select a restaurant for the manager.');
       }
+      // A supervisor runs one restaurant's Small Banquets section. Without a
+      // restaurant there is nothing for them to administer and every page would
+      // fail on `requireRestaurant` — better to refuse here than to mint an
+      // account that cannot do anything.
+      if (payload.role === AdminRole.SUPERVISOR && !payload.restaurantId) {
+        throw createHttpError(400, 'Select a restaurant for the supervisor.');
+      }
     }
     // Food Employees are the food-service product's own staff.
     if (payload.role === AdminRole.CATERING_EMPLOYEE && !canManageFoodEmployees(caller.role)) {
       throw createHttpError(403, 'Only the Owner, Chief Admin or Food Admin can create Food Employee accounts.');
+    }
+    // Small Banquets supervisors are created by the platform or the restaurant's
+    // owner, and by nobody else. Stated here rather than only in the two role
+    // dropdowns, because a dropdown is presentation and this is a permission —
+    // the ADMIN / CATERING_ADMIN branch below would refuse it anyway, and this
+    // gives the caller the actual reason instead of a generic list.
+    if (payload.role === AdminRole.SUPERVISOR && !canManageSupervisors(caller.role)) {
+      throw createHttpError(403, 'Only the Chief Admin or the restaurant Owner can create Supervisor accounts.');
     }
 
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
@@ -244,10 +276,11 @@ export class AuthService {
   // them, and a list they cannot act on is a list that invites 403s.
   async listUsersForRestaurant(restaurantId: string, callerRole?: AdminRole) {
     const users = await this.authRepository.listByRestaurant(restaurantId);
-    if (callerRole && !canManageFoodEmployees(callerRole)) {
-      return users.filter((user) => user.role !== AdminRole.CATERING_EMPLOYEE);
-    }
-    return users;
+    if (!callerRole) return users;
+    const hidden = new Set<AdminRole>();
+    if (!canManageFoodEmployees(callerRole)) hidden.add(AdminRole.CATERING_EMPLOYEE);
+    if (!canManageSupervisors(callerRole)) hidden.add(AdminRole.SUPERVISOR);
+    return hidden.size === 0 ? users : users.filter((user) => !hidden.has(user.role));
   }
 
   async resolveRestaurantId(userId: string, jwtRestaurantId: string | null): Promise<string | null> {

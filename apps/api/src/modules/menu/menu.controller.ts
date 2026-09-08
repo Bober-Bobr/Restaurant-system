@@ -4,14 +4,25 @@ import { eventIdSchema } from '../events/event.schema.js';
 import { arrangementSchema, assignSelectionSchema, createMenuItemSchema, menuItemIdSchema, settingsSchema, updateMenuItemSchema } from './menu.schema.js';
 import { MenuRepository } from './menu.repository.js';
 import { MenuService } from './menu.service.js';
-import { resolveMenuScope } from '../../utils/excludedCategories.js';
+import { resolveMenuScope, type MenuScope } from '../../utils/excludedCategories.js';
+import { DEFAULT_SECTION, type Section } from '../../utils/section.js';
 
 const menuService = new MenuService(new MenuRepository(), new EventRepository());
 
-// The authenticated menu list serves the banquet surfaces (the tablet's event
-// flow, the events pages); the catering arrangement screen asks for its own
-// product explicitly.
-const menuScopeOf = (request: Request) => resolveMenuScope(request.query.scope, 'banquet');
+const sectionOf = (request: Request) => request.section ?? DEFAULT_SECTION;
+
+// Each section reads the shared dish table through its OWN list of switched-off
+// categories, so the default scope follows the caller's section rather than
+// being fixed at 'banquet'. The catering arrangement screen still asks for its
+// own product explicitly, and an explicit `?scope=` always wins — this only
+// decides what a caller who named none meant.
+const SCOPE_BY_SECTION: Record<Section, MenuScope> = {
+  BANQUET: 'banquet',
+  SMALL_BANQUET: 'smallBanquet',
+};
+
+const menuScopeOf = (request: Request) =>
+  resolveMenuScope(request.query.scope, SCOPE_BY_SECTION[sectionOf(request)]);
 
 export class MenuController {
   async list(request: Request, response: Response) {
@@ -56,7 +67,7 @@ export class MenuController {
   async assignSelection(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
     const payload = assignSelectionSchema.parse(request.body);
-    const selection = await menuService.assignMenuItemToEvent(request.restaurantId!, eventId, payload);
+    const selection = await menuService.assignMenuItemToEvent(request.restaurantId!, sectionOf(request), eventId, payload);
     response.status(201).json(selection);
   }
 }

@@ -54,6 +54,10 @@ export const RESTAURANT_ROLES: readonly AdminRole[] = [
   'KITCHEN',
   'CATERING_ADMIN',
   'CATERING_EMPLOYEE',
+  // Runs one restaurant's Small Banquets section, so the restaurant's name is
+  // what the tab should say — and a supervisor is likely to have the banquet
+  // side open in another tab of the same browser.
+  'SUPERVISOR',
 ];
 
 export type TitleContext = {

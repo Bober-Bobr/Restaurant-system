@@ -3,7 +3,7 @@
  * switches off the categories it has no use for, so a read of the menu — and a
  * save of the exclusions — has to name one.
  */
-export type MenuScope = 'banquet' | 'catering';
+export type MenuScope = 'banquet' | 'catering' | 'smallBanquet';
 
 // Both lists, as the settings endpoint returns them.
 export type ExcludedCategories = Record<MenuScope, MenuItem['category'][]>;

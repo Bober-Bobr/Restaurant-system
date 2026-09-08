@@ -1276,3 +1276,133 @@
 @media (min-width: 800px) {
   .form-grid-4 { grid-template-columns: 1fr 1fr 1fr auto; }
 }
+
+/* ── Small Banquets (SUPERVISOR): the section's own identity ───────────────────
+   The third section of the product, at supervisor.v-menu.uz/<slug>. It runs the
+   SAME ~40 pages as the banquet admin app — that is the requirement — so it gets
+   its own look the way `.cadm-theme` does: by redeclaring every `--adm-*` token
+   and then restating the shared primitives, rather than by forking pages that
+   would immediately drift out of step with the originals.
+
+   It stays a DARK theme deliberately. The admin pages carry a few hundred
+   inline light-on-dark literals (`#f8fafc`, `rgba(226,232,240,…)`) that no token
+   reaches, so a light ground would have been illegible in dozens of places and
+   the fix would have churned the banquet product too. The identity therefore
+   comes from hue, geometry and surface language instead of from value:
+
+     · jade on a deep forest ground, against the banquet's gold on navy
+     · square corners and a left accent rail on cards, against lifted glass
+       panels with a lit top edge
+     · a tight uppercase grotesque for titles, against the display serif
+     · a fine diagonal weave instead of the drifting aurora blobs
+
+   Nothing here is a literal any page has to know about; a supervisor page is
+   byte-identical to its banquet counterpart. */
+.svr-theme {
+  --adm-accent: #4fd1a5;           /* jade */
+  --adm-accent-rgb: 79, 209, 165;
+  --adm-accent-soft: #7ee8c4;      /* hover / highlight */
+  --adm-accent-deep: #1f8f6d;      /* gradient foot */
+  --adm-accent-ink: #04120d;       /* text ON the accent */
+
+  --adm-bg: #0a1512;               /* deep forest ink */
+  --adm-bg-rgb: 10, 21, 18;
+  --adm-surface: rgba(19, 38, 32, 0.62);
+  --adm-surface-rgb: 19, 38, 32;
+  --adm-surface-solid: #132620;
+  --adm-line: rgba(180, 235, 214, 0.11);
+
+  --adm-text: #dcece5;
+  --adm-text-rgb: 220, 236, 229;
+  --adm-title: #f2fbf7;
+
+  --adm-cool: 44, 122, 168;        /* the secondary blob, unused here */
+}
+
+/* The ground: a fine 45° weave over the ink, and no drifting blobs. Still no
+   image request and no extra DOM, like `.adm-bg` itself. `overflow-x: clip` is
+   inherited from `.adm-bg` and must stay clip, never hidden — see
+   stickyAncestors.test.ts. */
+.svr-theme.adm-bg {
+  background:
+    repeating-linear-gradient(45deg, rgba(var(--adm-accent-rgb), 0.022) 0 1px, transparent 1px 9px),
+    radial-gradient(1200px 520px at 50% -10%, rgba(var(--adm-accent-rgb), 0.07), transparent 70%),
+    var(--adm-bg);
+}
+.svr-theme.adm-bg::before,
+.svr-theme.adm-bg::after { display: none; }
+
+/* Cards: squared off, flat, and marked by a rail down the leading edge instead
+   of the banquet card's lit top edge and deep shadow. The rail is a border, not
+   a ::before — 65 elements carry `.adm-card` and some own their pseudo-elements
+   already, which is the same reason the banquet treatment uses a box-shadow. */
+.svr-theme .adm-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-line);
+  border-left: 2px solid rgba(var(--adm-accent-rgb), 0.45);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.svr-theme .adm-card-lead { border-left-color: var(--adm-accent); }
+.svr-theme .adm-card-hover:hover {
+  border-color: rgba(var(--adm-accent-rgb), 0.4);
+  border-left-color: var(--adm-accent);
+  background: rgba(var(--adm-surface-rgb), 0.8);
+  box-shadow: none;
+}
+
+/* Titles: a tight uppercase grotesque, not the banquet's clipped-gradient
+   display serif. Flat colour, so there is no `background-clip: text` to fall
+   back from. */
+.svr-theme .adm-title {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--adm-title);
+}
+
+/* Section headings: closed by a rule beneath rather than opened by an accent
+   tick. `display` is left alone — the class sits on a mix of <p>/<h3>/<span>. */
+.svr-theme .adm-heading::before { display: none; }
+.svr-theme .adm-heading {
+  color: var(--adm-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(var(--adm-accent-rgb), 0.22);
+}
+
+/* Inputs: flat and squared, weighted on the bottom edge instead of recessed. */
+.svr-theme .adm-input {
+  background: rgba(var(--adm-surface-rgb), 0.7);
+  border: 1px solid var(--adm-line);
+  border-bottom: 2px solid rgba(var(--adm-accent-rgb), 0.28);
+  border-radius: 3px;
+  box-shadow: none;
+  color: var(--adm-text);
+}
+.svr-theme .adm-input:focus {
+  border-color: rgba(var(--adm-accent-rgb), 0.5);
+  border-bottom-color: var(--adm-accent);
+  box-shadow: 0 0 0 3px rgba(var(--adm-accent-rgb), 0.14);
+}
+.svr-theme .adm-input option { background: var(--adm-surface-solid); color: var(--adm-text); }
+
+/* Buttons, tables, badges and the masthead follow the same squared geometry. */
+.svr-theme .adm-btn-primary,
+.svr-theme .adm-btn-ghost,
+.svr-theme .adm-btn-danger { border-radius: 3px; }
+.svr-theme .adm-badge { border-radius: 3px; }
+.svr-theme .adm-empty { border-radius: 4px; }
+.svr-theme .adm-table thead th {
+  background: rgba(var(--adm-accent-rgb), 0.06);
+  border-bottom: 1px solid rgba(var(--adm-accent-rgb), 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.svr-theme .adm-topbar { border-bottom: 1px solid rgba(var(--adm-accent-rgb), 0.2); }
+.svr-theme .adm-topbar::after { display: none; }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type AdminRole = 'CHIEF_ADMIN' | 'MANAGER' | 'OWNER' | 'ADMIN' | 'CATERING_ADMIN' | 'RESTAURANT_MANAGER' | 'EMPLOYEE' | 'KITCHEN' | 'NFC_MAKER' | 'PERFORMER' | 'HOST' | 'CATERING_EMPLOYEE';
+export type AdminRole = 'CHIEF_ADMIN' | 'MANAGER' | 'OWNER' | 'ADMIN' | 'CATERING_ADMIN' | 'RESTAURANT_MANAGER' | 'EMPLOYEE' | 'KITCHEN' | 'NFC_MAKER' | 'PERFORMER' | 'HOST' | 'CATERING_EMPLOYEE' | 'SUPERVISOR';
 
 type AuthState = {
   accessToken: string | null;

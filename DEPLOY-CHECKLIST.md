@@ -2707,3 +2707,120 @@ cannot — and falling back to `payment_failed`.
    field.)
 6. Try to overpay → the refusal from §50 appears **as a message**, not as
    silence.
+
+---
+
+## §52 — Small Banquets: the third section (Part 1, the foundation)
+
+A new section of the v-menu product beside Banquet and General Dining, run by a
+new **SUPERVISOR** role at **`supervisor.v-menu.uz/<slug>`**. It offers the same
+pages and capabilities the banquet admin app does — including the Tablet and
+Summary pages and taking bookings — over **separate data**, in a look of its own.
+
+### What is separate, and what is not
+
+Separate: **halls, table packages, extra services and events**, plus the
+section's own list of switched-off dish categories. Shared: **the dishes
+themselves** — one `MenuItem` table, as before.
+
+Every one of those four models gained a `section` column (`BANQUET` |
+`SMALL_BANQUET`, defaulting to `BANQUET`), every query in those modules filters
+on it and every write stamps it.
+
+### Where the boundary is enforced
+
+**On the server, from the caller's role.** `requireRestaurant` sets
+`request.section` via `resolveSection(admin.role, …)`, and a role that is pinned
+to a section keeps it whatever the request asks for — a supervisor sending
+`?section=BANQUET` gets Small Banquets anyway. Only the platform roles
+(CHIEF_ADMIN, MANAGER, OWNER), who already reach every restaurant, may name a
+section. The rule sits in `requireRestaurant` rather than in a middleware of its
+own precisely because a second middleware is one somebody forgets to mount on a
+new route.
+
+The detail / update / delete paths address a row by **id**, and an id is all the
+caller supplies, so each re-checks the section and answers **404, not 403** — "not
+yours" and "not there" have to look identical, or the status code enumerates the
+other section's ids.
+
+The three **unauthenticated kiosk endpoints** (halls, table packages, extra
+services) have no role to derive a section from, so the kiosk names one. That is
+a display choice, not a boundary: those lists are the restaurant's own public
+menu furniture either way, and the bookings the kiosk creates are still stamped
+by the server.
+
+### Event numbers
+
+Deliberately **not** re-sequenced per section: `eventNumber` stays unique across
+the whole restaurant. Two bookings both called "13" in one venue is an
+operational hazard — it is the number staff say out loud — and the unique
+constraint is `[restaurantId, eventNumber]`, so allocating within one section
+would collide with the other's numbers on every insert.
+
+### The look
+
+`.svr-theme` on the layout root redeclares **every** `--adm-*` token and restates
+the shared primitives — jade on a deep forest ground, squared corners, a rail
+down the leading edge of a card, an uppercase grotesque for titles, no aurora
+blobs. Same mechanism `.cadm-theme` uses for food service, and it is what reaches
+~40 unmodified pages at once. The layout adds a **vertical rail** of grouped
+sections in place of the banquet app's horizontal tab bar with its "⋯" overflow.
+
+It stays a **dark** theme on purpose: the admin pages carry a few hundred inline
+light-on-dark literals no token reaches, so a light ground would have been
+illegible in dozens of places and the fix would have churned the banquet product
+too. The identity comes from hue, geometry and surface language instead.
+
+### Two pages the section does NOT have
+
+- **`/admin/users`** — the section has exactly one role at this stage, so there
+  is nobody for a supervisor to create; and the roles a banquet ADMIN can create
+  (EMPLOYEE, KITCHEN) are the *other* section's staff, which this one must not be
+  handed. The page returns when the section gets staff of its own.
+- **`/admin/restaurants`** — a tenancy screen, not part of running a section.
+
+Both are asserted as deliberate omissions in `supervisorRoutes.test.ts`, so
+adding either back is a one-line change there too.
+
+### Who may create a Supervisor
+
+**CHIEF_ADMIN and OWNER only** (`canManageSupervisors`), and an account is
+refused without a restaurant — every page would fail on `requireRestaurant`
+otherwise. The same rule **hides** the account from everyone else's user list: a
+banquet ADMIN sharing a restaurant with a supervisor does not see it at all,
+rather than seeing a row every action on returns 403 for.
+
+There is **no module entitlement** for the section. Small Banquets ships
+unqated; when it is sold separately, `MODULE_BY_ROLE` is the line that changes.
+
+**Prerequisite — DNS, nginx and TLS.** `supervisor.v-menu.uz` needs the same
+treatment `banquet.v-menu.uz` has: an A record, a server block with
+`root /var/www/restaurant` + `try_files … /index.html` and the `/api` + `/uploads`
+proxies, and the name added as a SAN on the certificate. **Nothing below works
+until that block exists** — the host will 404 at the edge.
+
+**After deploying:**
+
+1. `prisma migrate deploy` must have run. Check:
+   `\d "Hall"` shows a `section` column, and `\d "Event"` likewise;
+   `\dT+ "AdminRole"` lists `SUPERVISOR`.
+2. Every existing hall, package, extra service and event reads `BANQUET`:
+   `SELECT section, count(*) FROM "Event" GROUP BY 1;` → one row.
+3. **The banquet side is unchanged.** Sign in as a banquet ADMIN: the same halls,
+   the same packages, the same bookings, the same gold. This is the regression
+   that matters most — the section column touched four tables the banquet
+   product lives on.
+4. Chief Admin → create a SUPERVISOR, assigning a restaurant. Creating one
+   *without* a restaurant must be refused.
+5. Sign in as that supervisor → lands on `supervisor.v-menu.uz/<slug>`, in jade
+   on forest, with the vertical rail.
+6. Its Halls, Table categories and Extra services pages are **empty** — the
+   banquet section's are not visible. Create one of each.
+7. Name a hall exactly what a banquet hall is called → it saves. (This is the
+   unique-key change.)
+8. Take a booking through the supervisor's Tablet → Summary → Confirm. It appears
+   on the supervisor's Events page and **not** on the banquet ADMIN's.
+9. The dish list is the same on both sides — that is the one shared table.
+10. Settings shows the supervisor **one** list, "Small banquets". Switch a
+    category off there; confirm it is still on for banquets.
+11. Sign in as a banquet ADMIN → the supervisor account is absent from Users.

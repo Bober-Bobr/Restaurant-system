@@ -1,4 +1,5 @@
 import createHttpError from 'http-errors';
+import type { Section } from '../../utils/section.js';
 import { invoiceOutstandingCents } from '../../utils/invoice.js';
 import { EventRepository, type CreateEventData } from './event.repository.js';
 import { syncEventToLedger } from './event.ledgerSync.js';
@@ -30,21 +31,21 @@ export class EventService {
     };
   }
 
-  async listEvents(restaurantId: string, params?: { skip: number; take: number }) {
-    const events = await this.eventRepository.list(restaurantId, params);
+  async listEvents(restaurantId: string, section: Section, params?: { skip: number; take: number }) {
+    const events = await this.eventRepository.list(restaurantId, section, params);
     return events.map((event) => this.mapEventToExternalId(event));
   }
 
-  async createEvent(restaurantId: string, payload: CreateEventData) {
-    const event = await this.eventRepository.create(restaurantId, payload);
+  async createEvent(restaurantId: string, section: Section, payload: CreateEventData) {
+    const event = await this.eventRepository.create(restaurantId, section, payload);
     // Mirror the new event into the assigned restaurant manager's expense ledger
     // (morning → Nahor, afternoon → Fotiha, evening → Wedding). Best-effort.
     await syncEventToLedger(event);
     return this.mapEventToExternalId(event);
   }
 
-  async updateEvent(restaurantId: string, eventId: number, payload: Partial<CreateEventData>) {
-    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async updateEvent(restaurantId: string, section: Section, eventId: number, payload: Partial<CreateEventData>) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!existingEvent) throw createHttpError(404, 'Event not found');
 
     const updateData: Record<string, any> = {
@@ -84,7 +85,7 @@ export class EventService {
       updateData.debtDeadline = payload.debtDeadline; // Date to set, null to clear
     }
 
-    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, updateData);
+    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, section, eventId, updateData);
     // Keep the manager's ledger in sync when details change (e.g. a blank event
     // is filled in after creation, or the guest count / date is edited).
     if (updatedEvent) await syncEventToLedger(updatedEvent);
@@ -93,8 +94,8 @@ export class EventService {
 
   // ── Partial (installment) payments ──
 
-  async addPayment(restaurantId: string, eventId: number, amountCents: number, note?: string) {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async addPayment(restaurantId: string, section: Section, eventId: number, amountCents: number, note?: string) {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!event) throw createHttpError(404, 'Event not found');
     // A payment can never exceed what is left to pay. Without this an invoice
     // could be pushed past its total and sit at a negative balance — money the
@@ -111,27 +112,27 @@ export class EventService {
       );
     }
     await this.eventRepository.addPayment(event.id, amountCents, note);
-    const updated = await this.eventRepository.getByNumber(restaurantId, eventId);
+    const updated = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     return this.mapEventToExternalId(updated);
   }
 
-  async removePayment(restaurantId: string, eventId: number, paymentId: string) {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async removePayment(restaurantId: string, section: Section, eventId: number, paymentId: string) {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!event) throw createHttpError(404, 'Event not found');
     await this.eventRepository.deletePayment(event.id, paymentId);
-    const updated = await this.eventRepository.getByNumber(restaurantId, eventId);
+    const updated = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     return this.mapEventToExternalId(updated);
   }
 
-  async rescheduleEvent(restaurantId: string, eventId: number, newDate: Date) {
-    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async rescheduleEvent(restaurantId: string, section: Section, eventId: number, newDate: Date) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!existingEvent) throw createHttpError(404, 'Event not found');
 
     // Preserve the ORIGINAL date across repeated reschedules: only capture it the
     // first time (when it hasn't been set yet), so we always show the true origin.
     const originalEventDate = existingEvent.originalEventDate ?? existingEvent.eventDate;
 
-    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, eventId, {
+    const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, section, eventId, {
       originalEventDate,
       eventDate: newDate
     });
@@ -140,15 +141,15 @@ export class EventService {
     return this.mapEventToExternalId(updatedEvent);
   }
 
-  async getEventDetails(restaurantId: string, eventId: number) {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async getEventDetails(restaurantId: string, section: Section, eventId: number) {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!event) throw createHttpError(404, 'Event not found');
     return this.mapEventToExternalId(event);
   }
 
-  async deleteEvent(restaurantId: string, eventId: number) {
-    const existingEvent = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async deleteEvent(restaurantId: string, section: Section, eventId: number) {
+    const existingEvent = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!existingEvent) throw createHttpError(404, 'Event not found');
-    await this.eventRepository.deleteByNumber(restaurantId, eventId);
+    await this.eventRepository.deleteByNumber(restaurantId, section, eventId);
   }
 }

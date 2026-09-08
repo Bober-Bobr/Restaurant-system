@@ -39,9 +39,10 @@ import { ExpenseLedgerPage } from '../pages/ExpenseLedgerPage';
 import { AccountsPage } from '../pages/AccountsPage';
 import { AdditionalExpensesPage } from '../pages/AdditionalExpensesPage';
 import { TabletLayout } from './TabletLayout';
+import { SupervisorLayout } from './SupervisorLayout';
 import { useAuthStore } from '../store/auth.store';
 import type { AdminRole } from '../store/auth.store';
-import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isFoodAdminHost, isFoodSiteHost, getFoodSiteSlug, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
+import { isConnectHost, isNfcBuilderHost, getPlaqueSlug, isRootDomain, isAdminSubdomain, isCabinetSubdomain, isManagerSubdomain, isRestaurantManagerSubdomain, isPerformerSubdomain, isBanquetHost, getBanquetSlug, isSupervisorHost, buildSupervisorUrl, isFoodAdminHost, isFoodSiteHost, getFoodSiteSlug, getInvitationSubdomainSlug, isEventSubdomain, getCateringSlug, toSubdomainSlug, buildAbsoluteUrl, buildSubdomainBase, buildBanquetUrl, buildFoodAdminUrl, isInviteRootDomain, getInviteSiteSlug } from '../utils/subdomain';
 import { applyAppTitle } from '../utils/applyAppTitle';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { AdditionalServicesBySlug, AdditionalServicesPage } from '../pages/AdditionalServicesPage';
@@ -286,6 +287,13 @@ export const App = () => {
       window.location.href = buildFoodAdminUrl(toSubdomainSlug(restaurantName));
       return null;
     }
+    // SUPERVISOR → supervisor.v-menu.uz/<slug>. Must come before the catch-all
+    // below, which would otherwise send them to the banquet app — a host their
+    // role cannot get past.
+    if (accessToken && role === 'SUPERVISOR' && restaurantName && window.location.pathname !== '/login') {
+      window.location.href = buildSupervisorUrl(toSubdomainSlug(restaurantName));
+      return null;
+    }
     // Authenticated ADMIN/EMPLOYEE/KITCHEN on root domain → send to banquet.v-menu.uz/<slug>
     if (accessToken && restaurantName && window.location.pathname !== '/login') {
       window.location.href = buildBanquetUrl(toSubdomainSlug(restaurantName));
@@ -381,6 +389,28 @@ export const App = () => {
     }
   }
 
+  // supervisor.v-menu.uz/<slug> — the Small Banquets section. Its own host so
+  // the section has its own bookmark, its own login target and its own look; the
+  // routes beneath are the banquet app's, because the capabilities are meant to
+  // be identical. What separates the two is the DATA, and that is done on the
+  // server from the caller's role — see apps/api/src/utils/section.ts.
+  if (isSupervisorHost()) {
+    const { accessToken, role: supRole } = useAuthStore.getState();
+    if (!accessToken || supRole !== 'SUPERVISOR') {
+      if (window.location.pathname !== '/login') {
+        window.location.href = buildAbsoluteUrl('/login');
+        return null;
+      }
+      return (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      );
+    }
+    return <SupervisorRoutes />;
+  }
+
   // banquet.v-menu.uz/<slug> — a restaurant without the banquet module gets the
   // Additional Services page here instead of the admin panel or a login screen
   // it could never get past. Every host check above is false on this host, so
@@ -416,6 +446,50 @@ const BanquetHostGate = () => {
   return <RoleRoutes />;
 };
 
+/**
+ * The Small Banquets section's routes.
+ *
+ * Deliberately the same page components the banquet admin app mounts, in the
+ * same places: "identical pages and capabilities" is the requirement, and a
+ * second copy of forty pages would drift from the originals within a release.
+ * Every list they render is confined to this section by the API.
+ *
+ * Two differences from `RoleRoutes`, both deliberate:
+ *   · `/admin/users` is absent. The section has exactly one role at this stage,
+ *     so there is nobody for a supervisor to create; and the roles a banquet
+ *     ADMIN can create are the OTHER section's staff, which this one must not
+ *     be handed. The page returns when the section gets staff of its own.
+ *   · `/admin/restaurants` is absent for the same reason it is really an
+ *     ADMIN-only tenancy screen rather than part of running a section.
+ */
+const SupervisorRoutes = () => (
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route element={<TabletLayout />}>
+      <Route path="/tablet" element={<TabletMenuPage />} />
+      <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+      <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
+    </Route>
+    <Route element={<SupervisorLayout />}>
+      <Route path="/" element={<AdminEventsPage />} />
+      <Route path="/calendar" element={<CalendarPage />} />
+      <Route path="/devices" element={<DevicesPage />} />
+      <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
+      <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+      <Route path="/admin/menu" element={<AdminMenuPage />} />
+      <Route path="/admin/subcategories" element={<AdminSubcategoriesPage />} />
+      <Route path="/admin/additional" element={<AdminAdditionalPage />} />
+      <Route path="/admin/table-categories" element={<AdminTableCategoriesPage />} />
+      <Route path="/admin/halls" element={<AdminHallsPage />} />
+      <Route path="/admin/extra-services" element={<AdminExtraServicesPage />} />
+      <Route path="/admin/photos" element={<AdminPhotosPage />} />
+      <Route path="/admin/settings" element={<AdminSettingsPage />} />
+      <Route path="/admin/arrangement" element={<AdminArrangementAdminPage />} />
+    </Route>
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+);
+
 // Role-based routing — the tail of the host waterfall above.
 const RoleRoutes = () => {
   // RESTAURANT_MANAGER → expense ledger + devices, not tied to a restaurant.
@@ -435,6 +509,11 @@ const RoleRoutes = () => {
       </Routes>
     );
   }
+
+  // SUPERVISOR → the Small Banquets section. Reached this way on localhost /
+  // v-menu.local, where dev keeps role-based routing at root paths; in
+  // production the host branch above catches it first.
+  if (role === 'SUPERVISOR') return <SupervisorRoutes />;
 
   // CATERING_ADMIN → restaurant admin dashboard limited to a few pages, in the
   // monochrome catering-site theme.

@@ -1,5 +1,6 @@
 import createHttpError from 'http-errors';
 import { TableCategoryRepository, type CreateTableCategoryData } from './tableCategory.repository.js';
+import type { Section } from '../../utils/section.js';
 
 type PackageItemInput = { menuItemId: string; servings: number };
 type PackageItemsPayload = { menuItemIds?: string[]; packageItems?: PackageItemInput[] };
@@ -20,44 +21,53 @@ function resolvePackageItems(payload: PackageItemsPayload): PackageItemInput[] |
 export class TableCategoryService {
   constructor(private readonly tableCategoryRepository: TableCategoryRepository) {}
 
-  async listTableCategories(restaurantId: string, params?: { skip: number; take: number }) {
-    return this.tableCategoryRepository.list(restaurantId, params);
+  // A package fetched by id alone belongs to whichever section created it, and
+  // the id is all the caller supplies on the detail/update/delete paths. 404
+  // rather than 403 so the status code does not enumerate the other section's
+  // ids — the same rule the restaurant scoping already follows.
+  private async getInSection(id: string, section: Section) {
+    const category = await this.tableCategoryRepository.getById(id);
+    if (!category || category.section !== section) throw createHttpError(404, 'Table category not found');
+    return category;
   }
 
-  async listAllTableCategories(restaurantId: string) {
-    return this.tableCategoryRepository.listAll(restaurantId);
+  async listTableCategories(restaurantId: string, section: Section, params?: { skip: number; take: number }) {
+    return this.tableCategoryRepository.list(restaurantId, section, params);
   }
 
-  async saveArrangement(restaurantId: string, order: { id: string; sortOrder: number }[]) {
-    await this.tableCategoryRepository.saveArrangement(restaurantId, order);
+  async listAllTableCategories(restaurantId: string, section: Section) {
+    return this.tableCategoryRepository.listAll(restaurantId, section);
+  }
+
+  async saveArrangement(restaurantId: string, section: Section, order: { id: string; sortOrder: number }[]) {
+    await this.tableCategoryRepository.saveArrangement(restaurantId, section, order);
     return { ok: true };
   }
 
-  async countTableCategories(restaurantId: string) {
-    return this.tableCategoryRepository.count(restaurantId);
+  async countTableCategories(restaurantId: string, section: Section) {
+    return this.tableCategoryRepository.count(restaurantId, section);
   }
 
-  async createTableCategory(restaurantId: string, payload: CreateTableCategoryData & PackageItemsPayload) {
+  async createTableCategory(restaurantId: string, section: Section, payload: CreateTableCategoryData & PackageItemsPayload) {
     const { menuItemIds, packageItems, ...data } = payload;
     const items = resolvePackageItems({ menuItemIds, packageItems });
-    const existing = await this.tableCategoryRepository.getByName(restaurantId, data.name);
+    const existing = await this.tableCategoryRepository.getByName(restaurantId, section, data.name);
     if (existing) throw createHttpError(409, 'Table category with this name already exists');
 
-    const created = await this.tableCategoryRepository.create(restaurantId, data);
+    const created = await this.tableCategoryRepository.create(restaurantId, section, data);
     if (items && items.length > 0) {
       return this.tableCategoryRepository.setPackageItems(created.id, items);
     }
     return created;
   }
 
-  async updateTableCategory(restaurantId: string, id: string, payload: Partial<CreateTableCategoryData> & PackageItemsPayload) {
+  async updateTableCategory(restaurantId: string, section: Section, id: string, payload: Partial<CreateTableCategoryData> & PackageItemsPayload) {
     const { menuItemIds, packageItems, ...data } = payload;
     const items = resolvePackageItems({ menuItemIds, packageItems });
-    const existing = await this.tableCategoryRepository.getById(id);
-    if (!existing) throw createHttpError(404, 'Table category not found');
+    const existing = await this.getInSection(id, section);
 
     if (data.name && data.name !== existing.name) {
-      const nameTaken = await this.tableCategoryRepository.getByName(restaurantId, data.name);
+      const nameTaken = await this.tableCategoryRepository.getByName(restaurantId, section, data.name);
       if (nameTaken) throw createHttpError(409, 'Table category with this name already exists');
     }
 
@@ -70,15 +80,12 @@ export class TableCategoryService {
     return this.tableCategoryRepository.getById(id);
   }
 
-  async getTableCategoryDetails(id: string) {
-    const category = await this.tableCategoryRepository.getById(id);
-    if (!category) throw createHttpError(404, 'Table category not found');
-    return category;
+  async getTableCategoryDetails(id: string, section: Section) {
+    return this.getInSection(id, section);
   }
 
-  async deleteTableCategory(id: string) {
-    const existing = await this.tableCategoryRepository.getById(id);
-    if (!existing) throw createHttpError(404, 'Table category not found');
+  async deleteTableCategory(id: string, section: Section) {
+    await this.getInSection(id, section);
     await this.tableCategoryRepository.deleteById(id);
   }
 }

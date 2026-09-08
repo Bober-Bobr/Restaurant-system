@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { prisma } from '../db/prisma.js';
+import { resolveSection } from '../utils/section.js';
 
 type JwtPayload = {
   sub: string;
@@ -86,6 +87,16 @@ export const requireRestaurant = async (request: Request, response: Response, ne
     response.status(401).json({ message: 'Unauthorized' });
     return;
   }
+  // Which SECTION of the product — Banquet or Small Banquets — this request is
+  // for. Resolved here rather than in its own middleware because it is needed by
+  // exactly the routes that need a restaurant, and a separate middleware is one
+  // somebody eventually forgets to mount on a new route.
+  //
+  // `resolveSection` takes the query value but only honours it for the platform
+  // roles: a SUPERVISOR asking for `?section=BANQUET` still gets their own. That
+  // is the whole of the data separation, and it lives on the server precisely so
+  // a crafted request cannot cross it.
+  request.section = resolveSection(admin.role, request.query.section ?? request.body?.section);
   // CHIEF_ADMIN and MANAGER can scope to any restaurant via ?restaurantId=
   if (admin.role === 'CHIEF_ADMIN' || admin.role === 'MANAGER') {
     const queryRestaurantId = String(request.query.restaurantId ?? request.body?.restaurantId ?? '').trim();

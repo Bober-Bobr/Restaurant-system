@@ -39,6 +39,9 @@ const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
 // ownership; chiefs, NFC makers, performers and hosts are platform-wide.
 const RESTAURANT_AFFILIATED: AdminRole[] = [
   'ADMIN', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'RESTAURANT_MANAGER', 'EMPLOYEE', 'KITCHEN',
+  // A supervisor runs one restaurant's Small Banquets section; the server
+  // refuses to create one without a restaurant, so the picker must appear.
+  'SUPERVISOR',
 ];
 
 export const ChiefAdminPage = () => {
@@ -405,6 +408,7 @@ export const ChiefAdminPage = () => {
                   <option value="MANAGER">MANAGER</option>
                   <option value="OWNER">OWNER</option>
                   <option value="ADMIN">ADMIN</option>
+                  <option value="SUPERVISOR">SUPERVISOR (SMALL BANQUETS)</option>
                   <option value="CATERING_ADMIN">FOOD ADMIN</option>
                   <option value="CATERING_EMPLOYEE">FOOD EMPLOYEE</option>
                   <option value="RESTAURANT_MANAGER">RESTAURANT MANAGER</option>

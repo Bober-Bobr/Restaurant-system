@@ -10,8 +10,9 @@ import type { AdminRole } from '../store/auth.store';
  *
  *   banquet ADMIN   → what banquets do not serve
  *   CATERING_ADMIN  → what the public food-service menu does not serve
+ *   SUPERVISOR      → what the Small Banquets section does not serve
  *
- * They have to be independent all the way down, because both products sell from
+ * They have to be independent all the way down, because all three sell from
  * the same `MenuItem` table. Independence is enforced in three places, and this
  * covers the two that live on the client: which table a role is shown, and what
  * a save from that table actually sends. The third — that a scope the request
@@ -26,11 +27,18 @@ describe('one table per role, and only their own product', () => {
     expect(settingsScopesFor('CATERING_ADMIN')).toEqual(['catering']);
   });
 
-  it('neither can see the other product\'s table', () => {
+  it('a Supervisor manages the small-banquet list alone', () => {
+    expect(settingsScopesFor('SUPERVISOR')).toEqual(['smallBanquet']);
+  });
+
+  it('none of them can see another product\'s table', () => {
     // The point of the split. A banquet ADMIN switching off energy drinks must
-    // not be able to take them off the public menu, even by accident.
-    expect(settingsScopesFor('ADMIN')).not.toContain('catering');
-    expect(settingsScopesFor('CATERING_ADMIN')).not.toContain('banquet');
+    // not be able to take them off the public menu, even by accident — and the
+    // Small Banquets section is a third product on the same dish table, so the
+    // same has to hold in both directions for it.
+    expect(settingsScopesFor('ADMIN')).toEqual(['banquet']);
+    expect(settingsScopesFor('CATERING_ADMIN')).toEqual(['catering']);
+    expect(settingsScopesFor('SUPERVISOR')).toEqual(['smallBanquet']);
   });
 
   it('a role nobody has assigned a table gets none', () => {
@@ -43,9 +51,9 @@ describe('one table per role, and only their own product', () => {
     expect(settingsScopesFor(undefined)).toEqual([]);
   });
 
-  it('the platform roles would see both, if they ever reached the page', () => {
+  it('the platform roles would see every list, if they ever reached the page', () => {
     for (const role of ['CHIEF_ADMIN', 'OWNER'] as AdminRole[]) {
-      expect(settingsScopesFor(role)).toEqual(['banquet', 'catering']);
+      expect(settingsScopesFor(role)).toEqual(['banquet', 'catering', 'smallBanquet']);
     }
   });
 
@@ -54,7 +62,7 @@ describe('one table per role, and only their own product', () => {
     // route but no scope would land on a page with nothing on it.
     const app = readFileSync(join(__dirname, '..', 'app', 'App.tsx'), 'utf8');
     expect(app).toContain('<AdminSettingsPage />');
-    for (const role of ['ADMIN', 'CATERING_ADMIN'] as AdminRole[]) {
+    for (const role of ['ADMIN', 'CATERING_ADMIN', 'SUPERVISOR'] as AdminRole[]) {
       expect(settingsScopesFor(role).length, `${role} reaches the page with no table`).toBeGreaterThan(0);
     }
   });

@@ -107,6 +107,18 @@ model Event {
   debtDeadline    DateTime?
   status          EventStatus       @default(DRAFT)
   eventType            EventType         @default(RESERVATION)
+  // ── Which SECTION of the product this row belongs to ──────────────────────
+  // "BANQUET" (the original section) or "SMALL_BANQUET" (supervisor.v-menu.uz).
+  // The two sections share a restaurant and its dish table and nothing else:
+  // separate halls, separate table packages, separate extra services, separate
+  // events. Every query on those four models is filtered by it and every write
+  // stamps it, from the CALLER'S ROLE rather than from the request body — a
+  // supervisor must not be able to read banquet bookings by editing a payload.
+  //
+  // A plain String, not an enum, on the same reasoning as DesignTemplate.kind:
+  // a fourth section needs no migration. `utils/section.ts` is the only place
+  // that decides what a valid value is, so a typo cannot invent a partition.
+  section              String            @default("BANQUET")
   region               Region?
   hallId               String?
   tableCategoryId      String?
@@ -140,6 +152,7 @@ model Event {
   @@index([hallId])
   @@index([tableCategoryId])
   @@index([restaurantId])
+  @@index([restaurantId, section])
 }
 
 // A partial (installment) payment towards an event's invoice, in tiyin.
@@ -185,6 +198,12 @@ enum AdminRole {
   // Gated on moduleCatering, the same entitlement as CATERING_ADMIN.
   // NOT the banquet EMPLOYEE role, which is a separate product and unchanged.
   CATERING_EMPLOYEE
+  // Small Banquets — the third section of the v-menu product, beside Banquet and
+  // General Dining. A Supervisor runs it at supervisor.v-menu.uz/<slug> with the
+  // same capabilities a banquet ADMIN has, over a SEPARATE set of halls, table
+  // packages, extra services and events (see `section` on those models). The
+  // dish table is the one thing the two sections share.
+  SUPERVISOR
 }
 
 model AdminUser {
@@ -378,6 +397,12 @@ model Restaurant {
   // other. Null means "nothing excluded".
   excludedCategoriesBanquet  String?
   excludedCategoriesCatering String?
+  // The Small Banquets section's own list. It sells from the same dish table as
+  // the other two and switches off its own categories: a small banquet has no
+  // use for a 200-guest package's groupings. Backfilled from the banquet list on
+  // migration, so the section starts out looking like the one it was split from
+  // rather than with every category switched on.
+  excludedCategoriesSmallBanquet String?
   // Per-restaurant tablet/summary color palette (hex). Null → default gold theme.
   tabletAccentColor String?
   tabletBgColor     String?
@@ -439,12 +464,15 @@ model ExtraService {
   media        Json       @default("[]")
   isActive     Boolean    @default(true)
   sortOrder    Int        @default(0)
+  // BANQUET | SMALL_BANQUET — see Event.section.
+  section      String     @default("BANQUET")
   restaurantId String
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@index([restaurantId])
+  @@index([restaurantId, section])
 }
 
 model Review {
@@ -484,6 +512,9 @@ model TableCategory {
   freeSubstitutionItemIds Json?
   isActive           Boolean                   @default(true)
   sortOrder          Int                       @default(0)
+  // BANQUET | SMALL_BANQUET — see Event.section. A price package belongs to one
+  // section; the packages are the whole commercial difference between the two.
+  section            String                    @default("BANQUET")
   restaurantId       String?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
@@ -491,8 +522,9 @@ model TableCategory {
   packageItems       TableCategoryMenuItem[]
   restaurant         Restaurant?               @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
-  @@unique([restaurantId, name])
+  @@unique([restaurantId, section, name])
   @@index([restaurantId])
+  @@index([restaurantId, section])
 }
 
 model TableCategoryMenuItem {
@@ -515,14 +547,20 @@ model Hall {
   photoUrl     String?
   photos       Json        @default("[]")
   isActive     Boolean     @default(true)
+  // BANQUET | SMALL_BANQUET — see Event.section. A hall belongs to one section.
+  section      String      @default("BANQUET")
   restaurantId String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   events       Event[]
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
-  @@unique([restaurantId, name])
+  // Scoped by section as well as by restaurant: the two sections keep separate
+  // halls, so both may perfectly well have one called "Main hall". Without the
+  // section in the key the second section to want that name could never use it.
+  @@unique([restaurantId, section, name])
   @@index([restaurantId])
+  @@index([restaurantId, section])
 }
 
 model MenuItem {

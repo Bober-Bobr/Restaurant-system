@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DEFAULT_SECTION, type Section } from '../utils/section';
 import type { TableCategory } from '../types/domain';
 
 const publicTableCategoriesUrl = (): string => {
@@ -7,8 +8,8 @@ const publicTableCategoriesUrl = (): string => {
 };
 
 export const publicTableCategoryService = {
-  async listActive(restaurantId: string): Promise<TableCategory[]> {
-    const { data } = await axios.get<TableCategory[]>(publicTableCategoriesUrl(), { params: { restaurantId } });
+  async listActive(restaurantId: string, section: Section = DEFAULT_SECTION): Promise<TableCategory[]> {
+    const { data } = await axios.get<TableCategory[]>(publicTableCategoriesUrl(), { params: { restaurantId, section } });
     return data;
   }
 };

@@ -1,11 +1,12 @@
 import createHttpError from 'http-errors';
+import type { Section } from '../../utils/section.js';
 import { EventRepository } from '../events/event.repository.js';
 
 export class PricingService {
   constructor(private readonly eventRepository: EventRepository) {}
 
-  async calculateEventPricing(restaurantId: string, eventId: number) {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async calculateEventPricing(restaurantId: string, section: Section, eventId: number) {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
 
     if (!event) {
       throw createHttpError(404, 'Event not found');

@@ -174,10 +174,14 @@ const ScopeSection = ({
 const SETTINGS_SCOPES: Partial<Record<NonNullable<AdminRole>, Scope[]>> = {
   ADMIN: ['banquet'],
   CATERING_ADMIN: ['catering'],
-  // Platform roles do not reach this page today; if they ever do, both lists
-  // are theirs to see.
-  CHIEF_ADMIN: ['banquet', 'catering'],
-  OWNER: ['banquet', 'catering'],
+  // A supervisor runs the Small Banquets section and manages only its list —
+  // the same rule as the two above, and the reason the section can drop a
+  // category the banquet side still serves.
+  SUPERVISOR: ['smallBanquet'],
+  // Platform roles do not reach this page today; if they ever do, every list is
+  // theirs to see.
+  CHIEF_ADMIN: ['banquet', 'catering', 'smallBanquet'],
+  OWNER: ['banquet', 'catering', 'smallBanquet'],
 };
 
 export function settingsScopesFor(role: AdminRole | null | undefined): Scope[] {

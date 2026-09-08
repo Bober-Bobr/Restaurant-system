@@ -65,35 +65,57 @@ describe('money is counted in tiyin', () => {
   });
 });
 
-describe('the two products keep separate excluded-category lists', () => {
-  // Banquets and the public catering menu sell from one dish table, and each
-  // switches off the categories it has no use for. Switching one off for one
-  // product must leave the other alone.
+describe('each product keeps its own excluded-category list', () => {
+  // Banquets, the public catering menu and small banquets sell from one dish
+  // table, and each switches off the categories it has no use for. Switching one
+  // off for one product must leave the others alone.
   const excluded = {
     banquet: [MenuCategory.SUSHI_ROLLS, MenuCategory.ALCOHOL],
     catering: [MenuCategory.FIRST_COURSE, MenuCategory.ALCOHOL],
+    smallBanquet: [MenuCategory.SOUPS, MenuCategory.ALCOHOL],
   };
 
-  it('hides from a management screen only what BOTH have dropped', () => {
+  it('hides from a management screen only what EVERY product has dropped', () => {
     // A category still on the catering menu has to stay editable even once the
     // banquet side has dropped it — otherwise its dishes are on sale and
     // unreachable: invisible to edit, still shown to guests.
     expect(excludedEverywhere(excluded)).toEqual([MenuCategory.ALCOHOL]);
   });
 
-  it('hides nothing when the two lists have nothing in common', () => {
-    expect(excludedEverywhere({ banquet: [MenuCategory.SOUPS], catering: [MenuCategory.GRILL] })).toEqual([]);
+  it('a category one product still serves is not hidden', () => {
+    // Small banquets keeping SUSHI_ROLLS is enough to keep it on the management
+    // screens, even though the other two dropped it. This is the case a
+    // hard-coded two-way intersection would have got wrong when the third scope
+    // arrived — it would have gone on hiding it.
+    expect(excludedEverywhere({ ...excluded, smallBanquet: [MenuCategory.ALCOHOL] }))
+      .toEqual([MenuCategory.ALCOHOL]);
+    expect(excludedEverywhere({
+      banquet: [MenuCategory.SUSHI_ROLLS],
+      catering: [MenuCategory.SUSHI_ROLLS],
+      smallBanquet: [],
+    })).toEqual([]);
   });
 
-  it('hides everything when the two lists agree, as they did before the split', () => {
+  it('hides nothing when the lists have nothing in common', () => {
+    expect(excludedEverywhere({
+      banquet: [MenuCategory.SOUPS], catering: [MenuCategory.GRILL], smallBanquet: [MenuCategory.SALADS],
+    })).toEqual([]);
+  });
+
+  it('hides everything when the lists agree, as they did before the split', () => {
     const same = [MenuCategory.SUSHI_ROLLS, MenuCategory.ALCOHOL];
-    expect(excludedEverywhere({ banquet: same, catering: [...same] })).toEqual(same);
+    expect(excludedEverywhere({ banquet: same, catering: [...same], smallBanquet: [...same] })).toEqual(same);
   });
 
-  it('recognises the two scopes and nothing else', () => {
+  it('recognises the three scopes and nothing else', () => {
     expect(isMenuScope('banquet')).toBe(true);
     expect(isMenuScope('catering')).toBe(true);
-    for (const junk of ['BANQUET', 'tablet', '', null, undefined, 1]) expect(isMenuScope(junk)).toBe(false);
+    expect(isMenuScope('smallBanquet')).toBe(true);
+    // 'SMALL_BANQUET' is the SECTION spelling, not the scope spelling — the two
+    // axes have similar names and this is where confusing them would show.
+    for (const junk of ['BANQUET', 'SMALL_BANQUET', 'small-banquet', 'tablet', '', null, undefined, 1]) {
+      expect(isMenuScope(junk)).toBe(false);
+    }
   });
 
   it('falls back rather than refusing an unknown scope', () => {

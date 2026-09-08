@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { DEFAULT_SECTION, type Section } from '../../utils/section.js';
 import { EventRepository } from '../events/event.repository.js';
 import { eventIdSchema } from '../events/event.schema.js';
 import { PricingService } from '../pricing/pricing.service.js';
@@ -7,10 +8,12 @@ import { ExportService } from './export.service.js';
 const eventRepository = new EventRepository();
 const exportService = new ExportService(eventRepository, new PricingService(eventRepository));
 
+const sectionOf = (request: Request) => request.section ?? DEFAULT_SECTION;
+
 export class ExportController {
   async excel(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
-    const file = await exportService.createEventExcel(request.restaurantId!, eventId);
+    const file = await exportService.createEventExcel(request.restaurantId!, sectionOf(request), eventId);
 
     response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     response.setHeader('Content-Disposition', `attachment; filename="event-${eventId}.xlsx"`);
@@ -19,7 +22,7 @@ export class ExportController {
 
   async pdf(request: Request, response: Response) {
     const { eventId } = eventIdSchema.parse(request.params);
-    const file = await exportService.createEventPdf(request.restaurantId!, eventId);
+    const file = await exportService.createEventPdf(request.restaurantId!, sectionOf(request), eventId);
 
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader('Content-Disposition', `attachment; filename="event-${eventId}.pdf"`);

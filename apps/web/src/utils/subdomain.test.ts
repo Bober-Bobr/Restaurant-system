@@ -26,6 +26,7 @@ const HOSTS = {
   rmanager: 'https://rmanager.v-menu.uz/',
   performer: 'https://performer.v-menu.uz/',
   banquet: 'https://banquet.v-menu.uz/registon',
+  supervisor: 'https://supervisor.v-menu.uz/registon',
   foodAdmin: 'https://food-admin.v-menu.uz/registon',
   catering: 'https://v-menu.uz/registon',
   foodSite: 'https://test.v-menu.uz/registon',
@@ -50,6 +51,7 @@ describe('each host is claimed by exactly one product', () => {
     rmanager: sub.isRestaurantManagerSubdomain,
     performer: sub.isPerformerSubdomain,
     banquet: sub.isBanquetHost,
+    supervisor: sub.isSupervisorHost,
     foodAdmin: sub.isFoodAdminHost,
     foodSite: sub.isFoodSiteHost,
     event: sub.isEventSubdomain,
@@ -59,6 +61,7 @@ describe('each host is claimed by exactly one product', () => {
     root: [], www: [], localhost: [],
     admin: ['admin'], cabinet: ['cabinet'], manager: ['manager'], rmanager: ['rmanager'],
     performer: ['performer'], banquet: ['banquet'], foodAdmin: ['foodAdmin'],
+    supervisor: ['supervisor'],
     catering: [], foodSite: ['foodSite'],
     invite: ['inviteRoot'], inviteSite: ['inviteRoot'],
     connect: ['connectRoot'], nfc: ['nfcBuilder'], plaque: ['connectRoot'],
@@ -83,7 +86,7 @@ describe('the root domain', () => {
   });
 
   it('does not claim a subdomain', () => {
-    for (const url of [HOSTS.admin, HOSTS.banquet, HOSTS.foodSite]) {
+    for (const url of [HOSTS.admin, HOSTS.banquet, HOSTS.supervisor, HOSTS.foodSite]) {
       at(url);
       expect(sub.isRootDomain()).toBe(false);
     }
@@ -153,7 +156,7 @@ describe('the food-service site runs beside the live one', () => {
 describe('the router basename', () => {
   // Miss this and every internal <Link> 404s under a cosmetic slug.
   it('is the slug on the path-based restaurant hosts', () => {
-    for (const url of [HOSTS.banquet, HOSTS.foodAdmin, HOSTS.catering, HOSTS.foodSite]) {
+    for (const url of [HOSTS.banquet, HOSTS.supervisor, HOSTS.foodAdmin, HOSTS.catering, HOSTS.foodSite]) {
       at(url);
       expect(sub.routerBasename()).toBe('/registon');
     }
@@ -179,6 +182,42 @@ describe('the router basename', () => {
   it('is empty at a bare banquet host rather than eating the first route', () => {
     at('https://banquet.v-menu.uz/');
     expect(sub.routerBasename()).toBe('');
+  });
+
+  it('is empty at a bare supervisor host too', () => {
+    at('https://supervisor.v-menu.uz/');
+    expect(sub.routerBasename()).toBe('');
+  });
+});
+
+describe('the Small Banquets host', () => {
+  // supervisor.v-menu.uz/<slug> — the third section's app. One fixed subdomain,
+  // path-based slug, like banquet and food-admin: the .uz registrar rejects
+  // wildcard DNS, so a per-restaurant subdomain was never an option.
+  it('reads the slug from the path', () => {
+    at(HOSTS.supervisor);
+    expect(sub.getSupervisorSlug()).toBe('registon');
+  });
+
+  it('has no slug at the bare host', () => {
+    at('https://supervisor.v-menu.uz/');
+    expect(sub.getSupervisorSlug()).toBeNull();
+  });
+
+  it('claims no slug on any other host', () => {
+    // The predicate table above proves the hosts do not overlap; this proves
+    // the slug getter is gated on it too, so a banquet path cannot be read as a
+    // supervisor one.
+    for (const url of [HOSTS.banquet, HOSTS.foodAdmin, HOSTS.catering, HOSTS.root]) {
+      at(url);
+      expect(sub.getSupervisorSlug()).toBeNull();
+    }
+  });
+
+  it('builds a URL under the slug, like the banquet app', () => {
+    expect(sub.buildSupervisorUrl('registon')).toBe('https://supervisor.v-menu.uz/registon/');
+    expect(sub.buildSupervisorUrl('registon', { _at: 'tok' }))
+      .toBe('https://supervisor.v-menu.uz/registon/?_at=tok');
   });
 });
 

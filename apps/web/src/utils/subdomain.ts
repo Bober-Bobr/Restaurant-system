@@ -130,6 +130,27 @@ export function getBanquetSlug(): string | null {
   return firstPathSegment();
 }
 
+// supervisor.v-menu.uz — the Small Banquets section's admin app. Path-based
+// like banquet/food-admin (`supervisor.v-menu.uz/<slug>`): the restaurant comes
+// from the auth token, the slug is cosmetic, and one fixed subdomain needs no
+// wildcard DNS — which the .uz registrar rejects anyway.
+export function isSupervisorHost(): boolean {
+  return window.location.hostname === `supervisor.${ROOT_DOMAIN}`;
+}
+
+// The slug in supervisor.v-menu.uz/<slug>. Cosmetic — unlike the banquet host
+// there is no unauthenticated fallback page here that needs to resolve it.
+export function getSupervisorSlug(): string | null {
+  if (!isSupervisorHost()) return null;
+  return firstPathSegment();
+}
+
+// Build a supervisor-app URL: https://supervisor.v-menu.uz/<slug>/?<params>
+export function buildSupervisorUrl(slug: string, params: Record<string, string> = {}): string {
+  const qs = new URLSearchParams(params).toString();
+  return `https://supervisor.${ROOT_DOMAIN}/${slug}/${qs ? `?${qs}` : ''}`;
+}
+
 // performer.v-menu.uz — the performer workspace (profile, calendar, bookings).
 // Not restaurant-scoped, so no path slug.
 export function isPerformerSubdomain(): boolean {
@@ -182,13 +203,14 @@ export function buildFoodSiteUrl(slug: string): string {
   return `https://test.${ROOT_DOMAIN}/${slug}`;
 }
 
-// Router basename: banquet/food-admin admin apps live under /<slug>, so the app's
+// Router basename: the banquet, supervisor and food-admin apps live under
+// /<slug>, so the app's
 // routes (/, /admin/menu …) resolve beneath the cosmetic slug. The public catering
 // site likewise lives under /<slug> so its internal pages (/halls, /reviews …)
 // resolve correctly. Everything else (root login/tablet, admin/manager/cabinet/
 // rmanager subdomains, flyers, invitations) uses no basename.
 export function routerBasename(): string {
-  if (isBanquetHost() || isFoodAdminHost()) {
+  if (isBanquetHost() || isFoodAdminHost() || isSupervisorHost()) {
     const seg = firstPathSegment();
     return seg ? `/${seg}` : '';
   }

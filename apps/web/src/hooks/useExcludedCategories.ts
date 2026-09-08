@@ -7,7 +7,7 @@ export type MenuCategory = MenuItem['category'];
 // Shared query key so the Settings page can invalidate it after saving.
 export const EXCLUDED_CATEGORIES_KEY = ['menu-settings'] as const;
 
-const EMPTY: ExcludedCategories = { banquet: [], catering: [] };
+const EMPTY: ExcludedCategories = { banquet: [], catering: [], smallBanquet: [] };
 
 function useSettings(): MenuSettings | undefined {
   const { data } = useQuery({

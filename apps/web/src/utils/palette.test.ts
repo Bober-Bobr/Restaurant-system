@@ -64,6 +64,10 @@ describe('banquet palette (index.css)', () => {
   // so each scope is read from its own offset.
   const brand = css.indexOf('--adm-accent:');
   const catering = css.indexOf('.cadm-theme {');
+  // Small Banquets — the third section, at supervisor.v-menu.uz. It runs the
+  // same ~40 pages as the banquet admin app and gets its own identity the same
+  // way food service does: by redeclaring every token.
+  const smallBanquet = css.indexOf('.svr-theme {');
 
   it('accent is legible on the page background', () => {
     expect(contrast(token(css, 'adm-accent', brand), token(css, 'adm-bg', brand))).toBeGreaterThanOrEqual(AA);
@@ -97,10 +101,29 @@ describe('banquet palette (index.css)', () => {
     const base = declared(css.indexOf(':root {', css.indexOf('Banquet brand palette')));
     // The blue aurora blob; .cadm-theme hides both blobs outright.
     const exempt = new Set(['adm-cool']);
-    for (const [name, at] of [['.cadm-theme', catering]] as const) {
+    for (const [name, at] of [['.cadm-theme', catering], ['.svr-theme', smallBanquet]] as const) {
       const missing = [...base].filter((tk) => !declared(at).has(tk) && !exempt.has(tk));
       expect(missing, `${name} does not redeclare: ${missing.join(', ')}`).toEqual([]);
     }
+  });
+
+  it('the Small Banquets theme is legible in its own right', () => {
+    // It reaches every admin page through the shared primitives, so an
+    // unreadable token here is unreadable on forty screens at once.
+    expect(contrast(token(css, 'adm-accent', smallBanquet), token(css, 'adm-bg', smallBanquet))).toBeGreaterThanOrEqual(AA);
+    expect(contrast(token(css, 'adm-text', smallBanquet), token(css, 'adm-bg', smallBanquet))).toBeGreaterThanOrEqual(AA);
+    for (const stop of ['adm-accent-deep', 'adm-accent', 'adm-accent-soft']) {
+      expect(contrast(token(css, 'adm-accent-ink', smallBanquet), token(css, stop, smallBanquet)), stop)
+        .toBeGreaterThanOrEqual(AA);
+    }
+    expect(rgb(token(css, 'adm-accent-rgb', smallBanquet))).toEqual(rgb(token(css, 'adm-accent', smallBanquet)));
+  });
+
+  it('and is a different colour from the banquet section, which is the point', () => {
+    // The two sections run identical pages. If the palettes converged, the only
+    // thing telling a supervisor which book they are editing would be the URL.
+    expect(token(css, 'adm-accent', smallBanquet)).not.toBe(token(css, 'adm-accent', brand));
+    expect(token(css, 'adm-bg', smallBanquet)).not.toBe(token(css, 'adm-bg', brand));
   });
 
   it('food-service surfaces stay monochrome', () => {

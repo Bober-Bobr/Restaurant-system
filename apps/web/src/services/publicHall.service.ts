@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DEFAULT_SECTION, type Section } from '../utils/section';
 import type { Hall } from '../types/domain';
 
 const publicHallsUrl = (): string => {
@@ -7,8 +8,8 @@ const publicHallsUrl = (): string => {
 };
 
 export const publicHallService = {
-  async listActive(restaurantId: string): Promise<Hall[]> {
-    const { data } = await axios.get<Hall[]>(publicHallsUrl(), { params: { restaurantId } });
+  async listActive(restaurantId: string, section: Section = DEFAULT_SECTION): Promise<Hall[]> {
+    const { data } = await axios.get<Hall[]>(publicHallsUrl(), { params: { restaurantId, section } });
     return data;
   }
 };

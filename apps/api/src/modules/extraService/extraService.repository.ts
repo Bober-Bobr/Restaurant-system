@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import type { Section } from '../../utils/section.js';
 
 export type CreateExtraServiceData = {
   name: string;
@@ -9,29 +10,34 @@ export type CreateExtraServiceData = {
   sortOrder?: number;
 };
 
+/**
+ * Extra services belong to a restaurant AND to a section — Banquet and Small
+ * Banquets sell different add-ons. `section` is required on every read and write
+ * so a caller cannot omit it and silently get both sections back.
+ */
 export class ExtraServiceRepository {
-  async list(restaurantId: string, params?: { skip: number; take: number }) {
+  async list(restaurantId: string, section: Section, params?: { skip: number; take: number }) {
     return prisma.extraService.findMany({
       ...(params ?? {}),
-      where: { restaurantId },
+      where: { restaurantId, section },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
 
-  async listActive(restaurantId: string) {
+  async listActive(restaurantId: string, section: Section) {
     return prisma.extraService.findMany({
-      where: { restaurantId, isActive: true },
+      where: { restaurantId, section, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
 
-  async count(restaurantId: string) {
-    return prisma.extraService.count({ where: { restaurantId } });
+  async count(restaurantId: string, section: Section) {
+    return prisma.extraService.count({ where: { restaurantId, section } });
   }
 
-  async create(restaurantId: string, payload: CreateExtraServiceData) {
+  async create(restaurantId: string, section: Section, payload: CreateExtraServiceData) {
     const { media, ...rest } = payload;
-    return prisma.extraService.create({ data: { ...rest, media: media ?? [], restaurantId } });
+    return prisma.extraService.create({ data: { ...rest, media: media ?? [], restaurantId, section } });
   }
 
   async updateById(id: string, payload: Partial<CreateExtraServiceData>) {

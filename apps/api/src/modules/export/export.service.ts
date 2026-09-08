@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import type { Section } from '../../utils/section.js';
 import createHttpError from 'http-errors';
 import PDFDocument from 'pdfkit';
 import { EventRepository } from '../events/event.repository.js';
@@ -19,13 +20,13 @@ export class ExportService {
     private readonly pricingService: PricingService
   ) {}
 
-  async createEventExcel(restaurantId: string, eventId: number): Promise<Buffer> {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async createEventExcel(restaurantId: string, section: Section, eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }
 
-    const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
+    const pricing = await this.pricingService.calculateEventPricing(restaurantId, section, eventId);
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Banquet Summary');
@@ -59,13 +60,13 @@ export class ExportService {
     return Buffer.from(await workbook.xlsx.writeBuffer());
   }
 
-  async createEventPdf(restaurantId: string, eventId: number): Promise<Buffer> {
-    const event = await this.eventRepository.getByNumber(restaurantId, eventId);
+  async createEventPdf(restaurantId: string, section: Section, eventId: number): Promise<Buffer> {
+    const event = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!event) {
       throw createHttpError(404, 'Event not found');
     }
 
-    const pricing = await this.pricingService.calculateEventPricing(restaurantId, eventId);
+    const pricing = await this.pricingService.calculateEventPricing(restaurantId, section, eventId);
 
     const MARGIN = 44;
     const pdf = new PDFDocument({ margin: MARGIN });
