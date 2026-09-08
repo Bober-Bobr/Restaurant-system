@@ -2793,11 +2793,48 @@ rather than seeing a row every action on returns 403 for.
 There is **no module entitlement** for the section. Small Banquets ships
 unqated; when it is sold separately, `MODULE_BY_ROLE` is the line that changes.
 
-**Prerequisite — DNS, nginx and TLS.** `supervisor.v-menu.uz` needs the same
-treatment `banquet.v-menu.uz` has: an A record, a server block with
-`root /var/www/restaurant` + `try_files … /index.html` and the `/api` + `/uploads`
-proxies, and the name added as a SAN on the certificate. **Nothing below works
-until that block exists** — the host will 404 at the edge.
+**Prerequisite — DNS, nginx and TLS.** `supervisor.v-menu.uz` needs an A record,
+a server block, and the name added as a SAN on the `v-menu.uz` certificate.
+**Nothing below works until that block exists** — the host 404s at the edge.
+
+The block needs **nothing but** a document root and an SPA fallback: no `/api`
+proxy and no `/uploads` alias. `VITE_API_URL` is an absolute origin baked into
+the bundle and `getPhotoUrl()` derives `/uploads` from it, so this host never
+proxies the API — it calls `api.v-menu.uz` cross-origin, which the API's
+`cors({ origin: true })` and its `Cross-Origin-Resource-Policy: cross-origin`
+header on `/uploads` already allow. `api.v-menu.uz` is the ONE block that talks
+to port 4000; anything about body limits or CORS belongs there and nowhere else.
+
+Create `/etc/nginx/sites-available/supervisor.v-menu.uz`:
+
+```nginx
+server {
+    listen 80;
+    server_name supervisor.v-menu.uz;
+
+    root /var/www/restaurant;
+    index index.html;
+
+    # /<slug>, /<slug>/admin/halls, /<slug>/tablet … are all client-side routes
+    # under a cosmetic slug. Without this, reloading on any of them returns a
+    # 404 from nginx, because no such directory exists on disk.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+```bash
+ln -s /etc/nginx/sites-available/supervisor.v-menu.uz /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+curl -sI http://supervisor.v-menu.uz/registon | head -1   # expect 200, before TLS
+```
+
+Then reissue the certificate with **every name it already carries plus
+`-d supervisor.v-menu.uz`** — certbot replaces the SAN list, it does not append,
+so a name left out of the command is dropped and that host starts failing TLS
+immediately. `certbot certificates` is the authority for what is currently
+covered; take its `Domains:` line verbatim.
 
 **After deploying:**
 
