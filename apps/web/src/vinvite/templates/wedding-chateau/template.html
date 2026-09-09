@@ -423,7 +423,14 @@ section{position:relative}
 /* ============================================================
    DETAILS — engraved stationery, not cards
    ============================================================ */
-.details{background:var(--ivory)}
+/* `overflow:hidden` is load-bearing, not tidiness: `.art-bg` sits at
+   `inset:-8%` so the parallax has room to move, and `.art-veil` — the wash
+   that tones the photograph down to a background — is only `inset:0`. Left
+   unclipped, that 8% overhang escapes the section at full strength: a raw
+   strip of the plate photograph appearing under the calendar above and over
+   the text below. Every other section carrying an `.art-bg` already clips;
+   this one was the omission. */
+.details{background:var(--ivory);overflow:hidden}
 .details__sheet{
   position:relative;max-width:980px;margin:clamp(40px,6vw,72px) auto 0;
   border:1px solid rgba(184,146,78,.4);padding:clamp(28px,5vw,74px);
