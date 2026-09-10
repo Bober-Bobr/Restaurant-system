@@ -1403,6 +1403,9 @@ function bindTexts() {
   var region = loc(cfg('venue.region', ''));
 
   var map = {
+    // The "Where" block's address. A data-bind whose key is absent is left
+    // exactly as authored, and this one is authored empty.
+    venueAddress: loc(cfg('venue.address', '')),
     kicker: loc(cfg('invite.kicker', '')),
     heroMeta: loc(cfg('invite.meta', '')) || fmtDateLong(),
     coupleFull: coupleFull,

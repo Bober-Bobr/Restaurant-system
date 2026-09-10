@@ -1339,6 +1339,10 @@ function bindTexts() {
   var region = loc(cfg('venue.region', ''));
 
   var map = {
+    // The "Where" block. Both must be in this map: a data-bind whose key is
+    // absent is left exactly as authored, and these are authored empty.
+    venueName: venueName,
+    venueAddress: loc(cfg('venue.address', '')),
     kicker: loc(cfg('invite.kicker', '')),
     amp: loc(cfg('invite.amp', '')) || t('and'),
     heroMeta: loc(cfg('invite.meta', '')) || fmtDateLong(),

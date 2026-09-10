@@ -131,3 +131,42 @@ describe('the Where block is wired end to end', () => {
     });
   }
 });
+
+describe('every data-bind in a template has a key to fill it', () => {
+  /**
+   * The gap that let the venue name and address ship blank.
+   *
+   * `bindTexts` builds one object of `data-bind` key → text and then does
+   * `if (v != null) el.textContent = v`. A key that is not in that object is
+   * therefore NOT an error and NOT empty text — the element is skipped and keeps
+   * whatever it was authored with, which for these is nothing at all. So the
+   * markup was right, the field was declared, the editor accepted the value, and
+   * the page rendered an empty heading. Nothing anywhere said so.
+   *
+   * Checked across every template, not just the four: it is a property of how
+   * `bindTexts` works, so any template can fall into it.
+   */
+  for (const tpl of RICH_TEMPLATES) {
+    const src = read(tpl.id);
+    it(tpl.id, () => {
+      const used = new Set([...src.matchAll(/data-bind="([^"]+)"/g)].map((m) => m[1]));
+      const at = src.indexOf('var map = {');
+      expect(at, 'bindTexts no longer builds a map').toBeGreaterThan(-1);
+      // The object literal, brace-matched — the keys it defines are what can be
+      // bound. Comments stripped so prose mentioning a key does not count.
+      let depth = 0; let end = at;
+      for (let i = src.indexOf('{', at); i < src.length; i += 1) {
+        if (src[i] === '{') depth += 1;
+        else if (src[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      const body = src.slice(at, end).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      const defined = new Set([...body.matchAll(/^\s*([A-Za-z0-9_]+)\s*:/gm)].map((m) => m[1]));
+      const orphans = [...used].filter((k) => !defined.has(k));
+      expect(
+        orphans,
+        `these data-bind keys are never filled, so the element renders exactly as `
+        + `authored — empty: ${orphans.join(', ')}`,
+      ).toEqual([]);
+    });
+  }
+});
