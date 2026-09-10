@@ -107,10 +107,19 @@ section{position:relative}
 .dawn__in{position:relative;z-index:4;text-align:center;padding-inline:var(--gutter);width:100%}
 /* The floor was above the vw term on every phone, which stopped the clamp
    scaling exactly where it was needed and broke a long name across two lines. */
+  /* The couple's own names, in a hand. Applied HERE and not to --display,
+     which also sets every section heading and every tracked small-cap: a
+     connecting script set in uppercase with .3em of tracking comes apart
+     into loose unrelated glyphs. Letter-spacing goes to 0 for the same
+     reason — a script's letters are drawn to touch.
+
+     Face chosen for its Uzbek coverage as much as its looks: Great Vibes
+     was the first pick and crushes the modifier turned comma in `O'` and
+     `g'` against the next letter, so `O'tkirbek` reads as `Otkirbek`. */
 .dawn__names{
-  font-family:var(--display);font-weight:300;
-  font-size:clamp(32px,9.5vw,116px);line-height:1.04;margin:0;color:var(--ink);
-  letter-spacing:.02em;
+  font-family:var(--hand);font-weight:400;
+  font-size:clamp(32px,9.5vw,116px);line-height:1.12;margin:0;color:var(--ink);
+  letter-spacing:0;
 }
 .dawn__names .amp{
   display:block;font-family:var(--hand);font-size:clamp(24px,3.6vw,46px);
@@ -1317,21 +1326,49 @@ function applyVisibility() {
 var audio = $('#audio'), musicBtn = $('#music-btn'), musicRetry = false;
 var RETRY_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
 
+/* `musicOff` is the guest's own decision, and it outranks every automatic
+   start below. Without it, pressing pause and then scrolling would restart the
+   track — the retry listeners are still armed, and a scroll is a gesture. */
+var musicOff = false;
+
 function startMusic() {
+  if (musicOff) return;
   if (!audio || !audio.getAttribute('src') || !audio.paused) return;
   var p = audio.play ? audio.play() : null;
-  if (p && p.catch) p.catch(armMusicRetry);
+  // aria-pressed follows what actually happened, not what was attempted: a
+  // blocked autoplay used to leave the button claiming to be playing.
+  if (p && p.then) p.then(setPressed, armMusicRetry); else setPressed();
+}
+function setPressed() {
   if (musicBtn) musicBtn.setAttribute('aria-pressed', 'true');
 }
 function armMusicRetry() {
   if (musicRetry) return;
   musicRetry = true;
   var retry = function () {
+    if (musicOff) return;
     var p = audio.play();
-    var stop = function () { RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); }); };
-    if (p && p.then) p.then(stop); else stop();
+    var stop = function () {
+      setPressed();
+      RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); });
+    };
+    if (p && p.then) p.then(stop, function () {}); else stop();
   };
   RETRY_EVENTS.forEach(function (ev) { window.addEventListener(ev, retry); });
+}
+/* The button had no handler at all, which is why pressing it did nothing.
+   Autoplay itself is best-effort by necessity — every current browser refuses
+   to start audible media without a user gesture — so this attempts it on load
+   and, when that is refused, `armMusicRetry` starts the track on the guest's
+   FIRST tap, key or scroll. On this page that is the tap that opens the
+   invitation, so the music begins with it. */
+function initMusic() {
+  if (musicBtn) musicBtn.addEventListener('click', function () {
+    if (!audio || !audio.getAttribute('src')) return;
+    if (audio.paused) { musicOff = false; startMusic(); }
+    else { musicOff = true; audio.pause(); musicBtn.setAttribute('aria-pressed', 'false'); }
+  });
+  startMusic();
 }
 function renderMusic() {
   if (!audio || !musicBtn) return;
@@ -1569,6 +1606,7 @@ function renderAll() {
 /* ── Boot ────────────────────────────────────────────────────────────────── */
 try {
   renderAll();
+  initMusic();
   measureStems();
   initObserver();
   initCard();

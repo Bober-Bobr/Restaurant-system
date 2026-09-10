@@ -126,3 +126,31 @@ describe('the two that were actually broken', () => {
     });
   }
 });
+
+describe('type over a film keeps a backdrop to stand on', () => {
+  // The two heroes that play a film centre their names on it, and the vignette
+  // behind them is deliberately CLEAR in the middle so the film shows through.
+  // Measured on the real render, the ivory names sat at 2.7:1 against the bright
+  // frames and the gold at 1.8:1 — the largest type on the page was the least
+  // readable. A pool of shade under the text block took those to 7.1 and 4.7.
+  //
+  // The backdrop is darkened rather than the type, because the backdrop MOVES:
+  // the gates open from a bright frame onto a dusk one, so type dark enough for
+  // the opening would vanish seconds later.
+  for (const name of ['wedding-chateau', 'wedding-paris']) {
+    const src = readFileSync(join(DIR, name, 'template.html'), 'utf8');
+    const scrim = /\.hero__scrim\s*\{([^}]*)\}/.exec(src)?.[1] ?? '';
+
+    it(`${name}: the scrim pools shade under the text block`, () => {
+      expect(scrim, '.hero__scrim is gone').not.toBe('');
+      // An ellipse centred on the type, distinct from the vignette centred at 62%.
+      expect(scrim, 'the pool behind the hero type was removed')
+        .toMatch(/radial-gradient\(\s*[\d.]+%\s+[\d.]+%\s+at\s+50%\s+50%/);
+    });
+
+    it(`${name}: and the type carries a shadow for the frames it cannot predict`, () => {
+      const inner = /\.hero__inner\s*\{([^}]*)\}/.exec(src)?.[1] ?? '';
+      expect(inner).toContain('text-shadow');
+    });
+  }
+});

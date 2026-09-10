@@ -1689,6 +1689,8 @@ button,input,textarea{font:inherit;color:inherit}
      07 · MUSIC
      ==================================================================== */
   var audio = one('#music'), musicBtn = one('#music-btn');
+  /* The guest's own decision; it outranks the automatic starts below. */
+  var musicOff = false;
 
   function renderMusic() {
     if (!audio || !musicBtn) return;
@@ -1705,6 +1707,7 @@ button,input,textarea{font:inherit;color:inherit}
   if (musicBtn && audio) {
     musicBtn.addEventListener('click', function () {
       if (audio.paused) {
+        musicOff = false;
         var p = audio.play();
         if (p && p.then) p.then(function () {
           musicBtn.classList.add('playing');
@@ -1714,8 +1717,43 @@ button,input,textarea{font:inherit;color:inherit}
         audio.pause();
         musicBtn.classList.remove('playing');
         musicBtn.setAttribute('aria-pressed', 'false');
+        musicOff = true;
       }
     });
+
+    /* This template only ever started the track when the guest found the button,
+       so an invitation with music on it was usually silent. Try on load, and —
+       because every current browser refuses audible media without a gesture —
+       fall back to starting on the guest's FIRST tap, key or scroll. `musicOff`
+       is what stops that retry from undoing a deliberate pause: a scroll is a
+       gesture too. */
+    var RETRY_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+    var retryArmed = false;
+
+    function markPlaying() {
+      musicBtn.classList.add('playing');
+      musicBtn.setAttribute('aria-pressed', 'true');
+    }
+    function armMusicRetry() {
+      if (retryArmed) return;
+      retryArmed = true;
+      var retry = function () {
+        if (musicOff) return;
+        var p = audio.play();
+        var stop = function () {
+          markPlaying();
+          RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); });
+        };
+        if (p && p.then) p.then(stop, function () {}); else stop();
+      };
+      RETRY_EVENTS.forEach(function (ev) { window.addEventListener(ev, retry); });
+    }
+    function startMusic() {
+      if (musicOff || !audio.getAttribute('src') || !audio.paused) return;
+      var p = audio.play();
+      if (p && p.then) p.then(markPlaying, armMusicRetry); else markPlaying();
+    }
+    startMusic();
   }
 
   /* ========================================================================

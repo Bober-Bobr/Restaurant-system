@@ -9,20 +9,38 @@ import { useEffect, useRef, useState } from 'react';
 // original 18px, so every other caller is unchanged.
 export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; accent: string; bottomOffset?: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [playing, setPlaying] = useState(false);
+  // The visitor's own decision, and it outranks every automatic start below.
+  // A ref rather than state: the listeners below are bound once and would
+  // otherwise close over a stale value.
+  const mutedByUser = useRef(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // `playing` follows the ELEMENT, not the call. A play() that is refused, a
+    // track that stalls, or a pause from anywhere else used to leave the button
+    // showing the opposite of what the page was doing.
+    const sync = () => setPlaying(!audio.paused);
+    audio.addEventListener('play', sync);
+    audio.addEventListener('pause', sync);
+
     const start = () => {
-      audio.play().then(() => setPlaying(true)).catch(() => { /* blocked until a gesture */ });
+      if (mutedByUser.current) return;
+      audio.play().catch(() => { /* blocked until a gesture */ });
     };
 
-    // Try immediately; most browsers will reject until the user interacts.
+    // Try immediately; most browsers refuse until the visitor interacts.
     start();
 
-    const onFirstGesture = () => {
+    const onFirstGesture = (event: Event) => {
+      // NOT when the gesture is the toggle button itself. `pointerdown` fires
+      // before `click`, so this handler used to start the track and the click
+      // that followed immediately paused it again — which is precisely why
+      // pressing the button appeared to do nothing at all.
+      if (buttonRef.current?.contains(event.target as Node)) return;
       start();
       window.removeEventListener('pointerdown', onFirstGesture);
       window.removeEventListener('keydown', onFirstGesture);
@@ -31,6 +49,8 @@ export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; a
     window.addEventListener('keydown', onFirstGesture);
 
     return () => {
+      audio.removeEventListener('play', sync);
+      audio.removeEventListener('pause', sync);
       window.removeEventListener('pointerdown', onFirstGesture);
       window.removeEventListener('keydown', onFirstGesture);
       audio.pause();
@@ -41,10 +61,11 @@ export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; a
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
-      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      mutedByUser.current = false;
+      audio.play().catch(() => setPlaying(false));
     } else {
+      mutedByUser.current = true;
       audio.pause();
-      setPlaying(false);
     }
   };
 
@@ -52,6 +73,7 @@ export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; a
     <>
       <audio ref={audioRef} src={src} loop preload="auto" />
       <button
+        ref={buttonRef}
         type="button"
         onClick={toggle}
         aria-label={playing ? 'Pause music' : 'Play music'}
