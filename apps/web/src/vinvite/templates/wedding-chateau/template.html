@@ -955,7 +955,7 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
   </div>
   <div class="wrap">
     <figure class="floral__stage" style="margin:0">
-      <img class="floral__img" loading="lazy" decoding="async" data-art data-asset="arch.jpg" alt="">
+      <img class="floral__img" loading="lazy" decoding="async" data-art data-asset="arch.jpg" data-photo="ceremony.image" alt="">
       <span class="floral__mask" aria-hidden="true"></span>
       <svg class="floral__vines" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
         <path d="M0 620 C90 540 60 440 130 372 C196 308 176 214 244 150 C298 100 300 44 292 0"/>
@@ -1419,8 +1419,24 @@ function splitNames(bride, groom) {
 var assetsFailed = 0;
 function bindArtwork() {
   $$('[data-asset]').forEach(function (img) {
-    var url = asset(img.getAttribute('data-asset'));
+    /* `data-photo` marks the bundled artwork the honoree is allowed to replace —
+       the ceremony plate, so a couple can show the venue they are actually
+       marrying in. It names a config path; when that holds a URL it wins, and
+       when it is empty the bundled default stands. So an invitation that has
+       never been touched looks exactly as it did before.
+
+       The swap lives HERE rather than in a one-off `renderCeremony()` because
+       every one of these images is bound in this single pass, and a second
+       place that also sets `src` would race this one on each config push. */
+    var custom = img.getAttribute('data-photo') ? String(cfg(img.getAttribute('data-photo'), '') || '').trim() : '';
+    var url = custom || asset(img.getAttribute('data-asset'));
     if (img.getAttribute('src') !== url) img.setAttribute('src', url);
+    /* Every one of these frames already covers, so an upload of any proportion
+       fills it. What it cannot inherit is the ART DIRECTION: a bundled plate may
+       be offset to sit its subject correctly (samarkand's courtyard is pulled to
+       46% for the arch), and an arbitrary photo framed that way loses its own
+       subject. `is-custom` is what lets a template drop that offset. */
+    img.classList.toggle('is-custom', !!custom);
   });
   var poster = $('#heroPoster');
   if (poster && !poster.getAttribute('src')) poster.setAttribute('src', asset('gates.jpg'));

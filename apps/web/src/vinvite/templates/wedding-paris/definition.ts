@@ -83,6 +83,10 @@ const fields: TemplateField[] = [
 
   { key: 'ceremonyTitle', path: 'ceremony.title', type: 'localized-text', group: 'ceremony', labelKey: 'fld_sub' },
   { key: 'ceremonyCap', path: 'ceremony.caption', type: 'localized-textarea', group: 'ceremony', labelKey: 'fld_text' },
+  // The one bundled plate the honoree may replace — typically with a photo of
+  // the venue they are actually marrying in. Empty keeps the bundled artwork,
+  // so nothing already published changes. See `data-photo` in the template.
+  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'ceremony', labelKey: 'fld_photo' },
 
   { key: 'dateNote', path: 'details.dateNote', type: 'localized-text', group: 'details', labelKey: 'fld_time_note' },
   { key: 'detCeremony', path: 'details.ceremony', type: 'localized-text', group: 'details', labelKey: 'fld_venue_name' },
@@ -213,6 +217,8 @@ const defaultConfig = {
     },
   },
   ceremony: {
+    // Empty = keep the bundled plate. An uploaded URL replaces it.
+    image: '',
     title: { en: 'Beneath the tower, at six', ru: 'Под башней, в шесть', uz: 'Minora ostida, soat oltida' },
     caption: {
       en: 'Vows in the garden of the Hôtel de Sévigné, with the tower over our shoulders.',

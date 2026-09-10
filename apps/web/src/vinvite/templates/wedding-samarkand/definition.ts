@@ -71,6 +71,10 @@ const fields: TemplateField[] = [
 
   { key: 'venueName', path: 'venue.name', type: 'localized-text', group: 'venue', labelKey: 'fld_venue_name' },
   { key: 'venueCity', path: 'venue.city', type: 'localized-text', group: 'venue', labelKey: 'fld_city' },
+  // The one bundled plate the honoree may replace — typically with a photo of
+  // the venue they are actually marrying in. Empty keeps the bundled artwork,
+  // so nothing already published changes. See `data-photo` in the template.
+  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
 
   // Three plates behind parting silk. Leaving both a heading and its passage
   // blank drops that row from the page.
@@ -123,6 +127,10 @@ const fields: TemplateField[] = [
 ];
 
 const defaultConfig = {
+  // The venue plate the honoree may replace; empty keeps the bundled
+  // artwork. See `data-photo` in the template.
+  ceremony: { image: '' },
+
   couple: {
     bride: { uz: 'Zarina', ru: 'Зарина', en: 'Zarina' },
     groom: { uz: 'Timur', ru: 'Тимур', en: 'Timur' },

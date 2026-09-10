@@ -226,6 +226,9 @@ section{position:relative}
 .thresh{height:clamp(440px,84vh,880px);height:clamp(440px,84svh,880px);overflow:hidden;background:var(--night)}
 .thresh__bg{position:absolute;inset:-8%;will-change:transform}
 .thresh__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 46%}
+/* The 46% above frames the bundled courtyard's arch. An uploaded venue photo
+   has its own subject and is centred instead. */
+.thresh__bg img.is-custom{object-position:50% 50%}
 .thresh__top{position:absolute;left:0;right:0;top:-1px;height:34%;z-index:2;
   background:linear-gradient(var(--night),transparent);pointer-events:none}
 .thresh__hem{position:absolute;left:0;right:0;bottom:-1px;height:40%;z-index:2;
@@ -588,7 +591,7 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
      ============================================================ -->
 <section class="thresh" id="threshold" data-opt="threshold" aria-label="The courtyard">
   <div class="thresh__bg" data-depth="0.10">
-    <img loading="eager" decoding="async" data-art data-asset="courtyard.jpg" alt="">
+    <img loading="eager" decoding="async" data-art data-asset="courtyard.jpg" data-photo="ceremony.image" alt="">
   </div>
   <div class="thresh__top" aria-hidden="true"></div>
   <div class="thresh__hem" aria-hidden="true"></div>
@@ -1110,8 +1113,24 @@ function renderPlaqueDate() {
    __ORIGIN__, which only exists once the bootstrap has run. */
 function bindArtwork() {
   $$('[data-asset]').forEach(function (img) {
-    var url = asset(img.getAttribute('data-asset'));
+    /* `data-photo` marks the bundled artwork the honoree is allowed to replace —
+       the ceremony plate, so a couple can show the venue they are actually
+       marrying in. It names a config path; when that holds a URL it wins, and
+       when it is empty the bundled default stands. So an invitation that has
+       never been touched looks exactly as it did before.
+
+       The swap lives HERE rather than in a one-off `renderCeremony()` because
+       every one of these images is bound in this single pass, and a second
+       place that also sets `src` would race this one on each config push. */
+    var custom = img.getAttribute('data-photo') ? String(cfg(img.getAttribute('data-photo'), '') || '').trim() : '';
+    var url = custom || asset(img.getAttribute('data-asset'));
     if (img.getAttribute('src') !== url) img.setAttribute('src', url);
+    /* Every one of these frames already covers, so an upload of any proportion
+       fills it. What it cannot inherit is the ART DIRECTION: a bundled plate may
+       be offset to sit its subject correctly (samarkand's courtyard is pulled to
+       46% for the arch), and an arbitrary photo framed that way loses its own
+       subject. `is-custom` is what lets a template drop that offset. */
+    img.classList.toggle('is-custom', !!custom);
   });
   var poster = $('#heroPoster');
   if (poster && !poster.getAttribute('src')) poster.setAttribute('src', asset('lantern.jpg'));

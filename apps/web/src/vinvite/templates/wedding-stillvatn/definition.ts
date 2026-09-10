@@ -90,6 +90,10 @@ const fields: TemplateField[] = [
   { key: 'sWaterfall', path: 'scenes.waterfall', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sRain', path: 'scenes.rain', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sCeremony', path: 'scenes.ceremony', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
+  // The one bundled plate the honoree may replace — typically with a photo of
+  // the venue they are actually marrying in. Empty keeps the bundled artwork,
+  // so nothing already published changes. See `data-photo` in the template.
+  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'scenes', labelKey: 'fld_photo' },
   { key: 'sTable', path: 'scenes.table', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sRings', path: 'scenes.rings', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sValley', path: 'scenes.valley', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
@@ -126,6 +130,10 @@ const fields: TemplateField[] = [
 ];
 
 const defaultConfig = {
+  // The venue plate the honoree may replace; empty keeps the bundled
+  // artwork. See `data-photo` in the template.
+  ceremony: { image: '' },
+
   couple: {
     bride: { en: 'Elin', ru: 'Элин', uz: 'Elin' },
     groom: { en: 'Mattis', ru: 'Маттис', uz: 'Mattis' },
