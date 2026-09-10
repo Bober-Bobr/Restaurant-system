@@ -71,10 +71,13 @@ const fields: TemplateField[] = [
 
   { key: 'venueName', path: 'venue.name', type: 'localized-text', group: 'venue', labelKey: 'fld_venue_name' },
   { key: 'venueCity', path: 'venue.city', type: 'localized-text', group: 'venue', labelKey: 'fld_city' },
-  // The one bundled plate the honoree may replace — typically with a photo of
-  // the venue they are actually marrying in. Empty keeps the bundled artwork,
-  // so nothing already published changes. See `data-photo` in the template.
-  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
+  // ── Where ───────────────────────────────────────────────────────────────
+  // The venue as a place a guest has to physically reach: a photograph of it,
+  // an address, and a link into their map app. The photo falls back to bundled
+  // artwork while it is empty, so the block never renders as a grey box.
+  { key: 'venueImage', path: 'venue.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
+  { key: 'venueAddress', path: 'venue.address', type: 'localized-text', group: 'venue', labelKey: 'fld_address' },
+  { key: 'venueMapUrl', path: 'venue.mapUrl', type: 'text', group: 'venue', labelKey: 'fld_map_url', placeholder: 'https://yandex.uz/maps/…' },
 
   // Three plates behind parting silk. Leaving both a heading and its passage
   // blank drops that row from the page.
@@ -124,12 +127,10 @@ const fields: TemplateField[] = [
   { key: 'v_journey', path: 'hidden.journey', type: 'toggle', group: 'visibility', labelKey: 'sec_journey' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
   { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
+  { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
 ];
 
 const defaultConfig = {
-  // The venue plate the honoree may replace; empty keeps the bundled
-  // artwork. See `data-photo` in the template.
-  ceremony: { image: '' },
 
   couple: {
     bride: { uz: 'Zarina', ru: 'Зарина', en: 'Zarina' },
@@ -175,6 +176,11 @@ const defaultConfig = {
     },
   },
   venue: {
+    // Empty keeps the bundled photograph; an uploaded photo of the real
+    // venue replaces it. Address and map link start unset.
+    image: '',
+    address: { en: '', ru: '', uz: '' },
+    mapUrl: '',
     name: { uz: 'Bogi Nur', ru: 'Баги Нур', en: 'Bagh-i Nur' },
     city: { uz: 'Samarqand', ru: 'Самарканд', en: 'Samarkand' },
   },
@@ -311,7 +317,7 @@ export const weddingSamarkandTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'details', 'journey', 'final'],
+  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'details', 'place', 'journey', 'final'],
   // The lantern gold only. The burgundy and the ruby are the silk and the
   // petals; recolouring them with a picked accent would take the fabric with
   // them.

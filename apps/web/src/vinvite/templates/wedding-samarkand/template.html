@@ -226,9 +226,6 @@ section{position:relative}
 .thresh{height:clamp(440px,84vh,880px);height:clamp(440px,84svh,880px);overflow:hidden;background:var(--night)}
 .thresh__bg{position:absolute;inset:-8%;will-change:transform}
 .thresh__bg img{width:100%;height:100%;object-fit:cover;object-position:50% 46%}
-/* The 46% above frames the bundled courtyard's arch. An uploaded venue photo
-   has its own subject and is centred instead. */
-.thresh__bg img.is-custom{object-position:50% 50%}
 .thresh__top{position:absolute;left:0;right:0;top:-1px;height:34%;z-index:2;
   background:linear-gradient(var(--night),transparent);pointer-events:none}
 .thresh__hem{position:absolute;left:0;right:0;bottom:-1px;height:40%;z-index:2;
@@ -547,6 +544,29 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
   .journey__cap p{opacity:1 !important;transform:none !important}
   #dust{display:none}
 }
+
+/* ── WHERE ─────────────────────────────────────────────────────────────────
+   The practical block: what the place looks like, its address, and one link
+   out to a map. Dark like the rest of this design — a pale card would read as
+   a hole punched in the lantern-lit night. */
+.place{background:var(--night-2)}
+.place__card{
+  margin:clamp(30px,4.5vw,52px) auto 0;max-width:820px;
+  background:rgba(42,22,34,.6);
+  border:1px solid rgba(201,162,39,.3);
+  overflow:hidden;
+}
+.place__shot{position:relative;aspect-ratio:16/9;overflow:hidden;background:rgba(201,162,39,.08)}
+.place__img{width:100%;height:100%;object-fit:cover;display:block}
+.place__body{padding:clamp(20px,3vw,34px);text-align:center}
+.place__addr{
+  margin:0 0 clamp(18px,2.5vw,26px);
+  font-family:var(--body);font-size:clamp(15px,.5vw + 14px,18px);
+  line-height:1.7;color:var(--ivory-dim);
+}
+.place__map{color:var(--ivory);text-decoration:none;cursor:pointer}
+.place__map:hover{color:var(--gold-lt)}
+.place__addr[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -591,7 +611,7 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
      ============================================================ -->
 <section class="thresh" id="threshold" data-opt="threshold" aria-label="The courtyard">
   <div class="thresh__bg" data-depth="0.10">
-    <img loading="eager" decoding="async" data-art data-asset="courtyard.jpg" data-photo="ceremony.image" alt="">
+    <img loading="eager" decoding="async" data-art data-asset="courtyard.jpg" alt="">
   </div>
   <div class="thresh__top" aria-hidden="true"></div>
   <div class="thresh__hem" aria-hidden="true"></div>
@@ -767,6 +787,30 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
     </div>
   </div>
 </section>
+<!-- ============================================================
+     WHERE — the venue itself: a photograph of it, the address,
+     and a link straight into the guest's own map app.
+     ============================================================ -->
+<section class="place pad" id="place" data-opt="place" aria-labelledby="place-h">
+  <div class="wrap center">
+    <p class="eyebrow reveal" data-t="howToFindUs"></p>
+    <h2 class="reveal" id="place-h" style="font-size:clamp(28px,4vw,52px)" data-bind="venueName"></h2>
+  </div>
+  <div class="wrap">
+    <figure class="place__card reveal reveal--soft">
+      <div class="place__shot">
+        <img class="place__img" loading="lazy" decoding="async" data-art data-asset="palace.jpg" data-photo="venue.image" alt="">
+      </div>
+      <figcaption class="place__body">
+        <p class="place__addr" data-bind="venueAddress" data-hide-empty></p>
+        <a class="rsvp-btn place__map" id="mapBtn" target="_blank" rel="noopener">
+          <span data-t="openMap"></span>
+        </a>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
 
 <!-- ============================================================
      7 · GARDEN JOURNEY — sticky, scroll-driven descent
@@ -926,6 +970,8 @@ var UI = {
     savedYes: 'Javobingiz qabul qilindi. Chiroqlar soat oltida yoqiladi.',
     savedNo: 'Sizni sogtnamiz, ammo bir chirogni baribir yoqib qoyamiz.',
     close: 'Yopish', music: 'Musiqa',
+    openMap: 'Xaritada ochish',
+    howToFindUs: 'Bizni qanday topish mumkin',
     rThreshold: 'Hovli', rInvite: 'Taklifnoma', rCouple: 'Biz haqimizda',
     rDate: 'Sana', rDetails: 'Tafsilotlar', rJourney: 'Bog', rFinal: 'Keling',
     developedBy: 'V-INVITE tomonidan mehr bilan yaratildi'
@@ -946,6 +992,8 @@ var UI = {
     savedYes: 'Ваш ответ получен. Фонари зажигают в шесть.',
     savedNo: 'Нам будет вас не хватать — но один фонарь мы всё равно зажжём.',
     close: 'Закрыть', music: 'Музыка',
+    openMap: 'Открыть на карте',
+    howToFindUs: 'Как нас найти',
     rThreshold: 'Двор', rInvite: 'Приглашение', rCouple: 'О нас',
     rDate: 'Дата', rDetails: 'Детали', rJourney: 'Сад', rFinal: 'Приходите',
     developedBy: 'Сделано с любовью в V-INVITE'
@@ -966,6 +1014,8 @@ var UI = {
     savedYes: 'We have you down. The lanterns are lit at six.',
     savedNo: 'We will miss you, and we will keep a lantern burning anyway.',
     close: 'Close', music: 'Music',
+    openMap: 'Open in maps',
+    howToFindUs: 'How to find us',
     rThreshold: 'The courtyard', rInvite: 'The invitation', rCouple: 'Our story',
     rDate: 'The date', rDetails: 'Details', rJourney: 'The garden', rFinal: 'Come',
     developedBy: 'Developed with love by V-INVITE'
@@ -1672,6 +1722,28 @@ function renderMusic() {
   musicBtn.classList.remove('hidden');
 }
 
+/* ── Where ───────────────────────────────────────────────────────────────── */
+/* The map link. A hand-entered `venue.mapUrl` wins; with none, a search on the
+   address (falling back to the venue's name) is built instead — a guest gets a
+   working link either way, which matters more here than exactness, because this
+   is the one control on the page whose whole job is to be tapped. */
+function renderPlace() {
+  var btn = $('#mapBtn');
+  if (!btn) return;
+  var url = String(cfg('venue.mapUrl', '') || '').trim();
+  if (!url) {
+    var q = loc(cfg('venue.address', '')) || loc(cfg('venue.name', ''));
+    url = q ? 'https://yandex.com/maps/?text=' + encodeURIComponent(q) : '';
+  }
+  if (url) { btn.setAttribute('href', url); btn.removeAttribute('aria-disabled'); }
+  else { btn.removeAttribute('href'); btn.setAttribute('aria-disabled', 'true'); }
+  /* Nothing to show and nowhere to go — hide the whole block rather than leave
+     a titled empty card. `applyVisibility` handles the explicit switch; this is
+     the "never filled in" case. */
+  var sec = $('#place');
+  if (sec && !cfg('venue.image', '') && !loc(cfg('venue.address', '')) && !url) sec.classList.add('opt-off');
+}
+
 /* ── RSVP ────────────────────────────────────────────────────────────────── */
 var attending = true;
 var rsvpPending = null;
@@ -1894,6 +1966,7 @@ function renderAll() {
   bindArtwork();
   renderProgramme();
   applyVisibility();
+  renderPlace();
   renderMusic();
   renderLangbar();
   renderRail();

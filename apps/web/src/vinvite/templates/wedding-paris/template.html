@@ -736,6 +736,33 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
   .invite__sprig{opacity:.5 !important}
   #petals{display:none}
 }
+
+/* ── WHERE ─────────────────────────────────────────────────────────────────
+   The practical block: what the place looks like, its address, and one link
+   out to a map. It sits after the details list because that is the order a
+   guest reads in — what is happening, then how to get there. */
+.place{background:var(--ivory)}
+.place__card{
+  margin:clamp(30px,4.5vw,52px) auto 0;max-width:820px;
+  background:rgba(255,255,255,.5);
+  border:1px solid rgba(184,146,78,.28);
+  border-radius:3px;overflow:hidden;
+}
+.place__shot{position:relative;aspect-ratio:16/9;overflow:hidden;background:rgba(184,146,78,.08)}
+.place__img{width:100%;height:100%;object-fit:cover;display:block}
+.place__body{padding:clamp(20px,3vw,34px);text-align:center}
+.place__addr{
+  margin:0 0 clamp(18px,2.5vw,26px);
+  font-family:var(--body);font-size:clamp(15px,.5vw + 14px,18px);
+  line-height:1.7;color:var(--ink-soft,inherit);
+}
+/* The map link is the page's own button, so it needs no styling of its own —
+   only the colour correction for sitting on ivory rather than on the dark
+   finale, where .rsvp-btn normally lives. */
+.place__map{color:var(--green-deep,#2F3A2E);text-decoration:none;cursor:pointer}
+.place__map:hover{color:var(--gold)}
+/* An empty address must not leave a gap above the button. */
+.place__addr[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -892,7 +919,7 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
   </div>
   <div class="wrap">
     <figure class="floral__stage" style="margin:0">
-      <img class="floral__img" loading="lazy" decoding="async" data-art data-asset="tower.jpg" data-photo="ceremony.image" alt="">
+      <img class="floral__img" loading="lazy" decoding="async" data-art data-asset="tower.jpg" alt="">
       <span class="floral__mask" aria-hidden="true"></span>
       <svg class="floral__vines" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
         <path d="M0 620 C90 540 60 440 130 372 C196 308 176 214 244 150 C298 100 300 44 292 0"/>
@@ -990,6 +1017,30 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
     </div>
   </div>
 </section>
+<!-- ============================================================
+     WHERE — the venue itself: a photograph of it, the address,
+     and a link straight into the guest's own map app.
+     ============================================================ -->
+<section class="place pad" id="place" data-opt="place" aria-labelledby="place-h">
+  <div class="wrap center">
+    <p class="eyebrow reveal" data-t="howToFindUs"></p>
+    <h2 class="reveal" id="place-h" style="font-size:clamp(28px,4vw,52px)" data-bind="venueName"></h2>
+  </div>
+  <div class="wrap">
+    <figure class="place__card reveal reveal--soft">
+      <div class="place__shot">
+        <img class="place__img" loading="lazy" decoding="async" data-art data-asset="ballroom.jpg" data-photo="venue.image" alt="">
+      </div>
+      <figcaption class="place__body">
+        <p class="place__addr" data-bind="venueAddress" data-hide-empty></p>
+        <a class="rsvp-btn place__map" id="mapBtn" target="_blank" rel="noopener">
+          <span data-t="openMap"></span>
+        </a>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
 
 <!-- ============================================================
      GALLERY
@@ -1162,6 +1213,8 @@ var UI = {
     savedYes: 'We have you down. The doors open at five.',
     savedNo: 'We will miss you, and we will raise a glass anyway.',
     close: 'Close', music: 'Music',
+    openMap: 'Open in maps',
+    howToFindUs: 'How to find us',
     gGarden: 'The garden', gCafe: 'The cafe', gRoses: 'The rose walk',
     gBallroom: 'The mirror hall', gTable: 'The table', gDress: 'Lace and silk',
     gNight: 'Paris at night', gDoors: 'The doors',
@@ -1185,6 +1238,8 @@ var UI = {
     savedYes: 'Ваш ответ получен. Двери откроются в пять.',
     savedNo: 'Нам будет вас не хватать, но бокал мы поднимем.',
     close: 'Закрыть', music: 'Музыка',
+    openMap: 'Открыть на карте',
+    howToFindUs: 'Как нас найти',
     gGarden: 'Сад', gCafe: 'Кафе', gRoses: 'Розовая аллея',
     gBallroom: 'Зеркальный зал', gTable: 'Стол', gDress: 'Кружево и шёлк',
     gNight: 'Париж ночью', gDoors: 'Двери',
@@ -1208,6 +1263,8 @@ var UI = {
     savedYes: 'Javobingiz qabul qilindi. Eshiklar soat beshda ochiladi.',
     savedNo: 'Sizni sogtnamiz, ammo qadahni baribir kotaramiz.',
     close: 'Yopish', music: 'Musiqa',
+    openMap: 'Xaritada ochish',
+    howToFindUs: 'Bizni qanday topish mumkin',
     gGarden: 'Bog', gCafe: 'Kafe', gRoses: 'Atirgul yoli',
     gBallroom: 'Oynali zal', gTable: 'Dasturxon', gDress: 'Dantel va ipak',
     gNight: 'Tundagi Parij', gDoors: 'Eshiklar',
@@ -1981,6 +2038,28 @@ function renderMusic() {
   musicBtn.classList.remove('hidden');
 }
 
+/* ── Where ───────────────────────────────────────────────────────────────── */
+/* The map link. A hand-entered `venue.mapUrl` wins; with none, a search on the
+   address (falling back to the venue's name) is built instead — a guest gets a
+   working link either way, which matters more here than exactness, because this
+   is the one control on the page whose whole job is to be tapped. */
+function renderPlace() {
+  var btn = $('#mapBtn');
+  if (!btn) return;
+  var url = String(cfg('venue.mapUrl', '') || '').trim();
+  if (!url) {
+    var q = loc(cfg('venue.address', '')) || loc(cfg('venue.name', ''));
+    url = q ? 'https://yandex.com/maps/?text=' + encodeURIComponent(q) : '';
+  }
+  if (url) { btn.setAttribute('href', url); btn.removeAttribute('aria-disabled'); }
+  else { btn.removeAttribute('href'); btn.setAttribute('aria-disabled', 'true'); }
+  /* Nothing to show and nowhere to go — hide the whole block rather than leave
+     a titled empty card. `applyVisibility` handles the explicit switch; this is
+     the "never filled in" case. */
+  var sec = $('#place');
+  if (sec && !cfg('venue.image', '') && !loc(cfg('venue.address', '')) && !url) sec.classList.add('opt-off');
+}
+
 /* ── RSVP ────────────────────────────────────────────────────────────────── */
 var attending = true;
 var rsvpPending = null;
@@ -2186,6 +2265,7 @@ function renderAll() {
   renderSchedule();
   renderGallery();
   applyVisibility();
+  renderPlace();
   renderMusic();
   renderLangbar();
   collectLayers();

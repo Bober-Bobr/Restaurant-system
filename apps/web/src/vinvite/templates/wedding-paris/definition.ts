@@ -69,6 +69,13 @@ const fields: TemplateField[] = [
 
   { key: 'venueName', path: 'venue.name', type: 'localized-text', group: 'venue', labelKey: 'fld_venue_name' },
   { key: 'venueRegion', path: 'venue.region', type: 'localized-text', group: 'venue', labelKey: 'fld_city' },
+  // ── Where ───────────────────────────────────────────────────────────────
+  // The venue as a place a guest has to physically reach: a photograph of it,
+  // an address, and a link into their map app. The photo falls back to bundled
+  // artwork while it is empty, so the block never renders as a grey box.
+  { key: 'venueImage', path: 'venue.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
+  { key: 'venueAddress', path: 'venue.address', type: 'localized-text', group: 'venue', labelKey: 'fld_address' },
+  { key: 'venueMapUrl', path: 'venue.mapUrl', type: 'text', group: 'venue', labelKey: 'fld_map_url', placeholder: 'https://yandex.uz/maps/…' },
 
   // Three acts. Each is a heading and a passage beside its own plate; leaving
   // both blank drops that row from the page.
@@ -83,10 +90,6 @@ const fields: TemplateField[] = [
 
   { key: 'ceremonyTitle', path: 'ceremony.title', type: 'localized-text', group: 'ceremony', labelKey: 'fld_sub' },
   { key: 'ceremonyCap', path: 'ceremony.caption', type: 'localized-textarea', group: 'ceremony', labelKey: 'fld_text' },
-  // The one bundled plate the honoree may replace — typically with a photo of
-  // the venue they are actually marrying in. Empty keeps the bundled artwork,
-  // so nothing already published changes. See `data-photo` in the template.
-  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'ceremony', labelKey: 'fld_photo' },
 
   { key: 'dateNote', path: 'details.dateNote', type: 'localized-text', group: 'details', labelKey: 'fld_time_note' },
   { key: 'detCeremony', path: 'details.ceremony', type: 'localized-text', group: 'details', labelKey: 'fld_venue_name' },
@@ -117,6 +120,7 @@ const fields: TemplateField[] = [
   { key: 'v_arrival', path: 'hidden.arrival', type: 'toggle', group: 'visibility', labelKey: 'sec_arrival' },
   { key: 'v_story', path: 'hidden.story', type: 'toggle', group: 'visibility', labelKey: 'sec_story' },
   { key: 'v_ceremony', path: 'hidden.ceremony', type: 'toggle', group: 'visibility', labelKey: 'sec_ceremony' },
+  { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
   { key: 'v_calendar', path: 'hidden.calendar', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
@@ -171,6 +175,11 @@ const defaultConfig = {
     },
   },
   venue: {
+    // Empty keeps the bundled photograph of the estate; an uploaded photo of
+    // the real venue replaces it. Address and map link start unset.
+    image: '',
+    address: { en: '', ru: '', uz: '' },
+    mapUrl: '',
     name: { en: 'Hôtel de Sévigné', ru: 'Отель де Севинье', uz: 'Sevinye qasri' },
     region: { en: 'Paris, France', ru: 'Париж, Франция', uz: 'Parij, Fransiya' },
   },
@@ -217,8 +226,6 @@ const defaultConfig = {
     },
   },
   ceremony: {
-    // Empty = keep the bundled plate. An uploaded URL replaces it.
-    image: '',
     title: { en: 'Beneath the tower, at six', ru: 'Под башней, в шесть', uz: 'Minora ostida, soat oltida' },
     caption: {
       en: 'Vows in the garden of the Hôtel de Sévigné, with the tower over our shoulders.',
@@ -328,7 +335,7 @@ export const weddingParisTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'arrival', 'invite', 'story', 'ceremony', 'calendar', 'details', 'gallery', 'finale'],
+  sectionIds: ['hero', 'arrival', 'invite', 'story', 'ceremony', 'calendar', 'details', 'place', 'gallery', 'finale'],
   // The engraved gold only. The dusty rose and the burgundy are the flowers and
   // the ribbon drawn through the design; recolouring them with a picked accent
   // would take the roses with them.

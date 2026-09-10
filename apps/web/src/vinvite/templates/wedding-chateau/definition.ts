@@ -59,6 +59,13 @@ const fields: TemplateField[] = [
 
   { key: 'venueName', path: 'venue.name', type: 'localized-text', group: 'venue', labelKey: 'fld_venue_name' },
   { key: 'venueRegion', path: 'venue.region', type: 'localized-text', group: 'venue', labelKey: 'fld_city' },
+  // ── Where ───────────────────────────────────────────────────────────────
+  // The venue as a place a guest has to physically reach: a photograph of it,
+  // an address, and a link into their map app. The photo falls back to bundled
+  // artwork while it is empty, so the block never renders as a grey box.
+  { key: 'venueImage', path: 'venue.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
+  { key: 'venueAddress', path: 'venue.address', type: 'localized-text', group: 'venue', labelKey: 'fld_address' },
+  { key: 'venueMapUrl', path: 'venue.mapUrl', type: 'text', group: 'venue', labelKey: 'fld_map_url', placeholder: 'https://yandex.uz/maps/…' },
 
   { key: 'storyEyebrow', path: 'story.eyebrow', type: 'localized-text', group: 'story', labelKey: 'fld_kicker' },
   { key: 'storyTitle', path: 'story.title', type: 'localized-text', group: 'story', labelKey: 'fld_sub' },
@@ -71,10 +78,6 @@ const fields: TemplateField[] = [
 
   { key: 'ceremonyTitle', path: 'ceremony.title', type: 'localized-text', group: 'ceremony', labelKey: 'fld_sub' },
   { key: 'ceremonyCap', path: 'ceremony.caption', type: 'localized-textarea', group: 'ceremony', labelKey: 'fld_text' },
-  // The one bundled plate the honoree may replace — typically with a photo of
-  // the venue they are actually marrying in. Empty keeps the bundled artwork,
-  // so nothing already published changes. See `data-photo` in the template.
-  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'ceremony', labelKey: 'fld_photo' },
 
   { key: 'dateNote', path: 'details.dateNote', type: 'localized-text', group: 'details', labelKey: 'fld_time_note' },
   { key: 'detCeremony', path: 'details.ceremony', type: 'localized-text', group: 'details', labelKey: 'fld_venue_name' },
@@ -107,6 +110,7 @@ const fields: TemplateField[] = [
   { key: 'v_couple', path: 'hidden.couple', type: 'toggle', group: 'visibility', labelKey: 'sec_story' },
   { key: 'v_story', path: 'hidden.story', type: 'toggle', group: 'visibility', labelKey: 'sec_theday' },
   { key: 'v_ceremony', path: 'hidden.ceremony', type: 'toggle', group: 'visibility', labelKey: 'sec_ceremony' },
+  { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
   { key: 'v_calendar', path: 'hidden.calendar', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
@@ -159,6 +163,11 @@ const defaultConfig = {
     },
   },
   venue: {
+    // Empty keeps the bundled photograph of the estate; an uploaded photo of
+    // the real venue replaces it. Address and map link start unset.
+    image: '',
+    address: { en: '', ru: '', uz: '' },
+    mapUrl: '',
     name: { en: 'Château de Villandreau', ru: 'Шато де Виландро', uz: 'Vilandro qasri' },
     region: { en: 'Loire Valley, France', ru: 'Долина Луары, Франция', uz: 'Luara vodiysi, Fransiya' },
   },
@@ -198,8 +207,6 @@ const defaultConfig = {
     },
   },
   ceremony: {
-    // Empty = keep the bundled plate. An uploaded URL replaces it.
-    image: '',
     title: { en: 'Beneath the arch', ru: 'Под аркой', uz: 'Ravoq ostida' },
     caption: {
       en: 'Vows at five, in the rose walk. The chairs are on the grass — heels will sink, and nobody will mind.',
@@ -309,7 +316,7 @@ export const weddingChateauTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'arrival', 'invite', 'estate', 'couple', 'story', 'ceremony', 'calendar', 'details', 'gallery', 'finale'],
+  sectionIds: ['hero', 'arrival', 'invite', 'estate', 'couple', 'story', 'ceremony', 'calendar', 'details', 'place', 'gallery', 'finale'],
   // The engraved gold, not the blush and sage: those two are the florals drawn
   // into the ornament, and recolouring them with a picked accent would take the
   // roses and the leaves with them.

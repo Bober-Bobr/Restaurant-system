@@ -64,6 +64,13 @@ const fields: TemplateField[] = [
   { key: 'cardNote', path: 'card.note', type: 'localized-text', group: 'datetime', labelKey: 'fld_time_note' },
 
   { key: 'venueName', path: 'venue.name', type: 'localized-text', group: 'venue', labelKey: 'fld_venue_name' },
+  // ── Where ───────────────────────────────────────────────────────────────
+  // The venue as a place a guest has to physically reach: a photograph of it,
+  // an address, and a link into their map app. The photo falls back to bundled
+  // artwork while it is empty, so the block never renders as a grey box.
+  { key: 'venueImage', path: 'venue.image', type: 'image', group: 'venue', labelKey: 'fld_photo' },
+  { key: 'venueAddress', path: 'venue.address', type: 'localized-text', group: 'venue', labelKey: 'fld_address' },
+  { key: 'venueMapUrl', path: 'venue.mapUrl', type: 'text', group: 'venue', labelKey: 'fld_map_url', placeholder: 'https://yandex.uz/maps/…' },
 
   // The three quiet pages. Each has a handwritten line above its heading; a
   // page with neither heading nor prose removes itself.
@@ -90,10 +97,6 @@ const fields: TemplateField[] = [
   { key: 'sWaterfall', path: 'scenes.waterfall', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sRain', path: 'scenes.rain', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sCeremony', path: 'scenes.ceremony', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
-  // The one bundled plate the honoree may replace — typically with a photo of
-  // the venue they are actually marrying in. Empty keeps the bundled artwork,
-  // so nothing already published changes. See `data-photo` in the template.
-  { key: 'ceremonyImage', path: 'ceremony.image', type: 'image', group: 'scenes', labelKey: 'fld_photo' },
   { key: 'sTable', path: 'scenes.table', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sRings', path: 'scenes.rings', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
   { key: 'sValley', path: 'scenes.valley', type: 'localized-text', group: 'scenes', labelKey: 'fld_caption' },
@@ -127,12 +130,10 @@ const fields: TemplateField[] = [
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
   { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
+  { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
 ];
 
 const defaultConfig = {
-  // The venue plate the honoree may replace; empty keeps the bundled
-  // artwork. See `data-photo` in the template.
-  ceremony: { image: '' },
 
   couple: {
     bride: { en: 'Elin', ru: 'Элин', uz: 'Elin' },
@@ -164,6 +165,11 @@ const defaultConfig = {
     },
   },
   venue: {
+    // Empty keeps the bundled photograph; an uploaded photo of the real
+    // venue replaces it. Address and map link start unset.
+    image: '',
+    address: { en: '', ru: '', uz: '' },
+    mapUrl: '',
     name: { en: 'Stillvatn', ru: 'Стиллватн', uz: 'Stillvatn' },
   },
   story: {
@@ -293,7 +299,7 @@ export const weddingStillvatnTemplate: TemplateDefinition = {
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
   // `meadow` is a scene rather than a block, but it anchors the walk.
-  sectionIds: ['hero', 'invite', 'story', 'meadow', 'theday', 'date', 'details', 'ridge', 'final'],
+  sectionIds: ['hero', 'invite', 'story', 'meadow', 'theday', 'date', 'details', 'place', 'ridge', 'final'],
   // The sage greens. The gold is a single warm note in the pollen and the
   // paper, and recolouring it with a picked accent would not read as a change.
   accentVars: ['--sage', '--sage-deep', '--olive'],

@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { RICH_TEMPLATES } from './templates';
 
 /**
- * A bundled plate the honoree may replace — the ceremony photograph, so a couple
- * can show the venue they are actually marrying in.
+ * The "Where" block: a photograph of the venue, its address, and one link into
+ * the guest's map app.
  *
  * The artwork in these designs is part of the design and ships bundled; the
- * ceremony plate is the exception, marked in the markup with
+ * venue photograph is the exception, marked in the markup with
  * `data-photo="<config path>"`. `bindArtwork` prefers whatever that path holds
  * and falls back to `data-asset` when it is empty, so an invitation nobody has
  * touched looks exactly as it did before.
@@ -82,4 +82,52 @@ describe.each(WITH_SLOTS.map((t) => [t.id, t] as const))('%s', (id, tpl) => {
     expect(body, 'the bundled asset no longer acts as the fallback')
       .toMatch(/custom\s*\|\|\s*asset\(/);
   });
+});
+
+describe('the Where block is wired end to end', () => {
+  for (const [id, tpl] of WITH_SLOTS.map((t) => [t.id, t] as const)) {
+    const src = read(id);
+
+    it(`${id}: has a map link the renderer fills`, () => {
+      expect(src, 'no map button').toContain('id="mapBtn"');
+      // An <a> with no href is not a link and is not focusable, so the button
+      // is only useful once renderPlace() has put one on it.
+      expect(src).toContain('function renderPlace');
+      const call = src.slice(src.indexOf('function renderAll'));
+      expect(call.slice(0, 600), 'renderPlace is defined but never called').toContain('renderPlace();');
+    });
+
+    it(`${id}: falls back to a map search when no URL was entered`, () => {
+      // Most couples will not paste a Yandex link. Building a search from the
+      // address is what makes the button work anyway — and the button existing
+      // but doing nothing is worse than no button.
+      const fn = src.slice(src.indexOf('function renderPlace'));
+      expect(fn.slice(0, 900)).toContain("cfg('venue.mapUrl'");
+      expect(fn.slice(0, 900)).toMatch(/yandex\.com\/maps\/\?text=/);
+    });
+
+    it(`${id}: declares the address and the map URL as fields`, () => {
+      const paths = new Set(tpl.fields.map((f) => f.path));
+      for (const p of ['venue.address', 'venue.mapUrl', 'venue.image']) {
+        expect(paths.has(p), `${p} is not editable in the builder`).toBe(true);
+      }
+    });
+
+    it(`${id}: the section is reachable and switchable`, () => {
+      // Design+ scrolls to a group's section by id, and silently skips one that
+      // does not exist; the toggle is what lets a couple drop the block.
+      expect(tpl.sectionIds, 'place is missing from sectionIds').toContain('place');
+      expect(tpl.fields.some((f) => f.path === 'hidden.place'), 'no visibility switch').toBe(true);
+      expect(src).toContain('data-opt="place"');
+    });
+
+    it(`${id}: its two strings exist in every language`, () => {
+      // A missing data-t key renders as an empty element, so the kicker and the
+      // button's label would simply vanish in that language.
+      for (const key of ['howToFindUs', 'openMap']) {
+        const found = [...src.matchAll(new RegExp(`\\b${key}:`, 'g'))].length;
+        expect(found, `${key} is not in all three dictionaries`).toBe(3);
+      }
+    });
+  }
 });
