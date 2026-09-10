@@ -90,15 +90,18 @@ describe.each(TEMPLATES)('%s', (name) => {
 
 describe('the hand is for names, not for the whole page', () => {
   // A connecting script set in uppercase with .3em of tracking comes apart into
-  // loose unrelated glyphs, and these templates track their small caps hard. So
-  // `--hand` may dress the couple's names and the odd accent; `--display`, which
-  // also sets every section heading, stays a serif.
+  // loose unrelated glyphs, and these templates track their small caps hard.
+  //
+  // So the rule is about the GENERIC heading rule, not about every heading: the
+  // couple's names, and the venue's name over the "Where" block, are proper
+  // names and are set in the hand deliberately. What must stay a serif is
+  // `--display`, which dresses every section title at once.
   for (const name of TEMPLATES) {
     const src = readFileSync(join(DIR, name, 'template.html'), 'utf8');
     const css = /<style>([\s\S]*?)<\/style>/.exec(src)?.[1] ?? '';
     if (!/--hand\s*:/.test(css)) continue;
 
-    it(`${name}: headings do not use it`, () => {
+    it(`${name}: the generic h1,h2,h3 rule does not use it`, () => {
       const headings = /(^|\n)\s*h1\s*,\s*h2\s*,\s*h3\s*\{([^}]*)\}/.exec(css)?.[2];
       if (headings) expect(headings).not.toContain('var(--hand)');
     });
@@ -110,6 +113,23 @@ describe('the hand is for names, not for the whole page', () => {
           && /letter-spacing\s*:\s*\.?[1-9]/.test(m[1]))
         .map((m) => m[0].slice(0, m[0].indexOf('{')));
       expect(bad, `a script cannot be tracked uppercase: ${bad.join(', ')}`).toEqual([]);
+    });
+  }
+});
+
+describe('the venue name is set in the hand', () => {
+  // It is the heading over the "Where" block, and the one place a guest reads
+  // the venue as an address rather than as scenery — a proper name, like the
+  // couple's, so it gets the same treatment.
+  for (const name of TEMPLATES) {
+    const src = readFileSync(join(DIR, name, 'template.html'), 'utf8');
+    const rule = /\.place__title\s*\{([^}]*)\}/.exec(src)?.[1];
+    if (!rule) continue;
+
+    it(`${name}: in the hand, untracked`, () => {
+      expect(rule, 'the venue heading fell back to the display serif').toContain('var(--hand)');
+      // A script's letters are drawn to touch; inherited tracking pulls them apart.
+      expect(rule).toMatch(/letter-spacing\s*:\s*0/);
     });
   }
 });

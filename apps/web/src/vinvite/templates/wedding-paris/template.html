@@ -763,6 +763,18 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
 .place__map:hover{color:var(--gold)}
 /* An empty address must not leave a gap above the button. */
 .place__addr[hidden]{display:none}
+
+/* The venue's name, set in the same hand as the couple's — it is a proper name
+   too, and the block is the one place a guest reads it as an address rather
+   than as scenery. The size is bumped over the section headings around it
+   because a script reads smaller than a serif at the same pixel size, and
+   letter-spacing goes to 0: a script's letters are drawn to touch. */
+.place__title{
+  font-family:var(--hand);
+  font-size:clamp(34px,5vw,64px);
+  line-height:1.14;letter-spacing:0;
+  margin:0;
+}
 </style>
 </head>
 <body>
@@ -1024,7 +1036,7 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
 <section class="place pad" id="place" data-opt="place" aria-labelledby="place-h">
   <div class="wrap center">
     <p class="eyebrow reveal" data-t="howToFindUs"></p>
-    <h2 class="reveal" id="place-h" style="font-size:clamp(28px,4vw,52px)" data-bind="venueName"></h2>
+    <h2 class="place__title reveal" id="place-h" data-bind="venueName"></h2>
   </div>
   <div class="wrap">
     <figure class="place__card reveal reveal--soft">
