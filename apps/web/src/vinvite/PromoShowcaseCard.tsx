@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { vinviteService, type PromoShowcase } from './api';
 import { RICH_TEMPLATES } from './templates';
-import { COVER_SLOTS_DESKTOP } from './promoShowcase';
 import { useViT, type ViKey } from './i18n';
 
 // ── Promotional-site showcase (SYSTEM_ADMIN only) ───────────────────────────
@@ -110,11 +109,12 @@ export const PromoShowcaseCard = () => {
     });
   };
 
-  // What the cover will actually render, given the slot limits. Falls back to
-  // the front of the list, exactly as the landing page does.
-  const coverOrder = draft.coverSlugs.length > 0
-    ? chosen.filter((slug) => draft.coverSlugs.includes(slug))
-    : chosen;
+  // A star used to mean "ride the hero as a live card". The hero renders no
+  // cards any more — they were the most expensive thing on the site — so a star
+  // now means FIRST IN THE GALLERY, which is the same intent said against what
+  // the page actually has. There is no slot limit to respect: every starred
+  // invitation leads, in this order.
+  const coverOrder = chosen.filter((slug) => draft.coverSlugs.includes(slug));
 
   const visibleTemplates = RICH_TEMPLATES.length - draft.hiddenIds.length;
 
@@ -140,8 +140,7 @@ export const PromoShowcaseCard = () => {
             {t('promo_cover_now')}
           </span>
           <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>
-            {coverOrder.slice(0, COVER_SLOTS_DESKTOP)
-              .map((slug) => bySlug.get(slug)?.name ?? slug).join('  ·  ') || '—'}
+            {coverOrder.map((slug) => bySlug.get(slug)?.name ?? slug).join('  ·  ') || '—'}
           </p>
           <p style={{ margin: 0, fontSize: 12, color: 'var(--vi-muted)' }}>{t('promo_cover_hint')}</p>
           {draft.coverSlugs.length === 0 && (
@@ -158,7 +157,6 @@ export const PromoShowcaseCard = () => {
             const project = bySlug.get(slug);
             const onCover = draft.coverSlugs.includes(slug);
             const coverSlot = coverOrder.indexOf(slug);
-            const overflow = onCover && coverSlot >= COVER_SLOTS_DESKTOP;
             return (
               <div key={slug} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
@@ -181,9 +179,7 @@ export const PromoShowcaseCard = () => {
                   </p>
                   <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--vi-muted)' }}>
                     {project
-                      ? (onCover
-                        ? (overflow ? t('promo_cover_overflow') : `${t('promo_cover_slot')} #${coverSlot + 1}`)
-                        : `/${slug}`)
+                      ? (onCover ? `${t('promo_cover_slot')} #${coverSlot + 1}` : `/${slug}`)
                       : t('promo_work_missing')}
                   </p>
                 </div>

@@ -519,25 +519,15 @@
 
 /* ── Hero ── */
 .vi-lp-hero { position: relative; padding: 70px 20px 90px; overflow: hidden; }
+/* One column. The hero used to carry two live invitation cards beside the
+   type and a pair of counters beneath it; both are gone — the cards because
+   they were the most expensive thing on the site (a megabyte of one design's
+   photographs, fetched before a visitor asked for anything), the counters on
+   request. What is left is the sentence, which is what the hero was for. */
 .vi-lp-hero-grid {
   position: relative; max-width: 1180px; margin: 0 auto;
-  display: grid; grid-template-columns: 1.05fr 0.95fr;
-  grid-template-areas: 'copy art' 'stats art';
-  column-gap: 48px; align-items: center;
 }
-.vi-lp-hero-copy { grid-area: copy; min-width: 0; }
-/* Mobile-first stage. flex-wrap/gap are insurance: at fractional viewport
-   widths the JS breakpoint (<=860px) and the CSS one (>=861px) can briefly
-   disagree, and two cards may land in this flow layout. */
-.vi-lp-hero-art {
-  grid-area: art; position: relative;
-  display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; width: 100%;
-}
-.vi-lp-hero-stats {
-  grid-area: stats; display: flex; gap: 38px; flex-wrap: wrap; margin-top: 44px;
-}
-.vi-lp-stat-value { font-size: 32px; font-weight: 850; letter-spacing: -0.03em; color: var(--vi-accent); }
-.vi-lp-stat-label { font-size: 13px; color: var(--vi-muted); margin-top: 2px; }
+.vi-lp-hero-copy { min-width: 0; max-width: 760px; }
 
 .vi-lp-badge {
   display: inline-flex; align-items: center; gap: 8px;
@@ -555,25 +545,6 @@
 .vi-lp-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
 .vi-lp-hero-cta .vi-btn { padding: 15px 30px; font-size: 15.5px; border-radius: 14px; }
 
-.vi-lp-hero-card {
-  position: relative;
-  width: min(270px, 76vw);
-  aspect-ratio: 262 / 430;
-  border-radius: 26px; overflow: hidden;
-  border: 1px solid var(--vi-border); box-shadow: var(--vi-shadow-lg);
-  background: #0b0f1c;
-}
-
-/* Desktop only: two cards stacked and overlapping inside a fixed-height stage. */
-@media (min-width: 861px) {
-  .vi-lp-hero-art { display: block; height: 520px; }
-  .vi-lp-hero-card {
-    position: absolute; width: 262px; height: 430px; aspect-ratio: auto;
-  }
-  .vi-lp-hero-card.back { top: 0; left: 2%; }
-  .vi-lp-hero-card.front { top: 40px; left: 30%; }
-}
-
 .vi-lp-aurora-a { width: 620px; height: 620px; top: -240px; right: -160px; }
 .vi-lp-aurora-b { width: 520px; height: 520px; bottom: -220px; left: -170px; }
 .vi-lp-aurora-c { width: 400px; height: 400px; top: 38%; left: 46%; }
@@ -581,14 +552,6 @@
 .vi-lp-scroll {
   position: relative; max-width: 1180px; margin: 58px auto 0;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-}
-
-/* == Tablet: tighten the two-column hero == */
-@media (min-width: 861px) and (max-width: 980px) {
-  .vi-lp-hero-grid { column-gap: 28px; }
-  .vi-lp-hero-art { height: 460px; }
-  .vi-lp-hero-card { width: 224px; height: 370px; }
-  .vi-lp-hero-card.front { left: 26%; }
 }
 
 /* == Mobile: single column, sheet menu, one upright preview == */
@@ -610,13 +573,6 @@
   .vi-lp-hero-cta { margin-top: 24px; width: 100%; max-width: 340px; justify-content: center; }
   .vi-lp-hero-cta .vi-btn { flex: 1 1 100%; padding: 15px 20px; }
 
-  .vi-lp-hero-stats {
-    margin-top: 0; gap: 0; width: 100%; max-width: 400px;
-    display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;
-  }
-  .vi-lp-stat-value { font-size: 25px; }
-  .vi-lp-stat-label { font-size: 11.5px; line-height: 1.35; }
-
   /* Keep the blur fields from forcing horizontal overflow on narrow screens. */
   .vi-lp-aurora-a { width: 380px; height: 380px; top: -160px; right: -140px; }
   .vi-lp-aurora-b { width: 340px; height: 340px; bottom: -150px; left: -140px; }
@@ -636,8 +592,6 @@
 @media (max-width: 380px) {
   .vi-lp-head-bar { padding: 9px 12px; }
   .vi-lp-h1 { font-size: 28px; }
-  .vi-lp-stat-value { font-size: 22px; }
-  .vi-lp-stat-label { font-size: 10.5px; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -852,7 +806,7 @@
 .vi-lp-gradient { font-style: italic; }
 
 /* The kicker keeps the sans — it is a label, not a title. */
-.vi-lp-kicker, .vi-lp-sec-num, .vi-lp-stat-label { font-family: var(--vi-font-ui); }
+.vi-lp-kicker, .vi-lp-sec-num { font-family: var(--vi-font-ui); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    TEMPLATE CARD — the catalog
@@ -981,11 +935,6 @@
    rather than a fixed pixel height. These are somebody's real invitations, so
    there is no price and no "select" — only the name and the way in.
    ══════════════════════════════════════════════════════════════════════════ */
-.vi-work-band {
-  display: grid; gap: 22px; align-items: start;
-  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-}
-
 .vi-work {
   position: relative; display: flex; flex-direction: column; width: 100%; padding: 0;
   border: 1px solid var(--vi-border); border-radius: 20px; overflow: hidden;
@@ -1004,11 +953,6 @@
   display: block; position: relative; overflow: hidden;
   background: #0b0f1c; aspect-ratio: 10 / 16; width: 100%;
 }
-/* Named, not `.vi-work-stage > *`: the blunt child selector also put `inset: 0`
-   on the badge and the veil, and the badge only overrides `top`/`left` — the
-   surviving `right: 0; bottom: 0` stretched a pill across the whole card. */
-.vi-work-frame { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-
 .vi-work-veil {
   position: absolute; inset: 0; z-index: 2;
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px;
@@ -1031,14 +975,6 @@
   margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: .08em;
   color: var(--vi-muted); font-variant-numeric: tabular-nums;
 }
-.vi-work-live {
-  position: absolute; top: 12px; left: 12px; z-index: 3;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 11px; border-radius: 999px;
-  font-size: 11px; font-weight: 750; letter-spacing: .05em;
-  background: rgba(10,12,20,.55); color: #fff; backdrop-filter: blur(6px);
-}
-.vi-work-live i { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: block; }
 
 @media (prefers-reduced-motion: reduce) {
   .vi-tc:hover, .vi-work:hover, .vi-tc-btn:hover { transform: none; }
@@ -1066,4 +1002,106 @@
 .vi-pv-foot {
   padding: 12px; background: var(--vi-card);
   border-top: 1px solid var(--tb-border, var(--vi-border));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE POSTER — a design drawn without rendering it
+   ══════════════════════════════════════════════════════════════════════════
+   What stands where a live invitation used to. Every colour and the display
+   face come from the design being shown (templateBrand.ts, via --tb-*), so a
+   row of these reads as a shelf of different products rather than a row of
+   grey placeholders — and it costs no requests at all, which is the point.
+
+   `--pa` is the design's own accent, passed per card, and is what keeps the
+   two posters of two different designs from looking the same. */
+.vi-poster {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 26px 20px; overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--pa) 22%, transparent), transparent 70%),
+    var(--tb-tint, var(--vi-card));
+}
+/* `color-mix` is not universal; without this the panel would fall back to a
+   bare card and lose the design's colour entirely. */
+@supports not (background: color-mix(in srgb, red 10%, blue)) {
+  .vi-poster { background: var(--tb-tint, var(--vi-card)); }
+}
+.vi-poster-glow {
+  position: absolute; width: 150%; aspect-ratio: 1; top: -55%; left: -25%;
+  border-radius: 50%; opacity: .3; pointer-events: none;
+  background: radial-gradient(circle, var(--pa), transparent 62%);
+}
+.vi-poster-rule {
+  position: relative; width: 46px; height: 1px; flex-shrink: 0;
+  background: linear-gradient(90deg, transparent, var(--tb-border, var(--vi-border)), transparent);
+}
+.vi-poster-emoji { position: relative; font-size: 40px; line-height: 1; }
+.vi-poster-name {
+  position: relative; text-align: center;
+  font-family: var(--tb-font, var(--vi-font-display));
+  font-size: clamp(19px, 2.4vw, 25px); line-height: 1.24; font-weight: 600;
+  color: var(--tb-ink, var(--vi-text));
+  /* Two lines, then an ellipsis: a long couple's name must not push the rule
+     below it out of the card. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vi-poster-caption {
+  position: relative; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  font-family: var(--vi-font-ui); color: var(--vi-muted);
+}
+:root[data-theme='dark'] .vi-poster { background: var(--vi-card); }
+:root[data-theme='dark'] .vi-poster-name { color: var(--tb-ink-dark, var(--vi-text)); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE SLIDER — "our work", one card at a time
+   ══════════════════════════════════════════════════════════════════════════
+   Built on native scroll-snap, so a phone flicks through it with no JS at all
+   and the arrows are an addition for pointer users rather than the mechanism.
+   A studio accumulates work indefinitely; a grid of everything ever published
+   turns the page into a scroll. */
+.vi-slider { position: relative; }
+.vi-slider-rail {
+  display: flex; gap: 18px;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  /* Room for the cards' hover lift and their shadow, which a plain
+     `overflow: auto` box would clip off at the top. */
+  padding: 10px 2px 16px;
+  scrollbar-width: none;
+}
+.vi-slider-rail::-webkit-scrollbar { display: none; }
+.vi-slider-slide {
+  flex: 0 0 auto; width: min(268px, 74vw); scroll-snap-align: start;
+}
+.vi-slider-nav {
+  position: absolute; top: -58px; right: 0;
+  display: flex; gap: 8px;
+}
+.vi-slider-btn {
+  width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 1; font-family: inherit;
+  background: var(--vi-card); color: var(--vi-text);
+  border: 1px solid var(--vi-border);
+  transition: background .2s ease, border-color .2s ease, color .2s ease, opacity .2s ease;
+}
+.vi-slider-btn:hover:not(:disabled) {
+  background: var(--vi-accent-soft); color: var(--vi-accent); border-color: var(--vi-ring);
+}
+/* Dimmed and inert at the ends rather than wrapping: a slider that silently
+   jumps back to the first card reads as having lost your place. */
+.vi-slider-btn:disabled { opacity: .38; cursor: default; }
+
+@media (max-width: 860px) {
+  /* The arrows would sit on top of the section's own heading here, and a
+     touch device already has the gesture. */
+  .vi-slider-nav { display: none; }
+  .vi-slider-rail { padding-inline: 20px; margin-inline: -20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vi-slider-rail { scroll-behavior: auto; }
 }

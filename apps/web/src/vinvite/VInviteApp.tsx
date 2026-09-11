@@ -1,22 +1,12 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
 import { useViT } from './i18n';
 import { vinviteService } from './api';
 import { ViLoginPage } from './LoginPage';
 import { ViLandingPage } from './LandingPage';
-import { ViSettingsPage } from './SettingsPage';
-import { ViPricingPage } from './PricingPage';
-import { ViDashboardPage } from './DashboardPage';
-import { ViEditorPage } from './EditorPage';
-import { ViTemplatesPage } from './TemplatesPage';
-import { ViTemplateDesignerPage } from './TemplateDesignerPage';
-import { ViDevicesPage } from './DevicesPage';
-import { ViProfilePage } from './ProfilePage';
-import { ViNotificationsPage } from './NotificationsPage';
-import { PublicVInvitePage } from './PublicVInvitePage';
 import './vinvite.css';
 
 // ── v-invite.uz application shell ─────────────────────────────────────────────
@@ -26,6 +16,40 @@ import './vinvite.css';
 // load the same file by absolute URL (see RichRenderer's __ORIGIN__).
 export const VI_LOGO = '/v-invite-logo.png';
 export const VI_MARK = '/v-invite-mark.png';
+
+
+// ── Code splitting ───────────────────────────────────────────────────────────
+// Everything below is a separate chunk, because this shell is shared by three
+// audiences who need almost nothing in common:
+//
+//   · a logged-out visitor reading the marketing page at /main
+//   · a guest opening a published invitation at /<slug>
+//   · a signed-in administrator
+//
+// Statically imported, the builder and the published page put the whole
+// template registry — all twelve designs' markup, 374 kB gzipped — into the
+// graph of every one of those. The marketing page was measured downloading it
+// in order to draw a list of names.
+//
+// The published invitation pays one extra round trip for this, and that is the
+// deliberate half of the trade: it is the load that matters most, but the chunk
+// it waits on is several hundred kB, so one RTT against it is small — and it is
+// the only page that actually needs the registry.
+const PublicVInvitePage = lazy(() => import('./PublicVInvitePage').then((m) => ({ default: m.PublicVInvitePage })));
+const ViSettingsPage = lazy(() => import('./SettingsPage').then((m) => ({ default: m.ViSettingsPage })));
+const ViDashboardPage = lazy(() => import('./DashboardPage').then((m) => ({ default: m.ViDashboardPage })));
+const ViEditorPage = lazy(() => import('./EditorPage').then((m) => ({ default: m.ViEditorPage })));
+const ViTemplatesPage = lazy(() => import('./TemplatesPage').then((m) => ({ default: m.ViTemplatesPage })));
+const ViTemplateDesignerPage = lazy(() => import('./TemplateDesignerPage').then((m) => ({ default: m.ViTemplateDesignerPage })));
+const ViDevicesPage = lazy(() => import('./DevicesPage').then((m) => ({ default: m.ViDevicesPage })));
+const ViProfilePage = lazy(() => import('./ProfilePage').then((m) => ({ default: m.ViProfilePage })));
+const ViNotificationsPage = lazy(() => import('./NotificationsPage').then((m) => ({ default: m.ViNotificationsPage })));
+
+/* Blank, not a spinner: each of these paints its own background within a frame
+   or two, and a spinner that flashes for 40 ms is noise. */
+const Chunk = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={null}>{children}</Suspense>
+);
 
 export const VInviteApp = () => {
   const uiTheme = useVInviteStore((s) => s.uiTheme);
@@ -54,25 +78,29 @@ export const VInviteApp = () => {
             /:slug route below — a static segment outranks a dynamic one in
             React Router, and `main` is reserved so no invitation can claim it. */}
         <Route path="/main" element={<ViLandingPage />} />
-        {/* Pricing is part of the public site, reached by choosing a template in
-            a preview. Static, so it outranks /:slug; `pricing` is reserved. */}
-        <Route path="/pricing" element={<ViPricingPage />} />
+        {/* Pricing used to be a page of its own. It is now a section of the
+            landing page, so this route only forwards — links to it have been
+            shared and printed, and a bookmark that 404s is worse than a
+            redirect that lands one scroll away. `?template=` is carried across
+            because the landing page still reads it. `pricing` stays a reserved
+            slug either way, so no invitation can claim it. */}
+        <Route path="/pricing" element={<PricingRedirect />} />
         {/* Published invitation: v-invite.uz/<slug> (path-based — no wildcard
             DNS available on .uz). Static app routes above/below always win over
             this dynamic segment. */}
-        <Route path="/:slug" element={<PublicVInvitePage />} />
+        <Route path="/:slug" element={<Chunk><PublicVInvitePage /></Chunk>} />
         {accessToken ? (
           <>
             {/* The editor is full-bleed (its own top bar), outside the tabbed layout. */}
-            <Route path="/projects/:id" element={<ViEditorPage />} />
-            <Route path="/template-designer/:templateId" element={<ViTemplateDesignerPage />} />
+            <Route path="/projects/:id" element={<Chunk><ViEditorPage /></Chunk>} />
+            <Route path="/template-designer/:templateId" element={<Chunk><ViTemplateDesignerPage /></Chunk>} />
             <Route element={<ViLayout />}>
-              <Route path="/" element={<ViDashboardPage />} />
-              <Route path="/templates" element={<ViTemplatesPage />} />
-              <Route path="/notifications" element={<ViNotificationsPage />} />
-              <Route path="/devices" element={<ViDevicesPage />} />
-              <Route path="/profile" element={<ViProfilePage />} />
-              <Route path="/settings" element={<ViSettingsPage />} />
+              <Route path="/" element={<Chunk><ViDashboardPage /></Chunk>} />
+              <Route path="/templates" element={<Chunk><ViTemplatesPage /></Chunk>} />
+              <Route path="/notifications" element={<Chunk><ViNotificationsPage /></Chunk>} />
+              <Route path="/devices" element={<Chunk><ViDevicesPage /></Chunk>} />
+              <Route path="/profile" element={<Chunk><ViProfilePage /></Chunk>} />
+              <Route path="/settings" element={<Chunk><ViSettingsPage /></Chunk>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
@@ -89,6 +117,12 @@ export const VInviteApp = () => {
     </div>
   );
 };
+
+/** `/pricing?template=x` → `/main?template=x#pricing`, preserving the choice. */
+function PricingRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/main${search}#pricing`} replace />;
+}
 
 export function ViLogo({ size = 34 }: { size?: number }) {
   return (

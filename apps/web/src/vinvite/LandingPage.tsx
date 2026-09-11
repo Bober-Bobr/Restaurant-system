@@ -1,42 +1,41 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
 import { useViT, type ViKey } from './i18n';
-import { useCountUp, useReveal, useScrollProgress, usePointerTilt } from './motion';
+import { useReveal, useScrollProgress, usePointerTilt } from './motion';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
-import { usePromoShowcase, COVER_SLOTS_DESKTOP, COVER_SLOTS_MOBILE } from './promoShowcase';
-import { useTemplateOverrides } from './templateOverrides';
-import { RichRenderer } from './templates/RichRenderer';
-import { getTemplate, readRichDesign } from './templates';
-import { resolveAssetUrls } from './templates/utils';
-import { InviteSiteView } from './InviteSiteView';
-import { PreviewShell } from './PreviewShell';
-import { TemplateCard } from './TemplateCard';
+import { usePromoShowcase } from './promoShowcase';
 import { useTemplatePricing } from './templatePricing';
-import { brandOf, brandVars } from './templateBrand';
-import type { PromoWork, TemplateTier } from './api';
-import { LOCALES, type TemplateDefinition } from './templates/types';
+import { groupByTier, sellableTemplates, instagramHref, telegramHref } from './pricing';
+import { usePlatformContacts } from '../hooks/usePlatformContacts';
+import { getTemplateMeta, type TemplateMeta } from './templates/meta';
+import { brandOf, brandVars, longDescKey, shortDescKey, type TemplateBrand } from './templateBrand';
+import { TEMPLATE_TIERS, type PromoWork, type TemplateTier } from './api';
 
-// Stable identity: RichRenderer posts into the iframe whenever `config` or
-// `languages` change by reference, so these must not be rebuilt per render.
-const ALL_LOCALES = [...LOCALES];
-
-// ── v-invite.uz/ — public marketing landing ──────────────────────────────────
-// What a visitor sees: hero → our work → why us → closing CTA. There is no
-// sign-in or sign-up here — the site sells invitations, and choosing a design
-// happens on the Pricing page, not here. Everything animates on scroll; the
-// whole page degrades gracefully under prefers-reduced-motion (see vinvite.css).
+// ── v-invite.uz/main — public marketing landing ──────────────────────────────
+// What a visitor sees: hero → our work → prices → closing CTA. There is no
+// sign-in or sign-up here; the product is sold, not self-served.
 //
-// "Our work" and the cover show REAL published invitations the administrator
-// picked, falling back to the built-in templates until any are chosen — see
-// promoShowcase.ts. Both are rendered live, so this file works in terms of a
-// ShowcaseEntry that hides which of the two it is holding.
+// THE RULE THAT SHAPES THIS FILE: nothing on it renders a live invitation until
+// a visitor asks for one. Every rich design is an iframe that pulls its own
+// bundled artwork — measured, the two hero cards alone fetched over a megabyte
+// of one template's photographs, and a gallery of live cards multiplied that by
+// the number of cards. So the gallery and the price list are drawn from
+// `templates/meta.ts` (a name, an emoji, an accent) and the machinery that can
+// actually render a design — the registry, its markup, RichRenderer — is behind
+// a `lazy()` boundary that only loads when a preview opens.
+//
+// "Our work" is REAL published invitations the administrator picked. It is
+// opt-in and the section does not render at all until they pick some: filling
+// it with blank templates advertised unfinished goods as a portfolio.
 
-// Reveal-on-scroll lives in motion.ts. Elements are
-// registered by ref callback, so sections can mount lazily without a re-scan.
-// The observer is built on first use rather than in an effect: ref callbacks
-// fire during commit, before effects run, so an effect-created observer would
+// The live renderer, and everything it drags with it. Split out so the 374 kB
+// of template markup is fetched on the first preview rather than on page load.
+const LivePreviewModal = lazy(() => import('./LivePreviewModal'));
+// Type-only, so it is erased at build time and does NOT pull the chunk back in.
+import type { PreviewTarget } from './LivePreviewModal';
+
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(query).matches,
@@ -52,78 +51,79 @@ function useMediaQuery(query: string): boolean {
 }
 
 // ── One thing the gallery can show ───────────────────────────────────────────
-// Either a published invitation or (before any are chosen) a built-in template.
-// Both render live; everything else about a card — its name, its accent dot,
-// its emoji — is normalised here so the layout never branches on the source.
-export type ShowcaseEntry =
-  | { kind: 'work'; id: string; name: string; emoji: string; accent: string; site: PromoWork }
-  | { kind: 'template'; id: string; name: string; emoji: string; accent: string; tpl: TemplateDefinition };
+// A published invitation, reduced to what a poster needs. The design it was
+// built from supplies the emoji and the palette, so the row stays visually
+// varied without anything being rendered.
+export type ShowcaseEntry = {
+  id: string;
+  name: string;
+  meta: TemplateMeta | null;
+  emoji: string;
+  accent: string;
+  site: PromoWork;
+};
 
 function workEntry(site: PromoWork): ShowcaseEntry {
-  // A rich invitation borrows its template's emoji and accent so the gallery
-  // stays visually varied; a block design has neither, hence the fallbacks.
-  const rich = readRichDesign(site.theme);
-  const tpl = rich ? getTemplate(rich.templateId) : null;
+  // A rich invitation borrows its design's emoji and accent; a block design has
+  // neither, hence the fallbacks. Read from the METADATA, not the registry —
+  // asking the registry here would pull every template's markup onto the page.
+  const templateId = (site.theme as { templateId?: string } | null)?.templateId;
+  const meta = typeof templateId === 'string' ? getTemplateMeta(templateId) : null;
   return {
-    kind: 'work',
     id: site.slug,
     name: site.name,
-    emoji: tpl?.cover ?? '💌',
-    accent: tpl?.accent ?? (site.theme?.accentColor as string | undefined) ?? 'var(--vi-accent)',
+    meta,
+    emoji: meta?.cover ?? '💌',
+    accent: meta?.accent ?? (site.theme?.accentColor as string | undefined) ?? 'var(--vi-accent)',
     site,
   };
 }
 
-function templateEntry(tpl: TemplateDefinition, label: string): ShowcaseEntry {
-  return { kind: 'template', id: tpl.id, name: label, emoji: tpl.cover, accent: tpl.accent, tpl };
-}
-
-// The live preview itself. A template is rendered from its shipped html plus
-// the administrator's Design+ overrides; an invitation is rendered exactly as
-// its guests see it, minus the music and cursor chrome.
-function LivePreview({ entry }: { entry: ShowcaseEntry }) {
-  const { effectiveConfig } = useTemplateOverrides();
-  const config = useMemo(
-    () => (entry.kind === 'template'
-      ? resolveAssetUrls(entry.tpl, effectiveConfig(entry.tpl) as Record<string, unknown>)
-      : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entry, effectiveConfig],
-  );
-  if (entry.kind === 'work') return <InviteSiteView site={entry.site} chrome={false} />;
-  return <RichRenderer html={entry.tpl.html} config={config!} languages={ALL_LOCALES} interactive />;
-}
-
 export const ViLandingPage = () => {
   const t = useViT();
-  const navigate = useNavigate();
   const locale = useVInviteStore((s) => s.locale);
   const setLocale = useVInviteStore((s) => s.setLocale);
   const reveal = useReveal();
   const progress = useScrollProgress();
   const [stuck, setStuck] = useState(false);
-  const [preview, setPreview] = useState<ShowcaseEntry | null>(null);
   const isMobile = useMediaQuery('(max-width: 860px)');
-  // The invitations the administrator chose, or the built-in templates until
-  // they choose any. Falls back to the shipped set while loading or if the
-  // request fails, so the page is never empty.
-  const { items, templates } = usePromoShowcase();
-  const { priceLabel, tierOf } = useTemplatePricing();
-  const [tplPreview, setTplPreview] = useState<TemplateDefinition | null>(null);
+  const [preview, setPreview] = useState<PreviewTarget | null>(null);
 
-  // Our Work and the catalog are now two different things, so they no longer
-  // share a list. `work` is real published invitations and is EMPTY until an
-  // administrator picks some — the section simply does not render, rather than
-  // quietly showing blank templates as though they were finished commissions.
-  // The hero cover still falls back to templates, because a blank hero is the
-  // one thing this page cannot afford.
-  const { work, cover } = useMemo(() => {
-    const templateEntries = () => templates.map((tpl) => templateEntry(tpl, t(tpl.nameKey as ViKey)));
-    if (items.kind === 'works') {
-      return { work: items.works.map(workEntry), cover: items.cover.map(workEntry) };
-    }
-    return { work: [] as ShowcaseEntry[], cover: templateEntries() };
-  }, [items, templates, t]);
+  const { items, templates } = usePromoShowcase();
+  const { byTemplate, priceLabel, tierOf } = useTemplatePricing();
+
+  // `?template=` survives from the retired /pricing page's links, so a shared
+  // or bookmarked URL still lands on the design it named.
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get('template');
+  const choose = useCallback((id: string | null) => {
+    const next = new URLSearchParams(params);
+    if (id) next.set('template', id); else next.delete('template');
+    // `replace`: changing your mind five times should not mean five presses of
+    // the browser Back button to leave the page.
+    setParams(next, { replace: true });
+  }, [params, setParams]);
+
+  // Already in gallery order — `splitWorks` puts the administrator's starred
+  // invitations at the front. The section renders only when there ARE works:
+  // filling it with blank templates advertised unfinished goods as a portfolio.
+  const work = useMemo(
+    () => (items.kind === 'works' ? items.works.map(workEntry) : []),
+    [items],
+  );
+
+  /**
+   * The designs actually on offer: the administrator has not hidden them, AND
+   * they carry both a tier and a price. A listing with neither is a product a
+   * visitor cannot be quoted — see `sellableTemplates`.
+   */
+  const onOffer = useMemo(
+    () => sellableTemplates(
+      templates.map((tpl) => getTemplateMeta(tpl.id)).filter((m): m is TemplateMeta => !!m),
+      byTemplate,
+    ),
+    [templates, byTemplate],
+  );
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -132,52 +132,71 @@ export const ViLandingPage = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const goPricing = () => navigate('/pricing');
-
-  const scrollTo = (id: string) => {
-    // Nav entries carrying a route navigate instead of scrolling.
-    const item = NAV_ITEMS.find((entry) => entry.id === id);
-    if (item?.to) { navigate(item.to); return; }
-    if (id === 'top') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
+  const scrollTo = useCallback((id: string) => {
+    if (id === 'top') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  }, []);
 
-  const catalogCount = templates.length;
-  const goWork = () => scrollTo(work.length > 0 ? 'work' : 'catalog');
+  /**
+   * Arriving at `/main#pricing` — which is where `/pricing` now forwards to.
+   *
+   * The browser cannot do this itself: the section does not exist at the moment
+   * the URL is read, because the price list is still being fetched. So it waits
+   * for the element rather than for a timer, gives up after a few seconds
+   * instead of polling a page that will never have one, and jumps rather than
+   * smooth-scrolls — a slow glide down a page the visitor has only just landed
+   * on reads as the page moving on its own.
+   */
+  const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+  useEffect(() => {
+    if (!hash) return;
+    let tries = 0;
+    const id = window.setInterval(() => {
+      const el = document.getElementById(hash);
+      if (el) { el.scrollIntoView({ block: 'start' }); window.clearInterval(id); }
+      else if (++tries > 40) window.clearInterval(id);
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [hash]);
+
+  const goPricing = () => scrollTo('pricing');
+  const goWork = () => scrollTo(work.length > 0 ? 'work' : 'pricing');
+
+  const previewTemplate = useCallback((meta: TemplateMeta) => setPreview({
+    kind: 'template', id: meta.id, name: t(meta.nameKey as ViKey),
+    emoji: meta.cover, price: priceLabel(meta.id),
+  }), [t, priceLabel]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
-      {/* Reading position, as a hairline across the top. */}
       <div className="vi-lp-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden />
 
       <LandingHeader
-        t={t}
-        stuck={stuck}
-        locale={locale}
-        setLocale={setLocale}
-        isMobile={isMobile}
-        onNav={scrollTo}
+        t={t} stuck={stuck} locale={locale} setLocale={setLocale}
+        isMobile={isMobile} onNav={scrollTo} hasWork={work.length > 0}
       />
 
       <main style={{ flex: 1 }}>
-        <HeroSection t={t} isMobile={isMobile} cover={cover} designCount={catalogCount} onWork={goWork} onPricing={() => goPricing()} />
-        <NameMarquee entries={work.length > 0 ? work : cover} />
+        <HeroSection t={t} onWork={goWork} onPricing={goPricing} />
+        <NameMarquee entries={work} fallback={onOffer} t={t} />
         {work.length > 0 && (
-          <WorkSection t={t} entries={work} reveal={reveal} num="01" onPreview={setPreview} />
+          <WorkSection
+            t={t} entries={work} reveal={reveal} num="01"
+            onOpen={(entry) => setPreview({
+              kind: 'work', site: entry.site, name: entry.name, emoji: entry.emoji,
+            })}
+          />
         )}
-        <CatalogSection
+        <PricingSection
           t={t} reveal={reveal} num={work.length > 0 ? '02' : '01'}
-          templates={templates} priceLabel={priceLabel} tierOf={tierOf}
-          onPreview={setTplPreview} onPricing={() => goPricing()}
+          templates={onOffer} byTemplate={byTemplate}
+          priceLabel={priceLabel} tierOf={tierOf}
+          selectedId={selectedId} onSelect={choose}
+          onPreview={previewTemplate}
         />
-        <WhySection t={t} reveal={reveal} num={work.length > 0 ? '03' : '02'} />
-        <FinalCta t={t} reveal={reveal} onPricing={() => goPricing()} />
+        <FinalCta t={t} reveal={reveal} onPricing={goPricing} />
       </main>
 
-      {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid var(--vi-border)', padding: '30px 20px' }}>
         <div style={{
           maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center',
@@ -193,48 +212,46 @@ export const ViLandingPage = () => {
         </div>
       </footer>
 
-      {preview && <PreviewModal entry={preview} onClose={() => setPreview(null)} />}
-      {tplPreview && (
-        <CatalogPreviewModal
-          tpl={tplPreview}
-          name={t(tplPreview.nameKey as ViKey)}
-          price={priceLabel(tplPreview.id)}
-          label={t('lp_nav_pricing')}
-          onPricing={() => { navigate(`/pricing?template=${tplPreview.id}`); }}
-          onClose={() => setTplPreview(null)}
-        />
+      {/* The only live invitation on the page, and only once asked for. The
+          fallback is blank rather than a spinner: the shell it opens into is
+          already on screen, so a spinner inside a frame reads as an error. */}
+      {preview && (
+        <Suspense fallback={null}>
+          <LivePreviewModal
+            target={preview}
+            selectLabel={t('lp_select')}
+            onSelect={preview.kind === 'template' ? () => { choose(preview.id); setPreview(null); } : undefined}
+            onClose={() => setPreview(null)}
+          />
+        </Suspense>
       )}
     </div>
   );
 };
 
 // ── Header ───────────────────────────────────────────────────────────────────
-// Desktop: logo + inline section links + locale/theme/sign-in.
-// Mobile: compact bar (logo + theme + burger); the links, language picker and
-// sign-in move into a sheet that drops down under the bar.
 
-// `to` navigates; `id` scrolls to a section on this page.
-const NAV_ITEMS: { id: string; label: ViKey; to?: string }[] = [
+const NAV_ITEMS: { id: string; label: ViKey }[] = [
   { id: 'work', label: 'lp_nav_work' },
-  { id: 'catalog', label: 'cat_kicker' },
-  { id: 'why', label: 'lp_nav_why' },
-  { id: 'pricing', label: 'lp_nav_pricing', to: '/pricing' },
+  { id: 'pricing', label: 'lp_nav_pricing' },
 ];
 
-function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
+function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav, hasWork }: {
   t: (k: ViKey) => string;
   stuck: boolean;
   locale: Locale;
   setLocale: (l: Locale) => void;
   isMobile: boolean;
   onNav: (id: string) => void;
+  /** "Our work" is dropped from the nav when there is none — a link to a
+      section that is not on the page does nothing and looks broken. */
+  hasWork: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const items = hasWork ? NAV_ITEMS : NAV_ITEMS.filter((i) => i.id !== 'work');
 
-  // The sheet only exists on mobile — collapse it if the viewport grows.
   useEffect(() => { if (!isMobile) setMenuOpen(false); }, [isMobile]);
 
-  // Escape closes the sheet, and the page behind it must not scroll away.
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
@@ -284,9 +301,8 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
           <ViLogo size={isMobile ? 28 : 34} />
         </button>
 
-        {/* Desktop links */}
         <nav className="vi-lp-nav">
-          {NAV_ITEMS.map((item) => (
+          {items.map((item) => (
             <button key={item.id} type="button" className="vi-lp-navlink" onClick={() => go(item.id)}>
               {t(item.label)}
             </button>
@@ -299,7 +315,6 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
 
           {/* No sign-in or sign-up: this site has no self-serve accounts. */}
 
-          {/* Burger — mobile only */}
           <button
             type="button"
             className={`vi-lp-burger${menuOpen ? ' open' : ''}`}
@@ -312,7 +327,6 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
         </div>
       </div>
 
-      {/* Mobile sheet */}
       {isMobile && (
         <>
           <div
@@ -322,7 +336,7 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
           />
           <div className={`vi-lp-sheet${menuOpen ? ' open' : ''}`}>
             <nav style={{ display: 'grid', gap: 4 }}>
-              {NAV_ITEMS.map((item, i) => (
+              {items.map((item, i) => (
                 <button
                   key={item.id}
                   type="button"
@@ -347,9 +361,6 @@ function LandingHeader({ t, stuck, locale, setLocale, isMobile, onNav }: {
 
 // ── Shared section furniture ─────────────────────────────────────────────────
 
-// A numbered header whose rule draws itself outward as the block arrives. The
-// number gives the page a spine — a visitor can tell how far through they are
-// without a table of contents.
 function SectionHead({ num, kicker, title, sub, reveal }: {
   num: string; kicker: string; title: string; sub: string;
   reveal: (el: HTMLElement | null) => void;
@@ -373,13 +384,21 @@ function SectionHead({ num, kicker, title, sub, reveal }: {
 // loop is seamless — the track translates exactly -50%, which lands the copy
 // precisely where the original started. The copy is aria-hidden so a screen
 // reader hears the list once, not twice.
-function NameMarquee({ entries }: { entries: ShowcaseEntry[] }) {
-  if (entries.length === 0) return null;
-  const row = (hidden: boolean) => entries.map((entry) => (
-    <span className="vi-lp-marquee-item" key={`${entry.id}-${hidden}`} aria-hidden={hidden || undefined}>
+function NameMarquee({ entries, fallback, t }: {
+  entries: ShowcaseEntry[];
+  /** Design names, for a site with no published work chosen yet. */
+  fallback: TemplateMeta[];
+  t: (k: ViKey) => string;
+}) {
+  const names = entries.length > 0
+    ? entries.map((e) => ({ key: e.id, emoji: e.emoji, name: e.name }))
+    : fallback.map((m) => ({ key: m.id, emoji: m.cover, name: t(m.nameKey as ViKey) }));
+  if (names.length === 0) return null;
+  const row = (hidden: boolean) => names.map((n) => (
+    <span className="vi-lp-marquee-item" key={`${n.key}-${hidden}`} aria-hidden={hidden || undefined}>
       <span className="vi-lp-marquee-dot" />
-      <span style={{ fontSize: 17 }}>{entry.emoji}</span>
-      {entry.name}
+      <span style={{ fontSize: 17 }}>{n.emoji}</span>
+      {n.name}
     </span>
   ));
   return (
@@ -393,13 +412,14 @@ function NameMarquee({ entries }: { entries: ShowcaseEntry[] }) {
 }
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
+// Type only. The two live invitation cards that used to sit beside it were the
+// single most expensive thing on the site — measured, they fetched over a
+// megabyte of one design's photographs before a visitor had asked to see
+// anything — and the counters beside them ("12 designs, 3 languages") were
+// removed on request.
 
-function HeroSection({ t, isMobile, cover, designCount, onWork, onPricing }: {
-  t: (k: ViKey) => string; isMobile: boolean;
-  cover: ShowcaseEntry[];
-  /** How many designs the catalog is showing — what the stat counts. */
-  designCount: number;
-  onWork: () => void; onPricing: () => void;
+function HeroSection({ t, onWork, onPricing }: {
+  t: (k: ViKey) => string; onWork: () => void; onPricing: () => void;
 }) {
   // The headline rises word by word, each one slightly behind the last.
   const line1 = t('lp_hero_title_1').split(' ');
@@ -410,21 +430,13 @@ function HeroSection({ t, isMobile, cover, designCount, onWork, onPricing }: {
     wordIndex += 1;
     return (
       <span key={`${w}-${delay}`} className="vi-lp-word" style={{ animationDelay: `${delay}ms` }}>
-        <span className={gradient ? 'vi-lp-gradient' : undefined}>{w}</span>{' '}
+        <span className={gradient ? 'vi-lp-gradient' : undefined}>{w}</span>{' '}
       </span>
     );
   };
 
-  const stats: { value: number; label: ViKey }[] = [
-    // Count what a visitor can actually browse, not what ships in the bundle —
-    // a design kept off the site must not be advertised.
-    { value: designCount, label: 'lp_stat_templates' },
-    { value: 3, label: 'lp_stat_languages' },
-  ];
-
   return (
-    <section className="vi-lp-hero">
-      {/* Drifting aurora fields */}
+    <section className="vi-lp-hero vi-lp-hero-solo">
       <div className="vi-lp-aurora vi-lp-aurora-a" style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.34), transparent 68%)' }} />
       <div className="vi-lp-aurora vi-lp-aurora-b" style={{ background: 'radial-gradient(circle, rgba(217,168,90,0.34), transparent 68%)', animationDelay: '-8s' }} />
       <div className="vi-lp-aurora vi-lp-aurora-c" style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.26), transparent 70%)', animationDelay: '-15s' }} />
@@ -457,18 +469,8 @@ function HeroSection({ t, isMobile, cover, designCount, onWork, onPricing }: {
             </button>
           </div>
         </div>
-
-        {/* Live template cards, gently drifting */}
-        <HeroArt isMobile={isMobile} cover={cover} />
-
-        <div className="vi-fade-up vi-lp-hero-stats" style={{ animationDelay: '900ms' }}>
-          {stats.map((stat) => (
-            <CountStat key={stat.label} value={stat.value} label={t(stat.label)} />
-          ))}
-        </div>
       </div>
 
-      {/* Scroll cue */}
       <div className="vi-fade-up vi-lp-scroll" style={{ animationDelay: '1100ms' }}>
         <span style={{ fontSize: 11.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--vi-muted)', fontWeight: 700 }}>
           {t('lp_scroll')}
@@ -484,58 +486,81 @@ function HeroSection({ t, isMobile, cover, designCount, onWork, onPricing }: {
   );
 }
 
-// Real work rendered live. Desktop stacks two drifting cards; phones show a
-// single upright card — one iframe instead of two, and no rotation to cut off.
-function HeroArt({ isMobile, cover }: { isMobile: boolean; cover: ShowcaseEntry[] }) {
-  const cards = useMemo(
-    () => cover.slice(0, isMobile ? COVER_SLOTS_MOBILE : COVER_SLOTS_DESKTOP),
-    [cover, isMobile],
-  );
-  if (cards.length === 0) return <div className="vi-lp-hero-art" />;
+// ── A design, drawn without rendering it ─────────────────────────────────────
+// The poster that stands in for a live preview. Everything it shows comes from
+// the design's own palette and display face (templateBrand.ts), so a row of
+// them reads as a shelf of different products — and it costs no requests at
+// all, which is the entire point.
 
+function DesignPoster({ emoji, name, accent, brand, dark, caption }: {
+  emoji: string; name: string; accent: string; brand: TemplateBrand; dark: boolean;
+  caption?: string;
+}) {
   return (
-    <div className="vi-lp-hero-art">
-      {cards.map((entry, i) => {
-        const front = i === cards.length - 1;
-        const rot = isMobile ? 0 : front ? 4 : -6;
-        return (
-          <div
-            key={entry.id}
-            className={`vi-lp-hero-card vi-pop${isMobile ? '' : ' vi-lp-float'}${front ? ' front' : ' back'}`}
-            style={{
-              zIndex: front ? 2 : 1,
-              ['--r' as string]: `${rot}deg`,
-              transform: `rotate(${rot}deg)`,
-              animationDelay: isMobile ? '300ms' : `${i * 1.4}s, ${300 + i * 140}ms`,
-            }}
-          >
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-              <LivePreview entry={entry} />
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    <span className="vi-poster" style={{ ...brandVars(brand, dark), ['--pa' as string]: accent }}>
+      <span className="vi-poster-glow" aria-hidden />
+      <span className="vi-poster-rule" aria-hidden />
+      <span className="vi-poster-emoji" aria-hidden>{emoji}</span>
+      <span className="vi-poster-name">{name}</span>
+      {caption && <span className="vi-poster-caption">{caption}</span>}
+      <span className="vi-poster-rule" aria-hidden />
+    </span>
   );
 }
 
 // ── Our work ─────────────────────────────────────────────────────────────────
-// Finished invitations, in a block of their own. Nothing here is for sale — an
-// invitation belongs to the customer whose wedding it was — so there is no
-// price and no "select", only the name and the way in. The catalog below is
-// where the designs on offer live.
+// Finished invitations, as a slider. Nothing here is for sale — an invitation
+// belongs to the customer whose wedding it was — so there is no price and no
+// "select", only the name and the way in.
 //
-// The section is not rendered at all when no invitations have been chosen:
-// filling it with blank templates was the old behaviour, and it advertised
-// unfinished goods as a portfolio.
+// A slider rather than a grid: a studio accumulates work indefinitely, and a
+// grid of everything ever published turns the page into a scroll. It is built
+// on native scroll-snap, so a phone flicks through it with no JS at all and the
+// buttons are an addition for pointer users rather than the mechanism.
 
-function WorkSection({ t, entries, reveal, num, onPreview }: {
+function WorkSection({ t, entries, reveal, num, onOpen }: {
   t: (k: ViKey) => string;
   entries: ShowcaseEntry[];
   reveal: (el: HTMLElement | null) => void;
   num: string;
-  onPreview: (entry: ShowcaseEntry) => void;
+  onOpen: (entry: ShowcaseEntry) => void;
 }) {
+  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
+  const railRef = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+
+  // The arrows are disabled at the ends rather than wrapping around: a slider
+  // that silently jumps back to the first card reads as having lost your place.
+  const measure = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 2);
+    // A tolerance, not equality — fractional zoom leaves a sub-pixel remainder
+    // and the last card could never be reached.
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const el = railRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, entries.length]);
+
+  const page = (dir: -1 | 1) => {
+    const el = railRef.current;
+    if (!el) return;
+    // One card at a time, taken from the first child's real width, so the step
+    // follows the layout instead of a number that has to be kept in step with
+    // the CSS.
+    const card = el.firstElementChild as HTMLElement | null;
+    const step = card ? card.offsetWidth + 18 : el.clientWidth * 0.8;
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
+
   return (
     <section id="work" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
@@ -544,185 +569,302 @@ function WorkSection({ t, entries, reveal, num, onPreview }: {
           sub={t('work_sub')} reveal={reveal}
         />
 
-        <div className="vi-work-band">
-          {entries.map((entry, i) => (
-            <div
-              key={entry.id}
-              ref={reveal}
-              className="vi-r vi-r-blur"
-              style={{ ['--d' as string]: `${Math.min(i, 6) * 90}ms` }}
-            >
-              <WorkCard entry={entry} t={t} index={i} onPreview={() => onPreview(entry)} />
+        <div ref={reveal} className="vi-r vi-r-up vi-slider">
+          <div className="vi-slider-rail" ref={railRef} onScroll={measure}>
+            {entries.map((entry, i) => (
+              <button
+                key={entry.id}
+                type="button"
+                className="vi-work vi-slider-slide"
+                onClick={() => onOpen(entry)}
+                title={t('work_open')}
+              >
+                <span className="vi-work-stage">
+                  <DesignPoster
+                    emoji={entry.emoji}
+                    name={entry.name}
+                    accent={entry.accent}
+                    brand={brandOf(entry.meta ?? { id: entry.id, accent: entry.accent })}
+                    dark={dark}
+                  />
+                  <span className="vi-work-veil"><span>👁 {t('work_open')}</span></span>
+                </span>
+                <span className="vi-work-foot">
+                  <span className="vi-work-dot" style={{ background: entry.accent }} />
+                  <span className="vi-work-name">{entry.name}</span>
+                  <span className="vi-work-num">{String(i + 1).padStart(2, '0')}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Hidden entirely when everything already fits — two dead arrows are
+              worse than none. */}
+          {!(atStart && atEnd) && (
+            <div className="vi-slider-nav">
+              <button type="button" className="vi-slider-btn" onClick={() => page(-1)}
+                disabled={atStart} aria-label={t('slider_prev')}>‹</button>
+              <button type="button" className="vi-slider-btn" onClick={() => page(1)}
+                disabled={atEnd} aria-label={t('slider_next')}>›</button>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function CountStat({ value, label }: { value: number; label: string }) {
-  const { ref, display } = useCountUp(value);
-  return (
-    <div ref={ref}>
-      <div className="vi-lp-stat-value vi-lp-count">{display}</div>
-      <div className="vi-lp-stat-label">{label}</div>
-    </div>
-  );
-}
+// ── Prices, and choosing a design ────────────────────────────────────────────
+// This was its own page. It is here because a visitor deciding what to buy
+// should not have to leave the page that convinced them — and because the two
+// halves, "what does it cost" and "which one", were split across two screens
+// that each had to re-explain the other.
+//
+// Only designs carrying BOTH a tier and a price appear; see `sellableTemplates`.
 
-function WorkCard({ entry, t, index, onPreview }: {
-  entry: ShowcaseEntry;
-  t: (k: ViKey) => string;
-  index: number;
-  onPreview: () => void;
-}) {
-  const tilt = usePointerTilt(4);
+const TIER_ACCENT: Record<TemplateTier, string> = {
+  STANDARD: 'var(--vi-muted)',
+  PREMIUM: 'var(--vi-accent)',
+  LUXURY: '#c9a96a',
+};
 
-  return (
-    <button type="button" className="vi-work vi-lp-tilt" onClick={onPreview} title={t('work_open')} {...tilt}>
-      <span className="vi-work-stage">
-        <span className="vi-work-live"><i />{t('lp_work_live')}</span>
-        <span className="vi-work-frame">
-          <LivePreview entry={entry} />
-        </span>
-        <span className="vi-work-veil"><span>👁 {t('work_open')}</span></span>
-      </span>
-      <span className="vi-work-foot">
-        <span className="vi-work-dot" style={{ background: entry.accent }} />
-        <span className="vi-work-name">{entry.name}</span>
-        <span className="vi-work-num">{String(index + 1).padStart(2, '0')}</span>
-      </span>
-    </button>
-  );
-}
-
-// ── The catalog ──────────────────────────────────────────────────────────────
-// What is actually on offer: every design, its price, and a line about it.
-// Opening one gives the full description and the way to see it full screen.
-// The cards carry each design's own palette and display face — see
-// templateBrand.ts — so the row reads as nine products, not nine copies of
-// this site's blue.
-
-function CatalogSection({ t, reveal, num, templates, priceLabel, tierOf, onPreview, onPricing }: {
+function PricingSection({
+  t, reveal, num, templates, byTemplate, priceLabel, tierOf, selectedId, onSelect, onPreview,
+}: {
   t: (k: ViKey) => string;
   reveal: (el: HTMLElement | null) => void;
   num: string;
-  templates: TemplateDefinition[];
+  templates: TemplateMeta[];
+  byTemplate: Map<string, { tier: TemplateTier | null; priceCents?: number | null }>;
   priceLabel: (id: string) => string;
   tierOf: (id: string) => TemplateTier | null;
-  onPreview: (tpl: TemplateDefinition) => void;
-  onPricing: () => void;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  onPreview: (meta: TemplateMeta) => void;
 }) {
-  if (templates.length === 0) return null;
+  const contactFor = usePlatformContacts();
+  const contact = contactFor('vinvite');
+  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
+  const tilt = usePointerTilt(4);
+
+  const grouped = useMemo(() => groupByTier(templates, byTemplate), [templates, byTemplate]);
+  const selected = templates.find((m) => m.id === selectedId) ?? null;
+  const selectedTier = selected ? tierOf(selected.id) : null;
+
   return (
-    <section id="catalog" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
+    <section id="pricing" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <SectionHead
-          num={num} kicker={t('cat_kicker')} title={t('cat_title')}
-          sub={t('cat_sub')} reveal={reveal}
+          num={num} kicker={t('pricing_kicker')} title={t('pricing_title')}
+          sub={t('pricing_sub')} reveal={reveal}
         />
 
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', alignItems: 'start' }}>
-          {templates.map((tpl, i) => (
-            <div key={tpl.id} ref={reveal} className="vi-r vi-r-up" style={{ ['--d' as string]: `${Math.min(i, 6) * 70}ms` }}>
-              <TemplateCard
-                tpl={tpl}
-                price={priceLabel(tpl.id)}
-                tier={tierOf(tpl.id)}
-                onPreview={() => onPreview(tpl)}
-              />
-            </div>
-          ))}
-        </div>
+        {/* Nothing priced yet. Said plainly rather than rendered as three empty
+            columns, which reads as a broken page rather than an unfinished one. */}
+        {templates.length === 0 ? (
+          <p style={{ margin: '0 auto', maxWidth: 520, textAlign: 'center', fontSize: 15, color: 'var(--vi-muted)' }}>
+            {t('pricing_none')}
+          </p>
+        ) : (
+          <>
+            {selected && (
+              <div className="vi-card vi-pop vi-lp-sheenwrap" {...tilt} style={{
+                maxWidth: 560, margin: '0 auto 40px', padding: 20,
+                display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+                // The callout wears the chosen design's colours, so the page
+                // confirms the choice in the language of the thing chosen.
+                ...brandVars(brandOf(selected), dark),
+                border: '1px solid var(--tb-border)',
+              }}>
+                <span style={{ fontSize: 34 }}>{selected.cover}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <span className="vi-label" style={{ marginBottom: 2 }}>{t('pricing_your_choice')}</span>
+                  <p className="vi-tc-name" style={{ margin: 0 }}>{t(selected.nameKey as ViKey)}</p>
+                  {selectedTier && (
+                    <span style={{
+                      display: 'inline-block', marginTop: 6, padding: '3px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      color: TIER_ACCENT[selectedTier],
+                      border: `1px solid ${TIER_ACCENT[selectedTier]}`,
+                    }}>
+                      {t(`tier_${selectedTier.toLowerCase()}` as ViKey)}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
+                  <strong style={{ fontSize: 22, fontWeight: 850, whiteSpace: 'nowrap' }}>
+                    {priceLabel(selected.id)}
+                  </strong>
+                  <button type="button" className="vi-btn vi-btn-ghost"
+                    style={{ fontSize: 12.5, padding: '6px 12px' }}
+                    onClick={() => onSelect(null)}>
+                    {t('pricing_change')}
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <div ref={reveal} style={{ textAlign: 'center', marginTop: 44 }}>
-          <button type="button" className="vi-btn vi-btn-ghost"
-            style={{ padding: '14px 28px', fontSize: 15, borderRadius: 14 }} onClick={onPricing}>
-            💎 {t('lp_nav_pricing')} →
-          </button>
+            {!selected && (
+              <p style={{
+                margin: '0 auto 30px', maxWidth: 520, textAlign: 'center',
+                fontSize: 14, color: 'var(--vi-muted)',
+              }}>
+                {t('pricing_pick_hint')}
+              </p>
+            )}
+
+            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+              {TEMPLATE_TIERS.map((tier, i) => {
+                const inTier = grouped.buckets[tier];
+                // Premium is called out unless the visitor has already chosen,
+                // in which case their own tier is the one to highlight.
+                const featured = selectedTier ? selectedTier === tier : tier === 'PREMIUM';
+                return (
+                  <section
+                    key={tier}
+                    ref={reveal}
+                    className={`vi-lp-tier vi-r vi-r-up${featured ? ' featured' : ''}`}
+                    style={{ ['--d' as string]: `${i * 110}ms` }}
+                  >
+                    <div>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
+                        color: TIER_ACCENT[tier],
+                      }}>
+                        <span style={{
+                          width: 7, height: 7, borderRadius: 2, transform: 'rotate(45deg)',
+                          background: 'currentColor',
+                        }} />
+                        {t(`tier_${tier.toLowerCase()}` as ViKey)}
+                      </span>
+                      <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
+                        {t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}
+                      </p>
+                    </div>
+
+                    <hr style={{ border: 0, borderTop: '1px solid var(--vi-border)', margin: 0 }} />
+
+                    {inTier.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--vi-muted)' }}>{t('pricing_tier_empty')}</p>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 12 }}>
+                        {inTier.map((meta) => (
+                          <DesignRow
+                            key={meta.id}
+                            meta={meta}
+                            t={t}
+                            price={priceLabel(meta.id)}
+                            tier={tierOf(meta.id)}
+                            selected={meta.id === selectedId}
+                            onPreview={() => onPreview(meta)}
+                            onSelect={() => onSelect(meta.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Contact details, exactly as the system administrator entered them.
+            Rendered only where a value exists — an empty row would advertise a
+            channel the studio does not actually answer. */}
+        <div ref={reveal} className="vi-r vi-r-up" style={{ margin: '46px auto 0', maxWidth: 560, textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
+            {t('pricing_contact')}
+          </p>
+          <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {contact.phone.trim() && (
+              <ContactLink href={`tel:${contact.phone.replace(/\s+/g, '')}`} icon="📞" label={contact.phone} />
+            )}
+            {contact.telegram.trim() && (
+              <ContactLink href={telegramHref(contact.telegram)} icon="✈️" label={contact.telegram} />
+            )}
+            {contact.instagram.trim() && (
+              <ContactLink href={instagramHref(contact.instagram)} icon="📷" label={contact.instagram} />
+            )}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-// ── Why choose us ────────────────────────────────────────────────────────────
-
-function WhySection({ t, reveal, num }: { t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void; num: string }) {
-  // The animation tile is the headline claim and spans the full width, because
-  // it is what actually distinguishes these invitations from a picture of one —
-  // and it is the one thing a static list of bullet points cannot demonstrate.
-  // `span` is in sixths of the bento grid: 6 = full row, 3 = half, 2 = third.
-  const items: { icon: string; title: ViKey; desc: ViKey; span: 2 | 3 | 6 }[] = [
-    { icon: '✨', title: 'lp_why_1_t', desc: 'lp_why_1_d', span: 6 },
-    { icon: '🎬', title: 'lp_why_7_t', desc: 'lp_why_7_d', span: 3 },
-    { icon: '🎼', title: 'lp_why_8_t', desc: 'lp_why_8_d', span: 3 },
-    { icon: '🖼', title: 'lp_why_9_t', desc: 'lp_why_9_d', span: 2 },
-    { icon: '⏳', title: 'lp_why_10_t', desc: 'lp_why_10_d', span: 2 },
-    { icon: '📱', title: 'lp_why_2_t', desc: 'lp_why_2_d', span: 2 },
-    { icon: '🌍', title: 'lp_why_3_t', desc: 'lp_why_3_d', span: 2 },
-    { icon: '💌', title: 'lp_why_4_t', desc: 'lp_why_4_d', span: 2 },
-    { icon: '🗺', title: 'lp_why_11_t', desc: 'lp_why_11_d', span: 2 },
-    { icon: '🎨', title: 'lp_why_12_t', desc: 'lp_why_12_d', span: 3 },
-    // Half each, so the grid closes on a full row rather than a ragged one.
-    { icon: '🔗', title: 'lp_why_6_t', desc: 'lp_why_6_d', span: 3 },
-  ];
-
-  // The pointer-following glow is decorative; the tile is readable without it.
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const r = el.getBoundingClientRect();
-    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    el.style.setProperty('--my', `${e.clientY - r.top}px`);
-  };
+// One design in a tier. The same card the catalog used, minus its dependency on
+// the registry: it takes metadata, so listing every design costs no markup.
+function DesignRow({ meta, t, price, tier, selected, onPreview, onSelect }: {
+  meta: TemplateMeta;
+  t: (k: ViKey) => string;
+  price: string;
+  tier: TemplateTier | null;
+  selected: boolean;
+  onPreview: () => void;
+  onSelect: () => void;
+}) {
+  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
+  const [open, setOpen] = useState(false);
 
   return (
-    <section id="why" style={{ position: 'relative', padding: '90px 20px', scrollMarginTop: 70 }}>
-      <div className="vi-lp-aurora" style={{ width: 560, height: 560, top: '10%', right: -220, background: 'radial-gradient(circle, rgba(167,139,250,0.20), transparent 68%)', animationDelay: '-5s' }} />
+    <article className={`vi-tc${open ? ' open' : ''}${selected ? ' chosen' : ''}`} style={brandVars(brandOf(meta), dark)}>
+      {/* The whole head is the toggle: a card that says "more about this
+          design" and then only responds to the last three words of it is a
+          card people report as broken. */}
+      <button type="button" className="vi-tc-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="vi-tc-top">
+          <span className="vi-tc-emoji" aria-hidden>{meta.cover}</span>
+          <span className="vi-tc-headings">
+            <span className="vi-tc-name">{t(meta.nameKey as ViKey)}</span>
+            <span className="vi-tc-short">{t(shortDescKey(meta.id))}</span>
+          </span>
+          <span className="vi-tc-price">
+            <span className="vi-tc-price-label">{t('cat_from')}</span>
+            <strong>{price}</strong>
+            {tier && <span className="vi-tc-tier">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>}
+          </span>
+        </span>
+        <span className="vi-tc-toggle">
+          {open ? t('cat_less') : t('cat_more')}
+          <span className="vi-tc-chevron" aria-hidden>▾</span>
+        </span>
+      </button>
 
-      <div style={{ position: 'relative', maxWidth: 1180, margin: '0 auto' }}>
-        <SectionHead
-          num={num} kicker={t('lp_why_kicker')} title={t('lp_why_title')}
-          sub={t('lp_why_sub')} reveal={reveal}
-        />
-
-        {/* Bento: the animation claim takes the full width and carries a slowly
-            rotating ring behind it; the next two take half each; the rest tile.
-            A grid of identical boxes reads as a list — this reads as a page. */}
-        <div className="vi-lp-bento">
-          {items.map((item, i) => (
-            <div
-              key={item.title}
-              ref={reveal}
-              className={`vi-r ${item.span === 6 ? 'vi-r-zoom span-6' : item.span === 3 ? 'vi-r-up span-3' : 'vi-r-up'}`}
-              style={{ ['--d' as string]: `${Math.min(i, 8) * 55}ms` }}
-            >
-              <div
-                className={`vi-lp-tile vi-lp-sheenwrap${item.span === 6 ? ' vi-lp-feature' : ''}`}
-                onMouseMove={onMove}
-                style={{ height: '100%' }}
-              >
-                <span className="vi-lp-tile-icon">{item.icon}</span>
-                <h3 style={{
-                  margin: '18px 0 8px', fontWeight: 780, letterSpacing: '-0.02em',
-                  fontSize: item.span === 6 ? 'clamp(20px, 2.6vw, 27px)' : 18,
-                }}>
-                  {t(item.title)}
-                </h3>
-                <p style={{
-                  margin: 0, lineHeight: 1.62, color: 'var(--vi-muted)',
-                  fontSize: item.span === 6 ? 16 : 14.5,
-                  maxWidth: item.span === 6 ? 640 : undefined,
-                }}>
-                  {t(item.desc)}
-                </p>
-              </div>
-            </div>
-          ))}
+      {/* Removed from the page while closed rather than merely clipped: twelve
+          full descriptions of reserved-but-invisible height would leave the
+          columns full of holes. */}
+      <div className="vi-tc-body" hidden={!open}>
+        <p className="vi-tc-long">{t(longDescKey(meta.id))}</p>
+        <div className="vi-tc-actions">
+          <button type="button" className="vi-tc-btn" onClick={onPreview}>
+            👁 {t('cat_preview')}
+          </button>
+          <button type="button" className="vi-tc-btn ghost" onClick={onSelect}>
+            {t('lp_select')} →
+          </button>
         </div>
       </div>
-    </section>
+    </article>
+  );
+}
+
+function ContactLink({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="vi-card"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+        fontSize: 14.5, fontWeight: 650, textDecoration: 'none', color: 'inherit',
+      }}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+    </a>
   );
 }
 
@@ -765,52 +907,5 @@ function FinalCta({ t, reveal, onPricing }: {
         </div>
       </div>
     </section>
-  );
-}
-
-// ── Full-screen preview ──────────────────────────────────────────────────────
-// Look, don't buy: choosing a design happens on the Pricing page, where the
-// tiers and the prices are. A "select" button here would send a visitor onward
-// having picked an INVITATION — somebody else's finished work, not something
-// they can order.
-
-function CatalogPreviewModal({ tpl, name, price, label, onPricing, onClose }: {
-  tpl: TemplateDefinition; name: string; price: string; label: string;
-  onPricing: () => void; onClose: () => void;
-}) {
-  const { effectiveConfig } = useTemplateOverrides();
-  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
-  const config = useMemo(
-    () => resolveAssetUrls(tpl, effectiveConfig(tpl) as Record<string, unknown>),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tpl, effectiveConfig],
-  );
-  return (
-    <PreviewShell
-      onClose={onClose}
-      brandStyle={brandVars(brandOf(tpl), dark)}
-      header={(
-        <>
-          <span className="vi-pv-head-emoji" aria-hidden>{tpl.cover}</span>
-          <span className="vi-pv-head-name">{name}</span>
-          <span className="vi-pv-head-price">{price}</span>
-        </>
-      )}
-      footer={(
-        <button type="button" className="vi-tc-btn" style={{ width: '100%' }} onClick={onPricing}>
-          {label} <span style={{ fontSize: 17 }}>→</span>
-        </button>
-      )}
-    >
-      <RichRenderer html={tpl.html} config={config} languages={ALL_LOCALES} interactive />
-    </PreviewShell>
-  );
-}
-
-function PreviewModal({ entry, onClose }: { entry: ShowcaseEntry; onClose: () => void }) {
-  return (
-    <PreviewShell onClose={onClose}>
-      <LivePreview entry={entry} />
-    </PreviewShell>
   );
 }
