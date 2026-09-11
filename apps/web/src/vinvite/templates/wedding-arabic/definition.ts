@@ -58,7 +58,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-11-15T18:30:00',
+    dateISO: '2027-11-13T18:30:00',
   },
   venue: {
     name: { ru: 'Дворец «Аль-Каср»', uz: '«Al-Qasr» saroyi', en: 'Al-Qasr Palace' },

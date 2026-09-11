@@ -982,9 +982,9 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     <div class="hero-tal" data-bind="occasion">&nbsp;</div>
     <span class="eyebrow hero-kick" data-bind="kicker"></span>
     <h1 class="hero-names">
-      <span data-bind="brideName">&nbsp;</span>
-      <span class="amp">&amp;</span>
       <span data-bind="groomName">&nbsp;</span>
+      <span class="amp">&amp;</span>
+      <span data-bind="brideName">&nbsp;</span>
     </h1>
     <div class="guli-rule hero-rule" aria-hidden="true">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1 L12 6 L17 4 L15 9 L19 12 L14 12 L15 17 L10 14 L5 17 L6 12 L1 12 L5 9 L3 4 L8 6 Z"/></svg>
@@ -1083,20 +1083,6 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
   </div>
 
   <div class="couple-grid">
-    <div class="person observe" id="personBride">
-      <div class="portrait">
-        <div class="portrait-mask">
-          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
-          <img id="bridePhoto" alt="" class="hidden">
-        </div>
-        <div class="portrait-frame" aria-hidden="true"></div>
-      </div>
-      <div class="p-name" data-bind="brideFull">&nbsp;</div>
-      <div class="p-role" data-t="theBride">Kelin</div>
-    </div>
-
-    <div class="couple-amp" aria-hidden="true">❦</div>
-
     <div class="person observe" id="personGroom">
       <div class="portrait">
         <div class="portrait-mask">
@@ -1107,6 +1093,20 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
       </div>
       <div class="p-name" data-bind="groomFull">&nbsp;</div>
       <div class="p-role" data-t="theGroom">Kuyov</div>
+    </div>
+
+    <div class="couple-amp" aria-hidden="true">❦</div>
+
+    <div class="person observe" id="personBride">
+      <div class="portrait">
+        <div class="portrait-mask">
+          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
+          <img id="bridePhoto" alt="" class="hidden">
+        </div>
+        <div class="portrait-frame" aria-hidden="true"></div>
+      </div>
+      <div class="p-name" data-bind="brideFull">&nbsp;</div>
+      <div class="p-role" data-t="theBride">Kelin</div>
     </div>
   </div>
 </section>
@@ -1397,7 +1397,7 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
   function bindTexts() {
     var bride = loc(cfg('couple.bride', ''));
     var groom = loc(cfg('couple.groom', ''));
-    var couple = (bride && groom) ? (bride + ' & ' + groom) : (bride || groom);
+    var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
     var timeText = loc(cfg('event.timeText', '')) || fmtTime();
     var occasion = loc(cfg('invite.occasion', '')) || t('talbon');
     var venueName = loc(cfg('venue.name', ''));

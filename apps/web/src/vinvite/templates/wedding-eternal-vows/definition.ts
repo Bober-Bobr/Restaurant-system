@@ -24,8 +24,8 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
 
   // The hero's one-line promise, under the date.
   { key: 'promise', path: 'invite.promise', type: 'localized-text', group: 'invite', labelKey: 'fld_promise' },
@@ -76,8 +76,8 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { ru: 'Аиша', uz: 'Oysha', en: 'Aisha' },
     groom: { ru: 'Тимур', uz: 'Timur', en: 'Timur' },
+    bride: { ru: 'Аиша', uz: 'Oysha', en: 'Aisha' },
   },
   invite: {
     promise: {

@@ -109,7 +109,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-09-12T19:00:00',
+    dateISO: '2027-09-11T19:00:00',
     timeNote: { ru: '', uz: '', en: '' },
   },
   venue: {

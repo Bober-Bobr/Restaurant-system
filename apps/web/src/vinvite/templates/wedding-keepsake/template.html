@@ -1108,9 +1108,9 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
     </span>
     <span class="caps hero-kicker" data-bind="kicker">&nbsp;</span>
     <h1 class="hero-names">
-      <span data-bind="brideName">&nbsp;</span>
-      <span class="amp">&amp;</span>
       <span data-bind="groomName">&nbsp;</span>
+      <span class="amp">&amp;</span>
+      <span data-bind="brideName">&nbsp;</span>
     </h1>
     <div class="filigree hero-fil" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1 C10 5 11 5 15 8 C11 11 10 11 8 15 C6 11 5 11 1 8 C5 5 6 5 8 1 Z" opacity="0.85"/></svg>
@@ -1567,13 +1567,13 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
   /* ── Text binding ──────────────────────────────────────────────────────── */
   function initials() {
     var b = loc(cfg('couple.bride', '')).trim(), g = loc(cfg('couple.groom', '')).trim();
-    return ((b.charAt(0) || '') + (g.charAt(0) || '')).toUpperCase();
+    return ((g.charAt(0) || '') + (b.charAt(0) || '')).toUpperCase();
   }
 
   function bindTexts() {
     var bride = loc(cfg('couple.bride', ''));
     var groom = loc(cfg('couple.groom', ''));
-    var couple = (bride && groom) ? (bride + ' & ' + groom) : (bride || groom);
+    var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
     var timeText = loc(cfg('event.timeText', ''));
 
     var map = {
@@ -2170,7 +2170,7 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
       var end = new Date(start.getTime() + 5 * 3600000);
       var stamp = function (d) { return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; };
       var bride = loc(cfg('couple.bride', '')), groom = loc(cfg('couple.groom', ''));
-      var title = ((bride && groom) ? bride + ' & ' + groom : (bride || groom || t('wedding')));
+      var title = ((groom && bride) ? groom + ' & ' + bride : (groom || bride || t('wedding')));
       var ics = [
         'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//v-invite//EN', 'BEGIN:VEVENT',
         'UID:' + Date.now() + '@v-invite',

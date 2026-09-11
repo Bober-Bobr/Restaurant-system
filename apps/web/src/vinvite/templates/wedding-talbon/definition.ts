@@ -28,14 +28,14 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   // The full names carry the portraits under the arches; blank falls back to
   // the short names above rather than leaving a nameless photo.
-  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   { key: 'groomFull', path: 'couple.groomFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
-  { key: 'bridePhoto', path: 'couple.bridePhoto', type: 'image', group: 'couple', labelKey: 'fld_photo' },
+  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   { key: 'groomPhoto', path: 'couple.groomPhoto', type: 'image', group: 'couple', labelKey: 'fld_photo' },
+  { key: 'bridePhoto', path: 'couple.bridePhoto', type: 'image', group: 'couple', labelKey: 'fld_photo' },
 
   { key: 'occasion', path: 'invite.occasion', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
   { key: 'kicker', path: 'invite.kicker', type: 'localized-text', group: 'invite', labelKey: 'fld_sub' },
@@ -81,12 +81,12 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { uz: 'Malika', ru: 'Малика', en: 'Malika' },
     groom: { uz: 'Sardor', ru: 'Сардор', en: 'Sardor' },
-    brideFull: { uz: 'Malika Karimova', ru: 'Малика Каримова', en: 'Malika Karimova' },
+    bride: { uz: 'Malika', ru: 'Малика', en: 'Malika' },
     groomFull: { uz: 'Sardor Aliyev', ru: 'Сардор Алиев', en: 'Sardor Aliyev' },
-    bridePhoto: '',
+    brideFull: { uz: 'Malika Karimova', ru: 'Малика Каримова', en: 'Malika Karimova' },
     groomPhoto: '',
+    bridePhoto: '',
   },
   invite: {
     occasion: { uz: 'Talbon marosimi', ru: 'Талбон', en: 'Talbon celebration' },

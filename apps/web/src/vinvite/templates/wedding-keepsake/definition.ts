@@ -26,8 +26,8 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
 
   { key: 'kicker', path: 'invite.kicker', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
   // Card 01's script line — the "why we are writing" of the invitation.
@@ -79,8 +79,8 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { ru: 'Изабель', uz: 'Izabel', en: 'Isabel' },
     groom: { ru: 'Марко', uz: 'Marko', en: 'Marco' },
+    bride: { ru: 'Изабель', uz: 'Izabel', en: 'Isabel' },
   },
   invite: {
     kicker: {

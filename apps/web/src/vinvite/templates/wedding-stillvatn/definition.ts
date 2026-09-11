@@ -46,8 +46,8 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   // The word between the names, set in the handwriting face.
   { key: 'amp', path: 'invite.amp', type: 'localized-text', group: 'couple', labelKey: 'fld_label' },
 
@@ -127,6 +127,7 @@ const fields: TemplateField[] = [
   { key: 'v_theday', path: 'hidden.theday', type: 'toggle', group: 'visibility', labelKey: 'sec_theday' },
   { key: 'v_ridge', path: 'hidden.ridge', type: 'toggle', group: 'visibility', labelKey: 'sec_ridge' },
   { key: 'v_date', path: 'hidden.date', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
   { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
@@ -136,8 +137,8 @@ const fields: TemplateField[] = [
 const defaultConfig = {
 
   couple: {
-    bride: { en: 'Elin', ru: 'Элин', uz: 'Elin' },
     groom: { en: 'Mattis', ru: 'Маттис', uz: 'Mattis' },
+    bride: { en: 'Elin', ru: 'Элин', uz: 'Elin' },
   },
   invite: {
     amp: { en: 'and', ru: 'и', uz: 'va' },
@@ -150,7 +151,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-06-06T10:00:00',
+    dateISO: '2027-06-05T10:00:00',
   },
   card: {
     title: {
@@ -299,7 +300,7 @@ export const weddingStillvatnTemplate: TemplateDefinition = {
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
   // `meadow` is a scene rather than a block, but it anchors the walk.
-  sectionIds: ['hero', 'invite', 'story', 'meadow', 'theday', 'date', 'details', 'place', 'ridge', 'final'],
+  sectionIds: ['hero', 'invite', 'story', 'meadow', 'theday', 'date', 'countdown', 'details', 'place', 'ridge', 'final'],
   // The sage greens. The gold is a single warm note in the pollen and the
   // paper, and recolouring it with a picked accent would not read as a change.
   accentVars: ['--sage', '--sage-deep', '--olive'],

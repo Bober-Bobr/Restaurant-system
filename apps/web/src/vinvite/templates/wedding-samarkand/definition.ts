@@ -47,10 +47,10 @@ const fields: TemplateField[] = [
   // The short names carry the hero, where they are split into animated letters;
   // the full names sign the invitation itself. Blank full names fall back to
   // the short ones rather than leaving the invitation unsigned.
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
-  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groomFull', path: 'couple.groomFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   // The word between the names — "va" by default. Blank falls back to the
   // chrome's own "and" in whichever language is being read.
   { key: 'amp', path: 'invite.amp', type: 'localized-text', group: 'couple', labelKey: 'fld_label' },
@@ -122,6 +122,7 @@ const fields: TemplateField[] = [
   { key: 'v_threshold', path: 'hidden.threshold', type: 'toggle', group: 'visibility', labelKey: 'sec_arrival' },
   { key: 'v_couple', path: 'hidden.couple', type: 'toggle', group: 'visibility', labelKey: 'sec_story' },
   { key: 'v_date', path: 'hidden.date', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
   { key: 'v_journey', path: 'hidden.journey', type: 'toggle', group: 'visibility', labelKey: 'sec_journey' },
@@ -133,10 +134,10 @@ const fields: TemplateField[] = [
 const defaultConfig = {
 
   couple: {
-    bride: { uz: 'Zarina', ru: 'Зарина', en: 'Zarina' },
     groom: { uz: 'Timur', ru: 'Тимур', en: 'Timur' },
-    brideFull: { uz: 'Zarina Rashidova', ru: 'Зарина Рашидова', en: 'Zarina Rashidova' },
+    bride: { uz: 'Zarina', ru: 'Зарина', en: 'Zarina' },
     groomFull: { uz: 'Timur Aliyev', ru: 'Тимур Алиев', en: 'Timur Aliyev' },
+    brideFull: { uz: 'Zarina Rashidova', ru: 'Зарина Рашидова', en: 'Zarina Rashidova' },
   },
   invite: {
     kicker: {
@@ -161,7 +162,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-10-03T19:00:00',
+    dateISO: '2027-10-02T19:00:00',
   },
   plaque: {
     title: {
@@ -317,7 +318,7 @@ export const weddingSamarkandTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'details', 'place', 'journey', 'final'],
+  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'countdown', 'details', 'place', 'journey', 'final'],
   // The lantern gold only. The burgundy and the ruby are the silk and the
   // petals; recolouring them with a picked accent would take the fabric with
   // them.

@@ -21,8 +21,8 @@ const groups: TemplateFieldGroup[] = [
 ];
 
 const fields: TemplateField[] = [
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
 
   { key: 'inviteText', path: 'invite.text', type: 'localized-textarea', group: 'invite', labelKey: 'fld_invite_text' },
 
@@ -53,8 +53,8 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { ru: 'Аврора', uz: 'Avrora', en: 'Aurora' },
     groom: { ru: 'Лукас', uz: 'Lukas', en: 'Lucas' },
+    bride: { ru: 'Аврора', uz: 'Avrora', en: 'Aurora' },
   },
   invite: {
     text: {

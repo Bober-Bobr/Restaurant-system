@@ -38,10 +38,10 @@ const fields: TemplateField[] = [
   // The short names carry the hero, where they are split into animated letters;
   // the full names sign the invitation itself. Blank full names fall back to
   // the short ones rather than leaving the invitation unsigned.
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
-  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groomFull', path: 'couple.groomFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
 
   { key: 'kicker', path: 'invite.kicker', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
   // Left empty by default: the hero then prints the formatted event date, which
@@ -112,6 +112,7 @@ const fields: TemplateField[] = [
   { key: 'v_ceremony', path: 'hidden.ceremony', type: 'toggle', group: 'visibility', labelKey: 'sec_ceremony' },
   { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
   { key: 'v_calendar', path: 'hidden.calendar', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
   { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
@@ -121,10 +122,10 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { en: 'Éloïse', ru: 'Элоиза', uz: 'Eloiza' },
     groom: { en: 'Julien', ru: 'Жюльен', uz: 'Julyen' },
-    brideFull: { en: 'Éloïse Marchand', ru: 'Элоиза Маршан', uz: 'Eloiza Marshan' },
+    bride: { en: 'Éloïse', ru: 'Элоиза', uz: 'Eloiza' },
     groomFull: { en: 'Julien Rocher', ru: 'Жюльен Роше', uz: 'Julyen Roshe' },
+    brideFull: { en: 'Éloïse Marchand', ru: 'Элоиза Маршан', uz: 'Eloiza Marshan' },
   },
   invite: {
     kicker: {
@@ -148,7 +149,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-09-12T17:00:00',
+    dateISO: '2027-09-11T17:00:00',
   },
   calendar: {
     title: {
@@ -316,7 +317,7 @@ export const weddingChateauTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'arrival', 'invite', 'estate', 'couple', 'story', 'ceremony', 'calendar', 'details', 'place', 'gallery', 'finale'],
+  sectionIds: ['hero', 'arrival', 'invite', 'estate', 'couple', 'story', 'ceremony', 'calendar', 'countdown', 'details', 'place', 'gallery', 'finale'],
   // The engraved gold, not the blush and sage: those two are the florals drawn
   // into the ornament, and recolouring them with a picked accent would take the
   // roses and the leaves with them.

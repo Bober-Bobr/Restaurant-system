@@ -1365,7 +1365,7 @@ html.js .deck.unveil.in-view .print {
      ====================================================================== -->
 <div class="star-gate" id="starGate" data-vi-intro>
   <div class="sg-label">
-    <span class="caps"><span data-bind="brideName">Aurora</span> &amp; <span data-bind="groomName">Lucas</span></span>
+    <span class="caps"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span></span>
     <h2 data-t="gateTitle">A night was written for you</h2>
   </div>
 
@@ -1423,9 +1423,9 @@ html.js .deck.unveil.in-view .print {
     </svg>
 
     <h1 class="hero-names">
-      <span data-bind="brideName">Aurora</span>
-      <span class="amp">&amp;</span>
       <span data-bind="groomName">Lucas</span>
+      <span class="amp">&amp;</span>
+      <span data-bind="brideName">Aurora</span>
     </h1>
 
     <div class="rule hero-rule" aria-hidden="true">
@@ -1460,9 +1460,9 @@ html.js .deck.unveil.in-view .print {
     <span class="caps" data-t="togetherFamilies">Together with their families</span>
 
     <h2 class="card-names">
-      <span data-bind="brideName">Aurora</span>
-      <span class="card-star" aria-hidden="true">✦</span>
       <span data-bind="groomName">Lucas</span>
+      <span class="card-star" aria-hidden="true">✦</span>
+      <span data-bind="brideName">Aurora</span>
     </h2>
 
     <div class="card-when">
@@ -1667,7 +1667,7 @@ html.js .deck.unveil.in-view .print {
   </svg>
   <p class="script-line unveil">Merci · Tack · Thank you</p>
   <p class="thanks unveil" style="--unveil-delay: 0.15s" data-t="footerThanks">For every mile you cross and every star you wish on — our sky is fuller because you are in it.</p>
-  <p class="fine unveil" style="--unveil-delay: 0.3s"><span data-bind="brideName">Aurora</span> &amp; <span data-bind="groomName">Lucas</span></p>
+  <p class="fine unveil" style="--unveil-delay: 0.3s"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span></p>
 </footer>
 
 <footer id="vconnect">
@@ -1856,7 +1856,7 @@ function bindTexts(){
   $$('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
   $$('[data-t-aria]').forEach(function(el){ el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-  document.title = (bride && groom) ? (bride + ' & ' + groom) : 'Invitation';
+  document.title = (groom && bride) ? (groom + ' & ' + bride) : 'Invitation';
   document.documentElement.lang = lang;
 
   var logo = $('#vconnectLogo');

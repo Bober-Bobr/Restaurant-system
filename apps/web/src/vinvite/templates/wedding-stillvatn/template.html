@@ -492,6 +492,46 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:10px;letter-spac
   line-height:1.14;letter-spacing:0;
   margin:0;
 }
+
+/* ── Countdown ─────────────────────────────────────────────────────────────
+   No panels here. This design is a walk through open air and every other
+   block on it is type on paper, so the count is four numerals divided by
+   hairlines rather than four boxes.
+
+   `tabular-nums` is not decoration — without it the seconds column changes
+   width as the digits change and drags the three units beside it sideways
+   once a second. */
+.count{background:var(--paper);overflow:hidden}
+.count__row{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  max-width:660px;margin:clamp(38px,6vw,64px) auto 0;
+}
+.count__unit{
+  text-align:center;padding:0 clamp(4px,1vw,14px);
+  border-left:1px solid rgba(110,99,87,.22);
+}
+.count__unit:first-child{border-left:0}
+.count__num{
+  display:block;font-family:var(--display);font-weight:300;
+  font-size:clamp(32px,6vw,66px);line-height:1;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.count__lbl{
+  display:block;margin-top:1em;font-family:var(--util);
+  font-size:clamp(8px,.5vw + 6px,10px);letter-spacing:.3em;
+  text-transform:uppercase;color:var(--ink-soft);
+}
+.count__over{
+  display:none;margin:clamp(34px,5vw,58px) auto 0;text-align:center;
+  font-family:var(--hand);font-size:clamp(28px,4.2vw,46px);
+  line-height:1.2;letter-spacing:0;color:var(--sage-deep);
+}
+.count.is-over .count__row{display:none}
+.count.is-over .count__over{display:block}
+@media (max-width:520px){
+  .count__row{grid-template-columns:repeat(2,1fr);row-gap:clamp(26px,6vw,40px)}
+  .count__unit:nth-child(3){border-left:0}
+}
 </style>
 </head>
 <body>
@@ -513,9 +553,9 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:10px;letter-spac
 
   <div class="dawn__in">
     <h1 class="dawn__names">
-      <span class="split" data-name="bride"></span>
-      <span class="amp" data-bind="amp"></span>
       <span class="split" data-name="groom"></span>
+      <span class="amp" data-bind="amp"></span>
+      <span class="split" data-name="bride"></span>
     </h1>
     <p class="dawn__meta" data-bind="heroMeta"></p>
   </div>
@@ -643,6 +683,25 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:10px;letter-spac
         <circle cx="186" cy="24" r="3.5"/>
       </svg>
     </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     COUNTDOWN
+     ============================================================ -->
+<section class="count pad" id="countdown" data-opt="countdown" aria-labelledby="cd-h">
+  <div class="wrap center">
+    <p class="label up" data-t="countingDown"></p>
+    <h2 class="up" id="cd-h" style="font-size:clamp(26px,3.6vw,46px)" data-t="untilTheDay"></h2>
+  </div>
+  <div class="wrap">
+    <div class="count__row up" role="timer">
+      <div class="count__unit"><span class="count__num" id="cdDays">00</span><span class="count__lbl" data-t="uDays"></span></div>
+      <div class="count__unit"><span class="count__num" id="cdHours">00</span><span class="count__lbl" data-t="uHours"></span></div>
+      <div class="count__unit"><span class="count__num" id="cdMins">00</span><span class="count__lbl" data-t="uMins"></span></div>
+      <div class="count__unit"><span class="count__num" id="cdSecs">00</span><span class="count__lbl" data-t="uSecs"></span></div>
+    </div>
+    <p class="count__over up" data-t="theDayIsHere"></p>
   </div>
 </section>
 
@@ -846,6 +905,9 @@ var ADMIN_EDIT = window.__ADMIN_EDIT__ === true;
 /* ── Built-in UI strings (template chrome — not honoree-editable) ─────────── */
 var UI = {
   en: {
+    countingDown: 'Counting down', untilTheDay: 'Until the day',
+    uDays: 'Days', uHours: 'Hours', uMins: 'Minutes', uSecs: 'Seconds',
+    theDayIsHere: 'The day is here',
     skip: 'Skip', scrollGently: 'Scroll gently', and: 'and',
     theInvitation: 'The invitation', theDate: 'The date',
     whatToKnow: 'What to know', thePracticalPart: 'The practical part',
@@ -865,6 +927,9 @@ var UI = {
     developedBy: 'Developed with love by V-INVITE'
   },
   ru: {
+    countingDown: 'Обратный отсчёт', untilTheDay: 'До этого дня',
+    uDays: 'Дней', uHours: 'Часов', uMins: 'Минут', uSecs: 'Секунд',
+    theDayIsHere: 'Этот день настал',
     skip: 'Пропустить', scrollGently: 'Листайте спокойно', and: 'и',
     theInvitation: 'Приглашение', theDate: 'Дата',
     whatToKnow: 'Что нужно знать', thePracticalPart: 'Практическая часть',
@@ -884,6 +949,9 @@ var UI = {
     developedBy: 'Сделано с любовью в V-INVITE'
   },
   uz: {
+    countingDown: 'Teskari sanoq', untilTheDay: 'Shu kungacha',
+    uDays: 'Kun', uHours: 'Soat', uMins: 'Daqiqa', uSecs: 'Soniya',
+    theDayIsHere: 'Kun keldi',
     skip: 'Otkazib yuborish', scrollGently: 'Sekin aylantiring', and: 'va',
     theInvitation: 'Taklifnoma', theDate: 'Sana',
     whatToKnow: 'Bilishingiz kerak', thePracticalPart: 'Amaliy qism',
@@ -929,7 +997,7 @@ function asset(file) { return ORIGIN + '/stillvatn/' + file; }
 
 /* ── Dates ───────────────────────────────────────────────────────────────── */
 function eventDate() {
-  var d = new Date(cfg('event.dateISO', '2026-06-06T10:00:00'));
+  var d = new Date(cfg('event.dateISO', '2027-06-05T10:00:00'));
   return isNaN(d.getTime()) ? new Date() : d;
 }
 function intlLocale() { return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'ru' ? 'ru-RU' : 'en-GB'); }
@@ -947,7 +1015,7 @@ function fmtNumeric() {
 function bindTexts() {
   var bride = loc(cfg('couple.bride', ''));
   var groom = loc(cfg('couple.groom', ''));
-  var couple = (bride && groom) ? (bride + ' & ' + groom) : (bride || groom);
+  var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
   var place = loc(cfg('venue.name', ''));
 
   var map = {
@@ -1700,10 +1768,58 @@ window.addEventListener('message', function (e) {
 });
 
 /* ── Full render (initial + on config / language change) ─────────────────── */
+/* ── Countdown ───────────────────────────────────────────────────────────── */
+/* Days, hours, minutes and seconds to `event.dateISO` — the same date the block
+   above is drawn from, so there is no second copy of the day to keep in step.
+
+   Three things are deliberate:
+
+   · The tick is a one-second `setInterval`, not requestAnimationFrame. The
+     display changes once a second; rAF would wake the page sixty times to
+     redraw the same four numbers.
+   · A number is written only when it CHANGES. Assigning the same textContent
+     every second makes the browser re-lay-out the row once a second for
+     nothing, and the seconds column would drag the other three with it.
+   · Past the date it does NOT go negative and does NOT disappear. An
+     invitation is opened on the morning of the day and the week after, so the
+     block holds and says the day is here. A vanishing section would read as a
+     broken page on exactly the day it matters most. */
+var cdTimer = 0;
+
+function cdSet(sel, n) {
+  var el = $(sel);
+  if (!el) return;
+  var str = (n < 10 ? '0' : '') + n;
+  if (el.textContent !== str) el.textContent = str;
+}
+
+function renderCountdown() {
+  var sec = $('#countdown');
+  if (!sec) return;
+  var left = Math.floor((eventDate().getTime() - Date.now()) / 1000);
+  sec.classList.toggle('is-over', left <= 0);
+  if (left < 0) left = 0;
+  cdSet('#cdDays', Math.floor(left / 86400));
+  cdSet('#cdHours', Math.floor(left / 3600) % 24);
+  cdSet('#cdMins', Math.floor(left / 60) % 60);
+  cdSet('#cdSecs', left % 60);
+}
+
+function initCountdown() {
+  if (!$('#countdown')) return;
+  /* Cleared first so the interval can never be started twice — this is called
+     from the boot, and a boot that is retried would otherwise leave two timers
+     writing the same four numbers. */
+  if (cdTimer) clearInterval(cdTimer);
+  renderCountdown();
+  cdTimer = setInterval(renderCountdown, 1000);
+}
+
 function renderAll() {
   renderPlatformContacts();
   bindTexts();
   bindArtwork();
+  renderCountdown();
   applyVisibility();
   renderPlace();
   renderMusic();
@@ -1718,6 +1834,7 @@ try {
   initMusic();
   measureStems();
   initObserver();
+  initCountdown();
   initCard();
   initAir();
   initMeadowScatter();

@@ -45,10 +45,10 @@ const fields: TemplateField[] = [
   // The short names carry the hero, where they are split into animated letters;
   // the full names sign the invitation itself. Blank full names fall back to
   // the short ones rather than leaving the invitation unsigned.
-  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
-  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groomFull', path: 'couple.groomFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+  { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   // The word between the two names. "et" by default, because that is the joke
   // this design is telling; blank falls back to the chrome's own "and".
   { key: 'amp', path: 'invite.amp', type: 'localized-text', group: 'couple', labelKey: 'fld_label' },
@@ -122,6 +122,7 @@ const fields: TemplateField[] = [
   { key: 'v_ceremony', path: 'hidden.ceremony', type: 'toggle', group: 'visibility', labelKey: 'sec_ceremony' },
   { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
   { key: 'v_calendar', path: 'hidden.calendar', type: 'toggle', group: 'visibility', labelKey: 'sec_calendar' },
+  { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
   { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
@@ -131,10 +132,10 @@ const fields: TemplateField[] = [
 
 const defaultConfig = {
   couple: {
-    bride: { en: 'Camille', ru: 'Камиль', uz: 'Kamil' },
     groom: { en: 'Antoine', ru: 'Антуан', uz: 'Antuan' },
-    brideFull: { en: 'Camille Lefèvre', ru: 'Камиль Лефевр', uz: 'Kamil Lefevr' },
+    bride: { en: 'Camille', ru: 'Камиль', uz: 'Kamil' },
     groomFull: { en: 'Antoine Duval', ru: 'Антуан Дюваль', uz: 'Antuan Dyuval' },
+    brideFull: { en: 'Camille Lefèvre', ru: 'Камиль Лефевр', uz: 'Kamil Lefevr' },
   },
   invite: {
     kicker: {
@@ -160,7 +161,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-06-13T18:00:00',
+    dateISO: '2027-06-12T18:00:00',
   },
   calendar: {
     title: {
@@ -335,7 +336,7 @@ export const weddingParisTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'arrival', 'invite', 'story', 'ceremony', 'calendar', 'details', 'place', 'gallery', 'finale'],
+  sectionIds: ['hero', 'arrival', 'invite', 'story', 'ceremony', 'calendar', 'countdown', 'details', 'place', 'gallery', 'finale'],
   // The engraved gold only. The dusty rose and the burgundy are the flowers and
   // the ribbon drawn through the design; recolouring them with a picked accent
   // would take the roses with them.

@@ -103,7 +103,7 @@ const defaultConfig = {
     },
   },
   event: {
-    dateISO: '2026-09-20T19:00:00',
+    dateISO: '2027-09-18T19:00:00',
     timeNote: { ru: '', uz: '', en: '' },
     city: { ru: 'Ташкент', uz: 'Toshkent', en: 'Tashkent' },
   },

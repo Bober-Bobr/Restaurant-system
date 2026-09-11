@@ -23,7 +23,24 @@
 // the only script every template shares, so the rule is written once instead of
 // seven times and applies to templates added later for free.
 
+import { ADMIN_FONTS } from './types';
+
+/**
+ * The face table, flattened for the runtime below.
+ *
+ * Serialised in rather than fetched or duplicated: the runtime is a string of
+ * ES5 with no imports of its own, and a second hand-kept copy of this table is
+ * a copy that eventually disagrees with the one the editor offers — at which
+ * point a section is set to a face the runtime cannot fetch and quietly falls
+ * back to the system serif, which is the exact failure the curated list exists
+ * to prevent.
+ */
+const FONT_TABLE = Object.fromEntries(
+  ADMIN_FONTS.map((f) => [f.key, { stack: f.stack, query: f.query }]),
+);
+
 export const ADMIN_RUNTIME = `(function(){
+  var FONTS = ${JSON.stringify(FONT_TABLE)};
   var LAYER = (window.__CONFIG__ && window.__CONFIG__.adminLayer) || {};
   var EDIT = window.__ADMIN_EDIT__ === true;
   var PLAY = window.__ADMIN_PLAY__ === true;
@@ -141,6 +158,49 @@ export const ADMIN_RUNTIME = `(function(){
     return el;
   }
 
+  /* One <link> for every face the layer actually asks for.
+     Rebuilt on each render rather than appended to: a face dropped in the
+     editor must stop being fetched, and the href is compared before it is
+     written so a config push that changed something else does not make the
+     browser re-request the same stylesheet. */
+  function ensureFonts(){
+    var want = [], styles = LAYER.styles || [], i;
+    for (i = 0; i < styles.length; i++) {
+      var f = styles[i] && styles[i].font ? FONTS[styles[i].font] : null;
+      if (f && f.query && want.indexOf(f.query) === -1) want.push(f.query);
+    }
+    var link = document.getElementById('__vaFonts');
+    if (!want.length) { if (link && link.parentNode) link.parentNode.removeChild(link); return; }
+    var href = 'https://fonts.googleapis.com/css2?family=' + want.join('&family=') + '&display=swap';
+    if (!link) {
+      link = document.createElement('link');
+      link.id = '__vaFonts';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+  }
+
+  /* A layered shadow rather than one blur: a single soft shadow has to be
+     heavy to lift type off a photograph, and heavy reads as a smudge. A tight
+     one for the edge and two wide ones for the ground do it at a depth that
+     still looks like type. */
+  function shadowCss(depth, color){
+    var d = Math.max(0, Math.min(1, depth));
+    if (!d) return '';
+    var c = color || '#000000';
+    var rgb = hexToRgb(c);
+    var at = function(a){ return 'rgba(' + rgb + ',' + (Math.round(a * d * 100) / 100) + ')'; };
+    return 'text-shadow:0 1px 2px ' + at(0.34) + ',0 3px 12px ' + at(0.46) + ',0 8px 34px ' + at(0.34);
+  }
+  function hexToRgb(hex){
+    var h = String(hex).replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    if (isNaN(n) || h.length !== 6) return '0,0,0';
+    return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+  }
+
   function renderStyles(){
     var css = KEYFRAMES;
     /* Page-wide text size. Templates size everything in rem and none of them
@@ -162,8 +222,32 @@ export const ADMIN_RUNTIME = `(function(){
       if (s.background) rules.push('background:' + s.background + ' !important');
       if (s.text) rules.push('color:' + s.text + ' !important');
       if (s.vars) for (var k in s.vars) { if (s.vars[k]) rules.push(k + ':' + s.vars[k]); }
+
+      /* The shadow is set on the SECTION and left to inherit. text-shadow is an
+         inherited property, so one declaration reaches every line inside —
+         and a descendant that declares its own keeps it, which is what we
+         want: the hero's designed shadow was chosen for a moving film and must
+         not be replaced by a slider. */
+      var sh = shadowCss(typeof s.shadow === 'number' ? s.shadow : 0, s.shadowColor);
+      if (sh) rules.push(sh);
+
       if (rules.length) css += sel + '{' + rules.join(';') + '}';
+
+      /* The face is applied to the section and, separately, to its headings.
+         NOT to '#sec *': every template sets an explicit family on its small
+         tracked eyebrows and its body prose, and overriding those turns a
+         section into one monotone voice — a connecting script set in tracked
+         uppercase comes apart into loose unrelated glyphs. Headings are named
+         because they carry the template's own --display and would otherwise
+         ignore a family inherited from the section. */
+      var font = s.font ? FONTS[s.font] : null;
+      if (font) {
+        css += sel + '{font-family:' + font.stack + ' !important}';
+        css += sel + ' h1,' + sel + ' h2,' + sel + ' h3,' + sel + ' h4'
+          + '{font-family:' + font.stack + ' !important}';
+      }
     }
+    ensureFonts();
     styleEl().textContent = css;
   }
 

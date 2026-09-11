@@ -186,6 +186,50 @@ export type AdminElement = {
   pathMode?: 'loop' | 'alternate' | 'once';
 };
 
+// ── Faces Design+ may set on a section ───────────────────────────────────────
+// A CURATED list, not a free text box, for two reasons that have both already
+// cost a rewrite once.
+//
+// A template runs in a `srcdoc` iframe on an opaque origin and carries its own
+// <link> to Google Fonts; `index.html`'s families do not reach it. A family
+// named in CSS but never fetched does not fail — it silently falls back to the
+// system serif, which looks approximately right to whoever picked it and wrong
+// to everybody else. So a face is only offerable if we know how to FETCH it,
+// which is what `query` is: the runtime builds one <link> from the faces a
+// layer actually uses.
+//
+// And the scripts are only the ones checked against `Oʻ` and `gʻ` at display
+// size (the HANDS_OK set in templateFonts.test.ts). Great Vibes is absent
+// deliberately: it has U+02BB but draws it as a tick jammed against the next
+// letter, so `Oʻtkirbek` reads as `Otkirbek` — most of a guest list in this
+// product's home market.
+export type AdminFont = {
+  key: string;
+  label: string;
+  // The CSS stack, complete with its fallbacks.
+  stack: string;
+  // Google Fonts css2 `family=` fragment, already URL-shaped. Null for a face
+  // every browser has, which needs no request.
+  query: string | null;
+};
+
+export const ADMIN_FONTS: AdminFont[] = [
+  { key: 'playfair', label: 'Playfair Display', stack: '"Playfair Display",Georgia,serif', query: 'Playfair+Display:wght@400;500;600;700' },
+  { key: 'cormorant', label: 'Cormorant Garamond', stack: '"Cormorant Garamond","Iowan Old Style",Georgia,serif', query: 'Cormorant+Garamond:wght@300;400;500;600' },
+  { key: 'marcellus', label: 'Marcellus', stack: '"Marcellus","Optima",Palatino,serif', query: 'Marcellus' },
+  { key: 'italiana', label: 'Italiana', stack: '"Italiana","Didot","Bodoni MT",Georgia,serif', query: 'Italiana' },
+  { key: 'garamond', label: 'EB Garamond', stack: '"EB Garamond","Iowan Old Style",Georgia,serif', query: 'EB+Garamond:wght@400;500;600' },
+  { key: 'spectral', label: 'Spectral', stack: '"Spectral",Georgia,serif', query: 'Spectral:wght@300;400;500;600' },
+  { key: 'amiri', label: 'Amiri', stack: '"Amiri","Palatino Linotype",Palatino,serif', query: 'Amiri:wght@400;700' },
+  { key: 'jost', label: 'Jost', stack: '"Jost","Futura",-apple-system,"Segoe UI",sans-serif', query: 'Jost:wght@300;400;500;600' },
+  { key: 'karla', label: 'Karla', stack: '"Karla",-apple-system,"Segoe UI",sans-serif', query: 'Karla:wght@300;400;500;600' },
+  { key: 'parisienne', label: 'Parisienne', stack: '"Parisienne","Snell Roundhand",cursive', query: 'Parisienne' },
+  { key: 'sacramento', label: 'Sacramento', stack: '"Sacramento","Snell Roundhand",cursive', query: 'Sacramento' },
+  { key: 'dancing', label: 'Dancing Script', stack: '"Dancing Script","Snell Roundhand",cursive', query: 'Dancing+Script:wght@400;500;600' },
+  { key: 'belle', label: 'La Belle Aurore', stack: '"La Belle Aurore",cursive', query: 'La+Belle+Aurore' },
+  { key: 'caveat', label: 'Caveat', stack: '"Caveat",cursive', query: 'Caveat:wght@400;500;600' },
+];
+
 export type AdminSectionStyle = {
   section: string;
   background?: string;
@@ -193,6 +237,16 @@ export type AdminSectionStyle = {
   // Explicit CSS custom-property overrides (the editor writes the template's
   // accentVars here so the runtime stays template-agnostic).
   vars?: Record<string, string>;
+  // A key into ADMIN_FONTS — never a raw family name, so a saved layer can
+  // never name a face nothing fetches. See the note above the table.
+  font?: string;
+  // Depth of the shadow the section's type casts, 0 (none) … 1. A number
+  // rather than a CSS string: it is one slider, and a free-text shadow is a
+  // way to paste something that does not parse into a published page.
+  shadow?: number;
+  // What colour that shadow is. Defaults to black; a light section set over a
+  // dark photograph wants the opposite.
+  shadowColor?: string;
 };
 
 // Full-page falling-particle overlay. `custom` draws an uploaded image; in

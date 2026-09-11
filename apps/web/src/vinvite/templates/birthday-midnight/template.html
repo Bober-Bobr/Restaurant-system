@@ -1491,7 +1491,7 @@ function cfg(path, dflt){
 function hiddenKey(k){ var h = cfg('hidden', {}) || {}; return h[k] === true; }
 
 /* ── Derived date strings ── */
-function eventDate(){ var d = new Date(cfg('event.dateISO','2026-09-12T19:00:00')); return isNaN(d.getTime()) ? new Date() : d; }
+function eventDate(){ var d = new Date(cfg('event.dateISO','2027-09-11T19:00:00')); return isNaN(d.getTime()) ? new Date() : d; }
 function intlLocale(){ return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'en' ? 'en-GB' : 'ru-RU'); }
 function fmtDateLong(){
   try { return new Intl.DateTimeFormat(intlLocale(), { weekday:'long', day:'numeric', month:'long' }).format(eventDate()); }

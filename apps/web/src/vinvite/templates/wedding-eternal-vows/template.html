@@ -964,9 +964,9 @@ button,input,textarea{font:inherit;color:inherit}
   <!-- ---- THE NAMES ---- -->
   <div class="vows" id="vows">
     <span class="invited" style="--d:0s" data-t="togetherFamilies">Together with their families</span>
-    <h1 class="name" style="--d:.12s" data-bind="brideName">Aisha</h1>
+    <h1 class="name" style="--d:.12s" data-bind="groomName">Timur</h1>
     <span class="ring-slot" id="ringSlot" aria-hidden="true"></span>
-    <h1 class="name" style="--d:.24s" data-bind="groomName">Timur</h1>
+    <h1 class="name" style="--d:.24s" data-bind="brideName">Aisha</h1>
     <p class="day" style="--d:.4s"><i></i><span data-bind="dateFull">30 May 2027</span><i></i></p>
     <p class="promise" style="--d:.5s" data-bind="promise"></p>
     <button class="open-btn" id="openBtn" type="button" style="--d:.62s" data-t="openInvitation">Open the invitation</button>
@@ -988,7 +988,7 @@ button,input,textarea{font:inherit;color:inherit}
           <div class="inside">
             <p class="together" data-bind="together"></p>
             <h2 class="pair" id="cardNames">
-              <span data-bind="brideName">Aisha</span><span class="amp"> &amp; </span><span data-bind="groomName">Timur</span>
+              <span data-bind="groomName">Timur</span><span class="amp"> &amp; </span><span data-bind="brideName">Aisha</span>
             </h2>
             <span class="flourish" aria-hidden="true"><i></i><b></b><i></i></span>
             <p class="verse" data-bind="verse"></p>
@@ -1196,7 +1196,7 @@ button,input,textarea{font:inherit;color:inherit}
 <!-- ========================================================== THE CLOSE == -->
 <footer class="close">
   <div class="frame">
-    <p class="grace"><span data-t="withLove">With love,</span><br><span data-bind="brideName">Aisha</span> &amp; <span data-bind="groomName">Timur</span></p>
+    <p class="grace"><span data-t="withLove">With love,</span><br><span data-bind="groomName">Timur</span> &amp; <span data-bind="brideName">Aisha</span></p>
     <span class="flourish" aria-hidden="true"><i></i><b></b><i></i></span>
     <p data-t="closingWords">Thank you for being part of a day we will spend the rest of our lives remembering.</p>
     <p class="sig">
@@ -1562,7 +1562,7 @@ button,input,textarea{font:inherit;color:inherit}
     all('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
     all('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-    document.title = (bride && groom) ? (bride + ' & ' + groom) : 'Invitation';
+    document.title = (groom && bride) ? (groom + ' & ' + bride) : 'Invitation';
     document.documentElement.lang = lang;
 
     var logo = one('#vconnectLogo');

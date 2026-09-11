@@ -14,6 +14,7 @@ import { getTemplate } from './templates';
 import { RichRenderer } from './templates/RichRenderer';
 import { getPath, resolveAssetUrls, setPath, whenMode } from './templates/utils';
 import {
+  ADMIN_FONTS,
   LOCALES,
   type AdminElement, type AdminKeyframe, type AdminLayer, type AdminParticles, type AdminSectionStyle, type AdminTrail,
   type GalleryItem, type LocalizedText, type QuoteItem, type RichDesignData, type ScheduleItem,
@@ -827,6 +828,49 @@ function AdminDesignPanel({ template, design, setConfig, open, onToggle, onFocus
                     {t('adm_accent')}
                     <input type="color" value={Object.values(s.vars ?? {})[0] ?? '#c6a35c'} onChange={(e) => setAccent(s.section, e.target.value)} />
                   </label>
+
+                  {/* The face. A picker rather than a text box — see ADMIN_FONTS:
+                      a family the runtime cannot fetch does not fail, it silently
+                      falls back to the system serif. Each option is set in its own
+                      face so the list shows what it is offering. */}
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {t('adm_font')}
+                    <select
+                      value={s.font ?? ''}
+                      onChange={(e) => setStyle(s.section, { font: e.target.value || undefined })}
+                      style={{ ...panelInput, width: 'auto', padding: '3px 6px', fontSize: 11, fontFamily: ADMIN_FONTS.find((f) => f.key === s.font)?.stack }}
+                    >
+                      <option value="">{t('adm_font_default')}</option>
+                      {ADMIN_FONTS.map((f) => (
+                        <option key={f.key} value={f.key} style={{ fontFamily: f.stack }}>{f.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {/* The shadow the section's type casts. Its colour only appears
+                      once there is a shadow to colour — a colour well beside a
+                      slider at zero is a control that does nothing. */}
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {t('adm_shadow')}
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={s.shadow ?? 0}
+                      onChange={(e) => setStyle(s.section, { shadow: Number(e.target.value) || undefined })}
+                      style={{ width: 78 }}
+                    />
+                  </label>
+                  {!!s.shadow && (
+                    <input
+                      type="color"
+                      aria-label={t('adm_shadow')}
+                      value={s.shadowColor ?? '#000000'}
+                      onChange={(e) => setStyle(s.section, { shadowColor: e.target.value })}
+                    />
+                  )}
+
                   <button type="button" className="vi-btn vi-btn-ghost" style={{ fontSize: 11, padding: '4px 10px', marginLeft: 'auto' }} onClick={() => removeStyle(s.section)}>{t('delete')}</button>
                 </div>
               ))}
