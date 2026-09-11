@@ -6,7 +6,8 @@ import { RichRenderer } from './templates/RichRenderer';
 import { resolveAssetUrls } from './templates/utils';
 import { InviteSiteView } from './InviteSiteView';
 import { PreviewShell } from './PreviewShell';
-import { brandOf, brandVars } from './templateBrand';
+import { brandOf, brandVars, longDescKey } from './templateBrand';
+import { useViT } from './i18n';
 import { LOCALES } from './templates/types';
 import type { PromoWork } from './api';
 
@@ -32,13 +33,11 @@ export type PreviewTarget =
   | { kind: 'work'; site: PromoWork; name: string; emoji: string }
   | { kind: 'template'; id: string; name: string; emoji: string; price: string };
 
-export default function LivePreviewModal({ target, selectLabel, onSelect, onClose }: {
+export default function LivePreviewModal({ target, onClose }: {
   target: PreviewTarget;
-  selectLabel: string;
-  /** Absent for a customer's invitation — somebody's finished work is not on sale. */
-  onSelect?: () => void;
   onClose: () => void;
 }) {
+  const t = useViT();
   const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
   const { effectiveConfig } = useTemplateOverrides();
 
@@ -55,6 +54,10 @@ export default function LivePreviewModal({ target, selectLabel, onSelect, onClos
   // with a working Select button under it.
   if (target.kind === 'template' && !tpl) return null;
 
+  // There is no "select" here for either kind. A customer's invitation was
+  // never on sale, and a design is an illustration of its tier rather than the
+  // thing chosen — the choice is the tier, made on the card this was opened
+  // from, and an action here would quietly reintroduce picking a design.
   return (
     <PreviewShell
       onClose={onClose}
@@ -66,11 +69,12 @@ export default function LivePreviewModal({ target, selectLabel, onSelect, onClos
           {target.kind === 'template' && <span className="vi-pv-head-price">{target.price}</span>}
         </>
       )}
-      footer={onSelect ? (
-        <button type="button" className="vi-tc-btn" style={{ width: '100%' }} onClick={onSelect}>
-          {selectLabel} <span style={{ fontSize: 17 }}>→</span>
-        </button>
-      ) : undefined}
+      // The footer slot used to hold that button; it carries the design's full
+      // description instead, which a visitor who opened it full screen is
+      // exactly the person who wants.
+      footer={target.kind === 'template'
+        ? <p className="vi-pv-foot-desc">{t(longDescKey(target.id))}</p>
+        : undefined}
     >
       {target.kind === 'template'
         ? <RichRenderer html={tpl!.html} config={config!} languages={ALL_LOCALES} interactive />

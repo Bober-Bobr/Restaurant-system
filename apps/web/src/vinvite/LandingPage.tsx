@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
@@ -92,13 +92,13 @@ export const ViLandingPage = () => {
   const { items, templates } = usePromoShowcase();
   const { byTemplate, priceLabel, tierOf } = useTemplatePricing();
 
-  // `?template=` survives from the retired /pricing page's links, so a shared
-  // or bookmarked URL still lands on the design it named.
   const [params, setParams] = useSearchParams();
-  const selectedId = params.get('template');
-  const choose = useCallback((id: string | null) => {
+  const chooseTier = useCallback((tier: TemplateTier | null) => {
     const next = new URLSearchParams(params);
-    if (id) next.set('template', id); else next.delete('template');
+    if (tier) next.set('tier', tier); else next.delete('tier');
+    // A tier is the choice now, so a design named in the URL is stale the
+    // moment one is picked.
+    next.delete('template');
     // `replace`: changing your mind five times should not mean five presses of
     // the browser Back button to leave the page.
     setParams(next, { replace: true });
@@ -124,6 +124,22 @@ export const ViLandingPage = () => {
     ),
     [templates, byTemplate],
   );
+
+  /**
+   * Which tier is chosen.
+   *
+   * `?tier=` is the live parameter. `?template=` is read as a FALLBACK and
+   * resolved to whichever tier that design sits in, because the retired
+   * /pricing page's links carry one and they have been shared — landing on the
+   * right shelf is the nearest honest thing to what the link promised, now
+   * that a design is not something a visitor selects.
+   */
+  const selectedTier = useMemo<TemplateTier | null>(() => {
+    const named = params.get('tier');
+    if (named && (TEMPLATE_TIERS as readonly string[]).includes(named)) return named as TemplateTier;
+    const legacy = params.get('template');
+    return legacy ? tierOf(legacy) : null;
+  }, [params, tierOf]);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -189,12 +205,10 @@ export const ViLandingPage = () => {
         )}
         <PricingSection
           t={t} reveal={reveal} num={work.length > 0 ? '02' : '01'}
-          templates={onOffer} byTemplate={byTemplate}
-          priceLabel={priceLabel} tierOf={tierOf}
-          selectedId={selectedId} onSelect={choose}
+          templates={onOffer} byTemplate={byTemplate} priceLabel={priceLabel}
+          selectedTier={selectedTier} onSelectTier={chooseTier}
           onPreview={previewTemplate}
         />
-        <FinalCta t={t} reveal={reveal} onPricing={goPricing} />
       </main>
 
       <footer style={{ borderTop: '1px solid var(--vi-border)', padding: '30px 20px' }}>
@@ -217,12 +231,11 @@ export const ViLandingPage = () => {
           already on screen, so a spinner inside a frame reads as an error. */}
       {preview && (
         <Suspense fallback={null}>
-          <LivePreviewModal
-            target={preview}
-            selectLabel={t('lp_select')}
-            onSelect={preview.kind === 'template' ? () => { choose(preview.id); setPreview(null); } : undefined}
-            onClose={() => setPreview(null)}
-          />
+          {/* No "select" any more, for either kind. A customer's invitation was
+              never on sale, and a design is now an illustration of its tier
+              rather than the thing chosen — the choice is the tier, made on the
+              card the preview was opened from. */}
+          <LivePreviewModal target={preview} onClose={() => setPreview(null)} />
         </Suspense>
       )}
     </div>
@@ -421,7 +434,19 @@ function NameMarquee({ entries, fallback, t }: {
 function HeroSection({ t, onWork, onPricing }: {
   t: (k: ViKey) => string; onWork: () => void; onPricing: () => void;
 }) {
-  // The headline rises word by word, each one slightly behind the last.
+  /**
+   * The headline rises word by word, each one slightly behind the last.
+   *
+   * The separating space sits OUTSIDE `.vi-lp-word`, and that is the whole of
+   * it: the class is `display: inline-block`, and a space at the END of an
+   * inline-block's content is trailing whitespace on that box's last line, so
+   * CSS removes it. Inside the box the words rendered flush against each other
+   * — measured, "которые" ended at x=303 and "запомнят" began at x=302.
+   *
+   * A `&nbsp;` would also have shown a gap and would have been wrong: the
+   * headline has to wrap on a phone, and a non-breaking space is precisely the
+   * instruction not to.
+   */
   const line1 = t('lp_hero_title_1').split(' ');
   const line2 = t('lp_hero_title_2').split(' ');
   let wordIndex = 0;
@@ -429,9 +454,11 @@ function HeroSection({ t, onWork, onPricing }: {
     const delay = 220 + wordIndex * 85;
     wordIndex += 1;
     return (
-      <span key={`${w}-${delay}`} className="vi-lp-word" style={{ animationDelay: `${delay}ms` }}>
-        <span className={gradient ? 'vi-lp-gradient' : undefined}>{w}</span>{' '}
-      </span>
+      <Fragment key={`${w}-${delay}`}>
+        <span className="vi-lp-word" style={{ animationDelay: `${delay}ms` }}>
+          <span className={gradient ? 'vi-lp-gradient' : undefined}>{w}</span>
+        </span>{' '}
+      </Fragment>
     );
   };
 
@@ -529,6 +556,20 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
   const railRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  /**
+   * Whether the rail needs the centring gutter.
+   *
+   * The card the reader is on sits in the middle, and reaching the middle with
+   * the FIRST card requires half a rail of empty space in front of it. That is
+   * right while there is more work than fits — and silly when there is not: a
+   * gallery of four on a wide screen would show one card marooned in the centre
+   * with the other three off to the right and a screen's worth of nothing on
+   * the left.
+   *
+   * So the gutter is conditional, and the condition is measured rather than
+   * guessed at a breakpoint.
+   */
+  const [needsGutter, setNeedsGutter] = useState(false);
 
   // The arrows are disabled at the ends rather than wrapping around: a slider
   // that silently jumps back to the first card reads as having lost your place.
@@ -539,7 +580,18 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
     // A tolerance, not equality — fractional zoom leaves a sub-pixel remainder
     // and the last card could never be reached.
     setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
-  }, []);
+
+    // Measured against the WRAPPER, not the rail: the rail's own width already
+    // includes whatever gutter is currently applied, so asking it would answer
+    // a question about the last answer.
+    const card = el.firstElementChild as HTMLElement | null;
+    const avail = el.parentElement?.clientWidth ?? 0;
+    if (card && avail > 0) {
+      const GAP = 18;
+      const natural = entries.length * card.offsetWidth + (entries.length - 1) * GAP;
+      setNeedsGutter(natural > avail);
+    }
+  }, [entries.length]);
 
   useEffect(() => {
     measure();
@@ -547,6 +599,7 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
     if (!el) return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (el.parentElement) ro.observe(el.parentElement);
     return () => ro.disconnect();
   }, [measure, entries.length]);
 
@@ -570,7 +623,11 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
         />
 
         <div ref={reveal} className="vi-r vi-r-up vi-slider">
-          <div className="vi-slider-rail" ref={railRef} onScroll={measure}>
+          <div
+            className={`vi-slider-rail${needsGutter ? ' is-centred' : ''}`}
+            ref={railRef}
+            onScroll={measure}
+          >
             {entries.map((entry, i) => (
               <button
                 key={entry.id}
@@ -614,11 +671,18 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
   );
 }
 
-// ── Prices, and choosing a design ────────────────────────────────────────────
+// ── Prices ───────────────────────────────────────────────────────────────────
 // This was its own page. It is here because a visitor deciding what to buy
-// should not have to leave the page that convinced them — and because the two
-// halves, "what does it cost" and "which one", were split across two screens
-// that each had to re-explain the other.
+// should not have to leave the page that convinced them.
+//
+// WHAT IS CHOSEN IS A TIER, not a design. The three are a ladder — each one
+// buys more elaborate work than the last — and that is the decision a customer
+// is actually able to make before speaking to anyone: which of these is the
+// evening worth. Picking a specific design was asking them to commit to
+// something they can still change, and it made the page a catalog rather than
+// a price list. The designs are still shown inside their tier, and still open
+// full screen, because that is what makes a tier mean anything — but they are
+// illustrations of the tier now, not the thing being selected.
 //
 // Only designs carrying BOTH a tier and a price appear; see `sellableTemplates`.
 
@@ -628,8 +692,11 @@ const TIER_ACCENT: Record<TemplateTier, string> = {
   LUXURY: '#c9a96a',
 };
 
+/** The ladder, drawn. One mark for Standard, three for Luxury. */
+const TIER_MARKS: Record<TemplateTier, number> = { STANDARD: 1, PREMIUM: 2, LUXURY: 3 };
+
 function PricingSection({
-  t, reveal, num, templates, byTemplate, priceLabel, tierOf, selectedId, onSelect, onPreview,
+  t, reveal, num, templates, byTemplate, priceLabel, selectedTier, onSelectTier, onPreview,
 }: {
   t: (k: ViKey) => string;
   reveal: (el: HTMLElement | null) => void;
@@ -637,216 +704,211 @@ function PricingSection({
   templates: TemplateMeta[];
   byTemplate: Map<string, { tier: TemplateTier | null; priceCents?: number | null }>;
   priceLabel: (id: string) => string;
-  tierOf: (id: string) => TemplateTier | null;
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
+  selectedTier: TemplateTier | null;
+  onSelectTier: (tier: TemplateTier | null) => void;
   onPreview: (meta: TemplateMeta) => void;
 }) {
   const contactFor = usePlatformContacts();
   const contact = contactFor('vinvite');
-  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
-  const tilt = usePointerTilt(4);
 
   const grouped = useMemo(() => groupByTier(templates, byTemplate), [templates, byTemplate]);
-  const selected = templates.find((m) => m.id === selectedId) ?? null;
-  const selectedTier = selected ? tierOf(selected.id) : null;
+  /** Tiers that actually have something in them — an empty column is not an offer. */
+  const tiers = useMemo(
+    () => TEMPLATE_TIERS.filter((tier) => grouped.buckets[tier].length > 0),
+    [grouped],
+  );
+
+  /**
+   * The cheapest design in a tier, which is what "from" means.
+   *
+   * Read off `priceLabel` rather than formatted here, so there is still exactly
+   * one definition of what a price reads as.
+   */
+  const fromPrice = (tier: TemplateTier): string => {
+    const inTier = grouped.buckets[tier];
+    let best: { id: string; cents: number } | null = null;
+    for (const meta of inTier) {
+      const cents = byTemplate.get(meta.id)?.priceCents;
+      if (cents == null) continue;
+      if (!best || cents < best.cents) best = { id: meta.id, cents };
+    }
+    return best ? priceLabel(best.id) : '';
+  };
 
   return (
-    <section id="pricing" style={{ padding: '90px 20px', scrollMarginTop: 70 }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+    <section id="pricing" style={{ padding: '90px 0 90px', scrollMarginTop: 70 }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 20px' }}>
         <SectionHead
           num={num} kicker={t('pricing_kicker')} title={t('pricing_title')}
           sub={t('pricing_sub')} reveal={reveal}
         />
+      </div>
 
-        {/* Nothing priced yet. Said plainly rather than rendered as three empty
-            columns, which reads as a broken page rather than an unfinished one. */}
-        {templates.length === 0 ? (
-          <p style={{ margin: '0 auto', maxWidth: 520, textAlign: 'center', fontSize: 15, color: 'var(--vi-muted)' }}>
-            {t('pricing_none')}
+      {/* Nothing priced yet. Said plainly rather than rendered as three empty
+          columns, which reads as a broken page rather than an unfinished one. */}
+      {tiers.length === 0 ? (
+        <p style={{ margin: '0 auto', maxWidth: 520, padding: '0 20px', textAlign: 'center', fontSize: 15, color: 'var(--vi-muted)' }}>
+          {t('pricing_none')}
+        </p>
+      ) : (
+        <>
+          <p style={{
+            margin: '0 auto 26px', maxWidth: 520, padding: '0 20px',
+            textAlign: 'center', fontSize: 14, color: 'var(--vi-muted)',
+          }}>
+            {selectedTier ? t('pricing_tier_chosen') : t('pricing_pick_tier')}
           </p>
-        ) : (
-          <>
-            {selected && (
-              <div className="vi-card vi-pop vi-lp-sheenwrap" {...tilt} style={{
-                maxWidth: 560, margin: '0 auto 40px', padding: 20,
-                display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-                // The callout wears the chosen design's colours, so the page
-                // confirms the choice in the language of the thing chosen.
-                ...brandVars(brandOf(selected), dark),
-                border: '1px solid var(--tb-border)',
-              }}>
-                <span style={{ fontSize: 34 }}>{selected.cover}</span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <span className="vi-label" style={{ marginBottom: 2 }}>{t('pricing_your_choice')}</span>
-                  <p className="vi-tc-name" style={{ margin: 0 }}>{t(selected.nameKey as ViKey)}</p>
-                  {selectedTier && (
-                    <span style={{
-                      display: 'inline-block', marginTop: 6, padding: '3px 10px', borderRadius: 999,
-                      fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-                      color: TIER_ACCENT[selectedTier],
-                      border: `1px solid ${TIER_ACCENT[selectedTier]}`,
-                    }}>
-                      {t(`tier_${selectedTier.toLowerCase()}` as ViKey)}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
-                  <strong style={{ fontSize: 22, fontWeight: 850, whiteSpace: 'nowrap' }}>
-                    {priceLabel(selected.id)}
-                  </strong>
-                  <button type="button" className="vi-btn vi-btn-ghost"
-                    style={{ fontSize: 12.5, padding: '6px 12px' }}
-                    onClick={() => onSelect(null)}>
-                    {t('pricing_change')}
-                  </button>
-                </div>
-              </div>
-            )}
 
-            {!selected && (
-              <p style={{
-                margin: '0 auto 30px', maxWidth: 520, textAlign: 'center',
-                fontSize: 14, color: 'var(--vi-muted)',
-              }}>
-                {t('pricing_pick_hint')}
-              </p>
-            )}
+          <TierSlider
+            t={t} tiers={tiers} grouped={grouped} fromPrice={fromPrice}
+            selectedTier={selectedTier} onSelectTier={onSelectTier} onPreview={onPreview}
+          />
+        </>
+      )}
 
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-              {TEMPLATE_TIERS.map((tier, i) => {
-                const inTier = grouped.buckets[tier];
-                // Premium is called out unless the visitor has already chosen,
-                // in which case their own tier is the one to highlight.
-                const featured = selectedTier ? selectedTier === tier : tier === 'PREMIUM';
-                return (
-                  <section
-                    key={tier}
-                    ref={reveal}
-                    className={`vi-lp-tier vi-r vi-r-up${featured ? ' featured' : ''}`}
-                    style={{ ['--d' as string]: `${i * 110}ms` }}
-                  >
-                    <div>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7,
-                        fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase',
-                        color: TIER_ACCENT[tier],
-                      }}>
-                        <span style={{
-                          width: 7, height: 7, borderRadius: 2, transform: 'rotate(45deg)',
-                          background: 'currentColor',
-                        }} />
-                        {t(`tier_${tier.toLowerCase()}` as ViKey)}
-                      </span>
-                      <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
-                        {t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}
-                      </p>
-                    </div>
-
-                    <hr style={{ border: 0, borderTop: '1px solid var(--vi-border)', margin: 0 }} />
-
-                    {inTier.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--vi-muted)' }}>{t('pricing_tier_empty')}</p>
-                    ) : (
-                      <div style={{ display: 'grid', gap: 12 }}>
-                        {inTier.map((meta) => (
-                          <DesignRow
-                            key={meta.id}
-                            meta={meta}
-                            t={t}
-                            price={priceLabel(meta.id)}
-                            tier={tierOf(meta.id)}
-                            selected={meta.id === selectedId}
-                            onPreview={() => onPreview(meta)}
-                            onSelect={() => onSelect(meta.id)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Contact details, exactly as the system administrator entered them.
-            Rendered only where a value exists — an empty row would advertise a
-            channel the studio does not actually answer. */}
-        <div ref={reveal} className="vi-r vi-r-up" style={{ margin: '46px auto 0', maxWidth: 560, textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
-            {t('pricing_contact')}
-          </p>
-          <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {contact.phone.trim() && (
-              <ContactLink href={`tel:${contact.phone.replace(/\s+/g, '')}`} icon="📞" label={contact.phone} />
-            )}
-            {contact.telegram.trim() && (
-              <ContactLink href={telegramHref(contact.telegram)} icon="✈️" label={contact.telegram} />
-            )}
-            {contact.instagram.trim() && (
-              <ContactLink href={instagramHref(contact.instagram)} icon="📷" label={contact.instagram} />
-            )}
-          </div>
+      {/* Contact details, exactly as the system administrator entered them.
+          Rendered only where a value exists — an empty row would advertise a
+          channel the studio does not actually answer. */}
+      <div ref={reveal} className="vi-r vi-r-up" style={{ margin: '46px auto 0', maxWidth: 560, padding: '0 20px', textAlign: 'center' }}>
+        <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
+          {t('pricing_contact')}
+        </p>
+        <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {contact.phone.trim() && (
+            <ContactLink href={`tel:${contact.phone.replace(/\s+/g, '')}`} icon="📞" label={contact.phone} />
+          )}
+          {contact.telegram.trim() && (
+            <ContactLink href={telegramHref(contact.telegram)} icon="✈️" label={contact.telegram} />
+          )}
+          {contact.instagram.trim() && (
+            <ContactLink href={instagramHref(contact.instagram)} icon="📷" label={contact.instagram} />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-// One design in a tier. The same card the catalog used, minus its dependency on
-// the registry: it takes metadata, so listing every design costs no markup.
-function DesignRow({ meta, t, price, tier, selected, onPreview, onSelect }: {
-  meta: TemplateMeta;
+/**
+ * The three tiers as a carousel, the chosen one held in the centre.
+ *
+ * Centred rather than left-aligned because the point of the control is the
+ * LADDER: what a tier costs only means something beside the one below and the
+ * one above it, so the chosen card sits in the middle with its neighbours
+ * visible at its shoulders. Left-aligning would put Luxury alone against the
+ * edge of the screen with nothing to be more expensive than.
+ *
+ * The centring is done twice over, and both are needed. `scroll-snap-align:
+ * center` is what a finger lands on; `scrollIntoView({ inline: 'center' })` is
+ * what a click on a neighbour does, because pressing a card must bring it in
+ * rather than leave the reader to drag it there.
+ */
+function TierSlider({ t, tiers, grouped, fromPrice, selectedTier, onSelectTier, onPreview }: {
   t: (k: ViKey) => string;
-  price: string;
-  tier: TemplateTier | null;
-  selected: boolean;
-  onPreview: () => void;
-  onSelect: () => void;
+  tiers: TemplateTier[];
+  grouped: { buckets: Record<TemplateTier, TemplateMeta[]> };
+  fromPrice: (tier: TemplateTier) => string;
+  selectedTier: TemplateTier | null;
+  onSelectTier: (tier: TemplateTier | null) => void;
+  onPreview: (meta: TemplateMeta) => void;
 }) {
-  const dark = useVInviteStore((s) => s.uiTheme) === 'dark';
-  const [open, setOpen] = useState(false);
+  const railRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef(new Map<TemplateTier, HTMLDivElement>());
+
+  /**
+   * Bring the chosen tier to the middle.
+   *
+   * Two deliberate choices here.
+   *
+   * `scrollTo`, not `scrollIntoView`: the latter scrolls every scrollable
+   * ancestor, so on the first paint it would drag the PAGE down to the price
+   * list as well — a page that jumps to its middle as it loads.
+   *
+   * And the animation is left to CSS (`scroll-behavior` on the rail) rather
+   * than passed as `behavior: 'smooth'` here. That keeps this function
+   * deterministic — it sets a position, and the position is the thing worth
+   * being sure of — and it means the reduced-motion block that already governs
+   * the rail governs this too, instead of the preference having to be checked
+   * again in script. The first paint is instant because the rail only gains
+   * `scroll-behavior: smooth` once it is settled, for the same reason: a page
+   * that scrolls itself sideways while loading reads as broken, and `?tier=` in
+   * the URL means the card should simply already be there.
+   */
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const tier = selectedTier ?? tiers[Math.floor(tiers.length / 2)];
+    const card = tier ? cardRefs.current.get(tier) : null;
+    const rail = railRef.current;
+    if (!card || !rail) return;
+    rail.scrollTo({ left: card.offsetLeft - (rail.clientWidth - card.clientWidth) / 2 });
+    if (!settled) setSettled(true);
+  }, [selectedTier, tiers, settled]);
 
   return (
-    <article className={`vi-tc${open ? ' open' : ''}${selected ? ' chosen' : ''}`} style={brandVars(brandOf(meta), dark)}>
-      {/* The whole head is the toggle: a card that says "more about this
-          design" and then only responds to the last three words of it is a
-          card people report as broken. */}
-      <button type="button" className="vi-tc-head" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="vi-tc-top">
-          <span className="vi-tc-emoji" aria-hidden>{meta.cover}</span>
-          <span className="vi-tc-headings">
-            <span className="vi-tc-name">{t(meta.nameKey as ViKey)}</span>
-            <span className="vi-tc-short">{t(shortDescKey(meta.id))}</span>
-          </span>
-          <span className="vi-tc-price">
-            <span className="vi-tc-price-label">{t('cat_from')}</span>
-            <strong>{price}</strong>
-            {tier && <span className="vi-tc-tier">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>}
-          </span>
-        </span>
-        <span className="vi-tc-toggle">
-          {open ? t('cat_less') : t('cat_more')}
-          <span className="vi-tc-chevron" aria-hidden>▾</span>
-        </span>
-      </button>
+    <div className="vi-tierslider">
+      <div className={`vi-tierslider-rail${settled ? ' is-settled' : ''}`} ref={railRef}>
+        {tiers.map((tier) => {
+          const chosen = selectedTier === tier;
+          const inTier = grouped.buckets[tier];
+          return (
+            <div
+              key={tier}
+              data-tier={tier}
+              data-selected={chosen ? 'yes' : 'no'}
+              ref={(el) => { if (el) cardRefs.current.set(tier, el); else cardRefs.current.delete(tier); }}
+              className={`vi-tiercard${chosen ? ' chosen' : ''}`}
+              style={{ ['--tier-accent' as string]: TIER_ACCENT[tier] }}
+            >
+              {/* The head is the control. A card that says "Premium" and only
+                  responds to a small button in its corner is a card people
+                  press three times and report as broken. */}
+              <button
+                type="button"
+                className="vi-tiercard-head"
+                aria-pressed={chosen}
+                onClick={() => onSelectTier(chosen ? null : tier)}
+              >
+                <span className="vi-tiercard-marks" aria-hidden>
+                  {Array.from({ length: TIER_MARKS[tier] }, (_, i) => <i key={i} />)}
+                </span>
+                <span className="vi-tiercard-name">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>
+                <span className="vi-tiercard-price">
+                  <span className="vi-tiercard-from">{t('cat_from')}</span>
+                  <strong>{fromPrice(tier)}</strong>
+                </span>
+                <span className="vi-tiercard-desc">{t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}</span>
+                <span className="vi-tiercard-pick">
+                  {chosen ? `✓ ${t('pricing_tier_picked')}` : t('pricing_tier_pick')}
+                </span>
+              </button>
 
-      {/* Removed from the page while closed rather than merely clipped: twelve
-          full descriptions of reserved-but-invisible height would leave the
-          columns full of holes. */}
-      <div className="vi-tc-body" hidden={!open}>
-        <p className="vi-tc-long">{t(longDescKey(meta.id))}</p>
-        <div className="vi-tc-actions">
-          <button type="button" className="vi-tc-btn" onClick={onPreview}>
-            👁 {t('cat_preview')}
-          </button>
-          <button type="button" className="vi-tc-btn ghost" onClick={onSelect}>
-            {t('lp_select')} →
-          </button>
-        </div>
+              {/* What the tier actually contains. Not selectable — these are
+                  illustrations of what the money buys, and the choice above is
+                  the choice. */}
+              <div className="vi-tiercard-list">
+                <span className="vi-tiercard-listhead">{t('pricing_tier_includes')}</span>
+                {inTier.map((meta) => (
+                  <button
+                    key={meta.id}
+                    type="button"
+                    className="vi-tiercard-design"
+                    onClick={() => onPreview(meta)}
+                    title={t('cat_preview')}
+                  >
+                    <span className="vi-tiercard-emoji" aria-hidden>{meta.cover}</span>
+                    <span className="vi-tiercard-designtext">
+                      <span className="vi-tiercard-designname">{t(meta.nameKey as ViKey)}</span>
+                      <span className="vi-tiercard-designdesc">{t(shortDescKey(meta.id))}</span>
+                    </span>
+                    <span className="vi-tiercard-eye" aria-hidden>👁</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -865,47 +927,5 @@ function ContactLink({ href, icon, label }: { href: string; icon: string; label:
       <span aria-hidden>{icon}</span>
       {label}
     </a>
-  );
-}
-
-// ── Closing CTA ──────────────────────────────────────────────────────────────
-
-function FinalCta({ t, reveal, onPricing }: {
-  t: (k: ViKey) => string; reveal: (el: HTMLElement | null) => void; onPricing: () => void;
-}) {
-  return (
-    <section style={{ padding: '20px 20px 100px' }}>
-      <div ref={reveal} className="vi-r vi-r-zoom" style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <div style={{
-          position: 'relative', overflow: 'hidden', borderRadius: 26, padding: '62px 30px', textAlign: 'center',
-          border: '1px solid var(--vi-border)',
-          background: 'linear-gradient(135deg, var(--vi-accent-soft), transparent 60%), var(--vi-card)',
-          boxShadow: 'var(--vi-shadow)',
-        }}>
-          <div className="vi-lp-aurora" style={{ width: 420, height: 420, top: -190, left: '50%', marginLeft: -210, background: 'radial-gradient(circle, rgba(37,99,235,0.28), transparent 68%)' }} />
-          <div style={{ position: 'relative' }}>
-            <h2 className="vi-lp-display" style={{ fontSize: 'clamp(26px, 3.8vw, 42px)' }}>
-              {t('lp_final_title')}
-            </h2>
-            <p style={{ margin: '14px auto 0', maxWidth: 460, fontSize: 16.5, lineHeight: 1.6, color: 'var(--vi-muted)' }}>
-              {t('lp_final_sub')}
-            </p>
-            <button
-              type="button"
-              className="vi-btn vi-btn-primary vi-lp-cta"
-              style={{ marginTop: 28, padding: '16px 34px', fontSize: 16, borderRadius: 14 }}
-              onMouseMove={(e) => {
-                const r = e.currentTarget.getBoundingClientRect();
-                e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
-                e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
-              }}
-              onClick={onPricing}
-            >
-              {t('lp_nav_pricing')} <span style={{ fontSize: 18 }}>→</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }

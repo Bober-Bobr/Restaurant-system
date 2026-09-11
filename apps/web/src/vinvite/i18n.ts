@@ -337,17 +337,17 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Our work',
     lp_nav_pricing: 'Pricing',
-    pricing_change: 'Change',
     pricing_preview: 'Preview',
-    pricing_pick_hint: 'Choose a template below to see its price.',
-    lp_select: 'Select this template',
     pricing_kicker: 'Pricing',
     pricing_title: 'Choose your tier',
     pricing_sub: 'Every template belongs to a tier. Pick the design you love, and the price is the price.',
-    pricing_your_choice: 'Your choice',
     pricing_on_request: 'Price on request',
     pricing_free: 'Free',
-    pricing_tier_empty: 'No templates in this tier yet.',
+    pricing_pick_tier: 'Choose the level you want. Every design inside it is yours to pick later, with us.',
+    pricing_tier_chosen: 'Chosen. Get in touch and we will take it from here.',
+    pricing_tier_pick: 'Choose this level',
+    pricing_tier_picked: 'Chosen',
+    pricing_tier_includes: 'Designs at this level',
     pricing_none: 'The price list is being prepared. Get in touch and we will quote you.',
     slider_prev: 'Previous', slider_next: 'Next',
     pricing_unassigned: 'Not yet assigned to a tier:',
@@ -366,8 +366,6 @@ const dict = {
     // One line under the name on the card; the long form opens when the card is
     // expanded. Written per design rather than generically — a visitor picking
     // an invitation is choosing a mood, and the mood is what these describe.
-    cat_more: 'More about this design',
-    cat_less: 'Close',
     cat_preview: 'Preview full screen',
     cat_from: 'Price',
     work_kicker: 'Our work',
@@ -395,8 +393,6 @@ const dict = {
 
 
 
-    lp_final_title: 'Ready to invite everyone?',
-    lp_final_sub: 'Choose the design you love and we will have your invitation ready.',
     lp_footer_tag: 'Beautiful digital invitations',
     lp_rights: 'All rights reserved.',
   },
@@ -731,17 +727,17 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Наши работы',
     lp_nav_pricing: 'Цены',
-    pricing_change: 'Изменить',
     pricing_preview: 'Посмотреть',
-    pricing_pick_hint: 'Выберите шаблон ниже, чтобы увидеть его цену.',
-    lp_select: 'Выбрать этот шаблон',
     pricing_kicker: 'Цены',
     pricing_title: 'Выберите уровень',
     pricing_sub: 'Каждый шаблон относится к своему уровню. Выбирайте дизайн, который нравится, цена фиксированная.',
-    pricing_your_choice: 'Ваш выбор',
     pricing_on_request: 'Цена по запросу',
     pricing_free: 'Бесплатно',
-    pricing_tier_empty: 'В этом уровне пока нет шаблонов.',
+    pricing_pick_tier: 'Выберите уровень. Любой дизайн внутри него вы выберете позже, вместе с нами.',
+    pricing_tier_chosen: 'Уровень выбран. Напишите нам — дальше всё сделаем мы.',
+    pricing_tier_pick: 'Выбрать этот уровень',
+    pricing_tier_picked: 'Выбрано',
+    pricing_tier_includes: 'Дизайны этого уровня',
     pricing_none: 'Прайс-лист готовится. Напишите нам — назовём цену.',
     slider_prev: 'Назад', slider_next: 'Вперёд',
     pricing_unassigned: 'Пока без уровня:',
@@ -757,8 +753,6 @@ const dict = {
     lp_scroll: 'Листайте',
 
     // ── Каталог шаблонов (промо-сайт) ──
-    cat_more: 'Подробнее о дизайне',
-    cat_less: 'Свернуть',
     cat_preview: 'Открыть на весь экран',
     cat_from: 'Цена',
     work_kicker: 'Наши работы',
@@ -786,8 +780,6 @@ const dict = {
 
 
 
-    lp_final_title: 'Готовы пригласить всех?',
-    lp_final_sub: 'Выберите понравившийся дизайн, и мы подготовим ваше приглашение.',
     lp_footer_tag: 'Красивые электронные приглашения',
     lp_rights: 'Все права защищены.',
   },
@@ -1122,17 +1114,17 @@ const dict = {
     // ── Landing page ──
     lp_nav_work: 'Ishlarimiz',
     lp_nav_pricing: 'Narxlar',
-    pricing_change: 'Ozgartirish',
     pricing_preview: 'Korish',
-    pricing_pick_hint: 'Narxini korish uchun quyidan shablon tanlang.',
-    lp_select: 'Shu shablonni tanlash',
     pricing_kicker: 'Narxlar',
     pricing_title: 'Darajani tanlang',
     pricing_sub: 'Har bir shablon oz darajasiga tegishli. Yoqqan dizaynni tanlang, narx ozgarmaydi.',
-    pricing_your_choice: 'Sizning tanlovingiz',
     pricing_on_request: 'Narx sorov boyicha',
     pricing_free: 'Bepul',
-    pricing_tier_empty: 'Bu darajada hozircha shablon yoq.',
+    pricing_pick_tier: 'Darajani tanlang. Ichidagi istalgan dizaynni keyinroq biz bilan birga tanlaysiz.',
+    pricing_tier_chosen: 'Daraja tanlandi. Biz bilan boglaning, qolganini ozimiz qilamiz.',
+    pricing_tier_pick: 'Shu darajani tanlash',
+    pricing_tier_picked: 'Tanlandi',
+    pricing_tier_includes: 'Shu darajadagi dizaynlar',
     pricing_none: 'Narxlar royxati tayyorlanmoqda. Biz bilan boglaning, narxini aytamiz.',
     slider_prev: 'Orqaga', slider_next: 'Oldinga',
     pricing_unassigned: 'Hali darajasi belgilanmagan:',
@@ -1148,8 +1140,6 @@ const dict = {
     lp_scroll: 'Pastga',
 
     // ── Shablonlar katalogi (promo sayt) ──
-    cat_more: 'Dizayn haqida batafsil',
-    cat_less: 'Yopish',
     cat_preview: 'Toliq ekranda korish',
     cat_from: 'Narxi',
     work_kicker: 'Ishlarimiz',
@@ -1177,8 +1167,6 @@ const dict = {
 
 
 
-    lp_final_title: 'Hammani taklif qilishga tayyormisiz?',
-    lp_final_sub: 'Yoqqan dizaynni tanlang, taklifnomangizni biz tayyorlaymiz.',
     lp_footer_tag: 'Chiroyli elektron taklifnomalar',
     lp_rights: 'Barcha huquqlar himoyalangan.',
   },
