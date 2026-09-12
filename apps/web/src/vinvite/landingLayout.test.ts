@@ -159,14 +159,38 @@ describe('the price list sells tiers, not designs', () => {
     expect(LANDING, 'a select action reappeared on a design').not.toContain("t('lp_select')");
   });
 
-  it('still resolves an old ?template= link to a tier', () => {
-    // The retired /pricing page's links carry one and have been shared. Landing
-    // on the right shelf is the nearest honest thing to what the link promised.
-    const at = LANDING.indexOf('const selectedTier = useMemo');
-    const body = LANDING.slice(at, at + 500);
-    expect(body, 'a shared ?template= link now lands on nothing')
-      .toMatch(/params\.get\('template'\)/);
-    expect(body).toContain('tierOf(');
+  it('names no design in the price list', () => {
+    /**
+     * The change this replaced a check for. The tier cards used to list the
+     * designs inside them; naming them turned a price list back into a catalog
+     * and invited a reader to pick a design when what is sold is a level of
+     * work. The benefits are what a card carries now.
+     */
+    expect(LANDING_CODE, 'the tier cards list designs again')
+      .not.toMatch(/vi-tiercard-design/);
+    expect(LANDING_CODE, 'a category shows nothing for the money')
+      .toMatch(/TIER_BENEFITS\[tier\]/);
+  });
+
+  it('reads only ?tier=, never a design id', () => {
+    // `?template=` was resolved to that design's tier while the list still
+    // named designs. It needed the per-template pricing query on every page
+    // load, and the mapping it read is not what the shop sells; such a link
+    // still reaches the price list, it just arrives with nothing pre-chosen.
+    const at = LANDING_CODE.indexOf('const selectedTier = useMemo');
+    expect(at, 'nothing decides the chosen category').toBeGreaterThan(-1);
+    const body = LANDING_CODE.slice(at, at + 400);
+    expect(body).toContain("params.get('tier')");
+    expect(body, 'the retired per-design lookup is back on the critical path')
+      .not.toContain("params.get('template')");
+  });
+
+  it('quotes the category price, not a design price', () => {
+    expect(LANDING_CODE, 'the card no longer prices the category')
+      .toMatch(/TIER_PRICE_CENTS\[tier\]/);
+    // "from X" belongs to a list of differently-priced things. One category has
+    // one price, and qualifying it invites the reader to hunt for the other.
+    expect(LANDING_CODE, 'the price is still hedged as a "from"').not.toContain("t('cat_from')");
   });
 
   it('draws the ladder from the tier rather than from a picture', () => {

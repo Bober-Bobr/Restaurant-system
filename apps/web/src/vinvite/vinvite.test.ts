@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { groupByTier, sellableTemplates, telegramHref, instagramHref, TIER_ORDER } from './pricing';
+import {
+  TIER_BENEFITS, TIER_ORDER, TIER_PRICE_CENTS, telegramHref, instagramHref,
+} from './pricing';
 import { splitWorks, visibleTemplates, EMPTY_SHOWCASE } from './promoShowcase';
 import { viDict } from './i18n';
 import { whenMode } from './templates/utils';
@@ -12,101 +14,79 @@ import type { TemplateDefinition } from './templates/types';
 
 const tpl = (id: string) => ({ id } as TemplateDefinition);
 
-describe('grouping templates into price tiers', () => {
-  it('files each template under its tier', () => {
-    const { buckets } = groupByTier(
-      [tpl('a'), tpl('b')],
-      new Map([['a', { tier: 'PREMIUM' as const }], ['b', { tier: 'STANDARD' as const }]]),
-    );
-    expect(buckets.PREMIUM.map((t) => t.id)).toEqual(['a']);
-    expect(buckets.STANDARD.map((t) => t.id)).toEqual(['b']);
-  });
-
-  it('keeps an unpriced template visible instead of dropping it', () => {
-    // Shipping a new template must not make it silently vanish from the price
-    // list until somebody remembers to categorise it.
-    const { unassigned } = groupByTier([tpl('new-one')], new Map());
-    expect(unassigned.map((t) => t.id)).toEqual(['new-one']);
-  });
-
-  it('treats a tier this build does not know as unassigned', () => {
-    const { unassigned } = groupByTier([tpl('a')], new Map([['a', { tier: 'PLATINUM' as never }]]));
-    expect(unassigned.map((t) => t.id)).toEqual(['a']);
-  });
-
-  it('preserves the administrator\'s order within a tier', () => {
-    // Not the pricing map's insertion order — the showcase order they arranged.
-    const pricing = new Map([['b', { tier: 'STANDARD' as const }], ['a', { tier: 'STANDARD' as const }]]);
-    const { buckets } = groupByTier([tpl('a'), tpl('b')], pricing);
-    expect(buckets.STANDARD.map((t) => t.id)).toEqual(['a', 'b']);
-  });
-
-  it('offers the three tiers cheapest-first', () => {
-    expect(TIER_ORDER).toEqual(['STANDARD', 'PREMIUM', 'LUXURY']);
-  });
-});
-
-describe('what the public price list may quote', () => {
+describe('what a category costs and what it buys', () => {
   /**
-   * `sellableTemplates` deliberately REVERSES the rule above, and only for the
-   * visitor.
+   * The price moved from the design to the CATEGORY.
    *
-   * `groupByTier` keeps an uncategorised design visible so that shipping a new
-   * one cannot make it silently vanish — right for the administrator, who needs
-   * to see that something is unpriced. It is wrong for a shop window, where it
-   * shows a customer a product with no price and no category and invites them
-   * to buy it. So the public site filters first and the admin screens do not.
+   * It used to live per template on `InviteTemplateOverride.priceCents` — twelve
+   * figures to keep in step for a shop that quotes three, and a customer
+   * choosing a tier could be shown whichever design inside it happened to be
+   * cheapest. `groupByTier` and `sellableTemplates` sorted designs for that list
+   * and are gone with it.
    */
-  const price = (tier: unknown, priceCents: number | null) =>
-    ({ tier, priceCents } as { tier: TemplateTier | null; priceCents: number | null });
-
-  it('quotes a design that has both a tier and a price', () => {
-    const m = new Map([['a', price('PREMIUM', 150_000_00)]]);
-    expect(sellableTemplates([tpl('a')], m).map((t) => t.id)).toEqual(['a']);
+  it('prices all three categories, cheapest first', () => {
+    expect(TIER_ORDER).toEqual(['STANDARD', 'PREMIUM', 'LUXURY']);
+    for (const tier of TIER_ORDER) {
+      expect(TIER_PRICE_CENTS[tier], `${tier} has no price`).toBeGreaterThan(0);
+    }
+    const prices = TIER_ORDER.map((tier) => TIER_PRICE_CENTS[tier]);
+    expect([...prices].sort((a, b) => a - b), 'the ladder does not climb').toEqual(prices);
   });
 
-  it('drops a design with no tier, even when it is priced', () => {
-    const m = new Map([['a', price(null, 150_000_00)]]);
-    expect(sellableTemplates([tpl('a')], m)).toEqual([]);
+  it('keeps the prices in tiyin, like every other price here', () => {
+    // A figure typed in so'm would quote a hundredth of the real price, and
+    // nothing downstream would notice: `formatSum` divides by 100 either way.
+    for (const tier of TIER_ORDER) {
+      expect(TIER_PRICE_CENTS[tier] % 100, `${tier} is not a whole so'm`).toBe(0);
+      expect(TIER_PRICE_CENTS[tier], `${tier} looks like so'm, not tiyin`).toBeGreaterThanOrEqual(100_000);
+    }
   });
 
-  it('drops a design with no price, even when it is categorised', () => {
-    const m = new Map([['a', price('PREMIUM', null)]]);
-    expect(sellableTemplates([tpl('a')], m)).toEqual([]);
+  it('gives every category something to show for the money', () => {
+    for (const tier of TIER_ORDER) {
+      expect(TIER_BENEFITS[tier].length, `${tier} lists no benefits`).toBeGreaterThan(0);
+    }
   });
 
-  it('drops a design nobody has touched at all', () => {
-    expect(sellableTemplates([tpl('brand-new')], new Map())).toEqual([]);
+  it('makes each rung include the one below it', () => {
+    /**
+     * The ladder has to be literal, because that is the whole argument for
+     * paying more. Premium must not quietly DROP something Standard has — a
+     * dearer tier offering less is the one thing a price list cannot do — so
+     * every benefit of a cheaper tier has to reappear in the dearer ones, or be
+     * deliberately replaced by an upgrade of the same thing.
+     */
+    const UPGRADES: Record<string, string> = { anim: 'anim_pro' };
+    for (let i = 1; i < TIER_ORDER.length; i += 1) {
+      const below = TIER_BENEFITS[TIER_ORDER[i - 1]!]!;
+      const here = new Set(TIER_BENEFITS[TIER_ORDER[i]!]!);
+      const lost = below.filter((key) => !here.has(key) && !here.has(UPGRADES[key] ?? ''));
+      expect(lost, `${TIER_ORDER[i]} costs more than ${TIER_ORDER[i - 1]} but drops: ${lost.join(', ')}`)
+        .toEqual([]);
+    }
   });
 
-  it('keeps a design priced at zero', () => {
-    // Free is a price. `priceCents` is nullable precisely so that "given away"
-    // stays distinguishable from "never priced", and a falsy check here would
-    // collapse the two and hide a design the studio meant to offer.
-    const m = new Map([['a', price('STANDARD', 0)]]);
-    expect(sellableTemplates([tpl('a')], m).map((t) => t.id)).toEqual(['a']);
+  it('grows as it climbs', () => {
+    // Same list at a higher price is not a tier, it is a markup.
+    for (let i = 1; i < TIER_ORDER.length; i += 1) {
+      const below = TIER_BENEFITS[TIER_ORDER[i - 1]!]!;
+      const here = TIER_BENEFITS[TIER_ORDER[i]!]!;
+      const same = below.length === here.length && below.every((k, j) => k === here[j]);
+      expect(same, `${TIER_ORDER[i]} offers exactly what ${TIER_ORDER[i - 1]} does`).toBe(false);
+    }
   });
 
-  it('drops a tier this build does not know', () => {
-    // Same reasoning as groupByTier: an unrecognised tier has no column, so a
-    // design carrying one would be quoted into a bucket that is not rendered.
-    const m = new Map([['a', price('PLATINUM', 100)]]);
-    expect(sellableTemplates([tpl('a')], m)).toEqual([]);
-  });
-
-  it('preserves the order it was given', () => {
-    const m = new Map([
-      ['b', price('STANDARD', 1)], ['a', price('LUXURY', 2)], ['c', price('PREMIUM', 3)],
-    ]);
-    expect(sellableTemplates([tpl('a'), tpl('b'), tpl('c')], m).map((t) => t.id))
-      .toEqual(['a', 'b', 'c']);
-  });
-
-  it('leaves the admin-facing grouping alone', () => {
-    // The safety valve moved rather than disappeared: groupByTier must still
-    // surface an unpriced design, or the person who can price it cannot see it.
-    const { unassigned } = groupByTier([tpl('a')], new Map());
-    expect(unassigned.map((t) => t.id)).toEqual(['a']);
+  it('names a benefit string that actually exists, in every language', () => {
+    // The keys are suffixes resolved as `pricing_b_<key>`; a typo renders the
+    // raw key on the marketing page rather than failing.
+    for (const tier of TIER_ORDER) {
+      for (const key of TIER_BENEFITS[tier]) {
+        for (const lang of ['en', 'ru', 'uz'] as const) {
+          const full = `pricing_b_${key}`;
+          expect(full in viDict[lang], `${full} is missing from ${lang}`).toBe(true);
+        }
+      }
+    }
   });
 });
 

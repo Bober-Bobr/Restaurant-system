@@ -115,13 +115,31 @@ describe('VInviteApp.tsx', () => {
 });
 
 describe('LivePreviewModal.tsx', () => {
-  // The other half of the split: this file is where the weight is allowed to
-  // be, so it must actually be carrying it. If it stopped importing the
-  // registry, the guard above would pass while the preview rendered nothing.
+  /**
+   * The other half of the split: this file is where the weight is allowed to
+   * be, so it must actually be carrying it — otherwise the guard above passes
+   * while the preview renders nothing.
+   *
+   * Checked ONE HOP DEEP rather than on this file's own imports. The modal
+   * opens a customer's invitation and reaches the registry through
+   * `InviteSiteView`, which dispatches rich vs block; asking only about direct
+   * imports would have failed a module that is perfectly correct, which is
+   * exactly what it did when the design-preview branch was removed.
+   */
   it('is the module that holds the renderer', () => {
-    const imports = valueImports(read('LivePreviewModal.tsx'));
-    expect(imports).toContain('./templates');
-    expect(imports).toContain('./templates/RichRenderer');
+    const direct = valueImports(read('LivePreviewModal.tsx'));
+    const reachable = new Set(direct.flatMap((spec) => (
+      spec.startsWith('./') && spec !== './templates'
+        ? (() => {
+          try { return valueImports(read(`${spec.slice(2)}.tsx`)); } catch { return []; }
+        })()
+        : [spec]
+    )));
+    expect(
+      reachable.has('./templates'),
+      'nothing behind the lazy boundary reaches the template registry, so the '
+      + 'preview has nothing to render a rich invitation with',
+    ).toBe(true);
   });
 
   it('is a default export, which is what lazy() needs', () => {

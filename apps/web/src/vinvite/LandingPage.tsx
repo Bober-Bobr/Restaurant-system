@@ -6,11 +6,11 @@ import { useViT, type ViKey } from './i18n';
 import { useReveal, useScrollProgress, usePointerTilt } from './motion';
 import { ViLogo, ViThemeToggle } from './VInviteApp';
 import { usePromoShowcase } from './promoShowcase';
-import { useTemplatePricing } from './templatePricing';
-import { groupByTier, sellableTemplates, instagramHref, telegramHref } from './pricing';
+import { TIER_BENEFITS, TIER_ORDER, TIER_PRICE_CENTS, instagramHref, telegramHref } from './pricing';
 import { usePlatformContacts } from '../hooks/usePlatformContacts';
+import { formatSum } from '../utils/currency';
 import { getTemplateMeta, type TemplateMeta } from './templates/meta';
-import { brandOf, brandVars, longDescKey, shortDescKey, type TemplateBrand } from './templateBrand';
+import { brandOf, brandVars, type TemplateBrand } from './templateBrand';
 import { TEMPLATE_TIERS, type PromoWork, type TemplateTier } from './api';
 
 // ── v-invite.uz/main — public marketing landing ──────────────────────────────
@@ -90,7 +90,6 @@ export const ViLandingPage = () => {
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
 
   const { items, templates } = usePromoShowcase();
-  const { byTemplate, priceLabel, tierOf } = useTemplatePricing();
 
   const [params, setParams] = useSearchParams();
   const chooseTier = useCallback((tier: TemplateTier | null) => {
@@ -113,33 +112,33 @@ export const ViLandingPage = () => {
   );
 
   /**
-   * The designs actually on offer: the administrator has not hidden them, AND
-   * they carry both a tier and a price. A listing with neither is a product a
-   * visitor cannot be quoted — see `sellableTemplates`.
+   * The designs the administrator has not hidden.
+   *
+   * They are no longer named in the price list — a category is what is sold —
+   * so the only thing left reading this is the marquee, which borrows their
+   * names when no customer work has been chosen yet.
    */
   const onOffer = useMemo(
-    () => sellableTemplates(
-      templates.map((tpl) => getTemplateMeta(tpl.id)).filter((m): m is TemplateMeta => !!m),
-      byTemplate,
-    ),
-    [templates, byTemplate],
+    () => templates.map((tpl) => getTemplateMeta(tpl.id)).filter((m): m is TemplateMeta => !!m),
+    [templates],
   );
 
   /**
-   * Which tier is chosen.
+   * Which category is chosen.
    *
-   * `?tier=` is the live parameter. `?template=` is read as a FALLBACK and
-   * resolved to whichever tier that design sits in, because the retired
-   * /pricing page's links carry one and they have been shared — landing on the
-   * right shelf is the nearest honest thing to what the link promised, now
-   * that a design is not something a visitor selects.
+   * `?tier=` only. A `?template=` left over from the retired /pricing page's
+   * links is deliberately NOT resolved to its design's tier any more: that
+   * needed the per-template pricing query on every page load, and the mapping
+   * it read is no longer what the shop sells. Such a link still lands on the
+   * price list — it just arrives with nothing pre-chosen, which is the honest
+   * outcome when the thing it named is not for sale on its own.
    */
   const selectedTier = useMemo<TemplateTier | null>(() => {
     const named = params.get('tier');
-    if (named && (TEMPLATE_TIERS as readonly string[]).includes(named)) return named as TemplateTier;
-    const legacy = params.get('template');
-    return legacy ? tierOf(legacy) : null;
-  }, [params, tierOf]);
+    return named && (TEMPLATE_TIERS as readonly string[]).includes(named)
+      ? (named as TemplateTier)
+      : null;
+  }, [params]);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 12);
@@ -178,11 +177,6 @@ export const ViLandingPage = () => {
   const goPricing = () => scrollTo('pricing');
   const goWork = () => scrollTo(work.length > 0 ? 'work' : 'pricing');
 
-  const previewTemplate = useCallback((meta: TemplateMeta) => setPreview({
-    kind: 'template', id: meta.id, name: t(meta.nameKey as ViKey),
-    emoji: meta.cover, price: priceLabel(meta.id),
-  }), [t, priceLabel]);
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
       <div className="vi-lp-progress" style={{ transform: `scaleX(${progress})` }} aria-hidden />
@@ -199,15 +193,13 @@ export const ViLandingPage = () => {
           <WorkSection
             t={t} entries={work} reveal={reveal} num="01"
             onOpen={(entry) => setPreview({
-              kind: 'work', site: entry.site, name: entry.name, emoji: entry.emoji,
+              site: entry.site, name: entry.name, emoji: entry.emoji,
             })}
           />
         )}
         <PricingSection
           t={t} reveal={reveal} num={work.length > 0 ? '02' : '01'}
-          templates={onOffer} byTemplate={byTemplate} priceLabel={priceLabel}
           selectedTier={selectedTier} onSelectTier={chooseTier}
-          onPreview={previewTemplate}
         />
       </main>
 
@@ -231,10 +223,9 @@ export const ViLandingPage = () => {
           already on screen, so a spinner inside a frame reads as an error. */}
       {preview && (
         <Suspense fallback={null}>
-          {/* No "select" any more, for either kind. A customer's invitation was
-              never on sale, and a design is now an illustration of its tier
-              rather than the thing chosen — the choice is the tier, made on the
-              card the preview was opened from. */}
+          {/* A customer's finished invitation, opened from the gallery. There is
+              no "select": it was never on sale, and the thing that IS sold — a
+              category — is chosen on its own card further down. */}
           <LivePreviewModal target={preview} onClose={() => setPreview(null)} />
         </Suspense>
       )}
@@ -675,16 +666,16 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
 // This was its own page. It is here because a visitor deciding what to buy
 // should not have to leave the page that convinced them.
 //
-// WHAT IS CHOSEN IS A TIER, not a design. The three are a ladder — each one
-// buys more elaborate work than the last — and that is the decision a customer
-// is actually able to make before speaking to anyone: which of these is the
-// evening worth. Picking a specific design was asking them to commit to
-// something they can still change, and it made the page a catalog rather than
-// a price list. The designs are still shown inside their tier, and still open
-// full screen, because that is what makes a tier mean anything — but they are
-// illustrations of the tier now, not the thing being selected.
+// WHAT IS SOLD IS A CATEGORY. The three are a ladder — each buys more elaborate
+// work than the last — and that is the decision a customer can actually make
+// before speaking to anyone: which of these is the evening worth. The designs
+// are deliberately NOT listed here. Naming them turned the price list back into
+// a catalog and asked the reader to commit to a specific design when the thing
+// being bought is a level of work; which design it ends up being is settled in
+// the conversation that follows. Finished examples live in "our work" above.
 //
-// Only designs carrying BOTH a tier and a price appear; see `sellableTemplates`.
+// Price and benefits come from `TIER_PRICE_CENTS` / `TIER_BENEFITS` — one table,
+// not twelve per-template rows.
 
 const TIER_ACCENT: Record<TemplateTier, string> = {
   STANDARD: 'var(--vi-muted)',
@@ -695,45 +686,15 @@ const TIER_ACCENT: Record<TemplateTier, string> = {
 /** The ladder, drawn. One mark for Standard, three for Luxury. */
 const TIER_MARKS: Record<TemplateTier, number> = { STANDARD: 1, PREMIUM: 2, LUXURY: 3 };
 
-function PricingSection({
-  t, reveal, num, templates, byTemplate, priceLabel, selectedTier, onSelectTier, onPreview,
-}: {
+function PricingSection({ t, reveal, num, selectedTier, onSelectTier }: {
   t: (k: ViKey) => string;
   reveal: (el: HTMLElement | null) => void;
   num: string;
-  templates: TemplateMeta[];
-  byTemplate: Map<string, { tier: TemplateTier | null; priceCents?: number | null }>;
-  priceLabel: (id: string) => string;
   selectedTier: TemplateTier | null;
   onSelectTier: (tier: TemplateTier | null) => void;
-  onPreview: (meta: TemplateMeta) => void;
 }) {
   const contactFor = usePlatformContacts();
   const contact = contactFor('vinvite');
-
-  const grouped = useMemo(() => groupByTier(templates, byTemplate), [templates, byTemplate]);
-  /** Tiers that actually have something in them — an empty column is not an offer. */
-  const tiers = useMemo(
-    () => TEMPLATE_TIERS.filter((tier) => grouped.buckets[tier].length > 0),
-    [grouped],
-  );
-
-  /**
-   * The cheapest design in a tier, which is what "from" means.
-   *
-   * Read off `priceLabel` rather than formatted here, so there is still exactly
-   * one definition of what a price reads as.
-   */
-  const fromPrice = (tier: TemplateTier): string => {
-    const inTier = grouped.buckets[tier];
-    let best: { id: string; cents: number } | null = null;
-    for (const meta of inTier) {
-      const cents = byTemplate.get(meta.id)?.priceCents;
-      if (cents == null) continue;
-      if (!best || cents < best.cents) best = { id: meta.id, cents };
-    }
-    return best ? priceLabel(best.id) : '';
-  };
 
   return (
     <section id="pricing" style={{ padding: '90px 0 90px', scrollMarginTop: 70 }}>
@@ -744,27 +705,14 @@ function PricingSection({
         />
       </div>
 
-      {/* Nothing priced yet. Said plainly rather than rendered as three empty
-          columns, which reads as a broken page rather than an unfinished one. */}
-      {tiers.length === 0 ? (
-        <p style={{ margin: '0 auto', maxWidth: 520, padding: '0 20px', textAlign: 'center', fontSize: 15, color: 'var(--vi-muted)' }}>
-          {t('pricing_none')}
-        </p>
-      ) : (
-        <>
-          <p style={{
-            margin: '0 auto 26px', maxWidth: 520, padding: '0 20px',
-            textAlign: 'center', fontSize: 14, color: 'var(--vi-muted)',
-          }}>
-            {selectedTier ? t('pricing_tier_chosen') : t('pricing_pick_tier')}
-          </p>
+      <p style={{
+        margin: '0 auto 26px', maxWidth: 520, padding: '0 20px',
+        textAlign: 'center', fontSize: 14, color: 'var(--vi-muted)',
+      }}>
+        {selectedTier ? t('pricing_tier_chosen') : t('pricing_pick_tier')}
+      </p>
 
-          <TierSlider
-            t={t} tiers={tiers} grouped={grouped} fromPrice={fromPrice}
-            selectedTier={selectedTier} onSelectTier={onSelectTier} onPreview={onPreview}
-          />
-        </>
-      )}
+      <TierSlider t={t} selectedTier={selectedTier} onSelectTier={onSelectTier} />
 
       {/* Contact details, exactly as the system administrator entered them.
           Rendered only where a value exists — an empty row would advertise a
@@ -790,7 +738,7 @@ function PricingSection({
 }
 
 /**
- * The three tiers as a carousel, the chosen one held in the centre.
+ * The three categories as a carousel, the chosen one held in the centre.
  *
  * Centred rather than left-aligned because the point of the control is the
  * LADDER: what a tier costs only means something beside the one below and the
@@ -799,24 +747,20 @@ function PricingSection({
  * edge of the screen with nothing to be more expensive than.
  *
  * The centring is done twice over, and both are needed. `scroll-snap-align:
- * center` is what a finger lands on; `scrollIntoView({ inline: 'center' })` is
- * what a click on a neighbour does, because pressing a card must bring it in
- * rather than leave the reader to drag it there.
+ * center` is what a finger lands on; the `scrollTo` below is what a click on a
+ * neighbour does, because pressing a card must bring it in rather than leave
+ * the reader to drag it there.
  */
-function TierSlider({ t, tiers, grouped, fromPrice, selectedTier, onSelectTier, onPreview }: {
+function TierSlider({ t, selectedTier, onSelectTier }: {
   t: (k: ViKey) => string;
-  tiers: TemplateTier[];
-  grouped: { buckets: Record<TemplateTier, TemplateMeta[]> };
-  fromPrice: (tier: TemplateTier) => string;
   selectedTier: TemplateTier | null;
   onSelectTier: (tier: TemplateTier | null) => void;
-  onPreview: (meta: TemplateMeta) => void;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<TemplateTier, HTMLDivElement>());
 
   /**
-   * Bring the chosen tier to the middle.
+   * Bring the chosen category to the middle.
    *
    * Two deliberate choices here.
    *
@@ -836,20 +780,19 @@ function TierSlider({ t, tiers, grouped, fromPrice, selectedTier, onSelectTier, 
    */
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    const tier = selectedTier ?? tiers[Math.floor(tiers.length / 2)];
+    const tier = selectedTier ?? TIER_ORDER[Math.floor(TIER_ORDER.length / 2)];
     const card = tier ? cardRefs.current.get(tier) : null;
     const rail = railRef.current;
     if (!card || !rail) return;
     rail.scrollTo({ left: card.offsetLeft - (rail.clientWidth - card.clientWidth) / 2 });
     if (!settled) setSettled(true);
-  }, [selectedTier, tiers, settled]);
+  }, [selectedTier, settled]);
 
   return (
     <div className="vi-tierslider">
       <div className={`vi-tierslider-rail${settled ? ' is-settled' : ''}`} ref={railRef}>
-        {tiers.map((tier) => {
+        {TIER_ORDER.map((tier) => {
           const chosen = selectedTier === tier;
-          const inTier = grouped.buckets[tier];
           return (
             <div
               key={tier}
@@ -873,8 +816,7 @@ function TierSlider({ t, tiers, grouped, fromPrice, selectedTier, onSelectTier, 
                 </span>
                 <span className="vi-tiercard-name">{t(`tier_${tier.toLowerCase()}` as ViKey)}</span>
                 <span className="vi-tiercard-price">
-                  <span className="vi-tiercard-from">{t('cat_from')}</span>
-                  <strong>{fromPrice(tier)}</strong>
+                  <strong>{formatSum(TIER_PRICE_CENTS[tier])}</strong>
                 </span>
                 <span className="vi-tiercard-desc">{t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}</span>
                 <span className="vi-tiercard-pick">
@@ -882,28 +824,17 @@ function TierSlider({ t, tiers, grouped, fromPrice, selectedTier, onSelectTier, 
                 </span>
               </button>
 
-              {/* What the tier actually contains. Not selectable — these are
-                  illustrations of what the money buys, and the choice above is
-                  the choice. */}
-              <div className="vi-tiercard-list">
-                <span className="vi-tiercard-listhead">{t('pricing_tier_includes')}</span>
-                {inTier.map((meta) => (
-                  <button
-                    key={meta.id}
-                    type="button"
-                    className="vi-tiercard-design"
-                    onClick={() => onPreview(meta)}
-                    title={t('cat_preview')}
-                  >
-                    <span className="vi-tiercard-emoji" aria-hidden>{meta.cover}</span>
-                    <span className="vi-tiercard-designtext">
-                      <span className="vi-tiercard-designname">{t(meta.nameKey as ViKey)}</span>
-                      <span className="vi-tiercard-designdesc">{t(shortDescKey(meta.id))}</span>
-                    </span>
-                    <span className="vi-tiercard-eye" aria-hidden>👁</span>
-                  </button>
+              {/* What the money actually buys. Shared keys across the tiers, so
+                  the ladder reads as one list growing rather than three lists
+                  saying similar things — see TIER_BENEFITS. */}
+              <ul className="vi-tiercard-list">
+                {TIER_BENEFITS[tier].map((key) => (
+                  <li key={key} className="vi-tiercard-benefit">
+                    <span className="vi-tiercard-tick" aria-hidden>✓</span>
+                    <span>{t(`pricing_b_${key}` as ViKey)}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           );
         })}

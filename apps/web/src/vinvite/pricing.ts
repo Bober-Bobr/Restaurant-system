@@ -7,62 +7,55 @@ import type { TemplateTier } from './api';
 
 export const TIER_ORDER: TemplateTier[] = ['STANDARD', 'PREMIUM', 'LUXURY'];
 
-/**
- * What the PUBLIC site may quote: a design with both a tier and a price.
- *
- * This reverses the rule `groupByTier` still follows, deliberately and on
- * request. The old behaviour kept an uncategorised design visible so that
- * shipping a new one could not make it silently vanish — a good rule for the
- * administrator, who needs to see that something is unpriced, and the wrong one
- * for a shop window, where it shows a customer a product with no price and no
- * category and invites them to buy it.
- *
- * So the safety valve moves rather than disappearing: `groupByTier` still
- * surfaces `unassigned`, and the Settings screen still lists every design, so
- * an unpriced template is visible to the person who can price it. It is only
- * the visitor who is not shown a half-finished listing.
- *
- * Both halves are required. A tier with no price quotes nothing; a price with
- * no tier has no column to sit in.
- */
-export function sellableTemplates<T extends { id: string }>(
-  templates: T[],
-  pricing: Map<string, { tier: TemplateTier | null; priceCents?: number | null }>,
-): T[] {
-  return templates.filter((tpl) => {
-    const row = pricing.get(tpl.id);
-    if (!row) return false;
-    if (!row.tier || !TIER_ORDER.includes(row.tier)) return false;
-    // `priceCents` is nullable and zero is a real price — a design given away
-    // as part of a package is priced, not unpriced. Only null means unset.
-    return row.priceCents != null;
-  });
-}
+// ── What a tier costs, and what it buys ──────────────────────────────────────
+//
+// The price belongs to the CATEGORY, not to a design. It used to live per
+// template on `InviteTemplateOverride.priceCents`, which meant twelve prices
+// to keep in step for a shop that quotes three — and a customer choosing a
+// tier could be shown a different number depending on which design happened to
+// be cheapest inside it.
+//
+// So it is one table, here, beside the tier order it belongs with. Two
+// consequences worth being explicit about:
+//
+//  · Changing a price is a DEPLOY, not a form. That is the trade the studio
+//    asked for when the per-template price board was removed; three numbers
+//    that change rarely are better as reviewed content than as an admin screen
+//    nobody remembers exists.
+//  · The benefits are `ViKey` SUFFIXES shared between tiers, not sentences.
+//    Music is in all three and the premium animation is in two, so writing them
+//    per tier would mean the same claim phrased three slightly different ways
+//    within a fortnight. Shared keys make the ladder literal: Premium is
+//    Standard's list with the animation upgraded and a voice added, and that is
+//    exactly what the reader should see.
+//
+// Tiyin, like every other price in the codebase (1/100 so'm).
+export const TIER_PRICE_CENTS: Record<TemplateTier, number> = {
+  STANDARD: 600_000_00,
+  PREMIUM: 800_000_00,
+  LUXURY: 1_400_000_00,
+};
+
+/** i18n keys, in the order they are listed. Resolved as `pricing_b_<key>`. */
+export const TIER_BENEFITS: Record<TemplateTier, readonly string[]> = {
+  STANDARD: ['anim', 'music'],
+  PREMIUM: ['anim_pro', 'voice', 'music'],
+  LUXURY: ['anim_pro', 'voice', 'music', 'custom'],
+};
 
 /**
- * Split the visible templates into the three tiers.
+ * The retired pair.
  *
- * A template with no tier — or with a tier this build does not know — goes to
- * `unassigned` rather than being dropped. That is what lets the ADMIN screens
- * show an uncategorised design instead of losing it; the public site drops it
- * earlier, via `sellableTemplates` above.
+ * `sellableTemplates` and `groupByTier` sorted designs into tiers for a price
+ * list that named them. The price list now sells the three CATEGORIES and
+ * names no design, so both had no caller left; a filter nothing filters is a
+ * rule that quietly stops being true.
  *
- * Order within a tier follows the order given, which is the showcase order the
- * administrator arranged — not the pricing map's insertion order.
+ * What they encoded is not lost, it moved: a category's price is
+ * `TIER_PRICE_CENTS` above, and which category a design belongs to is still
+ * recorded per template on `InviteTemplateOverride.tier` and edited on the
+ * Settings board — it is simply not what the shop window is built from.
  */
-export function groupByTier<T extends { id: string }>(
-  templates: T[],
-  pricing: Map<string, { tier: TemplateTier | null }>,
-): { buckets: Record<TemplateTier, T[]>; unassigned: T[] } {
-  const buckets: Record<TemplateTier, T[]> = { STANDARD: [], PREMIUM: [], LUXURY: [] };
-  const unassigned: T[] = [];
-  for (const template of templates) {
-    const tier = pricing.get(template.id)?.tier ?? null;
-    if (tier && buckets[tier]) buckets[tier].push(template);
-    else unassigned.push(template);
-  }
-  return { buckets, unassigned };
-}
 
 // The administrator may type a handle, an @handle or a full URL into the studio
 // contact fields. Accept all three rather than making them remember which one
