@@ -14,6 +14,10 @@ import {
 } from './vinvite.service.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
+import { InviteOrderService } from '../inviteOrder/inviteOrder.service.js';
+import {
+  orderBotConfigured, ensureOrderCode, rotateOrderCode, orderDeepLink, listOrderLinks, deleteOrderLink,
+} from '../telegram/telegram.service.js';
 import { platformContactSchema } from '../platformContact/platformContact.schema.js';
 import { prisma } from '../../db/prisma.js';
 
@@ -25,6 +29,7 @@ const promoShowcaseService = new VInvitePromoShowcaseService();
 const templatePricingService = new VInviteTemplatePricingService();
 const platformContactService = new PlatformContactService();
 const inviteRequestService = new InviteRequestService();
+const inviteOrderService = new InviteOrderService();
 
 // Invitation orders are studio-wide operational data, not any one user's, so
 // every endpoint that touches them is SYSTEM_ADMIN-only — enforced here on the
@@ -291,6 +296,65 @@ export class VInviteController {
   async removeInviteRequest(request: Request, response: Response) {
     await requireSystemAdmin(request);
     await inviteRequestService.remove(String(request.params.id));
+    response.status(204).send();
+  }
+
+  // ── Invitation orders from the promotional site ────────────────────────────
+  // Same shape and same gate as the invite requests above. The submit side is
+  // public (POST /api/public/invite-orders); everything here is SYSTEM_ADMIN,
+  // re-checked in every method rather than only on the route.
+
+  async listInviteOrders(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    response.json(await inviteOrderService.list());
+  }
+
+  async inviteOrderUnreadCount(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    response.json({ count: await inviteOrderService.unreadCount() });
+  }
+
+  async setInviteOrderRead(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    const isRead = request.body?.isRead !== false;
+    response.json(await inviteOrderService.setRead(String(request.params.id), isRead));
+  }
+
+  async removeInviteOrder(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    await inviteOrderService.remove(String(request.params.id));
+    response.status(204).send();
+  }
+
+  // ── The studio's Telegram inbox for those orders ───────────────────────────
+  // The code, the deep link and the subscribed chats. Unlike the per-page
+  // Telegram endpoints there is nothing to own here — the inbox belongs to the
+  // studio — so SYSTEM_ADMIN is the whole check.
+
+  async orderInboxStatus(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    if (!orderBotConfigured()) {
+      response.json({ enabled: false });
+      return;
+    }
+    const code = await ensureOrderCode();
+    response.json({
+      enabled: true,
+      code,
+      link: await orderDeepLink(code),
+      links: await listOrderLinks(),
+    });
+  }
+
+  async rotateOrderInbox(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    const code = await rotateOrderCode();
+    response.json({ enabled: true, code, link: await orderDeepLink(code), links: [] });
+  }
+
+  async removeOrderInboxLink(request: Request, response: Response) {
+    await requireSystemAdmin(request);
+    await deleteOrderLink(String(request.params.linkId));
     response.status(204).send();
   }
 

@@ -192,7 +192,15 @@ function ViLayout() {
   // SYSTEM_ADMIN may call this, so it stays disabled for everyone else.
   const unreadQuery = useQuery({
     queryKey: ['vi-invite-requests-unread'],
-    queryFn: () => vinviteService.inviteRequestUnreadCount(),
+    // Both inboxes on the Notifications page: guest orders and website requests.
+    // One key, so the page's existing invalidation refreshes the badge for either.
+    queryFn: async () => {
+      const [requests, orders] = await Promise.all([
+        vinviteService.inviteRequestUnreadCount(),
+        vinviteService.inviteOrderUnreadCount(),
+      ]);
+      return requests + orders;
+    },
     enabled: isSystemAdmin,
     refetchInterval: 60_000,
   });

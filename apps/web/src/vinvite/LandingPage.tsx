@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Locale } from '../utils/translate';
 import { useVInviteStore } from './store';
@@ -11,7 +11,10 @@ import { usePlatformContacts } from '../hooks/usePlatformContacts';
 import { formatSum } from '../utils/currency';
 import { getTemplateMeta, type TemplateMeta } from './templates/meta';
 import { brandOf, brandVars, type TemplateBrand } from './templateBrand';
-import { TEMPLATE_TIERS, type PromoWork, type TemplateTier } from './api';
+import {
+  TEMPLATE_TIERS, submitInviteOrder, type InviteOrderReceipt, type PromoWork, type TemplateTier,
+} from './api';
+import { isPromoCode, normalizePromoCode, quoteOrder } from './promo';
 
 // ── v-invite.uz/main — public marketing landing ──────────────────────────────
 // What a visitor sees: hero → our work → prices → closing CTA. There is no
@@ -714,6 +717,8 @@ function PricingSection({ t, reveal, num, selectedTier, onSelectTier }: {
 
       <TierSlider t={t} selectedTier={selectedTier} onSelectTier={onSelectTier} />
 
+      <OrderForm t={t} tier={selectedTier} />
+
       {/* Contact details, exactly as the system administrator entered them.
           Rendered only where a value exists — an empty row would advertise a
           channel the studio does not actually answer. */}
@@ -840,6 +845,168 @@ function TierSlider({ t, selectedTier, onSelectTier }: {
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * The order form: the chosen category, a name, a phone number and an optional
+ * partner promo code.
+ *
+ * The quote shown here is a PREVIEW computed from `promo.ts`; the server prices
+ * the order again from its own copy and the confirmation shows what it wrote.
+ * The browser never sends a figure — see `submitInviteOrder`.
+ *
+ * Two deliberate behaviours around the code:
+ *  · It is folded to uppercase as it is typed, because that is how the codes are
+ *    printed and stored; a lowercase keyboard must not cost anyone the discount.
+ *  · "Not recognised" waits for the field to be left (or for a submit). Shown on
+ *    every keystroke, it would call "EMI" wrong on the way to "EMIR".
+ *
+ * An unrecognised code BLOCKS the submit rather than being dropped: sending the
+ * order at full price after the customer typed a code would quote them more than
+ * they expected without saying so.
+ */
+function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | null }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [promo, setPromo] = useState('');
+  const [promoTouched, setPromoTouched] = useState(false);
+  const [state, setState] = useState<'idle' | 'sending' | 'missing' | 'error'>('idle');
+  const [receipt, setReceipt] = useState<InviteOrderReceipt | null>(null);
+
+  const promoFilled = normalizePromoCode(promo) !== '';
+  const promoValid = promoFilled && isPromoCode(promo);
+  const promoBad = promoFilled && !promoValid;
+  const showBad = promoBad && promoTouched;
+  const quote = tier ? quoteOrder(tier, promoValid ? promo : null) : null;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!tier || state === 'sending') return;
+    if (!name.trim() || !phone.trim()) { setState('missing'); return; }
+    if (promoBad) { setPromoTouched(true); return; }
+    setState('sending');
+    try {
+      const result = await submitInviteOrder({
+        name: name.trim(),
+        phone: phone.trim(),
+        tier,
+        promoCode: promoValid ? normalizePromoCode(promo) : null,
+      });
+      setReceipt(result);
+      setState('idle');
+    } catch {
+      setState('error');
+    }
+  };
+
+  const accent = tier ? TIER_ACCENT[tier] : 'var(--vi-accent)';
+  const tierName = (x: TemplateTier) => t(`tier_${x.toLowerCase()}` as ViKey);
+
+  return (
+    <div id="order" className="vi-order" style={{ ['--tier-accent' as string]: accent }}>
+      <div className="vi-card vi-order-card" data-tier={tier ?? undefined}>
+        {receipt ? (
+          <div className="vi-order-done" role="status">
+            <div className="vi-order-done-mark" aria-hidden>✓</div>
+            <h3 className="vi-order-title">{t('ord_done_title')}</h3>
+            <p className="vi-order-sub" style={{ margin: 0 }}>{t('ord_done')}</p>
+            {/* The server's figures, not the preview's. */}
+            <OrderSum t={t} tierLabel={tierName(receipt.tier)} {...receipt} />
+            <button
+              type="button" className="vi-btn vi-btn-ghost"
+              onClick={() => { setReceipt(null); setPromo(''); setPromoTouched(false); }}
+            >
+              {t('ord_done_again')}
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} noValidate>
+            <h3 className="vi-order-title">{t('ord_title')}</h3>
+            <p className="vi-order-sub">{tier ? t('ord_sub') : t('ord_pick_first')}</p>
+
+            <div className="vi-order-grid">
+              <label>
+                <span className="vi-label">{t('ord_name')}</span>
+                <input
+                  className="vi-input" value={name} maxLength={120} autoComplete="name"
+                  placeholder={t('ord_name_ph')} disabled={!tier}
+                  onChange={(e) => { setName(e.target.value); if (state === 'missing') setState('idle'); }}
+                />
+              </label>
+              <label>
+                <span className="vi-label">{t('ord_phone')}</span>
+                <input
+                  className="vi-input" value={phone} maxLength={40} type="tel" inputMode="tel"
+                  autoComplete="tel" placeholder={t('ord_phone_ph')} disabled={!tier}
+                  onChange={(e) => { setPhone(e.target.value); if (state === 'missing') setState('idle'); }}
+                />
+              </label>
+            </div>
+
+            <label className="vi-order-promo">
+              <span className="vi-label">
+                {t('ord_promo')} <em className="vi-order-label-opt">· {t('ord_promo_opt')}</em>
+              </span>
+              <input
+                className="vi-input" value={promo} maxLength={60}
+                autoComplete="off" autoCapitalize="characters" spellCheck={false}
+                placeholder={t('ord_promo_ph')} disabled={!tier}
+                data-state={promoValid ? 'ok' : showBad ? 'bad' : undefined}
+                aria-invalid={showBad || undefined}
+                onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                onBlur={() => setPromoTouched(true)}
+              />
+              <span
+                className={`vi-order-hint${promoValid ? ' is-ok' : showBad ? ' is-bad' : ''}`}
+                aria-live="polite"
+              >
+                {promoValid ? `✓ ${t('ord_promo_ok')}` : showBad ? t('ord_promo_bad') : t('ord_promo_hint')}
+              </span>
+            </label>
+
+            {quote && <OrderSum t={t} tierLabel={tierName(quote.tier)} {...quote} />}
+
+            {state === 'missing' && <p className="vi-order-err" role="alert">{t('ord_required')}</p>}
+            {state === 'error' && <p className="vi-order-err" role="alert">{t('ord_error')}</p>}
+
+            <button
+              type="submit" className="vi-btn vi-btn-primary vi-order-submit"
+              disabled={!tier || state === 'sending'}
+            >
+              {state === 'sending' ? t('ord_sending') : t('ord_submit')}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Category → price → discount → total. The full price is struck only when something came off it. */
+function OrderSum({ t, tierLabel, promoCode, listCents, discountCents, totalCents }: {
+  t: (k: ViKey) => string;
+  tierLabel: string;
+  promoCode: string | null;
+  listCents: number;
+  discountCents: number;
+  totalCents: number;
+}) {
+  return (
+    <dl className="vi-order-sum">
+      <div><dt>{t('ord_category')}</dt><dd>{tierLabel}</dd></div>
+      <div>
+        <dt>{t('ord_list')}</dt>
+        <dd className={discountCents > 0 ? 'is-struck' : undefined}>{formatSum(listCents)}</dd>
+      </div>
+      {discountCents > 0 && (
+        <div className="is-discount">
+          <dt>{t('ord_discount')}{promoCode ? ` · ${promoCode}` : ''}</dt>
+          <dd>− {formatSum(discountCents)}</dd>
+        </div>
+      )}
+      <div className="is-total"><dt>{t('ord_total')}</dt><dd>{formatSum(totalCents)}</dd></div>
+    </dl>
   );
 }
 

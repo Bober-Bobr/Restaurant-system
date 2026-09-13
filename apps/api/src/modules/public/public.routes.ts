@@ -22,6 +22,8 @@ import { PlatformContactService } from '../platformContact/platformContact.servi
 import { isAllowedImage } from '../../utils/imageUpload.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
 import { createInviteRequestSchema } from '../inviteRequest/inviteRequest.schema.js';
+import { InviteOrderService } from '../inviteOrder/inviteOrder.service.js';
+import { createInviteOrderSchema } from '../inviteOrder/inviteOrder.schema.js';
 import { PerformerController } from '../performer/performer.controller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +58,7 @@ const tableCategoryRepository = new TableCategoryRepository();
 const restaurantRepository = new RestaurantRepository();
 const extraServiceRepository = new ExtraServiceRepository();
 const inviteRequestService = new InviteRequestService();
+const inviteOrderService = new InviteOrderService();
 const performerController = new PerformerController();
 
 router.get('/invitations/:slug', invitationController.publicBySlug.bind(invitationController));
@@ -104,6 +107,26 @@ router.post('/invite-requests', async (request, response, next) => {
     response.status(201).json(await inviteRequestService.create(data));
   } catch (error) { next(error); }
 });
+
+// ── Invitation orders from the promotional site (v-invite.uz/main) ───────────
+// The short form at the foot of the price list: a category, a name, a phone
+// number and an optional partner promo code. Unauthenticated by necessity — the
+// marketing page has no sign-in at all — and therefore rate limited, like the
+// public order endpoints: this creates a priced row and forwards a Telegram
+// message, so it is worth more than a review to somebody hammering it.
+//
+// The body carries NO money. The category's price and what the code takes off
+// are decided in `quoteOrder` on this side.
+router.post(
+  '/invite-orders',
+  rateLimit({ name: 'invite-order', windowMs: 60_000, max: 6 }),
+  async (request, response, next) => {
+    try {
+      const data = createInviteOrderSchema.parse(request.body);
+      response.status(201).json(await inviteOrderService.create(data));
+    } catch (error) { next(error); }
+  },
+);
 
 // The order's optional photos. Uploaded before the order is submitted, exactly
 // like the public review-photo flow above. Accepts a batch — the honoree picks

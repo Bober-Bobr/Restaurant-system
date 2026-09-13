@@ -1,28 +1,44 @@
 import { randomInt } from 'node:crypto';
 import { prisma } from '../../db/prisma.js';
 import { env } from '../../config/env.js';
+import { formatSom } from '../../utils/currency.js';
 
-// ── Telegram forwarding for flyer submissions & v-invite RSVPs ───────────────
-// Dependency-free Bot API client + the bind/unbind/forward logic. Two bots can
-// be configured: the main bot (TELEGRAM_BOT_TOKEN) and an optional dedicated
-// invitation bot (TELEGRAM_INVITE_BOT_TOKEN). When the invitation bot is set,
-// the main bot handles only flyer codes and the invitation bot only v-invite
-// project codes; when unset, the main bot serves both. Everything stays
-// dormant while no token is set (botConfigured()).
+// ── Telegram forwarding for flyer submissions, v-invite RSVPs & studio orders ─
+// Dependency-free Bot API client + the bind/unbind/forward logic. Three bots can
+// be configured: the main bot (TELEGRAM_BOT_TOKEN), an optional dedicated
+// invitation bot (TELEGRAM_INVITE_BOT_TOKEN) and an optional dedicated order bot
+// (TELEGRAM_ORDER_BOT_TOKEN). When the invitation bot is set, the main bot
+// handles only flyer codes and the invitation bot only v-invite project codes;
+// when unset, the main bot serves both. The order bot carries the studio's order
+// inbox, and the main bot carries it when no order bot is configured — so a
+// single-token deployment still delivers everything. Everything stays dormant
+// while no token is set (botConfigured()).
+//
+// TWO SHAPES OF SUBSCRIPTION LIVE HERE, and the difference is the reason the
+// order half is not folded into `targets` below. A flyer or a project binds a
+// chat to ONE PAGE: the code lives on that page's own row, and each page has its
+// own subscribers. An order has no page — there is one studio and one inbox — so
+// its code is a singleton row and its subscribers are scoped to nothing.
 
 const API = 'https://api.telegram.org';
 
-export type TgBot = 'main' | 'invite';
+export type TgBot = 'main' | 'invite' | 'order';
 
 /** True when a dedicated invitation bot is configured. */
 export function inviteBotSplit(): boolean {
   return Boolean(env.TELEGRAM_INVITE_BOT_TOKEN);
 }
 
+/** True when a dedicated order bot is configured. */
+export function orderBotSplit(): boolean {
+  return Boolean(env.TELEGRAM_ORDER_BOT_TOKEN);
+}
+
 function botToken(bot: TgBot): string | undefined {
-  // The invitation bot falls back to the main token so guest features keep
-  // working on single-bot setups.
+  // The invitation and order bots fall back to the main token so their features
+  // keep working on single-bot setups.
   if (bot === 'invite') return env.TELEGRAM_INVITE_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
+  if (bot === 'order') return env.TELEGRAM_ORDER_BOT_TOKEN || env.TELEGRAM_BOT_TOKEN;
   return env.TELEGRAM_BOT_TOKEN;
 }
 
@@ -33,6 +49,20 @@ function botFor(kind: TgKind): TgBot {
 
 export function botConfigured(kind: TgKind = 'flyer'): boolean {
   return Boolean(botToken(botFor(kind)));
+}
+
+/** Which bot carries the studio's order inbox. */
+export function orderBot(): TgBot {
+  return orderBotSplit() ? 'order' : 'main';
+}
+
+export function orderBotConfigured(): boolean {
+  return Boolean(botToken(orderBot()));
+}
+
+/** Does this bot answer the studio inbox code? Exactly one of them does. */
+function servesOrders(bot: TgBot): boolean {
+  return bot === orderBot();
 }
 
 /** Raw Bot API call. Returns the parsed `result`, or null on any failure. */
@@ -70,7 +100,9 @@ const cachedUsername: Partial<Record<TgBot, string | null>> = {};
 export async function getBotUsername(bot: TgBot): Promise<string | null> {
   const configured = bot === 'invite' && inviteBotSplit()
     ? env.TELEGRAM_INVITE_BOT_USERNAME
-    : env.TELEGRAM_BOT_USERNAME;
+    : bot === 'order' && orderBotSplit()
+      ? env.TELEGRAM_ORDER_BOT_USERNAME
+      : env.TELEGRAM_BOT_USERNAME;
   if (configured) return configured;
   if (cachedUsername[bot]) return cachedUsername[bot]!;
   const me = await tgApi<{ username?: string }>(bot, 'getMe', {});
@@ -203,6 +235,75 @@ export async function deleteLink(kind: TgKind, invitationId: string, linkId: str
   await targets[kind].deleteLinks({ id: linkId, invitationId });
 }
 
+// ── The studio's order inbox ─────────────────────────────────────────────────
+// One inbox, one code, any number of subscribed chats. Deliberately NOT part of
+// `targets` above: every function there takes the id of the page being
+// subscribed to, and there is no page here — an order belongs to the studio, not
+// to an invitation. Bending the delegate to accept a sentinel id would have made
+// three call sites lie about what they were passing.
+
+const ORDER_SCOPE = 'orders';
+
+/** The inbox code, generating (and persisting) one on first request. */
+export async function ensureOrderCode(): Promise<string> {
+  const existing = await prisma.inviteOrderInbox.findUnique({
+    where: { scope: ORDER_SCOPE },
+    select: { code: true },
+  });
+  if (existing) return existing.code;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const code = randomCode();
+    try {
+      const row = await prisma.inviteOrderInbox.create({ data: { scope: ORDER_SCOPE, code } });
+      return row.code;
+    } catch {
+      // Either the code collided, or another request created the row first.
+      const now = await prisma.inviteOrderInbox.findUnique({
+        where: { scope: ORDER_SCOPE },
+        select: { code: true },
+      });
+      if (now) return now.code;
+    }
+  }
+  throw new Error('Could not allocate a Telegram code');
+}
+
+/** Rotate to a fresh code and drop every subscriber (revokes access). */
+export async function rotateOrderCode(): Promise<string> {
+  await prisma.inviteOrderTelegramLink.deleteMany({});
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const code = randomCode();
+    try {
+      const row = await prisma.inviteOrderInbox.upsert({
+        where: { scope: ORDER_SCOPE },
+        create: { scope: ORDER_SCOPE, code },
+        update: { code },
+      });
+      return row.code;
+    } catch {
+      /* collision — retry */
+    }
+  }
+  throw new Error('Could not allocate a Telegram code');
+}
+
+export function listOrderLinks() {
+  return prisma.inviteOrderTelegramLink.findMany({
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, chatId: true, username: true, firstName: true, createdAt: true },
+  });
+}
+
+export async function deleteOrderLink(linkId: string): Promise<void> {
+  await prisma.inviteOrderTelegramLink.deleteMany({ where: { id: linkId } });
+}
+
+export async function orderDeepLink(code: string): Promise<string | null> {
+  const username = await getBotUsername(orderBot());
+  return username ? `https://t.me/${username}?start=${code}` : null;
+}
+
 // ── Inbound updates (webhook) ────────────────────────────────────────────────
 type TgUpdate = {
   message?: {
@@ -215,14 +316,20 @@ type TgUpdate = {
 /** Which page kinds a bot serves: the invitation bot only v-invite projects;
  *  the main bot everything, unless the invitation bot took the invite half. */
 function botKinds(bot: TgBot): TgKind[] {
+  // A dedicated order bot serves the studio inbox and nothing else.
+  if (bot === 'order') return [];
   if (bot === 'invite') return ['vinvite'];
   return inviteBotSplit() ? ['flyer'] : ['flyer', 'vinvite'];
 }
 
-// What the bot's help/stop texts call the things it serves.
-function servedNoun(kinds: TgKind[]): string {
-  if (kinds.length === 2) return 'flyers and invitations';
-  return kinds[0] === 'flyer' ? 'flyers' : 'invitations';
+// What the bot's help/stop texts call the things it serves. The studio inbox is
+// listed separately because it is not one of the page kinds.
+function servedNoun(kinds: TgKind[], orders: boolean): string {
+  const parts: string[] = kinds.map((k) => (k === 'flyer' ? 'flyers' : 'invitations'));
+  if (orders) parts.push('invitation orders');
+  if (parts.length === 0) return 'anything';
+  if (parts.length === 1) return parts[0]!;
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 export async function handleUpdate(bot: TgBot, update: TgUpdate): Promise<void> {
@@ -232,16 +339,20 @@ export async function handleUpdate(bot: TgBot, update: TgUpdate): Promise<void> 
   if (chatId == null || !text) return;
   const chat = String(chatId);
   const kinds = botKinds(bot);
+  const orders = servesOrders(bot);
 
   // "/start <code>", a bare code, or "/stop".
   const startMatch = /^\/start(?:@\w+)?(?:\s+(\S+))?/i.exec(text);
   const stopMatch = /^\/stop(?:@\w+)?/i.exec(text);
 
   if (stopMatch) {
-    const removed = await Promise.all(kinds.map((k) => targets[k].deleteLinks({ chatId: chat })));
+    const removed = await Promise.all([
+      ...kinds.map((k) => targets[k].deleteLinks({ chatId: chat })),
+      ...(orders ? [prisma.inviteOrderTelegramLink.deleteMany({ where: { chatId: chat } })] : []),
+    ]);
     const total = removed.reduce((sum, r) => sum + r.count, 0);
     await sendMessage(bot, chat, total > 0
-      ? `🔕 You have been unsubscribed from all ${servedNoun(kinds)}.`
+      ? `🔕 You have been unsubscribed from all ${servedNoun(kinds, orders)}.`
       : 'You are not subscribed to anything yet.');
     return;
   }
@@ -250,11 +361,36 @@ export async function handleUpdate(bot: TgBot, update: TgUpdate): Promise<void> 
   // link) — fall back to '' so we show help instead of throwing.
   const code = ((startMatch ? startMatch[1] : text) || '').trim().toUpperCase();
   if (!code || /^\//.test(code)) {
-    const what = kinds.length === 2 ? 'flyer or invitation' : kinds[0] === 'flyer' ? 'flyer' : 'invitation';
     await sendMessage(bot, chat,
-      `Send the code shown on your ${what} to start receiving its submissions here.\n\n` +
+      `Send your connection code to start receiving ${servedNoun(kinds, orders)} here.\n\n` +
       'Use /stop to unsubscribe.');
     return;
+  }
+
+  // The studio inbox first, when this bot carries it. Codes are unguessable, so
+  // the order of the lookups only decides which query runs first.
+  if (orders) {
+    const inbox = await prisma.inviteOrderInbox.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (inbox) {
+      // `upsert` on the unique chatId: pressing the deep link twice must not be
+      // an error, and must not subscribe the same chat twice.
+      await prisma.inviteOrderTelegramLink.upsert({
+        where: { chatId: chat },
+        create: {
+          chatId: chat,
+          username: msg?.from?.username ?? null,
+          firstName: msg?.from?.first_name ?? null,
+        },
+        update: {},
+      });
+      await sendMessage(bot, chat,
+        '✅ Connected to the <b>v-invite studio inbox</b>.\n'
+        + 'New invitation orders from the website will arrive here. Use /stop to unsubscribe.');
+      return;
+    }
   }
 
   // Look the code up only among the kinds this bot serves (codes are
@@ -340,10 +476,52 @@ export async function forwardRsvp(
   await Promise.all(links.map((l) => sendMessage(botFor('vinvite'), l.chatId, text)));
 }
 
+// ── Outbound: forward a new invitation order to the studio inbox ─────────────
+// The message is the whole point of the feature: the studio works from Telegram,
+// so everything needed to ring the customer back and know what they were quoted
+// has to be in it. The promo code is named even though it does not change what
+// to do next — it says which restaurant sent them, which is why the codes exist.
+export async function forwardInviteOrder(order: {
+  name: string;
+  phone: string;
+  tierLabel: string;
+  promoCode: string | null;
+  listCents: number;
+  discountCents: number;
+  totalCents: number;
+}): Promise<void> {
+  if (!orderBotConfigured()) return;
+  const links = await prisma.inviteOrderTelegramLink.findMany({ select: { chatId: true } });
+  if (links.length === 0) return;
+
+  const discounted = order.discountCents > 0;
+  const lines = [
+    '🎉 <b>Новая заявка на приглашение</b>',
+    RULE,
+    `👤 Имя: ${htmlEscape(order.name)}`,
+    `📱 Телефон: ${htmlEscape(order.phone)}`,
+    `🏷 Категория: ${htmlEscape(order.tierLabel)}`,
+    RULE,
+    // The full price is shown struck through only when something came off it,
+    // so an order without a code reads as one price rather than as a discount
+    // of zero.
+    discounted ? `💵 Цена: <s>${formatSom(order.listCents)}</s>` : `💵 Цена: ${formatSom(order.listCents)}`,
+    order.promoCode ? `🎟 Промокод: <b>${htmlEscape(order.promoCode)}</b>` : null,
+    discounted ? `➖ Скидка: ${formatSom(order.discountCents)}` : null,
+    `✅ К оплате: <b>${formatSom(order.totalCents)}</b>`,
+    RULE,
+    '✨ Заявка успешно получена',
+  ].filter(Boolean);
+  const text = lines.join('\n');
+
+  await Promise.all(links.map((l) => sendMessage(orderBot(), l.chatId, text)));
+}
+
 // ── Webhook registration (called once on boot) ───────────────────────────────
 /** The invitation bot's webhook secret (falls back to the main one). */
 export function webhookSecret(bot: TgBot): string | undefined {
   if (bot === 'invite') return env.TELEGRAM_INVITE_WEBHOOK_SECRET || env.TELEGRAM_WEBHOOK_SECRET;
+  if (bot === 'order') return env.TELEGRAM_ORDER_WEBHOOK_SECRET || env.TELEGRAM_WEBHOOK_SECRET;
   return env.TELEGRAM_WEBHOOK_SECRET;
 }
 
@@ -362,4 +540,5 @@ async function registerBotWebhook(bot: TgBot, path: string): Promise<void> {
 export async function registerWebhook(): Promise<void> {
   if (env.TELEGRAM_BOT_TOKEN) await registerBotWebhook('main', 'webhook');
   if (inviteBotSplit()) await registerBotWebhook('invite', 'invite-webhook');
+  if (orderBotSplit()) await registerBotWebhook('order', 'order-webhook');
 }

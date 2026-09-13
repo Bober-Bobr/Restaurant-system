@@ -2861,3 +2861,33 @@ covered; take its `Domains:` line verbatim.
 10. Settings shows the supervisor **one** list, "Small banquets". Switch a
     category off there; confirm it is still on for banquets.
 11. Sign in as a banquet ADMIN → the supervisor account is absent from Users.
+
+## §53 — v-invite: orders from the price list, promo codes, Telegram inbox (**has a migration**)
+
+Migration `20260913100000_invite_orders` — three new tables (`InviteOrder`,
+`InviteOrderInbox`, `InviteOrderTelegramLink`). Additive; touches nothing existing.
+
+**Before deploying — the new bot (optional):** in `apps/api/.env` add
+`TELEGRAM_ORDER_BOT_TOKEN` (and optionally `TELEGRAM_ORDER_WEBHOOK_SECRET`,
+`TELEGRAM_ORDER_BOT_USERNAME`). Without it, the **main** bot carries the order
+inbox. `TELEGRAM_PUBLIC_URL` must be set either way or no webhook is registered —
+`envFile.test.ts` refuses the deploy if an order token has no URL or no secret.
+
+**After deploying:**
+
+1. `\dt "InviteOrder*"` lists the three tables.
+2. pm2 logs show `[telegram] order webhook registered at …/api/telegram/order-webhook/…`
+   (only when a dedicated order token is set).
+3. As SYSTEM_ADMIN open `v-invite.uz/settings` → "Telegram inbox for website
+   requests" shows a code. Press **Open the bot** from the studio's group/phone →
+   the bot replies "Connected to the v-invite studio inbox"; the chat appears in
+   the list.
+4. On `v-invite.uz/main#pricing` pick **Premium**, type `emir` in the promo code →
+   it shows `EMIR`, "Code accepted", 800 000 struck, −200 000, **600 000**.
+5. Type `NOPE` and leave the field → "We do not recognise that code"; Send does not
+   submit.
+6. Submit a real test with a code → confirmation shows the same figures; the
+   Telegram message arrives with name, phone, category, code, price, discount,
+   total; Notifications → "Website requests" shows it and the badge counts it.
+7. Check Standard + code = 450 000 and Luxury + code = 1 100 000.
+8. Delete the test order from Notifications.

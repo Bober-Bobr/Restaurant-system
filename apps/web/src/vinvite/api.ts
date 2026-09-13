@@ -156,6 +156,56 @@ export type InviteRequest = {
   createdAt: string;
 };
 
+// An invitation order placed on the promotional site's price list: a category,
+// a name, a phone number and an optional partner promo code.
+//
+// The three money columns are a SNAPSHOT of what was quoted, in tiyin. They are
+// stored rather than recomputed because the category prices live in code, so an
+// old order would otherwise silently re-price itself to today's list.
+export type InviteOrder = {
+  id: string;
+  name: string;
+  phone: string;
+  tier: TemplateTier;
+  promoCode: string | null;
+  listCents: number;
+  discountCents: number;
+  totalCents: number;
+  isRead: boolean;
+  createdAt: string;
+};
+
+/** What the server confirms back — echoed from the row it actually wrote. */
+export type InviteOrderReceipt = {
+  id: string;
+  createdAt: string;
+  tier: TemplateTier;
+  promoCode: string | null;
+  listCents: number;
+  discountCents: number;
+  totalCents: number;
+};
+
+/**
+ * Place an order from the promotional site.
+ *
+ * A bare axios call, not `viHttp`: the marketing page has no sign-in at all, so
+ * there is no token to attach and the 401-refresh interceptor has nothing to do.
+ *
+ * NOTE WHAT IS NOT SENT: no price. The server prices the category and the code
+ * itself and returns what it wrote — a public endpoint that took the browser's
+ * figure would let a visitor set it.
+ */
+export async function submitInviteOrder(payload: {
+  name: string;
+  phone: string;
+  tier: TemplateTier;
+  promoCode?: string | null;
+}): Promise<InviteOrderReceipt> {
+  const { data } = await axios.post<InviteOrderReceipt>(`${API_BASE}/public/invite-orders`, payload);
+  return data;
+}
+
 export type TelegramLink = {
   id: string;
   chatId: string;
@@ -356,6 +406,37 @@ export const vinviteService = {
   },
   async removeInviteRequest(id: string): Promise<void> {
     await viHttp.delete(`/invite-requests/${id}`);
+  },
+
+  // Orders from the promotional site → the same Notifications page, same gate.
+  async listInviteOrders(): Promise<InviteOrder[]> {
+    const { data } = await viHttp.get<InviteOrder[]>('/invite-orders');
+    return data;
+  },
+  async inviteOrderUnreadCount(): Promise<number> {
+    const { data } = await viHttp.get<{ count: number }>('/invite-orders/unread-count');
+    return data.count;
+  },
+  async setInviteOrderRead(id: string, isRead: boolean): Promise<InviteOrder> {
+    const { data } = await viHttp.patch<InviteOrder>(`/invite-orders/${id}/read`, { isRead });
+    return data;
+  },
+  async removeInviteOrder(id: string): Promise<void> {
+    await viHttp.delete(`/invite-orders/${id}`);
+  },
+
+  // The Telegram inbox those orders are forwarded to. Studio-wide, so unlike the
+  // per-project endpoints below there is no id to pass.
+  async orderInboxStatus(): Promise<TelegramStatus> {
+    const { data } = await viHttp.get<TelegramStatus>('/order-inbox');
+    return data;
+  },
+  async rotateOrderInbox(): Promise<TelegramStatus> {
+    const { data } = await viHttp.post<TelegramStatus>('/order-inbox/rotate');
+    return data;
+  },
+  async removeOrderInboxLink(linkId: string): Promise<void> {
+    await viHttp.delete(`/order-inbox/links/${linkId}`);
   },
 
   // RSVP responses (owner)

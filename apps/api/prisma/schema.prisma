@@ -875,6 +875,67 @@ model InviteRequest {
   @@index([isRead])
 }
 
+// ── Invitation order placed on the promotional site (v-invite.uz/main) ───────
+// A visitor picks a CATEGORY, leaves a name and a phone number, and optionally
+// types a partner restaurant's promo code. Distinct from `InviteRequest` above,
+// which is the long form a banquet guest fills in once the evening is already
+// booked: this one is the top of the funnel and asks for the four things needed
+// to ring somebody back.
+//
+// The money is SNAPSHOTTED onto the row, like OrderItem and EventMenuSelection
+// and for the same reason: an order is a financial record of what was quoted at
+// the time. `TIER_PRICE_CENTS` is code and changing it is a deploy, so without
+// the snapshot an old order would silently re-price itself to today's list.
+model InviteOrder {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String
+  // STANDARD | PREMIUM | LUXURY. A plain String like the other status columns
+  // in this schema, so adding a category later needs no migration.
+  tier          String
+  // The canonical uppercase code, or null. Kept as provenance — it says which
+  // restaurant sent the customer, which is why the codes were handed out.
+  promoCode     String?
+  // All three in tiyin (1/100 so'm). `listCents - discountCents = totalCents`
+  // at the moment of the order; all three are stored rather than derived so a
+  // later change to either table cannot rewrite what was agreed.
+  listCents     Int
+  discountCents Int
+  totalCents    Int
+  // Notifications-page state on the v-invite side.
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([isRead])
+}
+
+// ── The studio's Telegram inbox for those orders ─────────────────────────────
+// Flyers and invitation projects each bind a chat to ONE PAGE, so their code
+// lives on the page's own row. An order has no page — there is one studio and
+// one inbox — so the bind code is a singleton row here and the subscribers are
+// not scoped to anything.
+//
+// A singleton rather than an env var so the studio can rotate the code and add
+// or drop recipients without an env edit and a restart.
+model InviteOrderInbox {
+  id        String   @id @default(cuid())
+  scope     String   @unique // "orders" — one row, ever
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InviteOrderTelegramLink {
+  id        String   @id @default(cuid())
+  // Telegram chat id (stored as text — ids exceed 32-bit and can be negative).
+  // Unique on its own: there is one inbox, so a chat is either subscribed or not.
+  chatId    String   @unique
+  username  String?
+  firstName String?
+  createdAt DateTime @default(now())
+}
+
 // ── Standalone guest invitation (wedding-style, not tied to a restaurant/event) ──
 // Created by a MANAGER; rendered publicly on <slug>.invitation.v-menu.uz.
 model GuestInvitation {

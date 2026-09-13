@@ -29,6 +29,93 @@ import { formatSum } from '../utils/currency';
 
 type Draft = Record<string, { tier: TemplateTier | null }>;
 
+/**
+ * Where orders from the price list are forwarded: the studio's Telegram inbox.
+ *
+ * One code for the whole studio (not per page, unlike flyers and invitations).
+ * Any chat or group that sends it to the bot starts receiving orders; a new code
+ * drops every chat, which is how access is revoked. Orders are saved on the
+ * Notifications page whether or not anything is connected, and the copy says so
+ * — an empty inbox must not read as orders being lost.
+ */
+function OrderInboxCard({ t }: { t: (k: ViKey) => string }) {
+  const queryClient = useQueryClient();
+  const status = useQuery({
+    queryKey: ['vi-order-inbox'],
+    queryFn: () => vinviteService.orderInboxStatus(),
+  });
+  const rotate = useMutation({
+    mutationFn: () => vinviteService.rotateOrderInbox(),
+    onSuccess: (data) => queryClient.setQueryData(['vi-order-inbox'], data),
+  });
+  const remove = useMutation({
+    mutationFn: (linkId: string) => vinviteService.removeOrderInboxLink(linkId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vi-order-inbox'] }),
+  });
+  const s = status.data;
+  const muted = { margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--vi-muted)' } as const;
+
+  return (
+    <div className="vi-card" style={{ padding: 18, display: 'grid', gap: 12 }}>
+      <span className="vi-label" style={{ fontSize: 10.5 }}>✈ {t('settings_tg_title')}</span>
+      {!s ? (
+        <p style={muted}>…</p>
+      ) : !s.enabled ? (
+        <p style={muted}>{t('settings_tg_off')}</p>
+      ) : (
+        <>
+          <p style={muted}>{t('settings_tg_hint')}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ display: 'grid', gap: 2 }}>
+              <span className="vi-label" style={{ fontSize: 10.5, margin: 0 }}>{t('settings_tg_code')}</span>
+              <code style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.12em' }}>{s.code}</code>
+            </span>
+            <span style={{ flex: 1 }} />
+            {s.link && (
+              <a className="vi-btn vi-btn-primary" href={s.link} target="_blank" rel="noopener noreferrer">
+                {t('settings_tg_open')}
+              </a>
+            )}
+            <button
+              type="button" className="vi-btn vi-btn-ghost" disabled={rotate.isPending}
+              onClick={() => { if (confirm(t('settings_tg_rotate_confirm'))) rotate.mutate(); }}
+            >
+              {t('settings_tg_rotate')}
+            </button>
+          </div>
+
+          <span className="vi-label" style={{ fontSize: 10.5, margin: '4px 0 0' }}>{t('settings_tg_subs')}</span>
+          {(s.links ?? []).length === 0 ? (
+            <p style={muted}>{t('settings_tg_none')}</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {(s.links ?? []).map((link) => (
+                <div key={link.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                  borderRadius: 10, border: '1px solid var(--vi-border)',
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 650, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {link.firstName || link.chatId}
+                    {link.username && <span style={{ color: 'var(--vi-muted)', fontWeight: 500 }}> @{link.username}</span>}
+                  </span>
+                  <button
+                    type="button" className="vi-btn vi-btn-danger"
+                    style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: 12.5 }}
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate(link.id)}
+                  >
+                    {t('settings_tg_remove')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export const ViSettingsPage = () => {
   const t = useViT();
   const user = useVInviteStore((s) => s.user);
@@ -97,6 +184,8 @@ export const ViSettingsPage = () => {
           {t('settings_pricing_sub')}
         </p>
       </div>
+
+      <OrderInboxCard t={t} />
 
       {/* What each category costs. Read-only on purpose: the figures live in
           `TIER_PRICE_CENTS`, and this is here so the person filing a design

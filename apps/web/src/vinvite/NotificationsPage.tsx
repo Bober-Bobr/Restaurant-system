@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { vinviteService, type InviteRequest } from './api';
-import { useViT } from './i18n';
+import { vinviteService, type InviteOrder, type InviteRequest } from './api';
+import { useViT, type ViKey } from './i18n';
+import { formatSum } from '../utils/currency';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { translate } from '../utils/translate';
 import { useVInviteStore } from './store';
 
 // ── Notifications ────────────────────────────────────────────────────────────
-// Invitation orders placed by restaurant guests on the Additional Services page
-// (banquet.v-menu.uz/<slug> or the tablet's booking-confirmed screen). The
-// studio works from this list; nothing here is automated yet.
+// Two inboxes, one tab each:
+//  · Website requests — the short form under the promotional site's price list
+//    (category, name, phone, promo code). These are also forwarded to the
+//    studio's Telegram inbox; this list is the record that survives a Telegram
+//    outage or an inbox nobody has connected yet.
+//  · Guest orders — the long form restaurant guests fill in on the Additional
+//    Services page (banquet.v-menu.uz/<slug> or the tablet's confirmed screen).
 //
 // SYSTEM_ADMIN only — the tab is hidden for everyone else and every endpoint
 // re-checks the role server-side.
@@ -103,18 +108,76 @@ function RequestCard({ request, onToggleRead, onDelete, busy }: {
   );
 }
 
+function OrderCard({ order, onToggleRead, onDelete, busy }: {
+  order: InviteOrder;
+  onToggleRead: () => void;
+  onDelete: () => void;
+  busy: boolean;
+}) {
+  const t = useViT();
+  const discounted = order.discountCents > 0;
+  return (
+    <div
+      className="vi-card vi-fade-up"
+      style={{ padding: 18, display: 'grid', gap: 14, borderColor: order.isRead ? undefined : 'var(--vi-accent)' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {!order.isRead && <span className="vi-badge vi-badge-live">{t('nt_new')}</span>}
+        <strong style={{ fontSize: 16 }}>{order.name}</strong>
+        <span style={{ fontSize: 13, color: 'var(--vi-muted)' }}>{t(`tier_${order.tier.toLowerCase()}` as ViKey)}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--vi-muted)' }}>
+          {new Date(order.createdAt).toLocaleString()}
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
+        <Field label={t('nt_phone')} value={<a href={`tel:${order.phone}`} style={{ color: 'var(--vi-accent)' }}>{order.phone}</a>} />
+        <Field label={t('nt_category')} value={t(`tier_${order.tier.toLowerCase()}` as ViKey)} />
+        <Field label={t('nt_promo')} value={order.promoCode} />
+        {/* The figures quoted at the time — snapshotted on the row, so a later
+            price change does not rewrite what this customer was told. */}
+        {discounted && <Field label={t('nt_list_price')} value={<s>{formatSum(order.listCents)}</s>} />}
+        {discounted && <Field label={t('nt_discount')} value={`− ${formatSum(order.discountCents)}`} />}
+        <Field label={t('nt_total')} value={<strong>{formatSum(order.totalCents)}</strong>} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="vi-btn" disabled={busy} onClick={onToggleRead}>
+          {order.isRead ? t('nt_mark_unread') : t('nt_mark_read')}
+        </button>
+        <button
+          className="vi-btn"
+          disabled={busy}
+          onClick={() => { if (confirm(t('nt_delete_confirm'))) onDelete(); }}
+          style={{ color: 'var(--vi-danger)' }}
+        >
+          {t('nt_delete')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type Inbox = 'orders' | 'requests';
+
 export const ViNotificationsPage = () => {
   const t = useViT();
   const queryClient = useQueryClient();
+  const [inbox, setInbox] = useState<Inbox>('orders');
   const [unreadOnly, setUnreadOnly] = useState(false);
 
   const requestsQuery = useQuery({
     queryKey: ['vi-invite-requests'],
     queryFn: () => vinviteService.listInviteRequests(),
   });
+  const ordersQuery = useQuery({
+    queryKey: ['vi-invite-orders'],
+    queryFn: () => vinviteService.listInviteOrders(),
+  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['vi-invite-requests'] });
+    queryClient.invalidateQueries({ queryKey: ['vi-invite-orders'] });
     queryClient.invalidateQueries({ queryKey: ['vi-invite-requests-unread'] });
   };
 
@@ -126,14 +189,31 @@ export const ViNotificationsPage = () => {
     mutationFn: (id: string) => vinviteService.removeInviteRequest(id),
     onSuccess: invalidate,
   });
+  const toggleOrderRead = useMutation({
+    mutationFn: ({ id, isRead }: { id: string; isRead: boolean }) => vinviteService.setInviteOrderRead(id, isRead),
+    onSuccess: invalidate,
+  });
+  const removeOrder = useMutation({
+    mutationFn: (id: string) => vinviteService.removeInviteOrder(id),
+    onSuccess: invalidate,
+  });
 
-  const all = requestsQuery.data ?? [];
-  const requests = unreadOnly ? all.filter((r) => !r.isRead) : all;
-  const busy = toggleRead.isPending || remove.isPending;
+  const allRequests = requestsQuery.data ?? [];
+  const allOrders = ordersQuery.data ?? [];
+  const requests = unreadOnly ? allRequests.filter((r) => !r.isRead) : allRequests;
+  const orders = unreadOnly ? allOrders.filter((o) => !o.isRead) : allOrders;
+  const busy = toggleRead.isPending || remove.isPending || toggleOrderRead.isPending || removeOrder.isPending;
+
+  const unread = {
+    orders: allOrders.filter((o) => !o.isRead).length,
+    requests: allRequests.filter((r) => !r.isRead).length,
+  };
+  const loading = inbox === 'orders' ? ordersQuery.isLoading : requestsQuery.isLoading;
+  const empty = inbox === 'orders' ? orders.length === 0 : requests.length === 0;
 
   return (
     <section className="vi-fade-up">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 22px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 14px' }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>{t('notifications')}</h1>
         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
           {([false, true] as const).map((v) => (
@@ -148,23 +228,46 @@ export const ViNotificationsPage = () => {
         </div>
       </div>
 
-      {requestsQuery.isLoading ? (
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '0 0 22px' }}>
+        {(['orders', 'requests'] as const).map((key) => (
+          <button
+            key={key}
+            className={`vi-tab${inbox === key ? ' active' : ''}`}
+            onClick={() => setInbox(key)}
+          >
+            {key === 'orders' ? t('nt_tab_orders') : t('nt_tab_requests')}
+            {unread[key] > 0 && ` · ${unread[key]}`}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><span className="vi-spinner" /></div>
-      ) : requests.length === 0 ? (
+      ) : empty ? (
         <div className="vi-card" style={{ padding: '56px 24px', textAlign: 'center', color: 'var(--vi-muted)', fontSize: 15 }}>
-          {t('nt_empty')}
+          {inbox === 'orders' ? t('nt_orders_empty') : t('nt_empty')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 760 }}>
-          {requests.map((r) => (
-            <RequestCard
-              key={r.id}
-              request={r}
-              busy={busy}
-              onToggleRead={() => toggleRead.mutate({ id: r.id, isRead: !r.isRead })}
-              onDelete={() => remove.mutate(r.id)}
-            />
-          ))}
+          {inbox === 'orders'
+            ? orders.map((o) => (
+              <OrderCard
+                key={o.id}
+                order={o}
+                busy={busy}
+                onToggleRead={() => toggleOrderRead.mutate({ id: o.id, isRead: !o.isRead })}
+                onDelete={() => removeOrder.mutate(o.id)}
+              />
+            ))
+            : requests.map((r) => (
+              <RequestCard
+                key={r.id}
+                request={r}
+                busy={busy}
+                onToggleRead={() => toggleRead.mutate({ id: r.id, isRead: !r.isRead })}
+                onDelete={() => remove.mutate(r.id)}
+              />
+            ))}
         </div>
       )}
     </section>

@@ -25,7 +25,16 @@ const envSchema = z.object({
   // TELEGRAM_WEBHOOK_SECRET when omitted.
   TELEGRAM_INVITE_BOT_TOKEN: z.string().optional(),
   TELEGRAM_INVITE_WEBHOOK_SECRET: z.string().optional(),
-  TELEGRAM_INVITE_BOT_USERNAME: z.string().optional()
+  TELEGRAM_INVITE_BOT_USERNAME: z.string().optional(),
+
+  // Optional third bot, dedicated to invitation ORDERS placed on the v-invite
+  // promotional site. Unlike the other two it subscribes chats to ONE studio
+  // inbox rather than to a page, so there is no per-page code. When unset the
+  // main bot carries the inbox, which keeps a single-bot deployment working.
+  // The webhook secret falls back to TELEGRAM_WEBHOOK_SECRET when omitted.
+  TELEGRAM_ORDER_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_ORDER_WEBHOOK_SECRET: z.string().optional(),
+  TELEGRAM_ORDER_BOT_USERNAME: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);

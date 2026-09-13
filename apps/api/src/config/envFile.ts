@@ -103,6 +103,8 @@ const TELEGRAM_MAIN = 'TELEGRAM_BOT_TOKEN';
 const TELEGRAM_SECRET = 'TELEGRAM_WEBHOOK_SECRET';
 const TELEGRAM_URL = 'TELEGRAM_PUBLIC_URL';
 const TELEGRAM_INVITE = 'TELEGRAM_INVITE_BOT_TOKEN';
+const TELEGRAM_ORDER = 'TELEGRAM_ORDER_BOT_TOKEN';
+const TELEGRAM_ORDER_SECRET = 'TELEGRAM_ORDER_WEBHOOK_SECRET';
 
 /**
  * Everything wrong with a parsed .env.
@@ -154,6 +156,17 @@ export function checkEnvFile(
   }
   if (has(TELEGRAM_INVITE) && !has(TELEGRAM_URL)) {
     problems.push({ key: TELEGRAM_URL, message: `${TELEGRAM_INVITE} is set but ${TELEGRAM_URL} is not — the invitation bot's webhook is never registered` });
+  }
+  // The order bot. It is registered only when a secret exists — its own or the
+  // main one it falls back to — so either missing half leaves the studio inbox
+  // silently deaf: orders are still saved, but no chat can ever subscribe.
+  if (has(TELEGRAM_ORDER)) {
+    if (!has(TELEGRAM_URL)) {
+      problems.push({ key: TELEGRAM_URL, message: `${TELEGRAM_ORDER} is set but ${TELEGRAM_URL} is not — the order bot's webhook is never registered` });
+    }
+    if (!has(TELEGRAM_ORDER_SECRET) && !has(TELEGRAM_SECRET)) {
+      problems.push({ key: TELEGRAM_ORDER_SECRET, message: `${TELEGRAM_ORDER} is set but neither ${TELEGRAM_ORDER_SECRET} nor ${TELEGRAM_SECRET} is — the order bot's webhook is never registered` });
+    }
   }
   if (has(TELEGRAM_URL) && !/^https?:\/\//.test(values[TELEGRAM_URL]!)) {
     problems.push({ key: TELEGRAM_URL, message: `${TELEGRAM_URL} must be an absolute https:// origin` });

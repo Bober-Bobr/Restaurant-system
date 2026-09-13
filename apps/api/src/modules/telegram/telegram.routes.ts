@@ -11,6 +11,10 @@ const managerOrChief = requireRole(AdminRole.CHIEF_ADMIN, AdminRole.MANAGER);
 // Public: Telegram posts updates here (secret in the path + header).
 router.post('/webhook/:secret', controller.webhook('main'));
 router.post('/invite-webhook/:secret', controller.webhook('invite'));
+// The order bot. Mounted whether or not a dedicated token is configured — with
+// none, this path simply never receives anything, because the main bot's
+// webhook is the one Telegram was told about and it carries the studio inbox.
+router.post('/order-webhook/:secret', controller.webhook('order'));
 
 // Manager-facing: per-flyer connection status / code / subscribers.
 router.get('/flyers/:invitationId/status', adminAuthMiddleware, managerOrChief, controller.status('flyer'));

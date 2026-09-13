@@ -1166,7 +1166,68 @@
   100%    { transform: translateX(120%); }
 }
 
+/* ── The order form under the price list ──
+   Dressed in the chosen rung's accent through the same `--tier-accent` the
+   cards use, so the form visibly belongs to the category above it. */
+.vi-order { max-width: 640px; margin: 34px auto 0; padding: 0 20px; scroll-margin-top: 80px; }
+.vi-order-card {
+  padding: 28px 26px; border-radius: 22px;
+  border-top: 3px solid var(--tier-accent, var(--vi-accent));
+  display: grid; gap: 16px;
+}
+.vi-order-card form { display: grid; gap: 16px; }
+.vi-order-title {
+  margin: 0; font-family: var(--vi-font-display); font-size: 25px; font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.vi-order-sub { margin: -8px 0 0; font-size: 14px; line-height: 1.6; color: var(--vi-muted); }
+.vi-order-tier {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 12px;
+  border: 1px dashed var(--tier-accent, var(--vi-accent));
+}
+.vi-order-tier .vi-label { margin: 0; }
+.vi-order-tier strong { font-size: 16px; color: var(--tier-accent, var(--vi-accent)); }
+.vi-order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.vi-order label { display: grid; min-width: 0; }
+.vi-order-label-opt { font-style: normal; font-weight: 500; opacity: .8; }
+/* The code is shown as it is canonically written — uppercase, tracked — so what
+   the customer types visibly matches what is printed on the partner's card. */
+.vi-order-promo .vi-input { text-transform: uppercase; letter-spacing: .08em; font-weight: 650; }
+.vi-order-promo .vi-input[data-state='ok'] { border-color: #16a34a; }
+.vi-order-promo .vi-input[data-state='bad'] { border-color: var(--vi-danger); }
+.vi-order-hint { margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: var(--vi-muted); }
+.vi-order-hint.is-ok { color: #16a34a; font-weight: 650; }
+.vi-order-hint.is-bad { color: var(--vi-danger); font-weight: 650; }
+:root[data-theme='dark'] .vi-order-hint.is-ok,
+:root[data-theme='dark'] .vi-order-promo .vi-input[data-state='ok'] { color: #4ade80; border-color: #4ade80; }
+
+.vi-order-sum {
+  margin: 0; display: grid; gap: 8px;
+  padding: 14px 16px; border-radius: 14px; background: var(--vi-accent-soft);
+}
+.vi-order-sum > div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.vi-order-sum dt { font-size: 13.5px; color: var(--vi-muted); }
+.vi-order-sum dd { margin: 0; font-size: 14.5px; font-weight: 700; white-space: nowrap; }
+.vi-order-sum dd.is-struck { text-decoration: line-through; opacity: .6; font-weight: 600; }
+.vi-order-sum .is-discount dd { color: #16a34a; }
+:root[data-theme='dark'] .vi-order-sum .is-discount dd { color: #4ade80; }
+.vi-order-sum .is-total { padding-top: 8px; border-top: 1px solid var(--vi-border); }
+.vi-order-sum .is-total dt { color: var(--vi-text); font-weight: 700; }
+.vi-order-sum .is-total dd { font-size: 22px; font-weight: 850; letter-spacing: -0.02em; }
+.vi-order-err { margin: 0; font-size: 13.5px; color: var(--vi-danger); font-weight: 600; }
+.vi-order-submit { justify-self: stretch; padding-block: 14px; font-size: 15px; }
+.vi-order-done { display: grid; gap: 14px; justify-items: center; text-align: center; }
+.vi-order-done .vi-order-sum { justify-self: stretch; text-align: left; }
+.vi-order-done-mark {
+  width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 26px; font-weight: 800; color: var(--vi-card);
+  background: var(--tier-accent, var(--vi-accent));
+}
+
 @media (max-width: 560px) {
+  .vi-order-grid { grid-template-columns: 1fr; }
+  .vi-order-card { padding: 22px 18px; }
   .vi-tiercard-name { font-size: 23px; }
   .vi-tiercard-price strong { font-size: 25px; }
 }

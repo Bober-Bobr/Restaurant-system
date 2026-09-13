@@ -61,6 +61,20 @@ router.get('/invite-requests/unread-count', inviteAuthMiddleware, controller.inv
 router.patch('/invite-requests/:id/read', inviteAuthMiddleware, controller.setInviteRequestRead.bind(controller));
 router.delete('/invite-requests/:id', inviteAuthMiddleware, controller.removeInviteRequest.bind(controller));
 
+// Invitation orders placed on the promotional site's price list. Same split:
+// the submit side is public (see /api/public/invite-orders), everything here is
+// SYSTEM_ADMIN-only, checked inside each controller method.
+router.get('/invite-orders', inviteAuthMiddleware, controller.listInviteOrders.bind(controller));
+router.get('/invite-orders/unread-count', inviteAuthMiddleware, controller.inviteOrderUnreadCount.bind(controller));
+router.patch('/invite-orders/:id/read', inviteAuthMiddleware, controller.setInviteOrderRead.bind(controller));
+router.delete('/invite-orders/:id', inviteAuthMiddleware, controller.removeInviteOrder.bind(controller));
+
+// The Telegram inbox those orders are forwarded to: its bind code, deep link
+// and subscribed chats. Rotating the code drops every subscriber.
+router.get('/order-inbox', inviteAuthMiddleware, controller.orderInboxStatus.bind(controller));
+router.post('/order-inbox/rotate', inviteAuthMiddleware, controller.rotateOrderInbox.bind(controller));
+router.delete('/order-inbox/links/:linkId', inviteAuthMiddleware, controller.removeOrderInboxLink.bind(controller));
+
 router.get('/templates', inviteAuthMiddleware, controller.listTemplates.bind(controller));
 router.post('/templates', inviteAuthMiddleware, controller.createTemplate.bind(controller));
 router.get('/templates/:id', inviteAuthMiddleware, controller.getTemplate.bind(controller));

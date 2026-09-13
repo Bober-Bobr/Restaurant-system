@@ -136,6 +136,20 @@ describe('the Telegram bots go silent without a word', () => {
     expect(check(GOOD + '\nTELEGRAM_INVITE_BOT_TOKEN="456:def"')).toEqual([]);
   });
 
+  it('flags the order bot with nowhere to deliver to', () => {
+    expect(messages(base + 'TELEGRAM_ORDER_BOT_TOKEN="789:ghi"'))
+      .toContain("order bot's webhook is never registered");
+  });
+
+  it('flags the order bot with no secret of its own and none to borrow', () => {
+    const problems = check(base + 'TELEGRAM_ORDER_BOT_TOKEN="789:ghi"\nTELEGRAM_PUBLIC_URL="https://event.v-menu.uz"');
+    expect(problems.map((p) => p.key)).toContain('TELEGRAM_ORDER_WEBHOOK_SECRET');
+  });
+
+  it('accepts the order bot borrowing the main webhook secret', () => {
+    expect(check(GOOD + '\nTELEGRAM_ORDER_BOT_TOKEN="789:ghi"')).toEqual([]);
+  });
+
   it('requires an absolute origin, since Telegram is told where to POST', () => {
     expect(messages(base + 'TELEGRAM_BOT_TOKEN="1"\nTELEGRAM_WEBHOOK_SECRET="s"\nTELEGRAM_PUBLIC_URL="event.v-menu.uz"'))
       .toContain('absolute https:// origin');
@@ -195,7 +209,7 @@ describe('deploying', () => {
   it('does not treat an optional key as required', () => {
     const required = requiredKeys(EXAMPLE);
     // These fall back or switch a feature off; a deploy must not need them.
-    for (const key of ['PORT', 'ADMIN_API_KEY', 'GOOGLE_CLIENT_ID', 'TELEGRAM_INVITE_BOT_TOKEN', 'TELEGRAM_BOT_USERNAME']) {
+    for (const key of ['PORT', 'ADMIN_API_KEY', 'GOOGLE_CLIENT_ID', 'TELEGRAM_INVITE_BOT_TOKEN', 'TELEGRAM_ORDER_BOT_TOKEN', 'TELEGRAM_BOT_USERNAME']) {
       expect(required).not.toContain(key);
     }
   });
