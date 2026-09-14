@@ -867,6 +867,35 @@
   display: block; position: relative; overflow: hidden;
   background: #0b0f1c; aspect-ratio: 10 / 16; width: 100%;
 }
+/* The real cover, over the poster. The poster stays underneath as the ground:
+   it costs no requests and is what shows while this is arriving, so the card is
+   never blank and never flashes.
+
+   `pointer-events: none` is required, not cosmetic — the cover is an iframe and
+   would otherwise swallow every click meant for the card. */
+.vi-work-cover {
+  position: absolute; inset: 0; z-index: 2; overflow: hidden;
+  pointer-events: none;
+}
+.vi-work-cover > * { width: 100%; height: 100%; }
+
+/* The card's control, laid over the whole card. It cannot wrap the card: an
+   iframe inside a <button> is invalid markup. */
+.vi-work-hit {
+  position: absolute; inset: 0; z-index: 3;
+  padding: 0; border: 0; background: transparent; cursor: pointer;
+  border-radius: inherit; font: inherit; color: inherit;
+}
+.vi-work-hit:focus-visible { outline: 2px solid var(--vi-accent); outline-offset: -3px; }
+
+/* A block design animates in THIS document rather than in an iframe, so its
+   still mode is a class. The reveal itself still happens — `AnimatedSection`
+   drives that from script — this only removes the motion it would have used. */
+.vi-still *, .vi-still *::before, .vi-still *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 .vi-work-foot { display: flex; align-items: center; gap: 11px; padding: 13px 16px; width: 100%; }
 /* The hint that used to live on the cover as a fading veil. Always present,
    never moves — it is a label, not an effect. */

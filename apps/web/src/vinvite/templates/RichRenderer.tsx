@@ -18,12 +18,73 @@ type InMsg =
   | { type: 'vinvite:admin-move'; id: string; x: number; y: number; kf?: number }
   | { type: 'vinvite:admin-select'; id: string | null };
 
-function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string; instagram: string }, adminSelected?: string | null): string {
+/**
+ * Makes the template believe the reader asked for no motion.
+ *
+ * This runs BEFORE the template's own script, which is the whole point: every
+ * template reads `matchMedia('(prefers-reduced-motion: reduce)')` once, at boot,
+ * and branches on it — skipping the intro sequence, revealing every section
+ * instead of observing it into view, and never creating the <source> for the
+ * opening film. Shimming the query therefore buys the entire still mode with no
+ * change to any template, and no second code path to keep in step.
+ *
+ * `(prefers-reduced-motion: no-preference)` must answer FALSE, hence testing the
+ * query text rather than returning `matches: true` for anything.
+ */
+const STILL_SHIM = `
+  (function () {
+    var real = window.matchMedia ? window.matchMedia.bind(window) : null;
+    function fake(q) {
+      return {
+        matches: /reduce/.test(q), media: q, onchange: null,
+        addListener: function () {}, removeListener: function () {},
+        addEventListener: function () {}, removeEventListener: function () {},
+        dispatchEvent: function () { return false; },
+      };
+    }
+    window.matchMedia = function (q) {
+      if (/prefers-reduced-motion/.test(String(q))) return fake(String(q));
+      return real ? real(q) : fake(String(q));
+    };
+  })();
+`;
+
+/**
+ * The belt to the shim's braces: anything animated purely in CSS that the
+ * template did not gate on the media query stops here too.
+ *
+ * NOT `animation: none`. That is the obvious way to write this and it renders a
+ * blank card, which is exactly what it did: across these templates the VISIBLE
+ * state of a revealed section is the END of its keyframes, held by
+ * `animation-fill-mode: forwards`, over a base style of `opacity: 0`. Remove the
+ * animation and you remove the only thing that ever made it visible.
+ *
+ * So the animation still runs — it just finishes immediately, which lands every
+ * element on the same final state a reader would see, with no motion to watch.
+ * `iteration-count: 1` matters as much: a 1 ms animation left looping would
+ * repaint the card forever, the very cost this is here to avoid. Transforms are
+ * deliberately left alone, since half the layouts are positioned with them.
+ */
+const STILL_CSS = `
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+    will-change: auto !important;
+  }
+  html, body { overflow: hidden !important; }
+`;
+
+function buildSrcDoc(html: string, config: Record<string, unknown>, languages: string[], adminEdit?: boolean, adminPlay?: boolean, contacts?: { phone: string; telegram: string; instagram: string }, adminSelected?: string | null, still?: boolean): string {
   // The template runs on the opaque `about:srcdoc` origin, so it can't read the
   // host origin itself. Inject it so templates can resolve their own bundled
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const bootstrap = `<script>
+    ${still ? STILL_SHIM : ''}
     window.__CONFIG__ = ${JSON.stringify(config)};
     window.__LANGS__ = ${JSON.stringify(languages)};
     window.__ORIGIN__ = ${JSON.stringify(origin)};
@@ -34,7 +95,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
   </script>`;
   // The Design+ overlay runtime (system-admin custom elements / palettes)
   // rides along in every template, after the template's own script.
-  const adminScript = `<script>${ADMIN_RUNTIME}</script>`;
+  const adminScript = `<script>${ADMIN_RUNTIME}</script>${still ? `<style>${STILL_CSS}</style>` : ''}`;
   // Templates include the marker <!--__CONFIG__--> in <head>; fall back to
   // prepending into <head> if absent.
   const withBootstrap = html.includes('<!--__CONFIG__-->')
@@ -45,19 +106,19 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
     : withBootstrap + adminScript;
 }
 
-export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, onAdminSelect, adminSelected, adminEdit, adminPlay, interactive, focusSection }: RichRendererProps) {
+export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdminMove, onAdminSelect, adminSelected, adminEdit, adminPlay, interactive, focusSection, still }: RichRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadedRef = useRef(false);
 
   // Built once per mounted template — later prop changes go via postMessage.
-  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected));
+  const [doc, setDoc] = useState(() => buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected, still));
   const htmlRef = useRef(html);
   useEffect(() => {
     if (htmlRef.current === html) return;
     // A different template was swapped in — a real reload is required.
     htmlRef.current = html;
     loadedRef.current = false;
-    setDoc(buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected));
+    setDoc(buildSrcDoc(html, config, languages, adminEdit, adminPlay, contacts, adminSelected, still));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html]);
 

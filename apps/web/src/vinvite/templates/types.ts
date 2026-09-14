@@ -93,6 +93,19 @@ export type RichRendererProps = {
   onRsvp?: (payload: RsvpPayload) => Promise<void>;
   // Editor mode: a border-radius/frame hint, and it disables RSVP persistence.
   interactive?: boolean;
+  /**
+   * Render the design as a STILL: no intro sequence, no reveal-on-scroll, no
+   * film, nothing moving — the finished first screen, immediately.
+   *
+   * Implemented by telling the template it is running under
+   * `prefers-reduced-motion: reduce` rather than by adding a second code path to
+   * twelve templates. Every one of them already has a complete still mode for
+   * that preference — it is the mode a guest who asks for no motion gets, and it
+   * is the mode that skips the 6 MB opening film in favour of its poster frame,
+   * which is also the cheapest thing to render. Reusing it means a still cover
+   * cannot drift away from what the templates actually do.
+   */
+  still?: boolean;
   // Design+ editing: overlay elements become draggable inside the iframe and
   // report their new position here (percent within their anchor). `kf` is set
   // when a motion-path keyframe marker was dragged (index into element.path).

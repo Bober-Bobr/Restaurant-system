@@ -31,6 +31,7 @@ const HEAVY = [
   './InviteSiteView',       // dispatches to the registry
   './templateOverrides',    // Design+ configs, only needed to render one
   './LivePreviewModal',     // the lazy boundary itself
+  './LiveCover',            // the gallery's covers — the other lazy boundary
 ];
 
 /**
@@ -69,6 +70,27 @@ describe('LandingPage.tsx', () => {
     );
     // A lazy component with no Suspense above it throws on first render.
     expect(src, 'nothing catches the lazy boundary').toContain('<Suspense');
+  });
+
+  it('reaches the gallery covers through a lazy boundary too', () => {
+    /**
+     * The covers show the REAL invitation, which means they reach the template
+     * registry — so they are split exactly like the preview modal. Statically
+     * importing `LiveCover` would put all twelve designs back into the landing
+     * page's own chunk and change nothing anyone could see, which is how this
+     * happened twice before.
+     */
+    expect(src, 'the covers are no longer split out').toMatch(
+      /lazy\(\s*\(\)\s*=>\s*import\(\s*'\.\/LiveCover'\s*\)/,
+    );
+  });
+
+  it('mounts a cover only once its card is near the viewport', () => {
+    // The gallery sits at the foot of the page and scrolls sideways: most
+    // visitors see two cards and never scroll the rail. Measured: the landing
+    // page fetches 557 kB and no template markup at all until the gallery is
+    // actually reached.
+    expect(src, 'every cover now mounts on page load').toContain('IntersectionObserver');
   });
 
   it('draws its cards from the metadata', () => {

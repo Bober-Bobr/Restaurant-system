@@ -37,13 +37,19 @@ export function isFullBleed(site: PublicInviteSite): boolean {
   return !!(rich && getTemplate(rich.templateId));
 }
 
-export function InviteSiteView({ site, contacts, onRsvp, chrome = true }: {
+export function InviteSiteView({ site, contacts, onRsvp, chrome = true, still = false }: {
   site: PublicInviteSite;
   contacts?: { phone: string; telegram: string; instagram: string };
   /** Omitted in previews: a showcase card must not take real replies. */
   onRsvp?: (payload: RsvpSubmission) => Promise<void>;
   /** Music player, finger trail and particle overlay. */
   chrome?: boolean;
+  /**
+   * Render it as a still: no intro, no reveal-on-scroll, nothing moving. Used by
+   * the marketing gallery's covers, which are photographs of the design rather
+   * than something to watch.
+   */
+  still?: boolean;
 }) {
   const rich = readRichDesign(site.theme);
   const richTemplate = rich ? getTemplate(rich.templateId) : null;
@@ -59,6 +65,7 @@ export function InviteSiteView({ site, contacts, onRsvp, chrome = true }: {
         // never persists a reply — the template's own timeout thanks the guest
         // and nothing is stored.
         onRsvp={onRsvp}
+        still={still}
       />
     );
   }
@@ -82,7 +89,11 @@ export function InviteSiteView({ site, contacts, onRsvp, chrome = true }: {
   };
 
   return (
-    <div style={{
+    // A block design animates in the HOST document, not in an iframe, so its
+    // still mode is a class rather than the matchMedia shim. `AnimatedSection`
+    // reveals through its own observer either way — this only stops the
+    // transition it would have used to get there.
+    <div className={still ? 'vi-still' : undefined} style={{
       minHeight: '100%', background: pageBackground, color: '#1a1a1a',
       fontFamily: '"Playfair Display", Georgia, serif',
       display: 'flex', justifyContent: 'center', position: 'relative',

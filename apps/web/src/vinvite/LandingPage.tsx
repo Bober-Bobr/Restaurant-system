@@ -36,6 +36,10 @@ import { isPromoCode, normalizePromoCode, quoteOrder } from './promo';
 // The live renderer, and everything it drags with it. Split out so the 374 kB
 // of template markup is fetched on the first preview rather than on page load.
 const LivePreviewModal = lazy(() => import('./LivePreviewModal'));
+// The gallery's covers. Split for the same reason and behind the same rule: this
+// is the only thing on the page that reaches the template registry, and a card
+// mounts it only once it is near the viewport.
+const LiveCover = lazy(() => import('./LiveCover'));
 // Type-only, so it is erased at build time and does NOT pull the chunk back in.
 import type { PreviewTarget } from './LivePreviewModal';
 
@@ -627,32 +631,10 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
             onScroll={measure}
           >
             {entries.map((entry, i) => (
-              <button
-                key={entry.id}
-                type="button"
-                className="vi-work vi-slider-slide"
-                onClick={() => onOpen(entry)}
-                title={t('work_open')}
-              >
-                {/* The cover, and nothing over it. The veil that used to fade in
-                    on hover carried the "open" label; it now sits in the footer
-                    as plain text, so the artwork is never covered or dimmed. */}
-                <span className="vi-work-stage">
-                  <DesignPoster
-                    emoji={entry.emoji}
-                    name={entry.name}
-                    accent={entry.accent}
-                    brand={brandOf(entry.meta ?? { id: entry.id, accent: entry.accent })}
-                    dark={dark}
-                  />
-                </span>
-                <span className="vi-work-foot">
-                  <span className="vi-work-dot" style={{ background: entry.accent }} />
-                  <span className="vi-work-name">{entry.name}</span>
-                  <span className="vi-work-open">👁 {t('work_open')}</span>
-                  <span className="vi-work-num">{String(i + 1).padStart(2, '0')}</span>
-                </span>
-              </button>
+              <WorkCard
+                key={entry.id} t={t} entry={entry} index={i} dark={dark}
+                onOpen={() => onOpen(entry)}
+              />
             ))}
           </div>
 
@@ -669,6 +651,90 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * One card in the gallery: the invitation's real cover, held still.
+ *
+ * THREE THINGS ARE LOAD-BEARING HERE.
+ *
+ * The cover is the real design, not a drawing of one. It was reduced to a name
+ * on a gradient when the live cards were found to be fetching a megabyte of
+ * somebody's photographs each; the answer to that is not to stop showing the
+ * work, it is to stop the work performing — see `LiveCover`.
+ *
+ * It mounts only once the card comes near the viewport. The gallery sits at the
+ * foot of the page and scrolls sideways, so most visitors see two cards and most
+ * of those never scroll the rail at all; everything past that costs nothing
+ * until it is asked for. The observer disconnects after the first hit — a cover
+ * that unmounted when scrolled past would reload its artwork on the way back.
+ *
+ * The poster stays UNDERNEATH rather than being replaced. It costs no requests,
+ * it is drawn in the design's own colours, and it is what the card shows while
+ * the cover is arriving — or for ever, if the chunk fails to load. There is no
+ * fade between the two: a cover appearing is not an animation to watch.
+ */
+function WorkCard({ t, entry, index, dark, onOpen }: {
+  t: (k: ViKey) => string;
+  entry: ShowcaseEntry;
+  index: number;
+  dark: boolean;
+  onOpen: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // No observer (an old browser, a test environment) must not mean no cover.
+    if (typeof IntersectionObserver === 'undefined') { setNear(true); return; }
+    const io = new IntersectionObserver((records) => {
+      if (records.some((r) => r.isIntersecting)) { setNear(true); io.disconnect(); }
+    }, { rootMargin: '250px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="vi-work vi-slider-slide">
+      <span className="vi-work-stage">
+        <DesignPoster
+          emoji={entry.emoji}
+          name={entry.name}
+          accent={entry.accent}
+          brand={brandOf(entry.meta ?? { id: entry.id, accent: entry.accent })}
+          dark={dark}
+        />
+        {near && (
+          <Suspense fallback={null}>
+            <span className="vi-work-cover" aria-hidden>
+              <LiveCover site={entry.site} />
+            </span>
+          </Suspense>
+        )}
+      </span>
+
+      <span className="vi-work-foot">
+        <span className="vi-work-dot" style={{ background: entry.accent }} />
+        <span className="vi-work-name">{entry.name}</span>
+        <span className="vi-work-open">👁 {t('work_open')}</span>
+        <span className="vi-work-num">{String(index + 1).padStart(2, '0')}</span>
+      </span>
+
+      {/* The whole card is the control, as a real button over the top of it.
+          It cannot WRAP the card any more: the cover is an iframe, and
+          interactive content inside a <button> is invalid markup — the browser
+          is entitled to drop the click. Transparent, so nothing is covered. */}
+      <button
+        type="button"
+        className="vi-work-hit"
+        onClick={onOpen}
+        title={t('work_open')}
+        aria-label={`${t('work_open')} — ${entry.name}`}
+      />
+    </div>
   );
 }
 

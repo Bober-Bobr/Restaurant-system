@@ -2905,8 +2905,13 @@ rows keep their values. Deploy it together with §53, which it builds on.
 2. Each category card shows only marks, name, price and the choose button.
    **Show details** opens the description and the benefit list; the label becomes
    **Hide details**. Two cards can be open at once.
-3. "Our work": the covers do not lift, fade in or dim on hover, and nothing
-   appears over the artwork. The way in is the static 👁 label in the footer.
+3. "Our work": each card shows the REAL cover of the invitation it opens — the
+   gates, the doors, the lantern — not a name on a gradient. Nothing plays: no
+   intro, no fade-in, no lift or veil on hover. The way in is the static 👁
+   label in the footer. A card still shows its poster for the instant before the
+   cover arrives, which is expected; it must not stay blank.
+   Watch the network panel: `/main` must fetch NO template markup until you
+   scroll to the gallery.
 4. Leave the category unchosen, fill in **only** a name and a phone, and send.
    It goes through. The summary line says the category is not chosen and shows
    **no** price.
