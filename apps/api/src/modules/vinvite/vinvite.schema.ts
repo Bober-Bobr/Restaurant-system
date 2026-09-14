@@ -97,14 +97,16 @@ export const templateOverrideSchema = z.object({
   config: z.record(z.string(), z.any()),
 });
 
-// System-admin control of the promotional site. `workSlugs`/`coverSlugs` hold
-// published-invitation slugs, `hiddenIds` template ids kept off the price list.
-// Bounds are explicit because this is written from a form.
+// System-admin control of the promotional site. `workSlugs` holds
+// published-invitation slugs in gallery order, `hiddenIds` template ids kept off
+// the price list. Bounds are explicit because this is written from a form.
+//
+// A retired `coverSlugs` list used to sit here. Zod strips unknown keys, so a
+// stale bundle still sending one is ignored rather than refused.
 const idList = z.array(z.string().min(1).max(120)).max(60);
 
 export const promoShowcaseSchema = z.object({
   workSlugs: idList,
-  coverSlugs: idList,
   hiddenIds: idList,
 });
 

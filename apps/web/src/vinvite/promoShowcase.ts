@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { vinviteService, type PromoShowcase, type PromoWork } from './api';
 import { TEMPLATE_META, type TemplateMeta } from './templates/meta';
 
-export const EMPTY_SHOWCASE: PromoShowcase = { workSlugs: [], coverSlugs: [], hiddenIds: [] };
+export const EMPTY_SHOWCASE: PromoShowcase = { workSlugs: [], hiddenIds: [] };
 
 // ── What the promotional site shows ─────────────────────────────────────────
 //
@@ -18,28 +18,22 @@ export const EMPTY_SHOWCASE: PromoShowcase = { workSlugs: [], coverSlugs: [], hi
 // blank templates.
 
 export type ShowcaseItems =
-  | { kind: 'works'; works: PromoWork[]; cover: PromoWork[]; templates: null }
-  | { kind: 'templates'; works: null; cover: null; templates: TemplateMeta[] };
+  | { kind: 'works'; works: PromoWork[]; templates: null }
+  | { kind: 'templates'; works: null; templates: TemplateMeta[] };
 
 /**
- * The gallery order: starred invitations first, the rest behind them.
+ * THE GALLERY IS SHOWN IN THE ADMINISTRATOR'S OWN ORDER, and there is no
+ * "cover" selection any more.
  *
- * The "cover" selection used to decide which one or two invitations rode the
- * hero as live cards. The hero no longer renders any — they were the most
- * expensive thing on the site — so rather than leave the administrator a
- * setting that silently does nothing, a star now means FIRST IN THE SLIDER,
- * which is the same intent (this is the one to show people) expressed against
- * what the page actually has.
+ * A star used to mean "ride the hero as a live card"; when the hero stopped
+ * rendering cards it was kept on as "show this one first", which left two
+ * controls doing one job — the list already has ↑ / ↓ arrows, and dragging a
+ * row to the top says the same thing more plainly. `splitWorks` and the
+ * `coverSlugs` column went with it.
  *
- * The server already returns them in the administrator's order and only
- * includes ones still published, so this is a stable partition and nothing
- * else. Starring none, or starring all, both leave the order untouched.
+ * The server returns the works already ordered, and only the ones still
+ * published, so there is nothing left for this module to decide.
  */
-export function splitWorks(works: PromoWork[]): { works: PromoWork[]; cover: PromoWork[] } {
-  const cover = works.filter((w) => w.onCover);
-  const rest = works.filter((w) => !w.onCover);
-  return { works: [...cover, ...rest], cover };
-}
 
 /**
  * Templates a visitor may see on the price list, in shipped order.
@@ -80,9 +74,8 @@ export function usePromoShowcase() {
 
   const items = useMemo<ShowcaseItems>(() => {
     const works = worksQuery.data ?? [];
-    if (works.length === 0) return { kind: 'templates', works: null, cover: null, templates };
-    const split = splitWorks(works);
-    return { kind: 'works', works: split.works, cover: split.cover, templates: null };
+    if (works.length === 0) return { kind: 'templates', works: null, templates };
+    return { kind: 'works', works, templates: null };
   }, [worksQuery.data, templates]);
 
   return {

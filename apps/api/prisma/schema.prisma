@@ -1088,8 +1088,11 @@ model InviteUser {
 model InvitePromoShowcase {
   id         String   @id @default(cuid())
   scope      String   @unique // "landing"
-  workSlugs  Json     @default("[]") // ordered slugs of published invitations
-  coverSlugs Json     @default("[]") // ordered slugs featured on the hero cover
+  // Ordered slugs of published invitations — the gallery, in this order. A
+  // retired `coverSlugs` list sat beside it: it meant "ride the hero as a live
+  // card", the hero renders none, and the list's own arrows already say "show
+  // this one first".
+  workSlugs  Json     @default("[]")
   hiddenIds  Json     @default("[]") // template ids kept off the price list
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

@@ -110,9 +110,9 @@ export const ViLandingPage = () => {
     setParams(next, { replace: true });
   }, [params, setParams]);
 
-  // Already in gallery order — `splitWorks` puts the administrator's starred
-  // invitations at the front. The section renders only when there ARE works:
-  // filling it with blank templates advertised unfinished goods as a portfolio.
+  // Already in gallery order: the administrator's own, as dragged on the
+  // showcase screen. The section renders only when there ARE works — filling it
+  // with blank templates advertised unfinished goods as a portfolio.
   const work = useMemo(
     () => (items.kind === 'works' ? items.works.map(workEntry) : []),
     [items],

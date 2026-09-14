@@ -244,18 +244,17 @@ export type TemplatePricing = {
   updatedAt?: string | null;
 };
 
-// What the promotional site shows. `workSlugs`/`coverSlugs` are published
+// What the promotional site shows. `workSlugs` are published
 // invitations (the site sells finished work, not blank templates); `hiddenIds`
 // is the one list still holding TEMPLATE ids, kept off the price list.
 export type PromoShowcase = {
   workSlugs: string[];
-  coverSlugs: string[];
   hiddenIds: string[];
   updatedAt?: string | null;
 };
 
 /** A showcased invitation, resolved server-side and ready to render. */
-export type PromoWork = PublicInviteSite & { onCover: boolean };
+export type PromoWork = PublicInviteSite;
 
 export type RsvpSubmission = {
   name: string;

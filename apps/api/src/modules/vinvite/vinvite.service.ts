@@ -590,17 +590,16 @@ export class VInvitePromoShowcaseService {
   async get() {
     const row = await prisma.invitePromoShowcase.findUnique({
       where: { scope: PROMO_SCOPE },
-      select: { workSlugs: true, coverSlugs: true, hiddenIds: true, updatedAt: true },
+      select: { workSlugs: true, hiddenIds: true, updatedAt: true },
     });
     if (!row) {
       return {
-        workSlugs: [] as string[], coverSlugs: [] as string[], hiddenIds: [] as string[],
+        workSlugs: [] as string[], hiddenIds: [] as string[],
         updatedAt: null as Date | null,
       };
     }
     return {
       workSlugs: asIdList(row.workSlugs),
-      coverSlugs: asIdList(row.coverSlugs),
       hiddenIds: asIdList(row.hiddenIds),
       updatedAt: row.updatedAt,
     };
@@ -608,7 +607,7 @@ export class VInvitePromoShowcaseService {
 
   async save(
     userId: string,
-    data: { workSlugs: string[]; coverSlugs: string[]; hiddenIds: string[] },
+    data: { workSlugs: string[]; hiddenIds: string[] },
   ) {
     const user = await prisma.inviteUser.findUnique({ where: { id: userId }, select: { role: true } });
     if (user?.role !== 'SYSTEM_ADMIN') throw createHttpError(403, 'System administrators only');
@@ -618,7 +617,6 @@ export class VInvitePromoShowcaseService {
     // admin cannot act on.
     const clean = {
       workSlugs: unique(data.workSlugs),
-      coverSlugs: unique(data.coverSlugs),
       hiddenIds: unique(data.hiddenIds),
     };
     await prisma.invitePromoShowcase.upsert({
@@ -637,8 +635,8 @@ export class VInvitePromoShowcaseService {
   // itself — the administrator does not have to remember to remove it, and a
   // customer who takes their invitation down is not still being advertised.
   async listWorks() {
-    const { workSlugs, coverSlugs } = await this.get();
-    const wanted = unique([...workSlugs, ...coverSlugs]);
+    const { workSlugs } = await this.get();
+    const wanted = unique(workSlugs);
     if (wanted.length === 0) return [];
 
     const projects = await prisma.inviteProject.findMany({
@@ -647,17 +645,15 @@ export class VInvitePromoShowcaseService {
     });
 
     const bySlug = new Map(projects.map((p) => [p.slug!, p]));
-    const onCover = new Set(coverSlugs);
-    // The admin's order, then anything starred for the cover that is not in the
-    // work list — a cover pick must never be silently dropped for having been
-    // left out of the grid order. De-duplicated on the way out as well as on
-    // the way in: these are JSON columns, so a slug repeated by a direct edit
-    // would otherwise render the same invitation twice under one React key.
-    const ordered = unique([...workSlugs, ...coverSlugs]);
-    return ordered
+    // The administrator's order, and nothing else decides it — the "cover"
+    // selection that used to be merged in here is gone. De-duplicated on the
+    // way out as well as on the way in: this is a JSON column, so a slug
+    // repeated by a direct edit would otherwise render the same invitation
+    // twice under one React key.
+    return wanted
       .map((slug) => bySlug.get(slug))
       .filter((p): p is NonNullable<typeof p> => !!p)
-      .map((p) => ({ ...p, slug: p.slug!, onCover: onCover.has(p.slug!) }));
+      .map((p) => ({ ...p, slug: p.slug! }));
   }
 }
 

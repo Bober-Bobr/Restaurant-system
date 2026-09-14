@@ -33,6 +33,31 @@ type InMsg =
  */
 const STILL_SHIM = `
   (function () {
+    /**
+     * A cover is silent, and this is what makes it silent.
+     *
+     * Every template starts its music from script, and the frame was handed
+     * \`allow="autoplay"\` unconditionally — so opening the marketing page began
+     * playing somebody's wedding music, four invitations at once, before a
+     * visitor had asked for anything. The permission is withheld for a still
+     * cover (see the iframe below), and this neutralises the call itself:
+     * withholding it alone would leave each template's own play() rejecting,
+     * and several of them answer that by showing a "tap to play" control, which
+     * is an invitation to start the music rather than a refusal to.
+     *
+     * It resolves rather than rejects so nothing lands in a template's error
+     * path, and it patches the PROTOTYPE, which covers both \`new Audio()\` and
+     * any <audio>/<video> element in the markup.
+     */
+    var media = window.HTMLMediaElement && window.HTMLMediaElement.prototype;
+    if (media && media.play) {
+      media.play = function () {
+        try { this.muted = true; this.pause(); } catch (e) { /* detached node */ }
+        return Promise.resolve();
+      };
+    }
+  })();
+  (function () {
     var real = window.matchMedia ? window.matchMedia.bind(window) : null;
     function fake(q) {
       return {
@@ -184,7 +209,11 @@ export function RichRenderer({ html, config, languages, contacts, onRsvp, onAdmi
       // The frame is cross-origin (no allow-same-origin), so audio playback is
       // blocked by Permissions Policy unless it is delegated explicitly — the
       // template starts the music on the envelope tap.
-      allow="autoplay"
+      //
+      // A STILL COVER IS NEVER GRANTED IT. The gallery's cards are previews
+      // nobody asked to hear; granting autoplay there is what made the
+      // marketing page start playing four invitations' music at once.
+      allow={still ? undefined : 'autoplay'}
       srcDoc={doc}
       style={{
         display: 'block',

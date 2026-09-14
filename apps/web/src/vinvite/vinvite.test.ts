@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   TIER_BENEFITS, TIER_ORDER, TIER_PRICE_CENTS, telegramHref, instagramHref,
 } from './pricing';
-import { splitWorks, visibleTemplates, EMPTY_SHOWCASE } from './promoShowcase';
+import { visibleTemplates, EMPTY_SHOWCASE } from './promoShowcase';
 import { viDict } from './i18n';
 import { whenMode } from './templates/utils';
 import { commitValue } from '../components/ui/NumberField';
@@ -156,33 +156,19 @@ describe('contact handles', () => {
 });
 
 describe('the promotional showcase', () => {
-  const work = (slug: string, onCover = false) => ({ slug, onCover, title: slug } as unknown as PromoWork);
-
-  it('leads the gallery with the starred invitations', () => {
-    // A star used to mean "ride the hero as a live card". The hero renders no
-    // cards any more, so it means "show this one first" — the same intent said
-    // against what the page actually has, rather than a setting doing nothing.
-    const { works, cover } = splitWorks([work('a'), work('b', true), work('c', true)]);
-    expect(works.map((w) => w.slug)).toEqual(['b', 'c', 'a']);
-    expect(cover.map((w) => w.slug)).toEqual(['b', 'c']);
-  });
-
-  it('leaves the order alone when nothing is starred', () => {
-    const { works, cover } = splitWorks([work('a'), work('b')]);
-    expect(works.map((w) => w.slug)).toEqual(['a', 'b']);
-    expect(cover).toEqual([]);
-  });
-
-  it('leaves the order alone when everything is starred', () => {
-    // A stable partition, not a sort: starring all of them must not reshuffle
-    // the order the administrator dragged them into.
-    const { works } = splitWorks([work('a', true), work('b', true), work('c', true)]);
-    expect(works.map((w) => w.slug)).toEqual(['a', 'b', 'c']);
-  });
-
-  it('never loses an invitation', () => {
-    const { works } = splitWorks([work('a'), work('b', true), work('c'), work('d', true)]);
-    expect(works.map((w) => w.slug).sort()).toEqual(['a', 'b', 'c', 'd']);
+  it('has no "cover" selection left to make', () => {
+    /**
+     * A star once meant "ride the hero as a live card". The hero renders none,
+     * and keeping it on as "show this one first" left two controls doing one
+     * job — the list's own ↑ / ↓ arrows already say it. `splitWorks`, the
+     * `onCover` flag and the `coverSlugs` column all went with it.
+     *
+     * This is a tripwire rather than a behaviour: the gallery is now shown in
+     * exactly the order the server returns, so there is no longer a function to
+     * test — only a setting that must not quietly come back.
+     */
+    expect('coverSlugs' in EMPTY_SHOWCASE, 'the retired cover list is back').toBe(false);
+    expect(Object.keys(EMPTY_SHOWCASE).sort()).toEqual(['hiddenIds', 'workSlugs']);
   });
 
   it('hides only the templates the administrator hid', () => {

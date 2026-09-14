@@ -63,6 +63,26 @@ describe('still mode', () => {
       .toMatch(/animation-iteration-count:\s*1/);
   });
 
+  it('is silent, and in both of the ways that takes', () => {
+    /**
+     * Opening the marketing page started playing somebody's wedding music —
+     * four invitations at once, before a visitor had asked for anything.
+     *
+     * Two things were needed and each alone is not enough. The frame is no
+     * longer GRANTED autoplay… and the call itself is neutralised, because
+     * several templates answer a rejected play() by showing a "tap to play"
+     * control, which is an invitation to start the music rather than a refusal
+     * to. It resolves rather than rejects so nothing lands in an error path,
+     * and it patches the prototype so `new Audio()` is covered as well as any
+     * <audio> in the markup.
+     */
+    expect(CODE, 'a still cover is granted autoplay again')
+      .toMatch(/allow=\{still \? undefined : 'autoplay'\}/);
+    expect(CODE, 'nothing stops the template starting its music')
+      .toContain('HTMLMediaElement');
+    expect(CODE, 'playback is not actually suppressed').toMatch(/media\.play = function/);
+  });
+
   it('applies neither unless still mode was asked for', () => {
     // A published invitation must animate. The shim and the stylesheet are both
     // conditional on the flag, so an accidental unconditional injection would

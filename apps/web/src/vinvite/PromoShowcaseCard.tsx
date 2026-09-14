@@ -49,7 +49,6 @@ export const PromoShowcaseCard = () => {
     if (!query.data || draft) return;
     setDraft({
       workSlugs: query.data.workSlugs,
-      coverSlugs: query.data.coverSlugs,
       hiddenIds: query.data.hiddenIds.filter((id) => RICH_TEMPLATES.some((tpl) => tpl.id === id)),
     });
   }, [query.data, draft]);
@@ -57,7 +56,6 @@ export const PromoShowcaseCard = () => {
   const save = useMutation({
     mutationFn: () => vinviteService.savePromoShowcase({
       workSlugs: draft!.workSlugs,
-      coverSlugs: draft!.coverSlugs,
       hiddenIds: draft!.hiddenIds,
     }),
     onSuccess: (result) => {
@@ -81,12 +79,11 @@ export const PromoShowcaseCard = () => {
   const chosen = draft.workSlugs;
   const available = publishable.filter((p) => !chosen.includes(p.slug!));
 
-  const setWork = (workSlugs: string[], coverSlugs = draft.coverSlugs) =>
-    setDraft({ ...draft, workSlugs, coverSlugs });
+  const setWork = (workSlugs: string[]) => setDraft({ ...draft, workSlugs });
 
   const add = (slug: string) => setWork([...chosen, slug]);
   const remove = (slug: string) =>
-    setWork(chosen.filter((s) => s !== slug), draft.coverSlugs.filter((s) => s !== slug));
+    setWork(chosen.filter((s) => s !== slug));
 
   const move = (index: number, delta: number) => {
     const next = [...chosen];
@@ -94,11 +91,6 @@ export const PromoShowcaseCard = () => {
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target]!, next[index]!];
     setWork(next);
-  };
-
-  const toggleCover = (slug: string) => {
-    const on = draft.coverSlugs.includes(slug);
-    setWork(chosen, on ? draft.coverSlugs.filter((s) => s !== slug) : [...draft.coverSlugs, slug]);
   };
 
   const toggleHidden = (id: string) => {
@@ -109,12 +101,10 @@ export const PromoShowcaseCard = () => {
     });
   };
 
-  // A star used to mean "ride the hero as a live card". The hero renders no
-  // cards any more — they were the most expensive thing on the site — so a star
-  // now means FIRST IN THE GALLERY, which is the same intent said against what
-  // the page actually has. There is no slot limit to respect: every starred
-  // invitation leads, in this order.
-  const coverOrder = chosen.filter((slug) => draft.coverSlugs.includes(slug));
+  // THERE IS NO "ON THE COVER" STAR ANY MORE. It meant "ride the hero as a live
+  // card"; the hero renders none, and keeping it on as "show this one first"
+  // left two controls doing one job — the ↑ / ↓ arrows below already put a row
+  // at the top, and they say it more plainly. The order IS the setting.
 
   const visibleTemplates = RICH_TEMPLATES.length - draft.hiddenIds.length;
 
@@ -131,23 +121,6 @@ export const PromoShowcaseCard = () => {
       <section style={{ display: 'grid', gap: 10 }}>
         <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800 }}>{t('promo_work_title')}</h3>
 
-        <div style={{
-          display: 'grid', gap: 6, padding: '12px 14px', borderRadius: 12,
-          background: 'var(--vi-surface-2, rgba(127,127,127,0.07))',
-          border: '1px solid var(--vi-border)',
-        }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--vi-muted)' }}>
-            {t('promo_cover_now')}
-          </span>
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600 }}>
-            {coverOrder.map((slug) => bySlug.get(slug)?.name ?? slug).join('  ·  ') || '—'}
-          </p>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--vi-muted)' }}>{t('promo_cover_hint')}</p>
-          {draft.coverSlugs.length === 0 && (
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--vi-muted)' }}>{t('promo_cover_auto')}</p>
-          )}
-        </div>
-
         {chosen.length === 0 && (
           <p style={{ margin: 0, fontSize: 12.5, color: 'var(--vi-muted)' }}>{t('promo_work_empty')}</p>
         )}
@@ -155,8 +128,6 @@ export const PromoShowcaseCard = () => {
         <div style={{ display: 'grid', gap: 8 }}>
           {chosen.map((slug, i) => {
             const project = bySlug.get(slug);
-            const onCover = draft.coverSlugs.includes(slug);
-            const coverSlot = coverOrder.indexOf(slug);
             return (
               <div key={slug} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
@@ -178,16 +149,10 @@ export const PromoShowcaseCard = () => {
                     {project?.name ?? slug}
                   </p>
                   <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--vi-muted)' }}>
-                    {project
-                      ? (onCover ? `${t('promo_cover_slot')} #${coverSlot + 1}` : `/${slug}`)
-                      : t('promo_work_missing')}
+                    {project ? `/${slug}` : t('promo_work_missing')}
                   </p>
                 </div>
 
-                <button type="button" onClick={() => toggleCover(slug)}
-                  title={t('promo_on_cover')} style={pillBtn(onCover)}>
-                  {onCover ? '★' : '☆'} {t('promo_on_cover')}
-                </button>
                 <button type="button" onClick={() => remove(slug)}
                   title={t('promo_work_remove')} style={pillBtn(false)}>
                   ✕ {t('promo_work_remove')}

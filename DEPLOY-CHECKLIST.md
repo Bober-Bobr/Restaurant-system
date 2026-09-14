@@ -2922,3 +2922,23 @@ rows keep their values. Deploy it together with §53, which it builds on.
    category", and still no figures.
 8. Notifications → "Website requests": that request shows the category as not
    chosen and carries no price row. Delete the test rows.
+
+## §55 — v-invite: the "on the cover" star retired, and silent covers (**has a migration**)
+
+Migration `20260914110000_drop_promo_cover_slugs` — drops `InvitePromoShowcase.
+"coverSlugs"`. Nothing else changes; the gallery order lives in `workSlugs`.
+
+**After deploying:**
+
+1. Open `/main` with the sound up. **Nothing plays.** Previously the gallery's
+   invitations started their music on arrival, several at once.
+2. Open one invitation from the gallery → its music still works there, on the
+   tap, exactly as a guest gets it. (This is the half that must NOT have been
+   broken by the fix.)
+3. SYSTEM_ADMIN → the promo showcase screen: the ★ / ☆ "В начало" button is gone
+   from every row, as is the "Shown first" panel above the list. The ↑ / ↓
+   arrows remain and are now the only thing deciding order.
+4. Drag a row to the top, save, reload `/main` → the gallery leads with it.
+5. `\d "InvitePromoShowcase"` no longer lists a `coverSlugs` column.
+6. A previously starred invitation is no longer pulled to the front — it sits
+   wherever the list order puts it. Re-order with the arrows if wanted.
