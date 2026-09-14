@@ -115,7 +115,11 @@ function OrderCard({ order, onToggleRead, onDelete, busy }: {
   busy: boolean;
 }) {
   const t = useViT();
-  const discounted = order.discountCents > 0;
+  // The category is optional on the form, and the three money columns are null
+  // together when it was left open — there is nothing to quote without one.
+  const tierLabel = order.tier ? t(`tier_${order.tier.toLowerCase()}` as ViKey) : t('ord_no_tier');
+  const priced = order.listCents != null && order.totalCents != null;
+  const discounted = priced && (order.discountCents ?? 0) > 0;
   return (
     <div
       className="vi-card vi-fade-up"
@@ -124,7 +128,7 @@ function OrderCard({ order, onToggleRead, onDelete, busy }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         {!order.isRead && <span className="vi-badge vi-badge-live">{t('nt_new')}</span>}
         <strong style={{ fontSize: 16 }}>{order.name}</strong>
-        <span style={{ fontSize: 13, color: 'var(--vi-muted)' }}>{t(`tier_${order.tier.toLowerCase()}` as ViKey)}</span>
+        <span style={{ fontSize: 13, color: 'var(--vi-muted)' }}>{tierLabel}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--vi-muted)' }}>
           {new Date(order.createdAt).toLocaleString()}
         </span>
@@ -132,13 +136,15 @@ function OrderCard({ order, onToggleRead, onDelete, busy }: {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
         <Field label={t('nt_phone')} value={<a href={`tel:${order.phone}`} style={{ color: 'var(--vi-accent)' }}>{order.phone}</a>} />
-        <Field label={t('nt_category')} value={t(`tier_${order.tier.toLowerCase()}` as ViKey)} />
+        <Field label={t('nt_category')} value={tierLabel} />
         <Field label={t('nt_promo')} value={order.promoCode} />
         {/* The figures quoted at the time — snapshotted on the row, so a later
-            price change does not rewrite what this customer was told. */}
-        {discounted && <Field label={t('nt_list_price')} value={<s>{formatSum(order.listCents)}</s>} />}
-        {discounted && <Field label={t('nt_discount')} value={`− ${formatSum(order.discountCents)}`} />}
-        <Field label={t('nt_total')} value={<strong>{formatSum(order.totalCents)}</strong>} />
+            price change does not rewrite what this customer was told. Absent
+            entirely when no category was chosen: a zero would read as a quoted
+            price of nothing. */}
+        {discounted && <Field label={t('nt_list_price')} value={<s>{formatSum(order.listCents!)}</s>} />}
+        {discounted && <Field label={t('nt_discount')} value={`− ${formatSum(order.discountCents!)}`} />}
+        {priced && <Field label={t('nt_total')} value={<strong>{formatSum(order.totalCents!)}</strong>} />}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -2891,3 +2891,29 @@ inbox. `TELEGRAM_PUBLIC_URL` must be set either way or no webhook is registered 
    total; Notifications → "Website requests" shows it and the badge counts it.
 7. Check Standard + code = 450 000 and Luxury + code = 1 100 000.
 8. Delete the test order from Notifications.
+
+## §54 — v-invite promo site: still covers, folded tier details, optional category (**has a migration**)
+
+Migration `20260914100000_invite_order_optional_tier` — widens `InviteOrder`:
+`tier`, `listCents`, `discountCents`, `totalCents` all become nullable. Existing
+rows keep their values. Deploy it together with §53, which it builds on.
+
+**After deploying:**
+
+1. `/main` on a **phone** (or a 390px window): in the price carousel the cards on
+   either side of the chosen one are visibly there (~30px each).
+2. Each category card shows only marks, name, price and the choose button.
+   **Show details** opens the description and the benefit list; the label becomes
+   **Hide details**. Two cards can be open at once.
+3. "Our work": the covers do not lift, fade in or dim on hover, and nothing
+   appears over the artwork. The way in is the static 👁 label in the footer.
+4. Leave the category unchosen, fill in **only** a name and a phone, and send.
+   It goes through. The summary line says the category is not chosen and shows
+   **no** price.
+5. The Telegram message for that request reads `🏷 Категория: не выбрана` and
+   `💬 Категорию и цену уточнить при звонке`, with no figures.
+6. Clear the phone and press send → refused with "fill in your name and phone".
+7. Type `EMIR` with no category → "code saved, discount applied once we agree a
+   category", and still no figures.
+8. Notifications → "Website requests": that request shows the category as not
+   chosen and carries no price row. Delete the test rows.

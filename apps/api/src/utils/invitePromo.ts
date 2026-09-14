@@ -93,13 +93,23 @@ export function isTier(value: string): value is OrderTier {
   return (TIERS as readonly string[]).includes(value);
 }
 
+/**
+ * A priced order, or an unpriced one.
+ *
+ * All four money/tier fields are nullable together, because a request may be
+ * sent with NO category chosen — a customer who just wants to be rung back
+ * should not have to decide what to spend first. There is then nothing to
+ * quote: the discount is a per-category amount, so without a category it has no
+ * value. The code is still recorded, and the figures are agreed in the
+ * conversation that follows.
+ */
 export type Quote = {
-  tier: OrderTier;
+  tier: OrderTier | null;
   /** The canonical code, or null when none was given. */
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
 };
 
 /**
@@ -111,19 +121,28 @@ export type Quote = {
  * customer a reduced figure, and silently charging them more is the one outcome
  * worth refusing over. The form blocks the same case before it is sent, so this
  * fires only for a hand-made request.
+ *
+ * The code is checked BEFORE the category, so a wrong code is refused even when
+ * there is no category to price it against. Otherwise a request with no tier
+ * would quietly bank a misspelling and the customer would find out later that
+ * the discount they typed was never recognised.
  */
-export function quoteOrder(tier: OrderTier, rawCode?: string | null): Quote {
-  const listCents = TIER_PRICE_CENTS[tier];
+export function quoteOrder(tier: OrderTier | null, rawCode?: string | null): Quote {
   const code = rawCode ? normalizePromoCode(rawCode) : '';
+  if (code && !CODE_SET.has(code)) throw new Error(`Unknown promo code: ${code}`);
+  const promoCode = code || null;
 
-  if (!code) {
-    return { tier, promoCode: null, listCents, discountCents: 0, totalCents: listCents };
+  // No category: nothing to price. Recorded as a lead with its code intact.
+  if (!tier) {
+    return { tier: null, promoCode, listCents: null, discountCents: null, totalCents: null };
   }
-  if (!CODE_SET.has(code)) throw new Error(`Unknown promo code: ${code}`);
+
+  const listCents = TIER_PRICE_CENTS[tier];
+  if (!promoCode) return { tier, promoCode: null, listCents, discountCents: 0, totalCents: listCents };
 
   // Floored at zero: a discount that grew past the price would otherwise quote a
   // negative total, i.e. money the studio owes the customer. Same guard as
   // `effectiveRatePerPerson` on the banquet side.
   const discountCents = Math.min(TIER_DISCOUNT_CENTS[tier], listCents);
-  return { tier, promoCode: code, listCents, discountCents, totalCents: listCents - discountCents };
+  return { tier, promoCode, listCents, discountCents, totalCents: listCents - discountCents };
 }

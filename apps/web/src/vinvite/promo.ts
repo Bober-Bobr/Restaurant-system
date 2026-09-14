@@ -71,28 +71,40 @@ export function isPromoCode(raw: string): boolean {
   return CODE_SET.has(normalizePromoCode(raw));
 }
 
+/**
+ * A priced order, or an unpriced one.
+ *
+ * The four fields are nullable together: a request may be sent with NO category
+ * chosen, and the discount is a per-category amount, so without a category
+ * there is nothing to quote. The code is still recorded.
+ */
 export type Quote = {
-  tier: TemplateTier;
+  tier: TemplateTier | null;
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
 };
 
 /**
  * Price one order. Throws on a code that is not recognised — see the API copy;
- * the form asks `isPromoCode` first and never submits an unknown one.
+ * the form asks `isPromoCode` first and never submits an unknown one. The code
+ * is checked before the category, so a wrong one is caught even with no
+ * category to price it against.
  */
-export function quoteOrder(tier: TemplateTier, rawCode?: string | null): Quote {
-  const listCents = TIER_PRICE_CENTS[tier];
+export function quoteOrder(tier: TemplateTier | null, rawCode?: string | null): Quote {
   const code = rawCode ? normalizePromoCode(rawCode) : '';
+  if (code && !CODE_SET.has(code)) throw new Error(`Unknown promo code: ${code}`);
+  const promoCode = code || null;
 
-  if (!code) {
-    return { tier, promoCode: null, listCents, discountCents: 0, totalCents: listCents };
+  if (!tier) {
+    return { tier: null, promoCode, listCents: null, discountCents: null, totalCents: null };
   }
-  if (!CODE_SET.has(code)) throw new Error(`Unknown promo code: ${code}`);
+
+  const listCents = TIER_PRICE_CENTS[tier];
+  if (!promoCode) return { tier, promoCode: null, listCents, discountCents: 0, totalCents: listCents };
 
   // Floored at the list price so a discount can never quote a negative total.
   const discountCents = Math.min(TIER_DISCOUNT_CENTS[tier], listCents);
-  return { tier, promoCode: code, listCents, discountCents, totalCents: listCents - discountCents };
+  return { tier, promoCode, listCents, discountCents, totalCents: listCents - discountCents };
 }

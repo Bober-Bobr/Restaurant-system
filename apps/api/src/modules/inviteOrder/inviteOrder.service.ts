@@ -32,7 +32,7 @@ export class InviteOrderService {
       throw createHttpError(400, `Promo code ${normalizePromoCode(raw)} was not recognised.`);
     }
 
-    const quote = quoteOrder(input.tier, raw || null);
+    const quote = quoteOrder(input.tier ?? null, raw || null);
 
     const order = await prisma.inviteOrder.create({
       data: {
@@ -52,7 +52,9 @@ export class InviteOrderService {
     await forwardInviteOrder({
       name: order.name,
       phone: order.phone,
-      tierLabel: TIER_LABEL[quote.tier],
+      // null → the message says the category was not chosen, rather than
+      // inventing one.
+      tierLabel: quote.tier ? TIER_LABEL[quote.tier] : null,
       promoCode: order.promoCode,
       listCents: order.listCents,
       discountCents: order.discountCents,

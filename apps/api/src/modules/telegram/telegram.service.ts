@@ -484,31 +484,39 @@ export async function forwardRsvp(
 export async function forwardInviteOrder(order: {
   name: string;
   phone: string;
-  tierLabel: string;
+  /** null when the customer did not choose a category. */
+  tierLabel: string | null;
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
 }): Promise<void> {
   if (!orderBotConfigured()) return;
   const links = await prisma.inviteOrderTelegramLink.findMany({ select: { chatId: true } });
   if (links.length === 0) return;
 
-  const discounted = order.discountCents > 0;
+  // No category → no figures at all. Printing a zero would read as a quoted
+  // price of nothing, which is the one thing worse than saying it is undecided.
+  const priced = order.listCents != null && order.totalCents != null;
+  const discounted = priced && (order.discountCents ?? 0) > 0;
   const lines = [
     '🎉 <b>Новая заявка на приглашение</b>',
     RULE,
     `👤 Имя: ${htmlEscape(order.name)}`,
     `📱 Телефон: ${htmlEscape(order.phone)}`,
-    `🏷 Категория: ${htmlEscape(order.tierLabel)}`,
+    `🏷 Категория: ${order.tierLabel ? htmlEscape(order.tierLabel) : 'не выбрана'}`,
     RULE,
     // The full price is shown struck through only when something came off it,
     // so an order without a code reads as one price rather than as a discount
     // of zero.
-    discounted ? `💵 Цена: <s>${formatSom(order.listCents)}</s>` : `💵 Цена: ${formatSom(order.listCents)}`,
+    priced
+      ? (discounted ? `💵 Цена: <s>${formatSom(order.listCents!)}</s>` : `💵 Цена: ${formatSom(order.listCents!)}`)
+      : null,
     order.promoCode ? `🎟 Промокод: <b>${htmlEscape(order.promoCode)}</b>` : null,
-    discounted ? `➖ Скидка: ${formatSom(order.discountCents)}` : null,
-    `✅ К оплате: <b>${formatSom(order.totalCents)}</b>`,
+    discounted ? `➖ Скидка: ${formatSom(order.discountCents!)}` : null,
+    priced
+      ? `✅ К оплате: <b>${formatSom(order.totalCents!)}</b>`
+      : '💬 Категорию и цену уточнить при звонке',
     RULE,
     '✨ Заявка успешно получена',
   ].filter(Boolean);

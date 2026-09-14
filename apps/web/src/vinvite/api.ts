@@ -162,15 +162,18 @@ export type InviteRequest = {
 // The three money columns are a SNAPSHOT of what was quoted, in tiyin. They are
 // stored rather than recomputed because the category prices live in code, so an
 // old order would otherwise silently re-price itself to today's list.
+// The category and the three money fields are null together when the visitor
+// did not choose a category — it is optional on the form, and the discount is a
+// per-category amount, so there is nothing to quote yet.
 export type InviteOrder = {
   id: string;
   name: string;
   phone: string;
-  tier: TemplateTier;
+  tier: TemplateTier | null;
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
   isRead: boolean;
   createdAt: string;
 };
@@ -179,11 +182,11 @@ export type InviteOrder = {
 export type InviteOrderReceipt = {
   id: string;
   createdAt: string;
-  tier: TemplateTier;
+  tier: TemplateTier | null;
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
 };
 
 /**
@@ -199,7 +202,8 @@ export type InviteOrderReceipt = {
 export async function submitInviteOrder(payload: {
   name: string;
   phone: string;
-  tier: TemplateTier;
+  /** Optional — a visitor may ask to be rung back without choosing one. */
+  tier: TemplateTier | null;
   promoCode?: string | null;
 }): Promise<InviteOrderReceipt> {
   const { data } = await axios.post<InviteOrderReceipt>(`${API_BASE}/public/invite-orders`, payload);

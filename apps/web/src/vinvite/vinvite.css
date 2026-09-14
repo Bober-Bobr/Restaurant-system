@@ -842,14 +842,21 @@
    rather than a fixed pixel height. These are somebody's real invitations, so
    there is no price and no "select" — only the name and the way in.
    ══════════════════════════════════════════════════════════════════════════ */
+/* THE COVER IS SHOWN STILL. No lift, no transition, no overlay that fades in
+   over it: these are photographs of somebody's finished invitation, and the
+   point of the row is to look at them. The card previously rose 8px on hover
+   and dimmed the artwork under a gradient veil carrying an "open" label, which
+   is movement and a scrim over the one thing the section exists to show.
+   The way in is now said in the footer instead, as static text.
+
+   `:focus-visible` is deliberately NOT removed — it is not decoration, it is
+   how a keyboard reader knows which card they are on. */
 .vi-work {
   position: relative; display: flex; flex-direction: column; width: 100%; padding: 0;
   border: 1px solid var(--vi-border); border-radius: 20px; overflow: hidden;
   background: var(--vi-card); cursor: pointer; text-align: left;
   box-shadow: var(--vi-shadow);
-  transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s ease, border-color .3s ease;
 }
-.vi-work:hover { transform: translateY(-8px); box-shadow: var(--vi-shadow-lg); border-color: var(--vi-ring); }
 /* `display: block` is not optional here: this is a <span> inside a <button>,
    and an inline box ignores height and overflow outright — which collapsed the
    whole preview to nothing.
@@ -860,31 +867,25 @@
   display: block; position: relative; overflow: hidden;
   background: #0b0f1c; aspect-ratio: 10 / 16; width: 100%;
 }
-.vi-work-veil {
-  position: absolute; inset: 0; z-index: 2;
-  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px;
-  background: linear-gradient(to top, rgba(8,10,20,.74) 0%, rgba(8,10,20,.1) 46%, transparent 72%);
-  opacity: 0; transition: opacity .3s ease;
-}
-.vi-work:hover .vi-work-veil, .vi-work:focus-visible .vi-work-veil { opacity: 1; }
-.vi-work-veil span {
-  padding: 11px 22px; border-radius: 12px; font-size: 14px; font-weight: 700;
-  background: rgba(255,255,255,.96); color: #111827;
-}
-
 .vi-work-foot { display: flex; align-items: center; gap: 11px; padding: 13px 16px; width: 100%; }
+/* The hint that used to live on the cover as a fading veil. Always present,
+   never moves — it is a label, not an effect. */
+.vi-work-open {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 12px; font-weight: 700; color: var(--vi-accent);
+}
 .vi-work-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .vi-work-name {
   font-family: var(--vi-font-display); font-size: 18px; font-weight: 600; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vi-work-num {
-  margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  font-size: 12px; font-weight: 800; letter-spacing: .08em;
   color: var(--vi-muted); font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vi-tc:hover, .vi-work:hover, .vi-tc-btn:hover { transform: none; }
+  .vi-tc:hover, .vi-tc-btn:hover { transform: none; }
   .vi-tc-body { animation: none; }
 }
 
@@ -1109,12 +1110,31 @@
   color: var(--vi-card);
 }
 
+/* ── Details, folded away ──
+   The card leads with the decision — which rung, what it costs — and the prose
+   and the benefit list wait behind a button. Three cards each opening with a
+   paragraph and four bullets is a wall of text where a price list should be,
+   and on a phone it pushed the next rung off the screen entirely. */
+.vi-tiercard-more {
+  margin-top: auto; padding: 0 22px 20px;
+  display: grid; gap: 14px;
+}
+.vi-tiercard-toggle {
+  justify-self: start; padding: 8px 0;
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  background: none; border: 0; border-bottom: 1px solid currentColor;
+  color: var(--tier-accent, var(--vi-accent));
+}
+.vi-tiercard-toggle:hover { opacity: .78; }
+
 /* What the money buys. A list, because that is what it is — and because the
    ladder is read by comparing one card's list with the next card's. */
 .vi-tiercard-list {
   display: grid; gap: 12px; margin: 0;
-  padding: 18px 22px 24px; list-style: none;
+  padding: 0; list-style: none;
 }
+.vi-tiercard-details { display: grid; gap: 14px; }
+.vi-tiercard-details .vi-tiercard-desc { margin: 0; }
 .vi-tiercard-benefit {
   display: flex; gap: 10px; align-items: flex-start;
   font-size: 13.5px; line-height: 1.55; color: var(--vi-muted);
@@ -1228,6 +1248,12 @@
 @media (max-width: 560px) {
   .vi-order-grid { grid-template-columns: 1fr; }
   .vi-order-card { padding: 22px 18px; }
+  /* THE NEIGHBOURS HAVE TO BE VISIBLE. At 82vw the chosen card plus the 20px
+     gap left perhaps a hair of the rungs on either side, so on a phone the
+     carousel read as a single card with no indication that there were two more
+     — and comparing the rungs is the entire point of the control. At 74vw each
+     neighbour shows ~30px on a 390px screen: enough to be seen and swiped. */
+  .vi-tierslider { --tier-card: min(320px, 74vw); }
   .vi-tiercard-name { font-size: 23px; }
   .vi-tiercard-price strong { font-size: 25px; }
 }

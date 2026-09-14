@@ -12,7 +12,10 @@ import { TIERS } from '../../utils/invitePromo.js';
 export const createInviteOrderSchema = z.object({
   name: z.string().min(1).max(120),
   phone: z.string().min(3).max(40),
-  tier: z.enum(TIERS),
+  // OPTIONAL. The phone number is the only thing a request actually needs — a
+  // visitor who wants to be rung back should not have to decide what to spend
+  // first. With no category there is nothing to price; see `quoteOrder`.
+  tier: z.enum(TIERS).optional().nullable(),
   // Absent, empty or a partner restaurant's code. Bounded well above the
   // longest real code so a typo gets the "not recognised" message rather than a
   // validation error that does not say which field is wrong.

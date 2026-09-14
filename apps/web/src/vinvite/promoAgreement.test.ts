@@ -54,7 +54,8 @@ describe('the promo rule, on both sides', () => {
       // padded by a paste, split by a thumb.
       'emir', '  Baxt  ', 'grand asli', 'PERY ',
     ];
-    for (const tier of api.TIERS) {
+    // `null` is a real input: a request may be sent with no category at all.
+    for (const tier of [...api.TIERS, null]) {
       for (const code of inputs) {
         expect(web.quoteOrder(tier, code), `${tier} + ${JSON.stringify(code)}`)
           .toEqual(api.quoteOrder(tier, code));
@@ -62,13 +63,48 @@ describe('the promo rule, on both sides', () => {
     }
   });
 
-  it('refuses an unrecognised code on both sides', () => {
+  it('refuses an unrecognised code on both sides, with or without a category', () => {
     // Quoting the full price instead would charge a customer more than the form
-    // just showed them, which is the one outcome worth failing over.
+    // just showed them, which is the one outcome worth failing over. With NO
+    // category there is no price to get wrong — but banking a misspelled code
+    // silently would still lose the customer their discount later, so the code
+    // is checked before the category on both sides.
     for (const bad of ['NOPE', 'EMIRR', 'EMI', 'PERY1', '0']) {
-      expect(() => api.quoteOrder('STANDARD', bad), `api accepted ${bad}`).toThrow();
-      expect(() => web.quoteOrder('STANDARD', bad), `web accepted ${bad}`).toThrow();
+      for (const tier of ['STANDARD', null] as const) {
+        expect(() => api.quoteOrder(tier, bad), `api accepted ${bad} (${tier})`).toThrow();
+        expect(() => web.quoteOrder(tier, bad), `web accepted ${bad} (${tier})`).toThrow();
+      }
     }
+  });
+});
+
+describe('a request with no category chosen', () => {
+  /**
+   * A visitor may just want to be rung back. The category is the one thing on
+   * the form they might not have decided, so it is optional — and then there is
+   * nothing to quote, because the discount is a per-category amount.
+   */
+  it('quotes nothing at all', () => {
+    const quote = api.quoteOrder(null);
+    expect(quote).toEqual({
+      tier: null, promoCode: null, listCents: null, discountCents: null, totalCents: null,
+    });
+  });
+
+  it('still records a valid code, for the conversation that follows', () => {
+    // The code says which restaurant sent them; that is worth keeping even
+    // before anyone has decided what it will be applied to.
+    expect(api.quoteOrder(null, 'emir').promoCode).toBe('EMIR');
+    expect(web.quoteOrder(null, 'emir').promoCode).toBe('EMIR');
+  });
+
+  it('never invents a figure to go with it', () => {
+    // A zero here would be a quoted price of nothing, which is worse than the
+    // absence: it would print "You pay 0 so'm" in the studio's Telegram.
+    const quote = api.quoteOrder(null, 'PERY');
+    expect(quote.totalCents).toBeNull();
+    expect(quote.discountCents).toBeNull();
+    expect(quote.listCents).toBeNull();
   });
 });
 

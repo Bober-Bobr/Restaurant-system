@@ -616,7 +616,11 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
           sub={t('work_sub')} reveal={reveal}
         />
 
-        <div ref={reveal} className="vi-r vi-r-up vi-slider">
+        {/* No reveal wrapper on the rail. `vi-r` starts the row at opacity 0 and
+            slides it up when it reaches the fold, and the covers are the one
+            thing on this page that must simply be there. The heading above
+            still reveals — that is chrome, not the work. */}
+        <div className="vi-slider">
           <div
             className={`vi-slider-rail${needsGutter ? ' is-centred' : ''}`}
             ref={railRef}
@@ -630,6 +634,9 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
                 onClick={() => onOpen(entry)}
                 title={t('work_open')}
               >
+                {/* The cover, and nothing over it. The veil that used to fade in
+                    on hover carried the "open" label; it now sits in the footer
+                    as plain text, so the artwork is never covered or dimmed. */}
                 <span className="vi-work-stage">
                   <DesignPoster
                     emoji={entry.emoji}
@@ -638,11 +645,11 @@ function WorkSection({ t, entries, reveal, num, onOpen }: {
                     brand={brandOf(entry.meta ?? { id: entry.id, accent: entry.accent })}
                     dark={dark}
                   />
-                  <span className="vi-work-veil"><span>👁 {t('work_open')}</span></span>
                 </span>
                 <span className="vi-work-foot">
                   <span className="vi-work-dot" style={{ background: entry.accent }} />
                   <span className="vi-work-name">{entry.name}</span>
+                  <span className="vi-work-open">👁 {t('work_open')}</span>
                   <span className="vi-work-num">{String(i + 1).padStart(2, '0')}</span>
                 </span>
               </button>
@@ -793,11 +800,22 @@ function TierSlider({ t, selectedTier, onSelectTier }: {
     if (!settled) setSettled(true);
   }, [selectedTier, settled]);
 
+  /**
+   * Which cards have their details open.
+   *
+   * Per card rather than one-at-a-time: the reason to open two is to compare
+   * them, and closing the one you were reading to look at the next is the
+   * opposite of what the ladder is for.
+   */
+  const [open, setOpen] = useState<Partial<Record<TemplateTier, boolean>>>({});
+
   return (
     <div className="vi-tierslider">
       <div className={`vi-tierslider-rail${settled ? ' is-settled' : ''}`} ref={railRef}>
         {TIER_ORDER.map((tier) => {
           const chosen = selectedTier === tier;
+          const isOpen = open[tier] === true;
+          const panelId = `tier-details-${tier.toLowerCase()}`;
           return (
             <div
               key={tier}
@@ -823,23 +841,49 @@ function TierSlider({ t, selectedTier, onSelectTier }: {
                 <span className="vi-tiercard-price">
                   <strong>{formatSum(TIER_PRICE_CENTS[tier])}</strong>
                 </span>
-                <span className="vi-tiercard-desc">{t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}</span>
                 <span className="vi-tiercard-pick">
                   {chosen ? `✓ ${t('pricing_tier_picked')}` : t('pricing_tier_pick')}
                 </span>
               </button>
 
-              {/* What the money actually buys. Shared keys across the tiers, so
-                  the ladder reads as one list growing rather than three lists
-                  saying similar things — see TIER_BENEFITS. */}
-              <ul className="vi-tiercard-list">
-                {TIER_BENEFITS[tier].map((key) => (
-                  <li key={key} className="vi-tiercard-benefit">
-                    <span className="vi-tiercard-tick" aria-hidden>✓</span>
-                    <span>{t(`pricing_b_${key}` as ViKey)}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* The prose and the benefit list wait behind a button. The card
+                  leads with the decision — which rung, what it costs — and three
+                  cards each opening with a paragraph and four bullets buried
+                  that, especially on a phone, where it pushed the next rung off
+                  the screen. The toggle sits OUTSIDE the head button: a button
+                  inside a button is invalid markup and the inner one is ignored.
+
+                  Rendered only when open rather than hidden with CSS, so the
+                  text is not read out by a screen reader (or found by ctrl-F)
+                  while it is folded away. */}
+              <div className="vi-tiercard-more">
+                <button
+                  type="button"
+                  className="vi-tiercard-toggle"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setOpen((prev) => ({ ...prev, [tier]: !prev[tier] }))}
+                >
+                  {isOpen ? t('pricing_details_hide') : t('pricing_details_show')}
+                </button>
+
+                {isOpen && (
+                  <div id={panelId} className="vi-tiercard-details">
+                    <p className="vi-tiercard-desc">{t(`pricing_${tier.toLowerCase()}_desc` as ViKey)}</p>
+                    {/* Shared keys across the tiers, so the ladder reads as one
+                        list growing rather than three lists saying similar
+                        things — see TIER_BENEFITS. */}
+                    <ul className="vi-tiercard-list">
+                      {TIER_BENEFITS[tier].map((key) => (
+                        <li key={key} className="vi-tiercard-benefit">
+                          <span className="vi-tiercard-tick" aria-hidden>✓</span>
+                          <span>{t(`pricing_b_${key}` as ViKey)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -878,11 +922,16 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
   const promoValid = promoFilled && isPromoCode(promo);
   const promoBad = promoFilled && !promoValid;
   const showBad = promoBad && promoTouched;
-  const quote = tier ? quoteOrder(tier, promoValid ? promo : null) : null;
+  /**
+   * The category is OPTIONAL, so this quotes `null` happily: the summary then
+   * carries the category row alone and no figures. A visitor who just wants to
+   * be rung back should not have to price their wedding to do it.
+   */
+  const quote = quoteOrder(tier, promoValid ? promo : null);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!tier || state === 'sending') return;
+    if (state === 'sending') return;
     if (!name.trim() || !phone.trim()) { setState('missing'); return; }
     if (promoBad) { setPromoTouched(true); return; }
     setState('sending');
@@ -901,7 +950,8 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
   };
 
   const accent = tier ? TIER_ACCENT[tier] : 'var(--vi-accent)';
-  const tierName = (x: TemplateTier) => t(`tier_${x.toLowerCase()}` as ViKey);
+  const tierName = (x: TemplateTier | null) =>
+    (x ? t(`tier_${x.toLowerCase()}` as ViKey) : t('ord_no_tier'));
 
   return (
     <div id="order" className="vi-order" style={{ ['--tier-accent' as string]: accent }}>
@@ -925,12 +975,15 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
             <h3 className="vi-order-title">{t('ord_title')}</h3>
             <p className="vi-order-sub">{tier ? t('ord_sub') : t('ord_pick_first')}</p>
 
+            {/* Nothing here is disabled while no category is chosen. The form
+                used to grey itself out until one was picked, which made choosing
+                a price the price of asking a question. */}
             <div className="vi-order-grid">
               <label>
                 <span className="vi-label">{t('ord_name')}</span>
                 <input
                   className="vi-input" value={name} maxLength={120} autoComplete="name"
-                  placeholder={t('ord_name_ph')} disabled={!tier}
+                  placeholder={t('ord_name_ph')}
                   onChange={(e) => { setName(e.target.value); if (state === 'missing') setState('idle'); }}
                 />
               </label>
@@ -938,7 +991,7 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
                 <span className="vi-label">{t('ord_phone')}</span>
                 <input
                   className="vi-input" value={phone} maxLength={40} type="tel" inputMode="tel"
-                  autoComplete="tel" placeholder={t('ord_phone_ph')} disabled={!tier}
+                  autoComplete="tel" placeholder={t('ord_phone_ph')} required
                   onChange={(e) => { setPhone(e.target.value); if (state === 'missing') setState('idle'); }}
                 />
               </label>
@@ -951,7 +1004,7 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
               <input
                 className="vi-input" value={promo} maxLength={60}
                 autoComplete="off" autoCapitalize="characters" spellCheck={false}
-                placeholder={t('ord_promo_ph')} disabled={!tier}
+                placeholder={t('ord_promo_ph')}
                 data-state={promoValid ? 'ok' : showBad ? 'bad' : undefined}
                 aria-invalid={showBad || undefined}
                 onChange={(e) => setPromo(e.target.value.toUpperCase())}
@@ -965,14 +1018,19 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
               </span>
             </label>
 
-            {quote && <OrderSum t={t} tierLabel={tierName(quote.tier)} {...quote} />}
+            <OrderSum t={t} tierLabel={tierName(quote.tier)} {...quote} />
+
+            {/* A code with no category yet. It IS worth something, but not a
+                number we can put on the screen — the discount is per category.
+                Saying so beats showing a code that appears to do nothing. */}
+            {promoValid && !tier && <p className="vi-order-hint">{t('ord_promo_after')}</p>}
 
             {state === 'missing' && <p className="vi-order-err" role="alert">{t('ord_required')}</p>}
             {state === 'error' && <p className="vi-order-err" role="alert">{t('ord_error')}</p>}
 
             <button
               type="submit" className="vi-btn vi-btn-primary vi-order-submit"
-              disabled={!tier || state === 'sending'}
+              disabled={state === 'sending'}
             >
               {state === 'sending' ? t('ord_sending') : t('ord_submit')}
             </button>
@@ -983,29 +1041,40 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
   );
 }
 
-/** Category → price → discount → total. The full price is struck only when something came off it. */
+/**
+ * Category → price → discount → total. The full price is struck only when
+ * something came off it.
+ *
+ * With no category the money rows are absent entirely rather than showing
+ * zeroes: a quoted price of nothing is worse than an undecided one. The
+ * category row still renders, so the summary says what was left open.
+ */
 function OrderSum({ t, tierLabel, promoCode, listCents, discountCents, totalCents }: {
   t: (k: ViKey) => string;
   tierLabel: string;
   promoCode: string | null;
-  listCents: number;
-  discountCents: number;
-  totalCents: number;
+  listCents: number | null;
+  discountCents: number | null;
+  totalCents: number | null;
 }) {
+  const priced = listCents != null && totalCents != null;
+  const off = discountCents ?? 0;
   return (
     <dl className="vi-order-sum">
       <div><dt>{t('ord_category')}</dt><dd>{tierLabel}</dd></div>
-      <div>
-        <dt>{t('ord_list')}</dt>
-        <dd className={discountCents > 0 ? 'is-struck' : undefined}>{formatSum(listCents)}</dd>
-      </div>
-      {discountCents > 0 && (
-        <div className="is-discount">
-          <dt>{t('ord_discount')}{promoCode ? ` · ${promoCode}` : ''}</dt>
-          <dd>− {formatSum(discountCents)}</dd>
+      {priced && (
+        <div>
+          <dt>{t('ord_list')}</dt>
+          <dd className={off > 0 ? 'is-struck' : undefined}>{formatSum(listCents)}</dd>
         </div>
       )}
-      <div className="is-total"><dt>{t('ord_total')}</dt><dd>{formatSum(totalCents)}</dd></div>
+      {priced && off > 0 && (
+        <div className="is-discount">
+          <dt>{t('ord_discount')}{promoCode ? ` · ${promoCode}` : ''}</dt>
+          <dd>− {formatSum(off)}</dd>
+        </div>
+      )}
+      {priced && <div className="is-total"><dt>{t('ord_total')}</dt><dd>{formatSum(totalCents)}</dd></div>}
     </dl>
   );
 }

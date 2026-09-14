@@ -890,18 +890,26 @@ model InviteOrder {
   id            String   @id @default(cuid())
   name          String
   phone         String
-  // STANDARD | PREMIUM | LUXURY. A plain String like the other status columns
-  // in this schema, so adding a category later needs no migration.
-  tier          String
+  // STANDARD | PREMIUM | LUXURY, or NULL. A plain String like the other status
+  // columns in this schema, so adding a category later needs no migration.
+  //
+  // Nullable because the category is optional on the form: a visitor who just
+  // wants to be rung back should not have to decide what to spend first. The
+  // phone number is the only thing actually required.
+  tier          String?
   // The canonical uppercase code, or null. Kept as provenance — it says which
   // restaurant sent the customer, which is why the codes were handed out.
   promoCode     String?
   // All three in tiyin (1/100 so'm). `listCents - discountCents = totalCents`
   // at the moment of the order; all three are stored rather than derived so a
   // later change to either table cannot rewrite what was agreed.
-  listCents     Int
-  discountCents Int
-  totalCents    Int
+  //
+  // NULL together when no category was chosen — the discount is a per-category
+  // amount, so there is nothing to quote yet. A zero would be worse than the
+  // absence: it reads as a price of nothing.
+  listCents     Int?
+  discountCents Int?
+  totalCents    Int?
   // Notifications-page state on the v-invite side.
   isRead        Boolean  @default(false)
   createdAt     DateTime @default(now())
