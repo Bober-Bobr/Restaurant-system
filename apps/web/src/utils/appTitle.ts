@@ -58,6 +58,8 @@ export const RESTAURANT_ROLES: readonly AdminRole[] = [
   // what the tab should say — and a supervisor is likely to have the banquet
   // side open in another tab of the same browser.
   'SUPERVISOR',
+  // The section's kitchen, restaurant-scoped exactly as KITCHEN is.
+  'SMALL_KITCHEN',
 ];
 
 export type TitleContext = {

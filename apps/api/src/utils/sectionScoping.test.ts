@@ -174,26 +174,50 @@ describe('the schema and the migration', () => {
   });
 });
 
-describe('who may create a supervisor', () => {
+describe('who may create the section\'s staff', () => {
   const auth = stripComments(read('src/modules/auth/auth.service.ts'));
 
   it('the Chief Admin and the restaurant Owner, and nobody else', () => {
-    expect(auth).toContain('const SUPERVISOR_MANAGERS: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.OWNER]');
-    expect(auth).toContain('canManageSupervisors(caller.role)');
+    expect(auth).toContain('const SMALL_BANQUET_STAFF_MANAGERS: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.OWNER]');
+    expect(auth).toContain('canManageSmallBanquetStaff(caller.role)');
   });
 
-  it('and the same rule hides the account from everyone else', () => {
+  it('and it covers BOTH of the section\'s roles, not only its supervisor', () => {
+    // SMALL_KITCHEN is the section's kitchen. The tempting reading — "it behaves
+    // like KITCHEN, and a banquet ADMIN may create a KITCHEN" — would hand the
+    // other section's staffing to the section it is separated from. The rule
+    // here is the section's boundary, not the role's job description.
+    expect(auth).toContain('const SMALL_BANQUET_ROLES: AdminRole[] = [AdminRole.SUPERVISOR, AdminRole.SMALL_KITCHEN]');
+    expect(auth).toContain('isSmallBanquetRole(payload.role) && !canManageSmallBanquetStaff(caller.role)');
+  });
+
+  it('and the same rule hides the accounts from everyone else', () => {
     // Hiding a role from a dropdown is presentation, not a permission — the
     // rule that gates creation gates the list too, so a banquet ADMIN sharing a
-    // restaurant with a supervisor does not see an account they cannot act on.
+    // restaurant with the other section does not see accounts they cannot act on.
     const at = auth.indexOf('async listUsersForRestaurant(');
     expect(at).toBeGreaterThan(-1);
-    expect(auth.slice(at, at + 600)).toContain('canManageSupervisors(callerRole)');
+    const body = auth.slice(at, at + 700);
+    expect(body).toContain('canManageSmallBanquetStaff(callerRole)');
+    // The whole list, so a third small-banquet role added later is hidden too
+    // rather than being the one somebody forgets.
+    expect(body).toContain('SMALL_BANQUET_ROLES');
   });
 
-  it('a supervisor without a restaurant is refused rather than created', () => {
+  it('a small-banquet account without a restaurant is refused rather than created', () => {
     // Every page would fail on `requireRestaurant`; better to refuse than to
     // mint an account that cannot do anything.
-    expect(auth).toContain('AdminRole.SUPERVISOR && !payload.restaurantId');
+    expect(auth).toContain('isSmallBanquetRole(payload.role) && !payload.restaurantId');
+  });
+
+  it('and the section\'s kitchen is not gated on the BANQUET module', () => {
+    // It copies KITCHEN, and KITCHEN is gated on `moduleBanquet`. Copying that
+    // line too would lock a restaurant's small-banquet cooks behind a switch
+    // belonging to a module it may never have bought — Small Banquets ships
+    // with no entitlement of its own, exactly as SUPERVISOR does.
+    const at = auth.indexOf('const MODULE_BY_ROLE');
+    const table = auth.slice(at, auth.indexOf('};', at));
+    expect(table).not.toContain('SMALL_KITCHEN');
+    expect(table).not.toContain('SUPERVISOR');
   });
 });

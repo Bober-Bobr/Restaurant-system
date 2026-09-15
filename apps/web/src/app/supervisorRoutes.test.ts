@@ -104,7 +104,71 @@ describe('the section has its own look without forking a page', () => {
     // A signed-in supervisor landing on the root domain must be sent to their
     // own host BEFORE the catch-all that sends restaurant staff to the banquet
     // app — a host their role cannot get past.
-    expect(APP.indexOf("role === 'SUPERVISOR' && restaurantName"))
+    const redirect = APP.indexOf("(role === 'SUPERVISOR' || role === 'SMALL_KITCHEN') && restaurantName");
+    // -1 would pass the comparison below for free, so prove the line is there
+    // before asking where it is. The redirect was reworded once already, when
+    // the section's kitchen joined it.
+    expect(redirect, 'the supervisor redirect is gone or reworded').toBeGreaterThan(-1);
+    expect(redirect).toBeLessThan(APP.indexOf('window.location.href = buildBanquetUrl('));
+  });
+});
+
+/**
+ * The Small Banquets section's kitchen.
+ *
+ * SMALL_KITCHEN is required to work exactly as KITCHEN does — same pages, same
+ * permissions — over the section's own bookings. "Exactly as" is the part that
+ * rots, so the three roles share ONE route table (`StaffRoutes`) and this reads
+ * the router to prove they still do. A second table for the new role would pass
+ * every other test in the suite and drift from the first within a release.
+ */
+describe('the section\'s kitchen is the banquet kitchen, on the other book', () => {
+  const staff = routeTable('StaffRoutes');
+
+  it('mounts one table for EMPLOYEE, KITCHEN and SMALL_KITCHEN alike', () => {
+    expect(APP).toMatch(/role === 'EMPLOYEE' \|\| role === 'KITCHEN' \|\| role === 'SMALL_KITCHEN'/);
+    for (const path of ['/', '/calendar', '/devices']) {
+      expect(paths(staff).has(path), `${path} is missing from the staff routes`).toBe(true);
+    }
+    expect(staff).toContain('<EmployeeLayout />');
+  });
+
+  it('and the kiosk stays EMPLOYEE\'s alone, as a POSITIVE test', () => {
+    // `role !== 'KITCHEN'` was the old form, and it hands the tablet to every
+    // role added to this layout afterwards — this one included. A cook does not
+    // take bookings in either section.
+    expect(staff).toContain("role === 'EMPLOYEE' && (");
+    expect(staff).not.toContain("role !== 'KITCHEN'");
+    // The layout carries the tablet LINK, and it had the same negative form.
+    // Checked at the link rather than across the file, because the layout's
+    // own role guard names the three roles it admits and legitimately says
+    // `role !== 'KITCHEN'` while doing so.
+    const layout = readFileSync(join(__dirname, 'EmployeeLayout.tsx'), 'utf8');
+    const link = layout.slice(Math.max(0, layout.indexOf('to={`/tablet?restaurantId=') - 600), layout.indexOf('to={`/tablet?restaurantId='));
+    expect(link, 'the tablet link is gone').not.toBe('');
+    expect(link, 'the tablet link is offered by a negative role test again').not.toContain("role !== 'KITCHEN'");
+    expect(link).toContain("role === 'EMPLOYEE' && (");
+  });
+
+  it('reaches the section\'s own host rather than the banquet app', () => {
+    // A signed-in small-banquet cook landing on the root domain must be sent to
+    // supervisor.v-menu.uz — the banquet host is one their role cannot get past
+    // — and that redirect must come BEFORE the catch-all that sends restaurant
+    // staff to the banquet app.
+    expect(APP).toContain("(role === 'SUPERVISOR' || role === 'SMALL_KITCHEN')");
+    expect(APP.indexOf("role === 'SUPERVISOR' || role === 'SMALL_KITCHEN'"))
       .toBeLessThan(APP.indexOf('window.location.href = buildBanquetUrl('));
+    // …and on that host it gets the kitchen's pages, not the section admin's.
+    expect(APP).toContain("if (supRole === 'SMALL_KITCHEN') return <StaffRoutes role={supRole} />;");
+  });
+
+  it('is dressed in the section\'s colours without forking the layout', () => {
+    // Same mechanism as SupervisorLayout: `.svr-theme` redeclares every --adm-*
+    // token, so one class reaches the whole shell and the three pages under it.
+    // Forking EmployeeLayout is what this is avoiding — the two kitchens would
+    // then drift, which is the one thing the role was specified not to do.
+    const layout = readFileSync(join(__dirname, 'EmployeeLayout.tsx'), 'utf8');
+    expect(layout).toContain("'adm-bg svr-theme'");
+    expect(layout).toMatch(/role === 'SMALL_KITCHEN'/);
   });
 });

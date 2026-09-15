@@ -361,6 +361,75 @@ describe('who may create which accounts', () => {
     ))).toBe(409);
   });
 
+  describe('the Small Banquets section\'s own staff', () => {
+    // SMALL_KITCHEN is the section's kitchen: the KITCHEN role's capabilities
+    // over the OTHER section's bookings. The capabilities are copied; the
+    // STAFFING rules are not, and that is the distinction these cover.
+
+    it('a banquet ADMIN may create a KITCHEN but NOT a SMALL_KITCHEN', async () => {
+      // The trap this exists for. "It works exactly like Kitchen" is true of
+      // what the role can do and false of who may hand it out — the other
+      // section's staff are not a banquet ADMIN's to create.
+      const restaurant = repo.addRestaurant({ name: 'Registon' });
+      const caller = { id: 'a1', role: AdminRole.ADMIN, restaurantId: restaurant.id };
+      const kitchen = await service.createUserAsChief(caller, {
+        username: 'cook', password: PASSWORD, role: AdminRole.KITCHEN,
+      });
+      expect(kitchen.role).toBe(AdminRole.KITCHEN);
+      expect(await statusOf(() => service.createUserAsChief(caller, {
+        username: 'smallcook', password: PASSWORD, role: AdminRole.SMALL_KITCHEN,
+      }))).toBe(403);
+    });
+
+    it('nor may a Food Admin', async () => {
+      const restaurant = repo.addRestaurant({ name: 'Registon' });
+      const caller = { id: 'c1', role: AdminRole.CATERING_ADMIN, restaurantId: restaurant.id };
+      expect(await statusOf(() => service.createUserAsChief(caller, {
+        username: 'smallcook', password: PASSWORD, role: AdminRole.SMALL_KITCHEN,
+      }))).toBe(403);
+    });
+
+    it('the Chief Admin and the Owner may', async () => {
+      const restaurant = repo.addRestaurant({ name: 'Registon', ownerId: 'o1' });
+      const created = await service.createUserAsChief(
+        { id: 'chief', role: AdminRole.CHIEF_ADMIN, restaurantId: null },
+        { username: 'cook1', password: PASSWORD, role: AdminRole.SMALL_KITCHEN, restaurantId: restaurant.id },
+      );
+      expect(created.role).toBe(AdminRole.SMALL_KITCHEN);
+      expect(created.restaurantId).toBe(restaurant.id);
+
+      const byOwner = await service.createUserAsChief(
+        { id: 'o1', role: AdminRole.OWNER, restaurantId: null },
+        { username: 'cook2', password: PASSWORD, role: AdminRole.SMALL_KITCHEN, restaurantId: restaurant.id },
+      );
+      expect(byOwner.role).toBe(AdminRole.SMALL_KITCHEN);
+    });
+
+    it('an Owner cannot create one without naming a restaurant', async () => {
+      // Every page it would open runs behind `requireRestaurant`; the account
+      // would exist and be able to do nothing at all.
+      expect(await statusOf(() => service.createUserAsChief(
+        { id: 'o1', role: AdminRole.OWNER, restaurantId: null },
+        { username: 'cook', password: PASSWORD, role: AdminRole.SMALL_KITCHEN },
+      ))).toBe(400);
+    });
+
+    it('and it is NOT gated on the banquet module', async () => {
+      // KITCHEN is gated on `moduleBanquet`; copying that would lock the small
+      // -banquet cooks of a restaurant that never bought the banquet module.
+      const restaurant = repo.addRestaurant({ name: 'Registon', moduleBanquet: false });
+      const created = await service.createUserAsChief(
+        { id: 'chief', role: AdminRole.CHIEF_ADMIN, restaurantId: null },
+        { username: 'cook', password: PASSWORD, role: AdminRole.SMALL_KITCHEN, restaurantId: restaurant.id },
+      );
+      expect(created.role).toBe(AdminRole.SMALL_KITCHEN);
+      // …and the same account can then actually sign in, which is the half that
+      // a create-time check alone would not prove.
+      const signedIn = await service.login('cook', PASSWORD);
+      expect(signedIn.role).toBe(AdminRole.SMALL_KITCHEN);
+    });
+  });
+
   it('agrees with canManageFoodEmployees, the one rule behind it', () => {
     expect(canManageFoodEmployees(AdminRole.CHIEF_ADMIN)).toBe(true);
     expect(canManageFoodEmployees(AdminRole.OWNER)).toBe(true);
@@ -381,6 +450,20 @@ describe('listing a restaurant\'s users', () => {
     // Hiding a role from a dropdown is presentation; this is the permission.
     const users = await service.listUsersForRestaurant('r1', AdminRole.ADMIN);
     expect(users.map((u) => u.username)).toEqual(['admin', 'cook']);
+  });
+
+  it('hides the other section\'s staff from a banquet ADMIN too', async () => {
+    // Both of the section's roles, not only its supervisor: a banquet ADMIN has
+    // no more business with the small-banquet cooks than with the person
+    // running the section.
+    repo.addUser({ username: 'sup', role: AdminRole.SUPERVISOR, restaurantId: 'r1' });
+    repo.addUser({ username: 'smallcook', role: AdminRole.SMALL_KITCHEN, restaurantId: 'r1' });
+    const users = await service.listUsersForRestaurant('r1', AdminRole.ADMIN);
+    expect(users.map((u) => u.username)).not.toContain('sup');
+    expect(users.map((u) => u.username)).not.toContain('smallcook');
+    // And the Owner, who staffs the section, still sees both.
+    const owner = await service.listUsersForRestaurant('r1', AdminRole.OWNER);
+    expect(owner.map((u) => u.username)).toEqual(expect.arrayContaining(['sup', 'smallcook']));
   });
 
   it('shows them to a Food Admin', async () => {

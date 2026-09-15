@@ -23,7 +23,8 @@ const ROLE_LABELS: Record<AdminRole, string> = {
   PERFORMER: 'Performer',
   HOST: 'Host',
   CATERING_EMPLOYEE: 'Waiter',
-  SUPERVISOR: 'Supervisor'
+  SUPERVISOR: 'Supervisor',
+  SMALL_KITCHEN: 'Small Kitchen'
 };
 
 const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
@@ -39,8 +40,10 @@ const ROLE_BADGE_STYLE: Record<AdminRole, React.CSSProperties> = {
   PERFORMER: { background: '#db2777', color: '#fff' },
   HOST: { background: '#be185d', color: '#fff' },
   CATERING_EMPLOYEE: { background: '#0d9488', color: '#fff' },
-  // Jade, the Small Banquets section's own accent.
-  SUPERVISOR: { background: '#1f8f6d', color: '#fff' }
+  // Jade, the Small Banquets section's own accent — the two roles that belong
+  // to that section share it, the darker one being the one who runs it.
+  SUPERVISOR: { background: '#1f8f6d', color: '#fff' },
+  SMALL_KITCHEN: { background: '#2f7f5f', color: '#fff' }
 };
 
 const formatError = (error: unknown): string => {
@@ -130,12 +133,14 @@ export const AdminUsersPage = () => {
   // (EMPLOYEE), a Food Admin staffs the food-service floor (CATERING_EMPLOYEE).
   // Only the Owner, Chief Admin and Food Admin manage Food Employees at all.
   //
-  // SUPERVISOR is on the OWNER line only: the Small Banquets section is created
-  // by the platform or the restaurant's owner, and a banquet ADMIN runs the
-  // other section. `canManageSupervisors` on the API enforces the same rule, so
-  // this list stays presentation rather than becoming the permission.
+  // SUPERVISOR and SMALL_KITCHEN are on the OWNER line only: the Small Banquets
+  // section's staff are created by the platform or the restaurant's owner, and a
+  // banquet ADMIN runs the other section. Note that a banquet ADMIN may create a
+  // KITCHEN and still may NOT create a SMALL_KITCHEN — the rule is the section's
+  // boundary, not the role's job. `canManageSmallBanquetStaff` on the API
+  // enforces it, so this list stays presentation rather than the permission.
   const creatableRoles: AdminRole[] = currentRole === 'OWNER'
-    ? ['ADMIN', 'SUPERVISOR', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
+    ? ['ADMIN', 'SUPERVISOR', 'SMALL_KITCHEN', 'CATERING_ADMIN', 'CATERING_EMPLOYEE', 'EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
     : currentRole === 'ADMIN'
       ? ['EMPLOYEE', 'KITCHEN', 'PERFORMER', 'HOST']
       : ['CATERING_EMPLOYEE', 'KITCHEN'];
@@ -143,13 +148,14 @@ export const AdminUsersPage = () => {
   // A banquet ADMIN shares a restaurant with its Food Employees but does not
   // manage them; the server filters them out of the list too.
   const canSeeFoodEmployees = currentRole === 'OWNER' || currentRole === 'CHIEF_ADMIN' || currentRole === 'CATERING_ADMIN';
-  // Likewise for the other section's supervisor: a banquet ADMIN shares a
-  // restaurant with one and manages neither the account nor the section. The
-  // server filters it out of the list too — this only spares a round trip.
-  const canSeeSupervisors = currentRole === 'OWNER' || currentRole === 'CHIEF_ADMIN';
+  // Likewise for the other section's own staff — the supervisor who runs it and
+  // the kitchen that cooks for it. A banquet ADMIN shares a restaurant with them
+  // and manages neither the accounts nor the section. The server filters them
+  // out of the list too — this only spares a round trip.
+  const canSeeSmallBanquetStaff = currentRole === 'OWNER' || currentRole === 'CHIEF_ADMIN';
   const visibleUsers: AdminUser[] = users.filter((user: AdminUser) => {
     if (!canSeeFoodEmployees && user.role === 'CATERING_EMPLOYEE') return false;
-    if (!canSeeSupervisors && user.role === 'SUPERVISOR') return false;
+    if (!canSeeSmallBanquetStaff && (user.role === 'SUPERVISOR' || user.role === 'SMALL_KITCHEN')) return false;
     return true;
   });
   const requiresRestaurantPicker = currentRole === 'OWNER';

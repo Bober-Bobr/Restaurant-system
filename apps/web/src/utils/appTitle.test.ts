@@ -9,6 +9,7 @@ import { CONNECT_TITLE, PLATFORM_ROLES, PLATFORM_TITLE, RESTAURANT_ROLES, resolv
 const ALL_ROLES: AdminRole[] = [
   'CHIEF_ADMIN', 'MANAGER', 'OWNER', 'ADMIN', 'CATERING_ADMIN', 'RESTAURANT_MANAGER',
   'EMPLOYEE', 'KITCHEN', 'NFC_MAKER', 'PERFORMER', 'HOST', 'CATERING_EMPLOYEE',
+  'SMALL_KITCHEN',
 ];
 
 describe('roles that belong to one restaurant are titled with it', () => {

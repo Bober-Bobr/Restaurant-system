@@ -31,6 +31,9 @@ export const DEFAULT_SECTION: Section = 'BANQUET';
 export function sectionForRole(role: AdminRole | null | undefined): Section | null {
   switch (role) {
     case 'SUPERVISOR':
+    // The section's kitchen — KITCHEN's counterpart on the other book. See the
+    // API copy for why this one line is the whole of the separation.
+    case 'SMALL_KITCHEN':
       return 'SMALL_BANQUET';
     case 'ADMIN':
     case 'EMPLOYEE':

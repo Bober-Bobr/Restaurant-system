@@ -1,0 +1,14 @@
+-- Small Banquets gets a kitchen of its own.
+--
+-- SMALL_KITCHEN is the KITCHEN role's counterpart inside the Small Banquets
+-- section: the same capabilities (events + calendar + devices, no tablet) over
+-- the other section's bookings. Nothing about the data changes — which section
+-- a request belongs to is derived from the ROLE, in utils/section.ts, so the
+-- whole of this feature on the database side is one enum value.
+--
+-- ALTER TYPE ... ADD VALUE cannot run inside a transaction block on older
+-- servers, and `prisma migrate deploy` wraps each migration in one. IF NOT
+-- EXISTS makes the statement safe to repeat; Postgres 12+ (this deploy is on
+-- 16) allows it inside a transaction as long as the new value is not USED in
+-- the same transaction. Nothing else is in this migration, so that holds.
+ALTER TYPE "AdminRole" ADD VALUE IF NOT EXISTS 'SMALL_KITCHEN';

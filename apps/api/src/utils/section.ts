@@ -44,6 +44,12 @@ export function isSection(value: unknown): value is Section {
 export function sectionForRole(role: AdminRole | undefined | null): Section | null {
   switch (role) {
     case AdminRole.SUPERVISOR:
+    // The section's kitchen. This line is the entire difference between
+    // SMALL_KITCHEN and KITCHEN: the same role in the same layout over the same
+    // pages, reading the other section's book. Every query downstream —
+    // /events, the calendar, the invoice totals — is scoped by it without
+    // knowing the role exists.
+    case AdminRole.SMALL_KITCHEN:
       return 'SMALL_BANQUET';
     case AdminRole.ADMIN:
     case AdminRole.EMPLOYEE:

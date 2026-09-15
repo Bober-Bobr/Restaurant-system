@@ -25,10 +25,14 @@ export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null 
 // platform roles (CHIEF_ADMIN, MANAGER, OWNER, RESTAURANT_MANAGER, NFC_MAKER)
 // are not restaurant-scoped and are never gated here.
 //
-// SUPERVISOR is deliberately absent: Small Banquets ships without an entitlement
-// of its own, so there is no column to gate it on and inventing one silently
-// would lock the section behind a switch nobody was told to turn on. When the
-// section is sold separately this is the line that changes.
+// SUPERVISOR and SMALL_KITCHEN are deliberately absent: Small Banquets ships
+// without an entitlement of its own, so there is no column to gate it on and
+// inventing one silently would lock the section behind a switch nobody was told
+// to turn on. SMALL_KITCHEN in particular must NOT borrow `moduleBanquet` from
+// the KITCHEN role it copies — the two sections are separate products, and a
+// restaurant running only Small Banquets would find its cooks locked out by a
+// switch belonging to a module it never bought. When the section is sold
+// separately, these are the lines that change.
 const MODULE_BY_ROLE: Partial<Record<AdminRole, 'moduleBanquet' | 'moduleCatering'>> = {
   [AdminRole.ADMIN]: 'moduleBanquet',
   [AdminRole.EMPLOYEE]: 'moduleBanquet',
@@ -60,16 +64,31 @@ export function canManageFoodEmployees(role: AdminRole): boolean {
   return FOOD_EMPLOYEE_MANAGERS.includes(role);
 }
 
-// A Small Banquets supervisor is created by the platform or by the restaurant's
+// The Small Banquets section's own staff: the SUPERVISOR who runs it and the
+// SMALL_KITCHEN that cooks for it. Both are pinned to SMALL_BANQUET by
+// `sectionForRole`, and stating them as one list is what stops a third
+// small-banquet role being added later with only half these rules applied to it.
+const SMALL_BANQUET_ROLES: AdminRole[] = [AdminRole.SUPERVISOR, AdminRole.SMALL_KITCHEN];
+
+export function isSmallBanquetRole(role: AdminRole): boolean {
+  return SMALL_BANQUET_ROLES.includes(role);
+}
+
+// A Small Banquets account is created by the platform or by the restaurant's
 // owner, and by nobody else — a banquet ADMIN runs the other section and has no
 // business over this one. Same shape as the rule above, and enforced on the
 // create path AND the list path for the same reason: a banquet ADMIN sharing a
-// restaurant with a supervisor should not see the account at all, rather than
+// restaurant with a small-banquet account should not see it at all, rather than
 // see one every action on it returns 403 for.
-const SUPERVISOR_MANAGERS: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.OWNER];
+//
+// Note what this does NOT say: a banquet ADMIN may create a KITCHEN, and the
+// obvious reading of "SMALL_KITCHEN behaves like KITCHEN" would let them create
+// one of those too. It must not — that is the other section's staff, and the
+// rule here is the section's boundary, not the role's job description.
+const SMALL_BANQUET_STAFF_MANAGERS: AdminRole[] = [AdminRole.CHIEF_ADMIN, AdminRole.OWNER];
 
-export function canManageSupervisors(role: AdminRole): boolean {
-  return SUPERVISOR_MANAGERS.includes(role);
+export function canManageSmallBanquetStaff(role: AdminRole): boolean {
+  return SMALL_BANQUET_STAFF_MANAGERS.includes(role);
 }
 
 export class AuthService {
@@ -194,7 +213,7 @@ export class AuthService {
         payload.role === AdminRole.CHIEF_ADMIN ||
         payload.role === AdminRole.MANAGER
       ) {
-        throw createHttpError(403, 'Owners can only create Administrator, Supervisor, Food Admin, Restaurant Manager, Employee, or Kitchen accounts.');
+        throw createHttpError(403, 'Owners can only create Administrator, Supervisor, Small Banquets Kitchen, Food Admin, Restaurant Manager, Employee, or Kitchen accounts.');
       }
       // Any restaurant an owner assigns must be one they actually own.
       if (payload.restaurantId) {
@@ -207,25 +226,27 @@ export class AuthService {
       if (payload.role === AdminRole.RESTAURANT_MANAGER && !payload.restaurantId) {
         throw createHttpError(400, 'Select a restaurant for the manager.');
       }
-      // A supervisor runs one restaurant's Small Banquets section. Without a
-      // restaurant there is nothing for them to administer and every page would
+      // A Small Banquets account works inside one restaurant's section. Without
+      // a restaurant there is nothing for them to work on and every page would
       // fail on `requireRestaurant` — better to refuse here than to mint an
       // account that cannot do anything.
-      if (payload.role === AdminRole.SUPERVISOR && !payload.restaurantId) {
-        throw createHttpError(400, 'Select a restaurant for the supervisor.');
+      if (isSmallBanquetRole(payload.role) && !payload.restaurantId) {
+        throw createHttpError(400, payload.role === AdminRole.SUPERVISOR
+          ? 'Select a restaurant for the supervisor.'
+          : 'Select a restaurant for the Small Banquets kitchen account.');
       }
     }
     // Food Employees are the food-service product's own staff.
     if (payload.role === AdminRole.CATERING_EMPLOYEE && !canManageFoodEmployees(caller.role)) {
       throw createHttpError(403, 'Only the Owner, Chief Admin or Food Admin can create Food Employee accounts.');
     }
-    // Small Banquets supervisors are created by the platform or the restaurant's
+    // Small Banquets staff are created by the platform or the restaurant's
     // owner, and by nobody else. Stated here rather than only in the two role
     // dropdowns, because a dropdown is presentation and this is a permission —
     // the ADMIN / CATERING_ADMIN branch below would refuse it anyway, and this
     // gives the caller the actual reason instead of a generic list.
-    if (payload.role === AdminRole.SUPERVISOR && !canManageSupervisors(caller.role)) {
-      throw createHttpError(403, 'Only the Chief Admin or the restaurant Owner can create Supervisor accounts.');
+    if (isSmallBanquetRole(payload.role) && !canManageSmallBanquetStaff(caller.role)) {
+      throw createHttpError(403, 'Only the Chief Admin or the restaurant Owner can create Small Banquets accounts.');
     }
 
     if (caller.role === AdminRole.ADMIN || caller.role === AdminRole.CATERING_ADMIN) {
@@ -279,7 +300,9 @@ export class AuthService {
     if (!callerRole) return users;
     const hidden = new Set<AdminRole>();
     if (!canManageFoodEmployees(callerRole)) hidden.add(AdminRole.CATERING_EMPLOYEE);
-    if (!canManageSupervisors(callerRole)) hidden.add(AdminRole.SUPERVISOR);
+    // Both of the other section's roles, not just its supervisor: a banquet
+    // ADMIN has no more business with its cooks than with the person running it.
+    if (!canManageSmallBanquetStaff(callerRole)) for (const role of SMALL_BANQUET_ROLES) hidden.add(role);
     return hidden.size === 0 ? users : users.filter((user) => !hidden.has(user.role));
   }
 
@@ -299,7 +322,11 @@ export class AuthService {
     if ((callerRole === AdminRole.ADMIN || callerRole === AdminRole.CATERING_ADMIN) && target.role !== AdminRole.EMPLOYEE && target.role !== AdminRole.KITCHEN) {
       throw createHttpError(403, 'Administrators can only delete Employee or Kitchen accounts.');
     }
-    if (callerRole === AdminRole.EMPLOYEE || callerRole === AdminRole.KITCHEN) {
+    // Floor staff manage nobody. SMALL_KITCHEN is here for the same reason
+    // KITCHEN is, and this is exactly the kind of list a new role gets left out
+    // of — leaving it out would have handed the section's cook the ability to
+    // delete accounts the role it copies cannot touch.
+    if (callerRole === AdminRole.EMPLOYEE || callerRole === AdminRole.KITCHEN || callerRole === AdminRole.SMALL_KITCHEN) {
       throw createHttpError(403, 'Forbidden.');
     }
     await this.authRepository.deleteById(targetId);

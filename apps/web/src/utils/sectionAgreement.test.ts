@@ -22,6 +22,7 @@ import type { AdminRole } from '../store/auth.store';
 const ROLES: AdminRole[] = [
   'CHIEF_ADMIN', 'MANAGER', 'OWNER', 'ADMIN', 'CATERING_ADMIN', 'RESTAURANT_MANAGER',
   'EMPLOYEE', 'KITCHEN', 'NFC_MAKER', 'PERFORMER', 'HOST', 'CATERING_EMPLOYEE', 'SUPERVISOR',
+  'SMALL_KITCHEN',
 ];
 
 describe('the two copies of the section rule agree', () => {
@@ -41,6 +42,19 @@ describe('which section a role works in', () => {
   it('a supervisor is pinned to Small Banquets', () => {
     expect(api.sectionForRole('SUPERVISOR' as never)).toBe('SMALL_BANQUET');
     expect(web.sectionOfRole('SUPERVISOR')).toBe('SMALL_BANQUET');
+  });
+
+  it('and so is the section\'s kitchen', () => {
+    // SMALL_KITCHEN is KITCHEN's counterpart, and this one line is the entire
+    // difference between them: same role, same layout, same three pages, the
+    // other section's book. Were it to fall back to null it would not merely
+    // read the wrong events — it would become a role that may NAME its own
+    // section, which is the one thing a pinned role must never be able to do.
+    expect(api.sectionForRole('SMALL_KITCHEN' as never)).toBe('SMALL_BANQUET');
+    expect(web.sectionOfRole('SMALL_KITCHEN')).toBe('SMALL_BANQUET');
+    for (const asked of ['BANQUET', 'SMALL_BANQUET', 'junk', '', null, undefined]) {
+      expect(api.resolveSection('SMALL_KITCHEN' as never, asked)).toBe('SMALL_BANQUET');
+    }
   });
 
   it('the banquet staff roles are pinned to Banquet', () => {

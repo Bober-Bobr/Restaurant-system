@@ -44,7 +44,7 @@ describe('one table per role, and only their own product', () => {
   it('a role nobody has assigned a table gets none', () => {
     // Not a default. Inheriting the wrong product's switches is how a
     // restaurant loses dishes it never touched.
-    for (const role of ['EMPLOYEE', 'KITCHEN', 'CATERING_EMPLOYEE', 'NFC_MAKER', 'PERFORMER'] as AdminRole[]) {
+    for (const role of ['EMPLOYEE', 'KITCHEN', 'SMALL_KITCHEN', 'CATERING_EMPLOYEE', 'NFC_MAKER', 'PERFORMER'] as AdminRole[]) {
       expect(settingsScopesFor(role), role).toEqual([]);
     }
     expect(settingsScopesFor(null)).toEqual([]);

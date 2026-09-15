@@ -204,6 +204,16 @@ enum AdminRole {
   // packages, extra services and events (see `section` on those models). The
   // dish table is the one thing the two sections share.
   SUPERVISOR
+  // Small Banquets — the section's kitchen. KITCHEN's counterpart, with exactly
+  // the same capabilities (events + calendar + devices, no tablet) over the
+  // OTHER section's bookings: `sectionForRole` pins it to SMALL_BANQUET, which
+  // is the whole of the separation, exactly as it is for SUPERVISOR.
+  //
+  // A separate role rather than a KITCHEN with a section flag on the row,
+  // because the section is derived from the role everywhere else in the product
+  // — a second mechanism saying which section someone belongs to is a second
+  // mechanism that can disagree with the first.
+  SMALL_KITCHEN
 }
 
 model AdminUser {

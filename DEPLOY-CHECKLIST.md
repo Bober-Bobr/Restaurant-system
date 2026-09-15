@@ -2942,3 +2942,39 @@ Migration `20260914110000_drop_promo_cover_slugs` — drops `InvitePromoShowcase
 5. `\d "InvitePromoShowcase"` no longer lists a `coverSlugs` column.
 6. A previously starred invitation is no longer pulled to the front — it sits
    wherever the list order puts it. Re-order with the arrows if wanted.
+
+## §56 — Small Banquets: the SMALL_KITCHEN role (**has a migration**)
+
+Migration `20260915100000_admin_role_small_kitchen` — one statement,
+`ALTER TYPE "AdminRole" ADD VALUE IF NOT EXISTS 'SMALL_KITCHEN'`. No table is
+touched and no row changes; which section a request belongs to is derived from
+the role in `utils/section.ts`, so the whole feature is one enum value plus code.
+
+The role is the banquet `KITCHEN`'s counterpart inside Small Banquets: the same
+three pages (events, calendar, devices), no kiosk, over the section's own
+bookings. It signs in at `supervisor.v-menu.uz/<slug>`, beside the supervisor.
+
+**After deploying:**
+
+1. Chief Admin → Users → create a `SMALL KITCHEN (SMALL BANQUETS)` account and
+   assign it a restaurant. The restaurant picker must appear; creating one
+   **without** a restaurant is refused.
+2. Sign in as it on `v-menu.uz`. You land on `supervisor.v-menu.uz/<slug>`, NOT
+   on the banquet app.
+3. The shell is the **jade** Small Banquets theme, the badge reads "Малая кухня"
+   / "Small Kitchen" / "Kichik oshxona", and there is **no Tablet link** — the
+   same three links a banquet Kitchen has.
+4. The events list shows the section's bookings **only**. Cross-check against a
+   `SUPERVISOR` on the same restaurant: same list. Then open the banquet ADMIN
+   for that restaurant — its events must be a different set, and none of them
+   may appear for the small kitchen.
+5. Open a booking: the dish breakdown is the Kitchen's view (the package's own
+   dishes listed), matching what a banquet KITCHEN sees on its side.
+6. As a **banquet ADMIN** for that restaurant, open Users: the small-kitchen
+   account (and the supervisor) are **not listed**, and `SMALL KITCHEN` is not
+   offered in the create dropdown. Both are the other section's staff.
+7. A restaurant with `moduleBanquet` **off**: the small-kitchen account still
+   signs in. (It must not borrow the banquet module's entitlement — that is the
+   one gate deliberately not copied from KITCHEN.)
+8. The account cannot delete users or reach any admin page: typing
+   `/admin/menu` on that host lands back on the events list.

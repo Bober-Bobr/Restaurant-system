@@ -287,10 +287,12 @@ export const App = () => {
       window.location.href = buildFoodAdminUrl(toSubdomainSlug(restaurantName));
       return null;
     }
-    // SUPERVISOR → supervisor.v-menu.uz/<slug>. Must come before the catch-all
-    // below, which would otherwise send them to the banquet app — a host their
-    // role cannot get past.
-    if (accessToken && role === 'SUPERVISOR' && restaurantName && window.location.pathname !== '/login') {
+    // SUPERVISOR and SMALL_KITCHEN → supervisor.v-menu.uz/<slug>. Must come
+    // before the catch-all below, which would otherwise send them to the banquet
+    // app — a host their role cannot get past. The kitchen is sent to the same
+    // host as the section it cooks for, so the two share one bookmark and one
+    // login target; what they each see there is decided by role, below.
+    if (accessToken && (role === 'SUPERVISOR' || role === 'SMALL_KITCHEN') && restaurantName && window.location.pathname !== '/login') {
       window.location.href = buildSupervisorUrl(toSubdomainSlug(restaurantName));
       return null;
     }
@@ -396,7 +398,7 @@ export const App = () => {
   // server from the caller's role — see apps/api/src/utils/section.ts.
   if (isSupervisorHost()) {
     const { accessToken, role: supRole } = useAuthStore.getState();
-    if (!accessToken || supRole !== 'SUPERVISOR') {
+    if (!accessToken || (supRole !== 'SUPERVISOR' && supRole !== 'SMALL_KITCHEN')) {
       if (window.location.pathname !== '/login') {
         window.location.href = buildAbsoluteUrl('/login');
         return null;
@@ -408,6 +410,9 @@ export const App = () => {
         </Routes>
       );
     }
+    // The section's kitchen gets the kitchen's pages, not the section admin's —
+    // the SAME table the banquet KITCHEN is mounted on, so the two cannot drift.
+    if (supRole === 'SMALL_KITCHEN') return <StaffRoutes role={supRole} />;
     return <SupervisorRoutes />;
   }
 
@@ -490,6 +495,43 @@ const SupervisorRoutes = () => (
   </Routes>
 );
 
+/**
+ * The floor staff's routes: EMPLOYEE, KITCHEN and SMALL_KITCHEN.
+ *
+ * ONE table for all three, deliberately. SMALL_KITCHEN is required to work
+ * exactly as KITCHEN does, and the way to keep that true is for the two to be
+ * the same code rather than two tables somebody has to remember to change
+ * together — the same reasoning that has the Small Banquets section mounting
+ * the banquet admin app's own pages (see `SupervisorRoutes`).
+ *
+ * What separates them is not here:
+ *   · the DATA — which section's events these pages list — is decided on the
+ *     server from the role, in apps/api/src/utils/section.ts;
+ *   · the LOOK — the Small Banquets jade — is a token scope on the layout.
+ *
+ * The tablet is EMPLOYEE's alone. Written as a positive test rather than
+ * `role !== 'KITCHEN'`, which would have silently handed the kiosk to every
+ * role added afterwards, this one included.
+ */
+const StaffRoutes = ({ role }: { role: AdminRole }) => (
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    {role === 'EMPLOYEE' && (
+      <Route element={<TabletLayout />}>
+        <Route path="/tablet" element={<TabletMenuPage />} />
+        <Route path="/tablet/summary" element={<TabletSummaryPage />} />
+        <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
+      </Route>
+    )}
+    <Route element={<EmployeeLayout />}>
+      <Route path="/" element={<EmployeeEventsPage />} />
+      <Route path="/calendar" element={<CalendarPage />} />
+      <Route path="/devices" element={<DevicesPage />} />
+    </Route>
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+);
+
 // Role-based routing — the tail of the host waterfall above.
 const RoleRoutes = () => {
   // RESTAURANT_MANAGER → expense ledger + devices, not tied to a restaurant.
@@ -554,26 +596,12 @@ const RoleRoutes = () => {
     );
   }
 
-  // EMPLOYEE → simplified layout (with tablet); KITCHEN → same layout but no tablet access
-  if (role === 'EMPLOYEE' || role === 'KITCHEN') {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        {role === 'EMPLOYEE' && (
-          <Route element={<TabletLayout />}>
-            <Route path="/tablet" element={<TabletMenuPage />} />
-            <Route path="/tablet/summary" element={<TabletSummaryPage />} />
-            <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
-          </Route>
-        )}
-        <Route element={<EmployeeLayout />}>
-          <Route path="/" element={<EmployeeEventsPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    );
+  // EMPLOYEE → simplified layout (with tablet); KITCHEN and SMALL_KITCHEN →
+  // the same layout with no tablet access. SMALL_KITCHEN reaches this branch on
+  // localhost / v-menu.local, where dev keeps role-based routing at root paths;
+  // in production the supervisor host above catches it first.
+  if (role === 'EMPLOYEE' || role === 'KITCHEN' || role === 'SMALL_KITCHEN') {
+    return <StaffRoutes role={role} />;
   }
 
   return (

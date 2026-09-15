@@ -43,13 +43,23 @@ export const EmployeeLayout = () => {
   });
 
   if (!accessToken) return <Navigate to="/login" replace />;
-  if (role !== 'EMPLOYEE' && role !== 'KITCHEN') { navigate('/', { replace: true }); return null; }
+  if (role !== 'EMPLOYEE' && role !== 'KITCHEN' && role !== 'SMALL_KITCHEN') { navigate('/', { replace: true }); return null; }
 
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-  const roleColor = role === 'KITCHEN' ? { bg: 'rgba(234,88,12,0.18)', fg: '#fb923c', border: 'rgba(234,88,12,0.35)' } : { bg: 'rgba(22,163,74,0.18)', fg: '#4ade80', border: 'rgba(22,163,74,0.35)' };
+  // The Small Banquets kitchen is this same shell in the section's own colours.
+  // Reusing the layout rather than forking it is the point: the two kitchens
+  // must not drift, and the section's look is a TOKEN SCOPE — `.svr-theme`
+  // redeclares every `--adm-*` token, so one class reaches the whole page and
+  // the three pages beneath it without a single per-page style.
+  const smallBanquet = role === 'SMALL_KITCHEN';
+  const roleColor = smallBanquet
+    ? { bg: 'rgba(31,143,109,0.18)', fg: '#4ade80', border: 'rgba(31,143,109,0.4)' }
+    : role === 'KITCHEN'
+      ? { bg: 'rgba(234,88,12,0.18)', fg: '#fb923c', border: 'rgba(234,88,12,0.35)' }
+      : { bg: 'rgba(22,163,74,0.18)', fg: '#4ade80', border: 'rgba(22,163,74,0.35)' };
 
   return (
-    <div className="adm-bg">
+    <div className={smallBanquet ? 'adm-bg svr-theme' : 'adm-bg'}>
       {/* Sticky, blurred, closed by a fading gold rule — see .adm-topbar. */}
       <nav className="adm-topbar">
         <div className="emp-nav-row" style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -68,7 +78,7 @@ export const EmployeeLayout = () => {
               <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(226,232,240,0.55)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', overflow: 'hidden' }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</span>
                 <span className="adm-badge" style={{ background: roleColor.bg, color: roleColor.fg, border: `1px solid ${roleColor.border}`, flexShrink: 0 }}>
-                  {t(role === 'KITCHEN' ? 'kitchen_role' : 'employee_role')}
+                  {t(smallBanquet ? 'small_kitchen_role' : role === 'KITCHEN' ? 'kitchen_role' : 'employee_role')}
                 </span>
               </p>
             </div>
@@ -118,7 +128,10 @@ export const EmployeeLayout = () => {
             >
               {t('devices')}
             </Link>
-            {role !== 'KITCHEN' && (
+            {/* The kiosk is EMPLOYEE's alone. A positive test, not
+                `!== 'KITCHEN'` — that form silently handed the tablet to every
+                role added to this layout afterwards, this one included. */}
+            {role === 'EMPLOYEE' && (
               <Link
                 to={`/tablet?restaurantId=${tabletRestaurantId}`}
                 style={{
