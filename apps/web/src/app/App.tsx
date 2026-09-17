@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminEventsPage } from '../pages/AdminEventsPage';
+import { FloorMapPage } from '../pages/FloorMapPage';
 import { AdminInvoicesPage } from '../pages/AdminInvoicesPage';
 import { AdminNotificationsPage } from '../pages/AdminNotificationsPage';
 import { AdminSettingsPage } from '../pages/AdminSettingsPage';
@@ -476,7 +477,11 @@ const SupervisorRoutes = () => (
       <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
     </Route>
     <Route element={<SupervisorLayout />}>
-      <Route path="/" element={<AdminEventsPage />} />
+      {/* The floor map is the section's main page — the first place it differs
+          from the banquet app instead of mounting the same page. Events moved
+          to /events; utils/eventsPath.ts is what shared pages ask. */}
+      <Route path="/" element={<FloorMapPage />} />
+      <Route path="/events" element={<AdminEventsPage />} />
       <Route path="/calendar" element={<CalendarPage />} />
       <Route path="/devices" element={<DevicesPage />} />
       <Route path="/admin/invoices" element={<AdminInvoicesPage />} />

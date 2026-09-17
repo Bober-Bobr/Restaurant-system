@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
+import { useAuthStore } from '../store/auth.store';
+import { eventsPath } from '../utils/eventsPath';
 import { translate } from '../utils/translate';
 import type { Event, Hall } from '../types/domain';
 
@@ -358,7 +360,7 @@ function EventDayBox({
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{ev.name}</p>
               <button
                 type="button"
-                onClick={() => { onClose(); navigate(`/?editEventId=${ev.id}`); }}
+                onClick={() => { onClose(); navigate(`${eventsPath(useAuthStore.getState().role)}?editEventId=${ev.id}`); }}
                 style={{
                   flexShrink: 0,
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',

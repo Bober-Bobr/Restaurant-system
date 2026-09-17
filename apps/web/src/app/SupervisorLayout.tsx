@@ -94,7 +94,9 @@ export const SupervisorLayout = () => {
     {
       label: t('nav_group_bookings'),
       items: [
-        { to: '/', label: t('events') },
+        // The map is home; the events list sits right under it.
+        { to: '/', label: t('floor_map') },
+        { to: '/events', label: t('events') },
         { to: '/calendar', label: t('calendar') },
         { to: '/admin/invoices', label: t('invoices') },
         { to: '/admin/notifications', label: t('notifications') },

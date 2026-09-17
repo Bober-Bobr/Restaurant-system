@@ -2978,3 +2978,54 @@ bookings. It signs in at `supervisor.v-menu.uz/<slug>`, beside the supervisor.
    one gate deliberately not copied from KITCHEN.)
 8. The account cannot delete users or reach any admin page: typing
    `/admin/menu` on that host lands back on the events list.
+
+## §57 — Small Banquets: the floor map (**has a migration**)
+
+Migration `20260917100000_floor_map`:
+
+- `Hall` gains `kind` (`'HALL'` default, or `'OUTDOOR'`) and four nullable map
+  columns (`mapX`, `mapY`, `mapWidth`, `mapHeight`). Every existing hall stays a
+  hall with no position; the map lays unplaced halls out by itself.
+- New table `FloorTable` (number, seats, shape, position, rotation), hanging off
+  a hall with `ON DELETE CASCADE`. It carries no restaurant or section of its
+  own; both are reached through the hall.
+
+The supervisor's main page (`supervisor.v-menu.uz/<slug>/`) is now the **map**,
+and the events list moved to **`/events`**. New API: `/api/floor-map`, limited
+to SUPERVISOR, CHIEF_ADMIN and OWNER.
+
+The real floor plan (restaurant and hall names on a photo) is still to come.
+Until then, what gets drawn is whatever the supervisor sets out.
+
+**After deploying:**
+
+1. Sign in as a SUPERVISOR. You land on the **Map**, first in the rail;
+   **Events** is directly under it and still lists the section's bookings.
+2. Every Small Banquets hall that already existed is on the map, laid out in a
+   row. No banquet-section hall appears (cross-check the names against the
+   banquet ADMIN's Halls page).
+3. Press **Edit map**, then **Add area** → type **Outdoor area**, name and
+   capacity → Create. It appears with a dashed outline, clear of the others,
+   and is now also listed on the section's Halls page.
+4. Select an area → **Add a table here**. A table "1" with four chairs appears.
+   Press **+** on Seats: a chair is added on the map at once, and at six seats a
+   chair appears at each end.
+5. Drag a table: it moves and **stays there after a page reload**. Drag it onto
+   another area: it moves there (the Area picker in the panel follows). Drag it
+   off the map: it stops at the edge of its own area.
+6. Drag one table onto another: both are outlined **red** and the panel explains
+   why. That is a warning, not a refusal.
+7. Rename a table to a number already used in the same area: the change is
+   refused with a message and the old number comes back. The same number in a
+   different area is accepted.
+8. Drag an area by its name strip, and resize it from the corner. It will not
+   shrink smaller than the tables standing in it. Reload: the positions hold.
+9. Delete an area from the panel: it disappears from the map **and** from the
+   Halls page, taking its tables with it.
+10. Calendar → open a day → **edit** on a booking: it opens the booking on
+    `/events`, not the map.
+11. As a SMALL_KITCHEN and as a banquet ADMIN, `GET /api/floor-map` answers
+    **403**. Neither app shows a map.
+12. On a phone: the map opens zoomed in and scrolls inside its frame, and the
+    page itself does not scroll sideways. A table can be dragged by touch in
+    edit mode, while in view mode a swipe scrolls instead of moving tables.

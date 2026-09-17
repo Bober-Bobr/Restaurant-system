@@ -172,3 +172,42 @@ describe('the section\'s kitchen is the banquet kitchen, on the other book', () 
     expect(layout).toMatch(/role === 'SMALL_KITCHEN'/);
   });
 });
+
+/**
+ * The floor map — the first place Small Banquets DIFFERS from the banquet app.
+ *
+ * Everything above holds that the section mounts the banquet app's pages; this
+ * is the deliberate exception, and it moves the events list. A move like that
+ * breaks quietly: a shared page linking to `/` for "the events" would open the
+ * map on this host and drop the event it was asked to show.
+ */
+describe('the floor map is the section\'s main page', () => {
+  it('is mounted at / in the supervisor app, and the events list moved to /events', () => {
+    expect(supervisor).toContain('<Route path="/" element={<FloorMapPage />} />');
+    expect(supervisor).toContain('<Route path="/events" element={<AdminEventsPage />} />');
+    expect(supervisor).not.toContain('<Route path="/" element={<AdminEventsPage />} />');
+  });
+
+  it('only there: the banquet app keeps its events at /', () => {
+    expect(banquetAdmin).toContain('<Route path="/" element={<AdminEventsPage />} />');
+    expect(banquetAdmin).not.toContain('FloorMapPage');
+    expect(routeTable('StaffRoutes')).not.toContain('FloorMapPage');
+  });
+
+  it('is first in the rail, with the events right under it', () => {
+    const layout = readFileSync(join(__dirname, 'SupervisorLayout.tsx'), 'utf8');
+    const map = layout.indexOf("{ to: '/', label: t('floor_map') }");
+    const events = layout.indexOf("{ to: '/events', label: t('events') }");
+    expect(map, 'the map is not in the rail').toBeGreaterThan(-1);
+    expect(events, 'the events list is not in the rail').toBeGreaterThan(-1);
+    expect(map).toBeLessThan(events);
+    // …and nothing in the rail still sends "events" to the map.
+    expect(layout).not.toContain("{ to: '/', label: t('events') }");
+  });
+
+  it('the calendar\'s edit link asks where the events are instead of assuming /', () => {
+    const calendar = readFileSync(join(__dirname, '..', 'pages', 'CalendarPage.tsx'), 'utf8');
+    expect(calendar).not.toMatch(/navigate\(`\/\?editEventId/);
+    expect(calendar).toContain('eventsPath(');
+  });
+});

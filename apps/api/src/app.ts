@@ -17,6 +17,7 @@ import { publicApiRouter } from './modules/public/public.routes.js';
 import { tableCategoryRouter } from './modules/tableCategory/tableCategory.routes.js';
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
+import { floorMapRouter } from './modules/floorMap/floorMap.routes.js';
 import { orderRouter } from './modules/order/order.routes.js';
 import { nfcPlaqueRouter } from './modules/nfcPlaque/nfcPlaque.routes.js';
 import { performerRouter } from './modules/performer/performer.routes.js';
@@ -78,6 +79,12 @@ protectedApi.use('/exports', requireRestaurant, exportRouter);
 protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/extra-services', requireRestaurant, extraServiceRouter);
+// The Small Banquets floor map. The supervisor who runs the section, plus the
+// platform roles that may name a section. NOT the kitchen and not the banquet
+// ADMIN: the map is where tables are created and moved, and requireRestaurant
+// would scope a banquet ADMIN to the other section's halls anyway.
+protectedApi.use('/floor-map', requireRestaurant,
+  requireRole(AdminRole.SUPERVISOR, AdminRole.CHIEF_ADMIN, AdminRole.OWNER), floorMapRouter);
 // Food-service orders (waiter side). Restaurant-scoped: the claim-by-code
 // lookup is confined to the caller's own restaurant.
 protectedApi.use('/orders', requireRestaurant, orderRouter);

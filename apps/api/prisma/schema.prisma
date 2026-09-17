@@ -559,10 +559,23 @@ model Hall {
   isActive     Boolean     @default(true)
   // BANQUET | SMALL_BANQUET — see Event.section. A hall belongs to one section.
   section      String      @default("BANQUET")
+  // HALL | OUTDOOR. An outdoor area is a hall in every other respect — it holds
+  // tables, takes bookings and is scoped by section — so it is a kind of hall
+  // rather than a parallel model the map and the booking pickers would both
+  // have to learn. Plain string, like `section`: a third kind needs no migration.
+  kind         String      @default("HALL")
+  // Where the area sits on the floor map, in map units (see floorMap.ts on the
+  // web). Null until someone places it: the map lays unplaced areas out itself,
+  // so every hall created before the map existed still appears on it.
+  mapX         Int?
+  mapY         Int?
+  mapWidth     Int?
+  mapHeight    Int?
   restaurantId String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   events       Event[]
+  floorTables  FloorTable[]
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   // Scoped by section as well as by restaurant: the two sections keep separate
@@ -571,6 +584,36 @@ model Hall {
   @@unique([restaurantId, section, name])
   @@index([restaurantId])
   @@index([restaurantId, section])
+}
+
+/// A table drawn on the floor map (Small Banquets).
+///
+/// Deliberately NOT `TableCategory`, which is a banquet PRICE PACKAGE despite
+/// its name. This is furniture: a numbered table with chairs, standing in a hall.
+///
+/// It carries no restaurantId and no section of its own. Both come from the
+/// hall, and every query reaches them through the relation — a table with its
+/// own copy of the section is a table that can disagree with the room it is in.
+model FloorTable {
+  id        String   @id @default(cuid())
+  hallId    String
+  // What staff call it — "5", "VIP 2". Unique within its hall, not the
+  // restaurant: two rooms may both have a table 1.
+  label     String
+  seats     Int
+  // RECT | ROUND. Its size follows from the seat count, so there is no width.
+  shape     String   @default("RECT")
+  // The table's CENTRE, relative to the hall's top-left corner, in map units —
+  // so moving a hall carries its tables with it.
+  x         Int
+  y         Int
+  rotation  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@unique([hallId, label])
+  @@index([hallId])
 }
 
 model MenuItem {
