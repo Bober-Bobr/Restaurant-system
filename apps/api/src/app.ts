@@ -18,6 +18,7 @@ import { tableCategoryRouter } from './modules/tableCategory/tableCategory.route
 import { hallRouter } from './modules/hall/hall.routes.js';
 import { extraServiceRouter } from './modules/extraService/extraService.routes.js';
 import { floorMapRouter } from './modules/floorMap/floorMap.routes.js';
+import { shellSettingsRouter } from './modules/shellSettings/shellSettings.routes.js';
 import { orderRouter } from './modules/order/order.routes.js';
 import { nfcPlaqueRouter } from './modules/nfcPlaque/nfcPlaque.routes.js';
 import { performerRouter } from './modules/performer/performer.routes.js';
@@ -79,6 +80,9 @@ protectedApi.use('/exports', requireRestaurant, exportRouter);
 protectedApi.use('/table-categories', requireRestaurant, tableCategoryRouter);
 protectedApi.use('/halls', requireRestaurant, hallRouter);
 protectedApi.use('/extra-services', requireRestaurant, extraServiceRouter);
+// The tablet's and the catering site's visual effects. Which of the two a
+// request reaches is decided from the role inside (shellSettings.rules.ts).
+protectedApi.use('/shell-settings', requireRestaurant, shellSettingsRouter);
 // The Small Banquets floor map. The supervisor who runs the section, plus the
 // platform roles that may name a section. NOT the kitchen and not the banquet
 // ADMIN: the map is where tables are created and moved, and requireRestaurant

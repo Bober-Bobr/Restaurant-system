@@ -14,6 +14,8 @@ import { dishName, dishDescription } from '../utils/menuI18n';
 import { formatSum } from '../utils/currency';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
+import { ParticleField } from '../blocks/ParticleField';
+import { STILL_CLASS, cateringShell } from '../utils/shellSettings';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import type { Hall, MenuItem } from '../types/domain';
 import { CATEGORY_LABEL_KEY, orderCategories, type MenuCategory } from '../utils/menuCategories';
@@ -85,6 +87,9 @@ function CateringLayout({
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const revealRef = useScrollReveal<HTMLElement>();
+  // The food admin's switches (Settings → Shell settings). Catering fields
+  // only — the tablet's switches are a different system and never read here.
+  const shell = cateringShell(restaurant);
 
   const navLink: React.CSSProperties = {
     padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600,
@@ -92,12 +97,15 @@ function CateringLayout({
   };
 
   return (
-    <div className="cs-root" style={{ minHeight: '100vh', position: 'relative', background: '#0a0a0a', color: C.text }}>
+    <div className={`cs-root${shell.animations ? '' : ` ${STILL_CLASS}`}`} style={{ minHeight: '100vh', position: 'relative', background: '#0a0a0a', color: C.text }}>
       {/* Sparkly white cursor/finger trail (matches the invitation effect) */}
-      <FingerTrail accent="#ffffff" />
+      {shell.trail && <FingerTrail accent="#ffffff" />}
 
       {/* Looping background music */}
-      <MusicPlayer src="/catering-music.mp3" accent="#ffffff" />
+      {shell.music && <MusicPlayer src="/catering-music.mp3" accent="#ffffff" />}
+
+      {/* White, like everything else on this monochrome site. */}
+      {shell.particles !== 'none' && <ParticleField kind={shell.particles} color="#ffffff" fixed />}
 
       {/* Full-site background photo (grayscale, dimmed) */}
       {bg && (

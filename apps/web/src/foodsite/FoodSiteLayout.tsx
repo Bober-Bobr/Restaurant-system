@@ -5,6 +5,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { useScrollReveal } from '../utils/useScrollReveal';
 import { FingerTrail } from '../components/FingerTrail';
 import { MusicPlayer } from '../components/MusicPlayer';
+import { ParticleField } from '../blocks/ParticleField';
+import { STILL_CLASS, cateringShell } from '../utils/shellSettings';
 import type { PublicRestaurantDetail } from '../services/publicRestaurant.service';
 import type { MenuItem } from '../types/domain';
 import { accentStyle, resolveAccent } from './theme';
@@ -41,13 +43,17 @@ export function FoodSiteLayout({
   const logo = restaurant?.logoUrl ? getPhotoUrl(restaurant.logoUrl) : null;
   const bg = restaurant?.backgroundImageUrl ? getPhotoUrl(restaurant.backgroundImageUrl) : null;
   const { accent } = resolveAccent(restaurant?.tabletAccentColor);
+  // The food admin's switches — this is the catering site's overhaul, so it
+  // follows the catering settings, never the tablet's.
+  const shell = cateringShell(restaurant);
 
   return (
-    <div className="fs-root" style={accentStyle(restaurant?.tabletAccentColor)}>
-      <FingerTrail accent={accent} />
+    <div className={`fs-root${shell.animations ? '' : ` ${STILL_CLASS}`}`} style={accentStyle(restaurant?.tabletAccentColor)}>
+      {shell.trail && <FingerTrail accent={accent} />}
       {/* Raised above the floating cart bar when that is on screen, otherwise
           the two overlap in the bottom-right corner. */}
-      <MusicPlayer src="/catering-music.mp3" accent={accent} bottomOffset={cartBarVisible ? 82 : 18} />
+      {shell.music && <MusicPlayer src="/catering-music.mp3" accent={accent} bottomOffset={cartBarVisible ? 82 : 18} />}
+      {shell.particles !== 'none' && <ParticleField kind={shell.particles} color={accent} fixed />}
 
       {/* Base wash, with or without a photo, so the page is never dead flat and
           foreground cards always have something to sit on. */}

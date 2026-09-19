@@ -3077,3 +3077,36 @@ npm run import:floor-plan -w @banquet/api -- --restaurant "Sangizar"
    default size.
 9. On a phone: the tabs scroll sideways, the map opens zoomed and scrolls inside
    its frame, and the page itself does not scroll sideways.
+
+## §59 — Shell settings: the tablet's and the catering site's effects (**has a migration**)
+
+Migration `20260920100000_shell_settings` adds seven columns to `Restaurant`:
+`tabletAnimations` · `tabletMusic` · `tabletTrail` and `cateringAnimations` ·
+`cateringMusic` · `cateringTrail` (all `DEFAULT true`) plus `cateringParticles`
+(null = none). The defaults are what both surfaces already did, so **nothing
+looks different after the deploy** until somebody saves a setting.
+
+New API: `GET/PUT /api/shell-settings`. The main admin reaches the tablet's
+settings, the food admin the catering site's — decided from the role on the
+server.
+
+**After deploying:**
+
+1. As a banquet ADMIN, open **Settings**: below the category list is **Shell
+   settings → Tablet**, with four options, all on and particles "None".
+2. Switch **Music** off → Save. Open the tablet: the welcome screen no longer
+   starts music and there is no music button.
+3. Switch **Block appearance animations** off → Save. On the tablet, dishes and
+   panels appear at once instead of fading and rising in — and **every card is
+   visible** (nothing blank).
+4. Switch **Cursor trail** off; choose **Snow** for particles → Save. The tablet
+   has no trail and snow falls.
+5. As the **Food Admin** of the same restaurant, open Settings: the block reads
+   **Catering site**, and it is still all on — the tablet changes above did not
+   reach it. Turn its music off and pick particles; check `v-menu.uz/<slug>` and
+   `test.v-menu.uz/<slug>` follow — and that the tablet has not changed back.
+6. As the Supervisor, Settings shows **no** shell block (their kiosk follows the
+   main admin's tablet settings).
+7. A restaurant whose manager portal set a custom particle image: the tablet
+   block shows "Custom image" as the current choice, and keeps it until another
+   kind is chosen.

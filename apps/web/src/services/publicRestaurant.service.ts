@@ -15,6 +15,11 @@ export type PublicRestaurantSummary = {
   categoryOrder?: string[] | null;
   hideSubcategories?: boolean;
   companyName?: string | null;
+  // The catering site's shell settings (see utils/shellSettings.ts).
+  cateringAnimations?: boolean;
+  cateringMusic?: boolean;
+  cateringTrail?: boolean;
+  cateringParticles?: string | null;
 };
 
 // Identity + module entitlements for a restaurant resolved by its URL slug.
@@ -33,6 +38,8 @@ export type PublicRestaurantDetail = PublicRestaurantSummary & {
   tabletAccentColor: string | null; tabletBgColor: string | null;
   tabletParticles: string | null; tabletParticlesColor: string | null; tabletParticlesImageUrl: string | null;
   tabletTrailTemplate: string | null; tabletTrailColor: string | null; tabletTrailImageUrl: string | null;
+  // The tablet's shell switches (its particles are tabletParticles above).
+  tabletAnimations?: boolean; tabletMusic?: boolean; tabletTrail?: boolean;
   moduleBanquet: boolean; moduleCatering: boolean; moduleAddons: boolean;
 };
 

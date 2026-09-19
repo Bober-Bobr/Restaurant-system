@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { tabletShell } from '../utils/shellSettings';
 import { useAuthStore } from './auth.store';
 import { sectionOfRole } from '../utils/section';
 import { publicHallService } from '../services/publicHall.service';
@@ -23,6 +24,11 @@ type PublicDataState = {
   tabletTrailTemplate: string | null;
   tabletTrailColor: string | null;
   tabletTrailImageUrl: string | null;
+  // Shell settings — the main admin's switches for this kiosk. ON until loaded,
+  // which is what the tablet did before they existed.
+  tabletAnimations: boolean;
+  tabletMusic: boolean;
+  tabletTrail: boolean;
   // Whether this restaurant bought the Additional Services module — drives the
   // button on the booking-confirmed screen.
   moduleAddons: boolean;
@@ -47,6 +53,9 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   tabletTrailTemplate: null,
   tabletTrailColor: null,
   tabletTrailImageUrl: null,
+  tabletAnimations: true,
+  tabletMusic: true,
+  tabletTrail: true,
   moduleAddons: false,
   isLoading: false,
   error: undefined,
@@ -95,6 +104,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
         tabletTrailTemplate: restaurant.tabletTrailTemplate ?? null,
         tabletTrailColor: restaurant.tabletTrailColor ?? null,
         tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
+        ...(() => { const shell = tabletShell(restaurant); return { tabletAnimations: shell.animations, tabletMusic: shell.music, tabletTrail: shell.trail }; })(),
         moduleAddons: !!restaurant.moduleAddons,
         isLoaded: true
       });

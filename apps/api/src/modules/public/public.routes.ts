@@ -205,6 +205,12 @@ router.get('/restaurants', async (_request, response, next) => {
       categoryOrder: parseCategoryOrder(r.categoryOrder),
       hideSubcategories: r.hideSubcategories ?? false,
       companyName: r.company?.name ?? null,
+      // The catering site's shell settings — this list is what the live
+      // catering site reads. Never the tablet's: this is not its payload.
+      cateringAnimations: r.cateringAnimations,
+      cateringMusic: r.cateringMusic,
+      cateringTrail: r.cateringTrail,
+      cateringParticles: r.cateringParticles ?? null,
     })));
   } catch (error) { next(error); }
 });
@@ -246,6 +252,16 @@ router.get('/restaurant', async (request, response, next) => {
       tabletTrailTemplate: restaurant.tabletTrailTemplate ?? null,
       tabletTrailColor: restaurant.tabletTrailColor ?? null,
       tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
+      // Shell settings. Both systems' switches are public — each surface reads
+      // only its own (the tablet the tablet*, the food-service site the
+      // catering*), and none of them is a secret.
+      tabletAnimations: restaurant.tabletAnimations,
+      tabletMusic: restaurant.tabletMusic,
+      tabletTrail: restaurant.tabletTrail,
+      cateringAnimations: restaurant.cateringAnimations,
+      cateringMusic: restaurant.cateringMusic,
+      cateringTrail: restaurant.cateringTrail,
+      cateringParticles: restaurant.cateringParticles ?? null,
       // Which paid products this restaurant has. Public on purpose: the tablet
       // decides whether to offer the Additional Services button, and that flow
       // is unauthenticated.

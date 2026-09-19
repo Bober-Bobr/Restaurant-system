@@ -1836,6 +1836,12 @@ export const TabletMenuPage = () => {
   const tabletTrailTemplate     = usePublicDataStore((s) => s.tabletTrailTemplate);
   const tabletTrailColor        = usePublicDataStore((s) => s.tabletTrailColor);
   const tabletTrailImageUrl     = usePublicDataStore((s) => s.tabletTrailImageUrl);
+  const tabletMusicOn           = usePublicDataStore((s) => s.tabletMusic);
+  const tabletTrailOn           = usePublicDataStore((s) => s.tabletTrail);
+  // Switched off while a track is already playing (the settings load after the
+  // welcome was dismissed on a previous visit): stop it, rather than leave the
+  // guest with music and no toggle to silence it.
+  useEffect(() => { if (!tabletMusicOn) pauseTabletMusic(); }, [tabletMusicOn]);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const error             = usePublicDataStore((s) => s.error);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
@@ -1884,7 +1890,8 @@ export const TabletMenuPage = () => {
   }, []);
 
   const dismissWelcome = () => {
-    startTabletMusic();
+    // Music is the main admin's switch (Settings → Shell settings).
+    if (tabletMusicOn) startTabletMusic();
     markTabletWelcomeShown();
     setWelcomeShown(true);
   };
@@ -1947,7 +1954,7 @@ export const TabletMenuPage = () => {
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8"
       style={tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties}>
       {/* Bottom-right music on/off toggle, like the catering site. */}
-      {welcomeShown && <TabletMusicToggle />}
+      {welcomeShown && tabletMusicOn && <TabletMusicToggle />}
       {welcomeShown && selectedTableCategory && (
         <RunningTotal
           perGuestCents={pricing.perGuestCents}
@@ -2078,11 +2085,13 @@ export const TabletMenuPage = () => {
           fixed
         />
       )}
-      <FingerTrail
-        accent={tabletTrailColor || tabletAccentColor || '#d8b45f'}
-        template={(tabletTrailTemplate as TrailTemplate) || 'sparkle'}
-        imageUrl={tabletTrailImageUrl ? (getPhotoUrl(tabletTrailImageUrl) ?? tabletTrailImageUrl) : null}
-      />
+      {tabletTrailOn && (
+        <FingerTrail
+          accent={tabletTrailColor || tabletAccentColor || '#d8b45f'}
+          template={(tabletTrailTemplate as TrailTemplate) || 'sparkle'}
+          imageUrl={tabletTrailImageUrl ? (getPhotoUrl(tabletTrailImageUrl) ?? tabletTrailImageUrl) : null}
+        />
+      )}
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} compact />}
       {replacingExtra && selectedTableCategory && (
         <ExtraReplaceModal

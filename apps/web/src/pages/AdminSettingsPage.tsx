@@ -6,6 +6,8 @@ import { translate } from '../utils/translate';
 import { EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcludedCategories';
 import { useAuthStore, type AdminRole } from '../store/auth.store';
 import type { MenuItem, MenuScope } from '../types/domain';
+import { shellSystemsFor } from '../utils/shellSettings';
+import { ShellSettingsSection } from './ShellSettingsSection';
 
 type MenuCategory = MenuItem['category'];
 
@@ -246,6 +248,12 @@ export const AdminSettingsPage = () => {
       {saveMutation.isError && (
         <p style={{ color: '#fca5a5', fontSize: 13, marginTop: 14 }}>{t('settings_save_failed')}</p>
       )}
+
+      {/* The main admin's tablet, or the food admin's catering site — one
+          system per role, never both (see utils/shellSettings.ts). */}
+      {shellSystemsFor(role).map((system) => (
+        <ShellSettingsSection key={system} system={system} t={t} />
+      ))}
     </main>
   );
 };

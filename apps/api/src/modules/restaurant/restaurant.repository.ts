@@ -47,6 +47,11 @@ export class RestaurantRepository {
         backgroundImageUrl: true,
         categoryOrder: true,
         hideSubcategories: true,
+        // The catering site's shell settings (never the tablet's).
+        cateringAnimations: true,
+        cateringMusic: true,
+        cateringTrail: true,
+        cateringParticles: true,
         company: { select: { name: true, logoUrl: true } },
       },
     });

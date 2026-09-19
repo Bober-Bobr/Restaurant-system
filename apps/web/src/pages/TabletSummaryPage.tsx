@@ -221,6 +221,7 @@ export const TabletSummaryPage = () => {
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
+  const trailOn           = usePublicDataStore((s) => s.tabletTrail);
   const tableCategories   = usePublicDataStore((s) => s.tableCategories);
   const extraServices     = usePublicDataStore((s) => s.extraServices);
   const restaurantName    = usePublicDataStore((s) => s.restaurantName);
@@ -725,7 +726,7 @@ export const TabletSummaryPage = () => {
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8" style={themeStyle}>
 
       <PageBackground />
-      <FingerTrail accent="var(--rg-accent)" />
+      {trailOn && <FingerTrail accent="var(--rg-accent)" />}
 
       <div ref={revealRef} className="relative mx-auto max-w-5xl space-y-4 sm:space-y-6">
         {/* Back to the menu to tweak the current selection — the fromSummary flag
