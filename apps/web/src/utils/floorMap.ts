@@ -1,22 +1,36 @@
 /**
  * The floor map's geometry — the pure half of FloorMapPage.
  *
- * Everything is in MAP UNITS, one coordinate space the SVG scales to the
- * screen, so a phone and a wall display show the same plan. An area (a hall or
- * an outdoor area) is a rectangle in that space; a table's position is its
- * CENTRE, relative to its area's top-left corner, so moving an area carries its
- * tables along with nothing to recompute.
+ * Everything is in MAP UNITS, which the SVG scales to the screen, so a phone
+ * and a wall display show the same plan. Each area (a hall or an outdoor venue)
+ * has a map of its OWN — the page switches between them — and a table's
+ * position is its CENTRE within its area's map.
  *
- * A table has no width or height of its own. Its size FOLLOWS FROM ITS SEATS:
- * add a chair and the table grows to make room for it. That is what keeps the
- * chairs drawn along the sides honest — a free-sized table could be given
- * twelve chairs and the length of four.
+ * A table's size comes one of two ways. Left alone, it FOLLOWS FROM ITS SEATS:
+ * add a chair and the table grows to make room for it. Resized by hand, it
+ * keeps the size it was given and the chairs spread round it — but it can
+ * never be made too small for its chairs (`fitTableSize`), which is what keeps
+ * the chairs drawn along the sides honest.
  */
 
 export type AreaKind = 'HALL' | 'OUTDOOR';
 export type TableShape = 'RECT' | 'ROUND';
 
-export type AreaLayout = { mapX: number; mapY: number; mapWidth: number; mapHeight: number };
+
+/** The size of an area's own map. */
+export type AreaSize = { mapWidth: number; mapHeight: number };
+
+/**
+ * The drawing under an area's tables — mirrors floorMap.features.ts on the API,
+ * which validates it. `water` and `stage` are where nobody is seated.
+ */
+export type FeatureKind = 'zone' | 'water' | 'stage' | 'path' | 'label';
+type FeatureCommon = { kind: FeatureKind; label?: string; labelAt?: [number, number]; color?: string };
+export type MapFeature = FeatureCommon & (
+  | { shape: 'rect' | 'ellipse'; x: number; y: number; width: number; height: number }
+  | { shape: 'polygon'; points: [number, number][] }
+  | { shape: 'point'; x: number; y: number }
+);
 
 export type MapArea = {
   id: string;
@@ -24,10 +38,9 @@ export type MapArea = {
   kind: AreaKind | string;
   capacity: number;
   isActive: boolean;
-  mapX: number | null;
-  mapY: number | null;
   mapWidth: number | null;
   mapHeight: number | null;
+  mapFeatures?: MapFeature[] | null;
 };
 
 export type MapTable = {
@@ -39,7 +52,13 @@ export type MapTable = {
   x: number;
   y: number;
   rotation: number;
+  /** Null = sized from the seats; set = resized by hand. */
+  width?: number | null;
+  height?: number | null;
 };
+
+/** What decides a table's footprint. */
+export type TableGeometry = Pick<MapTable, 'shape' | 'seats' | 'rotation' | 'width' | 'height'>;
 
 export type FloorMap = { areas: MapArea[]; tables: MapTable[] };
 
@@ -93,9 +112,28 @@ function roundRadius(seats: number): number {
   return Math.max(ROUND_MIN_RADIUS, Math.ceil(ring - CHAIR_GAP - CHAIR_DEPTH / 2));
 }
 
-/** The tabletop's size, before rotation. */
-export function tableSize(shape: TableShape | string, rawSeats: number): { width: number; height: number } {
+/** Smallest and largest a table may be resized to (mirrors the API's bounds). */
+export const MIN_TABLE = 30;
+export const MAX_TABLE = 2000;
+
+type ExplicitSize = { width?: number | null; height?: number | null } | null | undefined;
+
+const isExplicit = (size: ExplicitSize): size is { width: number; height: number } =>
+  size != null && size.width != null && size.height != null;
+
+/**
+ * The tabletop's size, before rotation: the size it was given, or the one its
+ * seats call for. A round table is always a circle — the larger side wins.
+ */
+export function tableSize(shape: TableShape | string, rawSeats: number, size?: ExplicitSize): { width: number; height: number } {
   const seats = clampSeats(rawSeats);
+  if (isExplicit(size)) {
+    if (shape === 'ROUND') {
+      const d = Math.max(size.width, size.height);
+      return { width: d, height: d };
+    }
+    return { width: size.width, height: size.height };
+  }
   if (shape === 'ROUND') {
     const d = roundRadius(seats) * 2;
     return { width: d, height: d };
@@ -110,10 +148,12 @@ export function tableSize(shape: TableShape | string, rawSeats: number): { width
  *
  * Always exactly `seats` chairs — the test suite holds that for every count.
  */
-export function chairsFor(shape: TableShape | string, rawSeats: number): Chair[] {
+export function chairsFor(shape: TableShape | string, rawSeats: number, size?: ExplicitSize): Chair[] {
   const seats = clampSeats(rawSeats);
-  const { width, height } = tableSize(shape, seats);
+  const { width, height } = tableSize(shape, seats, size);
   const offset = CHAIR_GAP + CHAIR_DEPTH / 2;
+
+  if (shape !== 'ROUND' && isExplicit(size)) return rectChairs(seats, width, height);
 
   if (shape === 'ROUND') {
     const ring = width / 2 + offset;
@@ -142,47 +182,164 @@ export function chairsFor(shape: TableShape | string, rawSeats: number): Chair[]
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** How many chairs a side of this length seats, each with a full pitch. */
+const sideCapacity = (length: number) => Math.max(0, Math.floor(length / CHAIR_PITCH));
+
+/**
+ * Chairs per side of a resized rectangular table: the two LONGER sides first,
+ * alternately, then the two ends — which is how a table is laid in a room, and
+ * what makes a slight resize of an automatic table keep its chairs where they
+ * were rather than jumping one onto each end.
+ *
+ * Past the table's capacity (only from data written round the map; the map's
+ * own resizing never allows it) the remainder goes round all four sides, so
+ * the count drawn is still the count stored.
+ */
+export function rectSideCounts(seats: number, width: number, height: number): { top: number; bottom: number; left: number; right: number } {
+  const counts = { top: 0, bottom: 0, left: 0, right: 0 };
+  const longPair: (keyof typeof counts)[] = width >= height ? ['top', 'bottom'] : ['left', 'right'];
+  const endPair: (keyof typeof counts)[] = width >= height ? ['left', 'right'] : ['top', 'bottom'];
+  const cap = (side: keyof typeof counts) => sideCapacity(side === 'top' || side === 'bottom' ? width : height);
+  let left = seats;
+  for (const pair of [longPair, endPair]) {
+    let placed = true;
+    while (left > 0 && placed) {
+      placed = false;
+      for (const side of pair) {
+        if (left > 0 && counts[side] < cap(side)) { counts[side] += 1; left -= 1; placed = true; }
+      }
+    }
+  }
+  const all = [...longPair, ...endPair];
+  for (let i = 0; left > 0; i += 1, left -= 1) counts[all[i % 4]] += 1;
+  return counts;
+}
+
+function rectChairs(seats: number, width: number, height: number): Chair[] {
+  const offset = CHAIR_GAP + CHAIR_DEPTH / 2;
+  const { top, bottom, left, right } = rectSideCounts(seats, width, height);
+  const along = (count: number, length: number) =>
+    Array.from({ length: count }, (_, i) => round2((i + 0.5) * (length / count) - length / 2));
+  return [
+    ...along(top, width).map((x) => ({ x, y: -(height / 2 + offset), angle: 0 })),
+    ...along(bottom, width).map((x) => ({ x, y: height / 2 + offset, angle: 180 })),
+    ...along(left, height).map((y) => ({ x: -(width / 2 + offset), y, angle: 270 })),
+    ...along(right, height).map((y) => ({ x: width / 2 + offset, y, angle: 90 })),
+  ];
+}
+
+/** How many chairs a table of this size seats without any two touching. */
+export function seatCapacity(shape: TableShape | string, width: number, height: number): number {
+  if (shape === 'ROUND') {
+    const ring = Math.max(width, height) / 2 + CHAIR_GAP + CHAIR_DEPTH / 2;
+    return Math.floor((2 * Math.PI * ring) / CHAIR_PITCH);
+  }
+  return 2 * sideCapacity(width) + 2 * sideCapacity(height);
+}
+
+/**
+ * A size asked for — by a resize handle, or by adding a seat to a resized
+ * table — made legal: within MIN/MAX_TABLE, and big enough for its chairs. A
+ * table too small for its seats grows along its longer side, a chair's pitch
+ * at a time; a round one grows its diameter.
+ */
+export function fitTableSize(shape: TableShape | string, rawSeats: number, width: number, height: number): { width: number; height: number } {
+  const seats = clampSeats(rawSeats);
+  const clamp = (v: number) => Math.round(Math.min(MAX_TABLE, Math.max(MIN_TABLE, Number.isFinite(v) ? v : MIN_TABLE)));
+  let w = clamp(width);
+  let h = clamp(height);
+  if (shape === 'ROUND') {
+    let d = Math.max(w, h);
+    while (seatCapacity('ROUND', d, d) < seats && d < MAX_TABLE) d = Math.min(MAX_TABLE, d + 2);
+    return { width: d, height: d };
+  }
+  while (seatCapacity('RECT', w, h) < seats && (w < MAX_TABLE || h < MAX_TABLE)) {
+    if ((w >= h && w < MAX_TABLE) || h >= MAX_TABLE) w = Math.min(MAX_TABLE, w + CHAIR_PITCH);
+    else h = Math.min(MAX_TABLE, h + CHAIR_PITCH);
+  }
+  return { width: w, height: h };
+}
+
 /**
  * Half the width and height of the box a table occupies ON THE MAP — tabletop
  * plus chairs, after rotation. Used for keeping tables inside their area and
  * off each other.
  */
-export function tableHalfExtents(table: Pick<MapTable, 'shape' | 'seats' | 'rotation'>): { hx: number; hy: number } {
-  const { width, height } = tableSize(table.shape, table.seats);
-  const reach = CHAIR_GAP + CHAIR_DEPTH;
-  const seats = clampSeats(table.seats);
-  const fw = table.shape === 'ROUND' ? width + 2 * reach : width + (endChairs(seats) ? 2 * reach : 0);
-  const fh = table.shape === 'ROUND' ? height + 2 * reach : height + 2 * reach;
+export function tableHalfExtents(table: Pick<TableGeometry, 'shape' | 'seats' | 'rotation'> & Partial<TableGeometry>): { hx: number; hy: number } {
+  const { ax, ay } = footprintHalf(table);
   const rad = ((table.rotation % 360) * Math.PI) / 180;
   // Rounded, because cos(90°) is 6e-17 rather than 0 and the ceil below would
   // then grow a table turned upright by a unit.
   const c = Math.abs(Math.round(Math.cos(rad) * 1e6) / 1e6);
   const s = Math.abs(Math.round(Math.sin(rad) * 1e6) / 1e6);
-  return { hx: Math.ceil((c * fw + s * fh) / 2), hy: Math.ceil((s * fw + c * fh) / 2) };
+  return { hx: Math.ceil(c * ax + s * ay), hy: Math.ceil(s * ax + c * ay) };
+}
+
+/**
+ * Half the footprint — tabletop plus chairs — in the table's OWN axes, before
+ * it is turned. `tableHalfExtents` is the upright box round it; the overlap
+ * test uses this directly, because the upright box of a table turned 60° is far
+ * wider than the table.
+ */
+export function footprintHalf(table: Pick<TableGeometry, 'shape' | 'seats'> & Partial<TableGeometry>): { ax: number; ay: number } {
+  const { width, height } = tableSize(table.shape, table.seats, table);
+  const reach = CHAIR_GAP + CHAIR_DEPTH;
+  const seats = clampSeats(table.seats);
+  let fw: number;
+  let fh: number;
+  if (table.shape === 'ROUND') {
+    fw = width + 2 * reach;
+    fh = height + 2 * reach;
+  } else if (isExplicit(table)) {
+    // Kept symmetric about the centre: a side with a chair reaches out on both.
+    const c = rectSideCounts(seats, width, height);
+    fw = width + (c.left || c.right ? 2 * reach : 0);
+    fh = height + (c.top || c.bottom ? 2 * reach : 0);
+  } else {
+    fw = width + (endChairs(seats) ? 2 * reach : 0);
+    fh = height + 2 * reach;
+  }
+  return { ax: fw / 2, ay: fh / 2 };
+}
+
+/**
+ * Whether two tables' footprints overlap, exactly, however each is turned — the
+ * separating-axis test on two rectangles. A round table is its footprint's
+ * square, which is what its chairs sweep anyway.
+ */
+export function footprintsOverlap(a: MapTable, b: MapTable): boolean {
+  const boxOf = (t: MapTable) => {
+    const { ax, ay } = footprintHalf(t);
+    const rad = (((t.shape === 'ROUND' ? 0 : t.rotation) % 360) * Math.PI) / 180;
+    return { cx: t.x, cy: t.y, ax, ay, u: [Math.cos(rad), Math.sin(rad)], v: [-Math.sin(rad), Math.cos(rad)] };
+  };
+  const A = boxOf(a);
+  const B = boxOf(b);
+  const d = [B.cx - A.cx, B.cy - A.cy];
+  const dot = (p: number[], q: number[]) => p[0] * q[0] + p[1] * q[1];
+  // 1e-6: two tables exactly edge to edge touch, they do not overlap.
+  return [A.u, A.v, B.u, B.v].every((n) => {
+    const ra = A.ax * Math.abs(dot(A.u, n)) + A.ay * Math.abs(dot(A.v, n));
+    const rb = B.ax * Math.abs(dot(B.u, n)) + B.ay * Math.abs(dot(B.v, n));
+    return Math.abs(dot(d, n)) < ra + rb - 1e-6;
+  });
 }
 
 export const nextRotation = (rotation: number) => (((rotation + 45) % 360) + 360) % 360;
 
 // ── Areas ───────────────────────────────────────────────────────────────────
 
-/** The strip across the top of an area that carries its name. Tables stay below it. */
-export const AREA_HEADER = 44;
 export const AREA_PADDING = 12;
-export const MIN_AREA = { width: 240, height: 180 };
-const DEFAULT_AREA: Record<AreaKind, { width: number; height: number }> = {
-  HALL: { width: 720, height: 480 },
-  OUTDOOR: { width: 720, height: 360 },
+export const MIN_AREA = { width: 400, height: 300 };
+/** A new area's map before anybody sizes it. An outdoor venue is usually the bigger. */
+export const DEFAULT_AREA: Record<AreaKind, { width: number; height: number }> = {
+  HALL: { width: 1200, height: 800 },
+  OUTDOOR: { width: 1600, height: 1000 },
 };
-/** Space between auto-placed areas and around the map's edge. */
-export const MAP_GAP = 40;
-/** Auto-placement wraps to a new row past this width. */
-export const MAP_WRAP_WIDTH = 2400;
-const MIN_WORLD = { width: 1200, height: 700 };
 
-export const isPlaced = (a: Pick<MapArea, 'mapX' | 'mapY' | 'mapWidth' | 'mapHeight'>) =>
-  a.mapX != null && a.mapY != null && a.mapWidth != null && a.mapHeight != null;
+export const defaultAreaSize = (kind: AreaKind | string) => DEFAULT_AREA[kind === 'OUTDOOR' ? 'OUTDOOR' : 'HALL'];
 
-/** The smallest an area may be while still holding every table standing in it. */
+/** The smallest an area's map may be while still holding every table standing in it. */
 export function minAreaSize(tables: MapTable[]): { width: number; height: number } {
   let width = MIN_AREA.width;
   let height = MIN_AREA.height;
@@ -195,116 +352,110 @@ export function minAreaSize(tables: MapTable[]): { width: number; height: number
 }
 
 /**
- * Every area's rectangle: the stored one where it has been placed, otherwise a
- * spot found for it.
- *
- * Unplaced areas are every hall that existed before the map did, and every
- * hall created from the Halls page since. They go in a row-wrapping grid BELOW
- * everything already placed, in the order given, so placing them never
- * overlaps a room somebody positioned by hand.
+ * The size of an area's map: the one stored, or — for every hall made before
+ * the map, or on the Halls page since — the default for its kind. Either way
+ * never too small for the tables in it, so nothing is ever drawn off the edge.
  */
-export function resolveLayouts(areas: MapArea[], tables: MapTable[]): Map<string, AreaLayout> {
-  const out = new Map<string, AreaLayout>();
-  let top = MAP_GAP;
-  for (const a of areas) {
-    if (!isPlaced(a)) continue;
-    const layout = { mapX: a.mapX!, mapY: a.mapY!, mapWidth: a.mapWidth!, mapHeight: a.mapHeight! };
-    out.set(a.id, layout);
-    top = Math.max(top, layout.mapY + layout.mapHeight + MAP_GAP);
-  }
+export function areaSize(area: Pick<MapArea, 'kind' | 'mapWidth' | 'mapHeight'>, tables: MapTable[]): { width: number; height: number } {
+  const base = area.mapWidth != null && area.mapHeight != null
+    ? { width: area.mapWidth, height: area.mapHeight }
+    : defaultAreaSize(area.kind);
+  const fit = minAreaSize(tables);
+  return { width: Math.max(base.width, fit.width), height: Math.max(base.height, fit.height) };
+}
 
-  let x = MAP_GAP;
-  let y = top;
-  let rowHeight = 0;
-  for (const a of areas) {
-    if (isPlaced(a)) continue;
-    const base = DEFAULT_AREA[a.kind === 'OUTDOOR' ? 'OUTDOOR' : 'HALL'];
-    const fit = minAreaSize(tables.filter((t) => t.hallId === a.id));
-    const width = Math.max(base.width, fit.width);
-    const height = Math.max(base.height, fit.height);
-    if (x > MAP_GAP && x + width > MAP_WRAP_WIDTH) {
-      x = MAP_GAP;
-      y += rowHeight + MAP_GAP;
-      rowHeight = 0;
+// ── The drawing ─────────────────────────────────────────────────────────────
+
+export const BLOCKING_KINDS: readonly FeatureKind[] = ['water', 'stage'];
+
+/** A feature as the list the page reads: whatever the column holds, only well-formed features survive. */
+export function featuresOf(area: Pick<MapArea, 'mapFeatures'>): MapFeature[] {
+  const raw = Array.isArray(area.mapFeatures) ? area.mapFeatures : [];
+  return raw.filter((f): f is MapFeature => !!f && typeof f === 'object' && typeof (f as MapFeature).shape === 'string');
+}
+
+/** Where a feature's name is written. */
+export function featureLabelAt(f: MapFeature): [number, number] {
+  if (f.labelAt) return f.labelAt;
+  if (f.shape === 'polygon') {
+    const n = f.points.length || 1;
+    return [f.points.reduce((s, p) => s + p[0], 0) / n, f.points.reduce((s, p) => s + p[1], 0) / n];
+  }
+  if (f.shape === 'point') return [f.x, f.y];
+  return [f.x + f.width / 2, f.y + f.height / 2];
+}
+
+type Box = { x: number; y: number; hx: number; hy: number };
+
+/**
+ * Whether a table's footprint, centred at (x, y), reaches onto a feature where
+ * nobody is seated. An ellipse is tested exactly — scaled to a unit circle, the
+ * box's nearest point must stay outside it — because its bounding box would
+ * wrongly keep tables off the ground round a pool, which is where they go.
+ */
+export function hitsBlockingFeature(box: Box, features: MapFeature[]): boolean {
+  return features.some((f) => {
+    if (!BLOCKING_KINDS.includes(f.kind)) return false;
+    if (f.shape === 'ellipse') {
+      const rx = f.width / 2; const ry = f.height / 2;
+      const cx = f.x + rx; const cy = f.y + ry;
+      const nx = Math.min(Math.max(cx, box.x - box.hx), box.x + box.hx);
+      const ny = Math.min(Math.max(cy, box.y - box.hy), box.y + box.hy);
+      return ((nx - cx) / rx) ** 2 + ((ny - cy) / ry) ** 2 < 1;
     }
-    out.set(a.id, { mapX: x, mapY: y, mapWidth: width, mapHeight: height });
-    x += width + MAP_GAP;
-    rowHeight = Math.max(rowHeight, height);
-  }
-  return out;
-}
-
-/** Where a NEW area goes: exactly where the auto-placement would put it. */
-export function placeNewArea(areas: MapArea[], tables: MapTable[], kind: AreaKind): AreaLayout {
-  const probe: MapArea = {
-    id: ' new', name: '', kind, capacity: 0, isActive: true, mapX: null, mapY: null, mapWidth: null, mapHeight: null,
-  };
-  // Pin every existing area first, so the new one lands after all of them
-  // rather than in the unplaced grid alongside them.
-  const pinned = [...resolveLayouts(areas, tables)].map(([id, l]) => ({ ...probe, id, ...l }));
-  return resolveLayouts([...pinned, probe], tables).get(probe.id)!;
-}
-
-/** The size of the drawing: everything on it, plus a margin, never smaller than a floor. */
-export function worldSize(layouts: Iterable<AreaLayout>): { width: number; height: number } {
-  let width = MIN_WORLD.width;
-  let height = MIN_WORLD.height;
-  for (const l of layouts) {
-    width = Math.max(width, l.mapX + l.mapWidth + MAP_GAP);
-    height = Math.max(height, l.mapY + l.mapHeight + MAP_GAP);
-  }
-  return { width, height };
-}
-
-/** The area under a point on the map. Later areas are drawn on top, so they win. */
-export function areaAt(point: { x: number; y: number }, layouts: Map<string, AreaLayout>): string | null {
-  let hit: string | null = null;
-  for (const [id, l] of layouts) {
-    if (point.x >= l.mapX && point.x <= l.mapX + l.mapWidth && point.y >= l.mapY && point.y <= l.mapY + l.mapHeight) hit = id;
-  }
-  return hit;
+    let minX: number; let minY: number; let maxX: number; let maxY: number;
+    if (f.shape === 'polygon') {
+      minX = Math.min(...f.points.map((p) => p[0])); maxX = Math.max(...f.points.map((p) => p[0]));
+      minY = Math.min(...f.points.map((p) => p[1])); maxY = Math.max(...f.points.map((p) => p[1]));
+    } else if (f.shape === 'rect') {
+      minX = f.x; minY = f.y; maxX = f.x + f.width; maxY = f.y + f.height;
+    } else {
+      return false;
+    }
+    return box.x + box.hx > minX && box.x - box.hx < maxX && box.y + box.hy > minY && box.y - box.hy < maxY;
+  });
 }
 
 // ── Tables in an area ───────────────────────────────────────────────────────
 
-/** A table centre moved as far as needed to keep the whole table inside its area, below the header. */
+/** A table centre moved as far as needed to keep the whole table, chairs included, on its area's map. */
 export function clampTable(
   pos: { x: number; y: number },
-  table: Pick<MapTable, 'shape' | 'seats' | 'rotation'>,
+  table: Pick<TableGeometry, 'shape' | 'seats' | 'rotation'> & Partial<TableGeometry>,
   area: { width: number; height: number },
 ): { x: number; y: number } {
   const { hx, hy } = tableHalfExtents(table);
   const clampAxis = (v: number, lo: number, hi: number) => (hi < lo ? Math.round((lo + hi) / 2) : Math.round(Math.min(hi, Math.max(lo, v))));
   return {
     x: clampAxis(pos.x, hx + AREA_PADDING, area.width - hx - AREA_PADDING),
-    y: clampAxis(pos.y, AREA_HEADER + hy, area.height - hy - AREA_PADDING),
+    y: clampAxis(pos.y, hy + AREA_PADDING, area.height - hy - AREA_PADDING),
   };
 }
 
-const overlaps = (
-  a: { x: number; y: number; hx: number; hy: number },
-  b: { x: number; y: number; hx: number; hy: number },
-  margin: number,
-) => Math.abs(a.x - b.x) < a.hx + b.hx + margin && Math.abs(a.y - b.y) < a.hy + b.hy + margin;
+const overlaps = (a: Box, b: Box, margin: number) =>
+  Math.abs(a.x - b.x) < a.hx + b.hx + margin && Math.abs(a.y - b.y) < a.hy + b.hy + margin;
 
 /**
  * The first spot, reading left to right and top to bottom, where a new table
- * fits inside the area without touching another. Null when the area is full —
- * the caller decides what to do then, rather than this silently stacking
- * tables on top of each other.
+ * fits on the area's map without touching another table — or the pool, or the
+ * stage. Null when there is none: the caller decides what to do then, rather
+ * than this silently stacking tables on top of each other.
  */
 export function freeSpot(
-  table: Pick<MapTable, 'shape' | 'seats' | 'rotation'>,
+  table: Pick<TableGeometry, 'shape' | 'seats' | 'rotation'> & Partial<TableGeometry>,
   area: { width: number; height: number },
   others: MapTable[],
+  features: MapFeature[] = [],
 ): { x: number; y: number } | null {
   const { hx, hy } = tableHalfExtents(table);
   const boxes = others.map((o) => ({ x: o.x, y: o.y, ...tableHalfExtents(o) }));
-  const STEP = 10;
+  // A step in proportion to the map, so a venue-sized plan is not 50 000 probes.
+  const STEP = Math.max(10, Math.round(Math.max(area.width, area.height) / 160));
   const MARGIN = 12;
-  for (let y = AREA_HEADER + hy; y <= area.height - hy - AREA_PADDING; y += STEP) {
+  for (let y = hy + AREA_PADDING; y <= area.height - hy - AREA_PADDING; y += STEP) {
     for (let x = hx + AREA_PADDING; x <= area.width - hx - AREA_PADDING; x += STEP) {
-      if (!boxes.some((b) => overlaps({ x, y, hx, hy }, b, MARGIN))) return { x, y };
+      const me = { x, y, hx, hy };
+      if (!boxes.some((b) => overlaps(me, b, MARGIN)) && !hitsBlockingFeature(me, features)) return { x, y };
     }
   }
   return null;
@@ -321,14 +472,13 @@ export function freeSpot(
  */
 export function overlappingTables(tables: MapTable[]): Set<string> {
   const out = new Set<string>();
-  const boxes = tables.map((t) => ({ t, ...tableHalfExtents(t) }));
-  for (let i = 0; i < boxes.length; i += 1) {
-    for (let j = i + 1; j < boxes.length; j += 1) {
-      const a = boxes[i]; const b = boxes[j];
-      if (a.t.hallId !== b.t.hallId) continue;
-      if (overlaps({ x: a.t.x, y: a.t.y, hx: a.hx, hy: a.hy }, { x: b.t.x, y: b.t.y, hx: b.hx, hy: b.hy }, 0)) {
-        out.add(a.t.id);
-        out.add(b.t.id);
+  for (let i = 0; i < tables.length; i += 1) {
+    for (let j = i + 1; j < tables.length; j += 1) {
+      const a = tables[i]; const b = tables[j];
+      if (a.hallId !== b.hallId) continue;
+      if (footprintsOverlap(a, b)) {
+        out.add(a.id);
+        out.add(b.id);
       }
     }
   }
@@ -347,7 +497,7 @@ export function nextTableLabel(labels: string[]): string {
   return String(n);
 }
 
-/** Seats already set out in an area — shown beside its name. */
+/** Seats already set out in an area — shown on its tab and in the panel. */
 export function seatsIn(tables: MapTable[]): number {
   return tables.reduce((sum, t) => sum + clampSeats(t.seats), 0);
 }

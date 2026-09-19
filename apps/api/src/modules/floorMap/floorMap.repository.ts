@@ -1,10 +1,12 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
 import type { Section } from '../../utils/section.js';
 
 export type AreaKind = 'HALL' | 'OUTDOOR';
 export type TableShape = 'RECT' | 'ROUND';
 
-export type AreaLayout = { mapX: number; mapY: number; mapWidth: number; mapHeight: number };
+/** The size of an area's own map. */
+export type AreaSize = { mapWidth: number; mapHeight: number };
 
 export type AreaRow = {
   id: string;
@@ -14,10 +16,9 @@ export type AreaRow = {
   isActive: boolean;
   restaurantId: string | null;
   section: string;
-  mapX: number | null;
-  mapY: number | null;
   mapWidth: number | null;
   mapHeight: number | null;
+  mapFeatures: Prisma.JsonValue;
 };
 
 export type TableRow = {
@@ -29,6 +30,8 @@ export type TableRow = {
   x: number;
   y: number;
   rotation: number;
+  width: number | null;
+  height: number | null;
 };
 
 export type TableData = {
@@ -39,16 +42,20 @@ export type TableData = {
   x: number;
   y: number;
   rotation: number;
+  width?: number | null;
+  height?: number | null;
 };
+
+export type AreaPatch = Partial<AreaSize & { name: string; kind: AreaKind; mapFeatures: unknown[] }>;
 
 const AREA_SELECT = {
   id: true, name: true, kind: true, capacity: true, isActive: true,
   restaurantId: true, section: true,
-  mapX: true, mapY: true, mapWidth: true, mapHeight: true,
+  mapWidth: true, mapHeight: true, mapFeatures: true,
 } as const;
 
 const TABLE_SELECT = {
-  id: true, hallId: true, label: true, seats: true, shape: true, x: true, y: true, rotation: true,
+  id: true, hallId: true, label: true, seats: true, shape: true, x: true, y: true, rotation: true, width: true, height: true,
 } as const;
 
 /**
@@ -85,13 +92,18 @@ export class FloorMapRepository {
   async createArea(
     restaurantId: string,
     section: Section,
-    data: { name: string; kind: AreaKind; capacity: number } & AreaLayout,
+    data: { name: string; kind: AreaKind; capacity: number } & AreaSize,
   ): Promise<AreaRow> {
     return prisma.hall.create({ data: { ...data, restaurantId, section }, select: AREA_SELECT });
   }
 
-  async updateArea(id: string, data: Partial<AreaLayout & { name: string; kind: AreaKind }>): Promise<AreaRow> {
-    return prisma.hall.update({ where: { id }, data, select: AREA_SELECT });
+  async updateArea(id: string, data: AreaPatch): Promise<AreaRow> {
+    const { mapFeatures, ...rest } = data;
+    return prisma.hall.update({
+      where: { id },
+      data: { ...rest, ...(mapFeatures ? { mapFeatures: mapFeatures as Prisma.InputJsonValue } : {}) },
+      select: AREA_SELECT,
+    });
   }
 
   /** The table together with the scope of the hall it stands in. */

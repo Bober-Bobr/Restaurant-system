@@ -1,4 +1,4 @@
-import type { AreaKind, AreaLayout, FloorMap, MapArea, MapTable, TableShape } from '../utils/floorMap';
+import type { AreaKind, AreaSize, FloorMap, MapArea, MapTable, TableShape } from '../utils/floorMap';
 import { httpClient } from './http';
 
 export type TablePayload = {
@@ -9,6 +9,9 @@ export type TablePayload = {
   x: number;
   y: number;
   rotation?: number;
+  /** Null = back to the size its seats call for. */
+  width?: number | null;
+  height?: number | null;
 };
 
 /**
@@ -20,11 +23,11 @@ export const floorMapService = {
     const { data } = await httpClient.get<FloorMap>('/floor-map');
     return data;
   },
-  async createArea(payload: { name: string; kind: AreaKind; capacity: number } & AreaLayout) {
+  async createArea(payload: { name: string; kind: AreaKind; capacity: number } & AreaSize) {
     const { data } = await httpClient.post<MapArea>('/floor-map/areas', payload);
     return data;
   },
-  async updateArea(id: string, payload: Partial<AreaLayout & { name: string; kind: AreaKind }>) {
+  async updateArea(id: string, payload: Partial<AreaSize & { name: string; kind: AreaKind }>) {
     const { data } = await httpClient.patch<MapArea>(`/floor-map/areas/${id}`, payload);
     return data;
   },

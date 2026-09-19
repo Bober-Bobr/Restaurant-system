@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FloorMapService } from './floorMap.service.js';
 import type { AreaRow, FloorMapRepository, TableData, TableRow } from './floorMap.repository.js';
-import { createTableSchema, updateTableSchema } from './floorMap.schema.js';
+import { createTableSchema, updateAreaSchema, updateTableSchema } from './floorMap.schema.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
 
@@ -26,7 +26,7 @@ function fakeRepo() {
       return areas.some((a) => a.restaurantId === restaurantId && a.section === section && a.name === name && a.id !== exceptId);
     },
     async createArea(restaurantId, section, data) {
-      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, ...data };
+      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, mapFeatures: [], ...data };
       areas.push(row);
       return row;
     },
@@ -43,7 +43,7 @@ function fakeRepo() {
     },
     async labelsInArea(hallId) { return tables.filter((t) => t.hallId === hallId).map(({ id, label }) => ({ id, label })); },
     async createTable(data: TableData) {
-      const row: TableRow = { id: `t${++seq}`, ...data };
+      const row: TableRow = { id: `t${++seq}`, width: null, height: null, ...data };
       tables.push(row);
       return row;
     },
@@ -66,7 +66,7 @@ async function statusOf(run: () => Promise<unknown>): Promise<number> {
   throw new Error('expected the call to be refused, but it succeeded');
 }
 
-const LAYOUT = { mapX: 0, mapY: 0, mapWidth: 600, mapHeight: 400 };
+const LAYOUT = { mapWidth: 600, mapHeight: 400 };
 const TABLE = { label: '1', seats: 6, shape: 'RECT' as const, x: 100, y: 100, rotation: 0 };
 
 let store: ReturnType<typeof fakeRepo>;
@@ -116,7 +116,7 @@ describe('an id is re-checked against BOTH scopes, and refused with 404', () => 
   });
 
   it('an area outside the scope cannot be moved or renamed', async () => {
-    expect(await statusOf(() => service.updateArea('r1', 'SMALL_BANQUET', banquet.id, { mapX: 50 }))).toBe(404);
+    expect(await statusOf(() => service.updateArea('r1', 'SMALL_BANQUET', banquet.id, { mapWidth: 900 }))).toBe(404);
     expect(await statusOf(() => service.updateArea('r1', 'SMALL_BANQUET', foreign.id, { name: 'Mine now' }))).toBe(404);
     expect(foreign.name).toBe('Main');
   });
@@ -182,6 +182,31 @@ describe('the request schema', () => {
   it('an update that omits rotation leaves it alone rather than resetting it to 0', () => {
     expect(updateTableSchema.parse({ seats: 4 })).not.toHaveProperty('rotation');
   });
+
+  it('a table size is a number when resized and null when sized from its seats', () => {
+    expect(updateTableSchema.parse({ width: 120, height: 80 })).toEqual({ width: 120, height: 80 });
+    expect(updateTableSchema.parse({ width: null, height: null })).toEqual({ width: null, height: null });
+    expect(updateTableSchema.safeParse({ width: 5 }).success).toBe(false);
+    expect(updateTableSchema.safeParse({ width: 5000 }).success).toBe(false);
+  });
+
+  it('the drawing is validated shape by shape', () => {
+    const ok = [
+      { kind: 'zone', shape: 'rect', x: 0, y: 0, width: 100, height: 50, label: 'Терраса', color: '#9c9a4f' },
+      { kind: 'water', shape: 'ellipse', x: 10, y: 10, width: 40, height: 40 },
+      { kind: 'path', shape: 'polygon', points: [[0, 0], [10, 0], [10, 10]] },
+      { kind: 'label', shape: 'point', x: 5, y: 5, label: 'Центр сцена' },
+    ];
+    expect(updateAreaSchema.safeParse({ mapFeatures: ok }).success).toBe(true);
+    for (const bad of [
+      { kind: 'zone', shape: 'rect', x: 0, y: 0, width: 100, height: 50, color: 'red; fill: url(x)' },
+      { kind: 'lava', shape: 'rect', x: 0, y: 0, width: 1, height: 1 },
+      { kind: 'path', shape: 'polygon', points: [[0, 0], [1, 1]] },
+      { kind: 'zone', shape: 'circle', x: 0, y: 0 },
+    ]) {
+      expect(updateAreaSchema.safeParse({ mapFeatures: [bad] }).success, JSON.stringify(bad)).toBe(false);
+    }
+  });
 });
 
 describe('the wiring', () => {
@@ -222,5 +247,13 @@ describe('the wiring', () => {
     expect(migration).toContain('CREATE TABLE "FloorTable"');
     expect(migration).toContain('ON DELETE CASCADE');
     expect(migration).toContain(`ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'HALL'`);
+    // One map per area: the shared-canvas position goes, the drawing and the
+    // table sizes arrive — nullable, so every existing table keeps its look.
+    const perArea = fs.readFileSync(path.join(API_ROOT, 'prisma/migrations/20260919100000_floor_map_per_area/migration.sql'), 'utf8');
+    expect(perArea).toContain('DROP COLUMN "mapX"');
+    expect(perArea).toContain(`ADD COLUMN "mapFeatures" JSONB NOT NULL DEFAULT '[]'`);
+    expect(perArea).toMatch(/ADD COLUMN "width" INTEGER;/);
+    expect(model).toMatch(/width\s+Int\?/);
+    expect(schema).not.toMatch(/^\s*mapX\s/m);
   });
 });

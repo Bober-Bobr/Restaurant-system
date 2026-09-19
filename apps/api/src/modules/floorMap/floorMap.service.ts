@@ -1,7 +1,7 @@
 import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
 import type {
-  AreaKind, AreaLayout, AreaRow, FloorMapRepository, TableData, TableRow,
+  AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
 } from './floorMap.repository.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
@@ -56,7 +56,7 @@ export class FloorMapService {
   async createArea(
     restaurantId: string,
     section: Section,
-    payload: { name: string; kind: AreaKind; capacity: number } & AreaLayout,
+    payload: { name: string; kind: AreaKind; capacity: number } & AreaSize,
   ) {
     if (await this.repo.areaNameTaken(restaurantId, section, payload.name)) {
       throw createHttpError(409, 'Hall with this name already exists');
@@ -68,7 +68,7 @@ export class FloorMapService {
     restaurantId: string,
     section: Section,
     id: string,
-    payload: Partial<AreaLayout & { name: string; kind: AreaKind }>,
+    payload: AreaPatch,
   ) {
     const area = await this.areaInScope(restaurantId, section, id);
     if (payload.name && payload.name !== area.name

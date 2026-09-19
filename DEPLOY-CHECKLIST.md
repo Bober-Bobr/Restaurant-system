@@ -3029,3 +3029,51 @@ Until then, what gets drawn is whatever the supervisor sets out.
 12. On a phone: the map opens zoomed in and scrolls inside its frame, and the
     page itself does not scroll sideways. A table can be dragged by touch in
     edit mode, while in view mode a swipe scrolls instead of moving tables.
+
+## §58 — Floor map: one map per area, resizable tables, Sangizar's "Street" (**has a migration + a one-off script**)
+
+Migration `20260919100000_floor_map_per_area` (after §57's `20260917100000_floor_map`):
+
+- `Hall` loses `mapX` / `mapY` (positions on the old shared canvas — meaningless
+  now that each area has its own map) and gains `mapFeatures JSONB DEFAULT '[]'`
+  (the drawing under the tables).
+- `FloorTable` gains nullable `width` / `height`. Null keeps the size derived from
+  the seats, so every existing table looks exactly as before.
+
+**Then load Sangizar's plan** on the server, from `Restaurant-system/`:
+
+```
+# 1. Check it finds the right restaurant — writes nothing:
+npm run import:floor-plan -w @banquet/api -- --restaurant "Sangizar" --dry-run
+# 2. Load it:
+npm run import:floor-plan -w @banquet/api -- --restaurant "Sangizar"
+```
+
+- If the name does not match, the script lists every restaurant; copy the exact
+  name, or pass the id. Two matches → it lists both and stops.
+- The area is created as **"Street"**, an outdoor area in the **Small Banquets**
+  section. `--name "Улица"` names it differently.
+- Running it again is safe: an area that already has tables is left alone unless
+  `--replace` is given (which replaces its drawing and ALL its tables, including
+  any the supervisor moved since).
+
+**After deploying:**
+
+1. As Sangizar's SUPERVISOR, open the Map. There is a tab per area; **Street** is
+   one of them. Open it: the Terrace, Stage, Bungalow, pool, Dessert bar, New hall
+   and the two labels are drawn, with 73 numbered tables — none outlined red.
+2. The URL now carries `?area=…`; reload — still on Street.
+3. **Edit map** → select a table: a handle appears at its corner. Drag it — the
+   table resizes, its chairs spread along it, and it cannot be dragged smaller
+   than its chairs need. **Automatic size** in the panel puts it back.
+4. On a resized table press **+** several times: chairs are added and the table
+   grows to take them.
+5. Drag a table; **Add table** (placed clear of the pool); delete one. Reload —
+   everything holds.
+6. Drag the map's bottom-right corner: the area gets bigger. Reload — it holds.
+7. **+ Add area** (at the end of the tabs, in edit mode) → it gets its own tab
+   and opens on it, empty, at the default size for its kind.
+8. Any hall made on the Halls page appears as a tab too, with a map of the
+   default size.
+9. On a phone: the tabs scroll sideways, the map opens zoomed and scrolls inside
+   its frame, and the page itself does not scroll sideways.

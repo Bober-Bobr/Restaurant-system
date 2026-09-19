@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AREA_HEADER, CHAIR_DEPTH, CHAIR_PITCH, CHAIR_WIDTH, MAX_SEATS, MIN_AREA, areaAt, chairsFor, clampTable,
-  freeSpot, isPlaced, minAreaSize, nextRotation, nextTableLabel, overlappingTables, placeNewArea, resolveLayouts, tableHalfExtents,
-  tableSize, worldSize, type MapArea, type MapTable,
+  AREA_PADDING, CHAIR_DEPTH, CHAIR_GAP, CHAIR_PITCH, CHAIR_WIDTH, DEFAULT_AREA, MAX_SEATS, MAX_TABLE, MIN_AREA, MIN_TABLE,
+  areaSize, chairsFor, clampTable, featureLabelAt, featuresOf, fitTableSize, freeSpot, hitsBlockingFeature, minAreaSize,
+  nextRotation, nextTableLabel, overlappingTables, rectSideCounts, seatCapacity, tableHalfExtents, tableSize,
+  type MapArea, type MapTable,
 } from './floorMap';
 
 const SHAPES = ['RECT', 'ROUND'] as const;
@@ -10,7 +11,7 @@ const ALL_SEATS = Array.from({ length: MAX_SEATS }, (_, i) => i + 1);
 
 const area = (over: Partial<MapArea> = {}): MapArea => ({
   id: 'a', name: 'Hall', kind: 'HALL', capacity: 50, isActive: true,
-  mapX: null, mapY: null, mapWidth: null, mapHeight: null, ...over,
+  mapWidth: null, mapHeight: null, mapFeatures: [], ...over,
 });
 const table = (over: Partial<MapTable> = {}): MapTable => ({
   id: 't', hallId: 'a', label: '1', seats: 4, shape: 'RECT', x: 100, y: 100, rotation: 0, ...over,
@@ -115,55 +116,25 @@ describe('chairs along the sides', () => {
   });
 });
 
-describe('areas on the map', () => {
-  it('a placed area keeps exactly the rectangle it was given', () => {
-    const placed = area({ id: 'p', mapX: 300, mapY: 200, mapWidth: 500, mapHeight: 400 });
-    expect(resolveLayouts([placed], []).get('p')).toEqual({ mapX: 300, mapY: 200, mapWidth: 500, mapHeight: 400 });
+describe('an area\'s own map', () => {
+  it('keeps the size it was given', () => {
+    expect(areaSize(area({ mapWidth: 2620, mapHeight: 1780 }), [])).toEqual({ width: 2620, height: 1780 });
   });
 
-  it('every hall that predates the map still appears, laid out below anything placed by hand', () => {
-    const placed = area({ id: 'p', mapX: 40, mapY: 40, mapWidth: 900, mapHeight: 600 });
-    const layouts = resolveLayouts([area({ id: 'u1' }), placed, area({ id: 'u2', kind: 'OUTDOOR' })], []);
-    expect(layouts.size).toBe(3);
-    for (const id of ['u1', 'u2']) expect(layouts.get(id)!.mapY).toBeGreaterThanOrEqual(640);
+  it('a hall that predates the map gets the default for its kind — an outdoor venue the bigger', () => {
+    expect(areaSize(area(), [])).toEqual(DEFAULT_AREA.HALL);
+    expect(areaSize(area({ kind: 'OUTDOOR' }), [])).toEqual(DEFAULT_AREA.OUTDOOR);
+    expect(DEFAULT_AREA.OUTDOOR.width * DEFAULT_AREA.OUTDOOR.height).toBeGreaterThan(DEFAULT_AREA.HALL.width * DEFAULT_AREA.HALL.height);
   });
 
-  it('auto-placed areas never overlap one another or a placed one', () => {
-    const areas = [
-      area({ id: 'p', mapX: 40, mapY: 40, mapWidth: 1200, mapHeight: 500 }),
-      ...Array.from({ length: 7 }, (_, i) => area({ id: `u${i}`, kind: i % 2 ? 'OUTDOOR' : 'HALL' })),
-    ];
-    const rects = [...resolveLayouts(areas, []).values()];
-    for (let i = 0; i < rects.length; i += 1) {
-      for (let j = i + 1; j < rects.length; j += 1) {
-        const a = rects[i]; const b = rects[j];
-        const apart = a.mapX + a.mapWidth <= b.mapX || b.mapX + b.mapWidth <= a.mapX
-          || a.mapY + a.mapHeight <= b.mapY || b.mapY + b.mapHeight <= a.mapY;
-        expect(apart, `${i} and ${j} overlap`).toBe(true);
-      }
-    }
-  });
-
-  it('an unplaced area is drawn big enough for the tables already in it', () => {
+  it('is never smaller than the tables standing in it, whatever is stored', () => {
     const far = table({ x: 1500, y: 900, seats: 12 });
-    const layout = resolveLayouts([area()], [far]).get('a')!;
-    expect(layout.mapWidth).toBeGreaterThan(1500);
-    expect(layout.mapHeight).toBeGreaterThan(900);
+    const size = areaSize(area({ mapWidth: 600, mapHeight: 400 }), [far]);
+    expect(size.width).toBeGreaterThan(1500);
+    expect(size.height).toBeGreaterThan(900);
   });
 
-  it('a new area lands clear of every existing one, placed or not', () => {
-    const areas = [area({ id: 'p', mapX: 40, mapY: 40, mapWidth: 700, mapHeight: 400 }), area({ id: 'u' })];
-    const existing = [...resolveLayouts(areas, []).values()];
-    const fresh = placeNewArea(areas, [], 'OUTDOOR');
-    for (const e of existing) {
-      const apart = fresh.mapX >= e.mapX + e.mapWidth || e.mapX >= fresh.mapX + fresh.mapWidth
-        || fresh.mapY >= e.mapY + e.mapHeight || e.mapY >= fresh.mapY + fresh.mapHeight;
-      expect(apart).toBe(true);
-    }
-    expect(isPlaced(fresh)).toBe(true);
-  });
-
-  it('an area cannot be shrunk past the tables standing in it', () => {
+  it('cannot be shrunk past the tables standing in it', () => {
     expect(minAreaSize([])).toEqual(MIN_AREA);
     const t = table({ x: 600, y: 400, seats: 8 });
     const min = minAreaSize([t]);
@@ -172,33 +143,121 @@ describe('areas on the map', () => {
     expect(min.height).toBeGreaterThanOrEqual(400 + hy);
   });
 
-  it('the drawing grows to hold everything on it', () => {
-    expect(worldSize([{ mapX: 2000, mapY: 1500, mapWidth: 800, mapHeight: 400 }])).toEqual({ width: 2840, height: 1940 });
-    expect(worldSize([]).width).toBeGreaterThan(0);
+  it('reads the drawing defensively — a malformed column draws nothing rather than breaking the page', () => {
+    expect(featuresOf(area({ mapFeatures: null }))).toEqual([]);
+    expect(featuresOf({ mapFeatures: 'x' as never })).toEqual([]);
+    expect(featuresOf({ mapFeatures: [null, 4, { kind: 'label', shape: 'point', x: 1, y: 2 }] as never })).toHaveLength(1);
   });
 
-  it('a point finds the area under it, and the one drawn last wins where they overlap', () => {
-    const layouts = new Map([
-      ['under', { mapX: 0, mapY: 0, mapWidth: 500, mapHeight: 500 }],
-      ['over', { mapX: 400, mapY: 400, mapWidth: 300, mapHeight: 300 }],
-    ]);
-    expect(areaAt({ x: 100, y: 100 }, layouts)).toBe('under');
-    expect(areaAt({ x: 450, y: 450 }, layouts)).toBe('over');
-    expect(areaAt({ x: 900, y: 900 }, layouts)).toBeNull();
+  it('writes a feature\'s name where it was told to, else in its middle', () => {
+    expect(featureLabelAt({ kind: 'zone', shape: 'rect', x: 0, y: 0, width: 100, height: 50 })).toEqual([50, 25]);
+    expect(featureLabelAt({ kind: 'zone', shape: 'polygon', points: [[0, 0], [30, 0], [0, 30]] })).toEqual([10, 10]);
+    expect(featureLabelAt({ kind: 'zone', shape: 'rect', x: 0, y: 0, width: 100, height: 50, labelAt: [7, 8] })).toEqual([7, 8]);
+  });
+});
+
+describe('the pool and the stage', () => {
+  const pool = { kind: 'water' as const, shape: 'ellipse' as const, x: 0, y: 0, width: 400, height: 400 };
+  const lawn = { kind: 'zone' as const, shape: 'rect' as const, x: 0, y: 0, width: 400, height: 400 };
+
+  it('a table on the water is caught, one on the ground round it is not — the ellipse is tested exactly', () => {
+    expect(hitsBlockingFeature({ x: 200, y: 200, hx: 40, hy: 40 }, [pool])).toBe(true);
+    // In the pool's bounding box, but on the dry corner outside the circle.
+    expect(hitsBlockingFeature({ x: 30, y: 30, hx: 20, hy: 20 }, [pool])).toBe(false);
+  });
+
+  it('a zone is where tables go, not where they may not', () => {
+    expect(hitsBlockingFeature({ x: 200, y: 200, hx: 40, hy: 40 }, [lawn])).toBe(false);
+  });
+
+  it('a new table is never put in the pool', () => {
+    // The pool fills the left half; the first free spot reading left to right
+    // would be ON it if the pool were not an obstacle.
+    const spot = freeSpot({ shape: 'RECT', seats: 4, rotation: 0 }, { width: 800, height: 400 }, [], [pool]);
+    expect(spot).not.toBeNull();
+    expect(freeSpot({ shape: 'RECT', seats: 4, rotation: 0 }, { width: 800, height: 400 }, [])!.x).toBeLessThan(spot!.x);
+    expect(hitsBlockingFeature({ ...spot!, ...tableHalfExtents({ shape: 'RECT', seats: 4, rotation: 0 }) }, [pool])).toBe(false);
+  });
+});
+
+describe('a table resized by hand', () => {
+  it('keeps exactly the size it was given, and a round one stays round', () => {
+    expect(tableSize('RECT', 4, { width: 120, height: 70 })).toEqual({ width: 120, height: 70 });
+    expect(tableSize('ROUND', 4, { width: 90, height: 70 })).toEqual({ width: 90, height: 90 });
+    // No size, or half a size, is the automatic one.
+    expect(tableSize('RECT', 4, { width: 120, height: null })).toEqual(tableSize('RECT', 4));
+  });
+
+  it('still seats exactly its chairs, none overlapping, none on the tabletop', () => {
+    for (const [w, h] of [[64, 64], [150, 80], [300, 60], [60, 300], [200, 200]] as const) {
+      for (const seats of [1, 2, 4, 6, 9, 12]) {
+        const size = fitTableSize('RECT', seats, w, h);
+        const chairs = chairsFor('RECT', seats, size);
+        expect(chairs, `${w}×${h}, ${seats}`).toHaveLength(seats);
+        for (let i = 0; i < chairs.length; i += 1) {
+          const c = chairs[i];
+          const outside = Math.abs(c.x) >= size.width / 2 + CHAIR_DEPTH / 2 || Math.abs(c.y) >= size.height / 2 + CHAIR_DEPTH / 2;
+          expect(outside, `${w}×${h}, ${seats}: chair ${i}`).toBe(true);
+          for (let j = i + 1; j < chairs.length; j += 1) {
+            const d = Math.hypot(c.x - chairs[j].x, c.y - chairs[j].y);
+            expect(d, `${w}×${h}, ${seats}: chairs ${i}/${j}`).toBeGreaterThanOrEqual(CHAIR_WIDTH - 0.5);
+          }
+        }
+      }
+    }
+  });
+
+  it('fills the long sides before the ends, as a table is laid in a room', () => {
+    expect(rectSideCounts(4, 84, 56)).toEqual({ top: 2, bottom: 2, left: 0, right: 0 });
+    expect(rectSideCounts(4, 64, 64)).toEqual({ top: 1, bottom: 1, left: 1, right: 1 });
+    // Upright, the long sides are left and right.
+    expect(rectSideCounts(4, 56, 84)).toEqual({ top: 0, bottom: 0, left: 2, right: 2 });
+    expect(rectSideCounts(6, 150, 80)).toEqual({ top: 3, bottom: 3, left: 0, right: 0 });
+  });
+
+  it('a slight resize of an automatic table keeps its chairs where they were', () => {
+    // An automatic four-top seats two a side; nudged a few units, it must not
+    // suddenly put a chair on each end.
+    const auto = tableSize('RECT', 4);
+    const nudged = { width: auto.width + 6, height: auto.height + 2 };
+    const sides = (chairs: { angle: number }[]) => [0, 90, 180, 270].map((a) => chairs.filter((c) => c.angle === a).length);
+    expect(sides(chairsFor('RECT', 4, nudged))).toEqual(sides(chairsFor('RECT', 4)));
+  });
+
+  it('cannot be made too small for its chairs — it grows back along its longer side', () => {
+    for (const seats of [1, 4, 8, 12, 20, MAX_SEATS]) {
+      for (const shape of SHAPES) {
+        const size = fitTableSize(shape, seats, 10, 10);
+        expect(seatCapacity(shape, size.width, size.height), `${shape} ${seats}`).toBeGreaterThanOrEqual(seats);
+        expect(size.width).toBeGreaterThanOrEqual(MIN_TABLE);
+        expect(size.height).toBeGreaterThanOrEqual(MIN_TABLE);
+      }
+    }
+    expect(fitTableSize('RECT', 4, 64, 64)).toEqual({ width: 64, height: 64 });
+    expect(fitTableSize('RECT', 4, 5000, 5000)).toEqual({ width: MAX_TABLE, height: MAX_TABLE });
+    expect(fitTableSize('ROUND', 4, 90, 60)).toEqual({ width: 90, height: 90 });
+  });
+
+  it('its footprint follows its size and where its chairs actually are', () => {
+    const long = tableHalfExtents({ shape: 'RECT', seats: 4, rotation: 0, width: 300, height: 60 });
+    // Four chairs on a 300-long table all go on the long sides: no end chairs.
+    expect(long.hx).toBe(150);
+    expect(long.hy).toBe(30 + CHAIR_GAP + CHAIR_DEPTH);
   });
 });
 
 describe('tables inside an area', () => {
   const room = { width: 600, height: 400 };
 
-  it('a dragged table stays wholly inside its area, chairs included, and below the name strip', () => {
+  it('a dragged table stays wholly on its area\'s map, chairs included', () => {
     const t = { shape: 'RECT', seats: 8, rotation: 0 };
     const { hx, hy } = tableHalfExtents(t);
     for (const pos of [{ x: -500, y: -500 }, { x: 5000, y: 5000 }, { x: 300, y: 0 }]) {
       const c = clampTable(pos, t, room);
+      expect(c.x - hx).toBeGreaterThanOrEqual(AREA_PADDING);
       expect(c.x - hx).toBeGreaterThanOrEqual(0);
       expect(c.x + hx).toBeLessThanOrEqual(room.width);
-      expect(c.y - hy).toBeGreaterThanOrEqual(AREA_HEADER);
+      expect(c.y - hy).toBeGreaterThanOrEqual(AREA_PADDING);
       expect(c.y + hy).toBeLessThanOrEqual(room.height);
     }
   });
@@ -231,6 +290,19 @@ describe('tables inside an area', () => {
     const { hy } = tableHalfExtents(a);
     expect(overlappingTables([a, table({ id: 'c', x: 100, y: 100 + 2 * hy - 2 })]).size).toBe(2);
     expect(overlappingTables([a, table({ id: 'c', x: 100, y: 100 + 2 * hy + 1 })]).size).toBe(0);
+  });
+
+  it('a turned table is judged by its real outline, not its upright box', () => {
+    // A row of squares turned along a diagonal, as along Sangizar's Bungalow:
+    // their upright boxes overlap, the tables do not.
+    const along = (i: number) => table({ id: `d${i}`, x: 100 + i * 60, y: 100 + i * 104, rotation: 60, width: 64, height: 64 });
+    const row = [0, 1, 2].map(along);
+    const box = tableHalfExtents(row[0]);
+    expect(Math.abs(row[0].x - row[1].x)).toBeLessThan(2 * box.hx); // the upright boxes DO overlap
+    expect(overlappingTables(row).size).toBe(0);
+    // …and pushed together along the row, they are caught.
+    const squeezed = [0, 1].map((i) => table({ id: `s${i}`, x: 100 + i * 30, y: 100 + i * 52, rotation: 60, width: 64, height: 64 }));
+    expect(overlappingTables(squeezed).size).toBe(2);
   });
 
   it('table numbers fill a gap before counting upwards', () => {
