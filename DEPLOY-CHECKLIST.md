@@ -3110,3 +3110,33 @@ server.
 7. A restaurant whose manager portal set a custom particle image: the tablet
    block shows "Custom image" as the current choice, and keeps it until another
    kind is chosen.
+
+## §60 — Dishes per system: categories that really switch off, single dishes, separate prices (**has a migration**)
+
+Migration `20260921100000_menu_per_system` on `MenuItem`:
+
+- adds `priceCentsSmallBanquet` and `priceCentsCatering`, **filled from today's
+  `priceCents`** (which stays as the banquet price), so every price is unchanged
+  on the deploy;
+- adds `disabledBanquet` · `disabledSmallBanquet` · `disabledCatering`, all false.
+
+**After deploying:**
+
+1. As the banquet ADMIN, Settings → switch off a category (e.g. Desserts) →
+   Save. It is gone from the Menu, Additional and Table categories pages, and
+   from the tablet — including from inside table packages on the tablet.
+2. As the Food Admin, the same category is still on the Menu page and on the
+   catering site. Switch one off there; the banquet side is unaffected.
+3. Settings → open a category's "N dishes" chip → tick one dish → Save. That
+   dish is gone from the banquet pages and tablet; its category and the other
+   dishes remain. Untick → Save → it is back.
+4. As the Supervisor, switch off a category → Save → reload Settings: it
+   **stays** switched off (it used to be dropped silently on every save).
+5. As the banquet ADMIN, change a dish's price on the Menu page. The catering
+   site and the Food Admin's Menu page still show the old price; the tablet and
+   the banquet PDF show the new one. Then change it as the Food Admin: the
+   tablet does not change.
+6. A catering order priced after step 5 uses the catering price; a small-banquet
+   booking uses the supervisor's.
+7. Opening a table package in the banquet admin still shows every dish it had,
+   switched off or not — saving it does not drop them.

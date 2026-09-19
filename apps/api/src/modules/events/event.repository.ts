@@ -44,7 +44,9 @@ export function isEventNumberCollision(error: unknown): boolean {
 const eventInclude = {
   hall: true,
   tableCategory: true,
-  selections: { include: { menuItem: true } },
+  // The dish's identity only. Its price here is the selection's own snapshot
+  // (`unitPriceCents`); the dish row would carry every system's price.
+  selections: { include: { menuItem: { select: { id: true, name: true, nameI18n: true, category: true, photoUrl: true } } } },
   payments: { orderBy: { createdAt: 'asc' } }
 } as const;
 

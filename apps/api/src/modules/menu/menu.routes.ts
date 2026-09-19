@@ -8,6 +8,7 @@ router.get('/', controller.list.bind(controller));
 router.get('/admin/all', controller.listAll.bind(controller));
 router.get('/settings', controller.getSettings.bind(controller));
 router.put('/settings', controller.saveSettings.bind(controller));
+router.get('/settings/dishes', controller.listSettingsDishes.bind(controller));
 router.post('/', controller.create.bind(controller));
 router.put('/arrangement', controller.saveArrangement.bind(controller));
 router.delete('/:menuItemId', controller.remove.bind(controller));

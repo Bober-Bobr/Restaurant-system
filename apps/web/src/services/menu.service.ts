@@ -34,6 +34,15 @@ export const menuService = {
   }) {
     await httpClient.put('/menu-items/arrangement', payload);
   },
+  /**
+   * Every dish, with ONE system's switch — for the Settings page. `scope` is
+   * honoured for the Chief Admin and the Owner only; everyone else gets their
+   * own system whatever is sent.
+   */
+  async getSettingsDishes(scope: MenuScope) {
+    const { data } = await httpClient.get<{ scope: MenuScope; dishes: MenuItem[] }>('/menu-items/settings/dishes', { params: { scope } });
+    return data;
+  },
   async getSettings() {
     const { data } = await httpClient.get<MenuSettings>('/menu-items/settings');
     return data;
@@ -42,6 +51,8 @@ export const menuService = {
   // saving one product's list never touches the other's.
   async saveSettings(payload: {
     excludedCategories?: Partial<ExcludedCategories>;
+    /** Per system: the COMPLETE list of dishes switched off — every other dish is switched back on. */
+    disabledDishes?: Partial<Record<MenuScope, string[]>>;
     hideSubcategories?: boolean;
   }) {
     const { data } = await httpClient.put<MenuSettings>('/menu-items/settings', payload);

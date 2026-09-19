@@ -10,7 +10,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { Lightbox } from '../components/ui/lightbox';
-import { useExcludedCategories } from '../hooks/useExcludedCategories';
+import { useOwnExcludedCategories } from '../hooks/useExcludedCategories';
 import { formatSum, formatSumInput, parseSumToTiyin, parseWholeSum } from '../utils/currency';
 import { NumberField } from '../components/ui/NumberField';
 import { MoneyInput } from '../components/ui/MoneyInput';
@@ -143,7 +143,8 @@ function FoodPackageSection({
   locale: 'en' | 'ru' | 'uz';
 }) {
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-  const excluded = useExcludedCategories('banquet');
+  // The section's own list: a supervisor's packages follow Small Banquets'.
+  const excluded = useOwnExcludedCategories();
   const categories = FOOD_PACKAGE_CATEGORIES.filter((cat) => !excluded.has(cat));
   // Full-screen preview of a dish photo when its thumbnail is tapped.
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);

@@ -15,7 +15,7 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { PhotoSelector } from '../components/ui/photo-selector';
 import { getPhotoUrl } from '../utils/photoUrl';
-import { useExcludedEverywhere, useHideSubcategories } from '../hooks/useExcludedCategories';
+import { useOwnExcludedCategories, useHideSubcategories } from '../hooks/useExcludedCategories';
 import { StickyHScroll } from '../components/ui/StickyHScroll';
 import { draftOf, patchOf, mayAcceptServerValue, type DishDraft } from './adminMenuDraft';
 
@@ -111,7 +111,7 @@ export const AdminMenuPage = () => {
   // The food-admin (catering) dashboard doesn't deal with banquet table
   // categories, so the per-dish "Tables" column is hidden there.
   const showTableCategories = role !== 'CATERING_ADMIN';
-  const excluded = useExcludedEverywhere();
+  const excluded = useOwnExcludedCategories();
   // Master switch (Subcategories page): when on, hide the Subcategory column entirely.
   const showSubcategories = !useHideSubcategories();
   const [activeCategory, setActiveCategory] = useState<MenuCategory | null>(null);

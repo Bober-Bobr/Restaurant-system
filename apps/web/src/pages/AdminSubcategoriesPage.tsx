@@ -4,7 +4,7 @@ import { subcategoryService } from '../services/subcategory.service';
 import { menuService } from '../services/menu.service';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { useExcludedEverywhere, EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcludedCategories';
+import { useOwnExcludedCategories, EXCLUDED_CATEGORIES_KEY } from '../hooks/useExcludedCategories';
 import type { MenuItem, Subcategory } from '../types/domain';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -40,12 +40,11 @@ export const AdminSubcategoriesPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
-  // Both a banquet ADMIN and a Food Admin manage subcategories, and they are one
-  // shared table like the dishes themselves — so this hides only what BOTH
-  // products dropped, exactly as the Menu and Photos pages do. Filtering by one
-  // product's list would show a Food Admin a category the banquet side had
-  // switched off, and vice versa.
-  const excluded = useExcludedEverywhere();
+  // Each system sees the categories IT serves, exactly as the Menu and Photos
+  // pages do — a category switched off for banquets is off the banquet pages.
+  // The subcategories themselves are one shared table; another system that
+  // still serves the category manages them from its own pages.
+  const excluded = useOwnExcludedCategories();
 
   const { data: subcategories = [], isLoading } = useQuery({
     queryKey: ['subcategories'],

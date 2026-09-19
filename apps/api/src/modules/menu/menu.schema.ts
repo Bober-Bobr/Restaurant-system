@@ -41,11 +41,19 @@ export const arrangementSchema = z.object({
 // Each product's exclusions are optional and saved independently: the Settings
 // page edits one at a time, and the Subcategories page sends neither. A scope
 // that is absent keeps whatever it already held.
+// Per system. `smallBanquet` was missing here, and zod strips unknown keys, so
+// the supervisor's category list was dropped on every save without an error.
+// `.strict()` now, so a scope that is not listed is refused rather than lost.
+const perScope = <T extends z.ZodTypeAny>(value: T) => z.object({
+  banquet: value.optional(),
+  catering: value.optional(),
+  smallBanquet: value.optional(),
+}).strict();
+
 export const settingsSchema = z.object({
-  excludedCategories: z.object({
-    banquet: z.array(z.nativeEnum(MenuCategory)).optional(),
-    catering: z.array(z.nativeEnum(MenuCategory)).optional(),
-  }).optional(),
+  excludedCategories: perScope(z.array(z.nativeEnum(MenuCategory))).optional(),
+  // The dishes switched off, per system, as a whole list (see saveDisabledDishes).
+  disabledDishes: perScope(z.array(z.string().cuid()).max(5000)).optional(),
   hideSubcategories: z.boolean().optional()
 });
 

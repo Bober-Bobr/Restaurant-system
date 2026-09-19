@@ -91,6 +91,7 @@ describe('a save carries one product and nothing else', () => {
     // failed save let the next refetch throw the edits away silently.
     expect(src).toMatch(/if \(isSaved\) setTouched\(false\)/);
     expect(src).not.toMatch(/onClick=\{\(\) => \{[^}]*setTouched\(false\)/);
-    expect(src).toMatch(/if \(!touched\) setExcluded\(new Set\(saved\)\)/);
+    // Both lists — categories and single dishes — are adopted only while untouched.
+    expect(src).toMatch(/if \(!touched\) \{\s*setExcluded\(new Set\(saved\)\);\s*setDisabled\(new Set\(savedDisabled\)\);/);
   });
 });

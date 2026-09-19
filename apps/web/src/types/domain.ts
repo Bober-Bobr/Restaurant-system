@@ -156,7 +156,12 @@ export type MenuItem = {
     | 'FIRST_COURSE' | 'SECOND_COURSE' | 'THIRD_COURSE' | 'SWEETS' | 'FRUITS'
     | 'ALCOHOL' | 'LEMONADES' | 'NON_ALCOHOLIC_COCKTAILS' | 'ALCOHOLIC_COCKTAILS'
     | 'MILKSHAKES' | 'TEA_MENU' | 'FRESH_JUICES' | 'LIQUEURS';
+  // The price in the READER's system — the server resolves which of the three
+  // (banquet, small banquets, catering) from the caller, so this is always the
+  // one this screen may show and edit.
   priceCents: number;
+  /** Switched off in the reader's system (Settings → single dishes). */
+  disabled?: boolean;
   photoUrl?: string;
   isActive: boolean;
   showOnTablet?: boolean;

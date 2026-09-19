@@ -53,9 +53,10 @@ const ALL_CATEGORIES: { value: MenuCategory; key: Parameters<typeof translate>[0
 type Scope = MenuScope;
 
 /**
- * One product's list. Each section holds its own working copy and its own Save
- * button, so editing the banquet list can never write the catering one — the
- * two are saved by separate requests carrying only their own scope.
+ * One system's switches: the categories it does not serve, and — inside the
+ * categories it does — the single dishes it does not. Each section holds its
+ * own working copy and its own Save, which sends THIS system's two lists and
+ * nothing else; the server refuses a save naming any other system's list.
  */
 const ScopeSection = ({
   scope, saved, t, onSave, isSaving, isSaved,
@@ -63,19 +64,32 @@ const ScopeSection = ({
   scope: Scope;
   saved: MenuCategory[];
   t: (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
-  onSave: (scope: Scope, categories: MenuCategory[]) => void;
+  onSave: (scope: Scope, categories: MenuCategory[], disabledDishes: string[]) => void;
   isSaving: boolean;
   isSaved: boolean;
 }) => {
   const [excluded, setExcluded] = useState<Set<MenuCategory>>(new Set(saved));
+  // Every active dish, with THIS system's switch. Its own query key per system,
+  // so the banquet section's list can never be the catering section's.
+  const dishesQuery = useQuery({
+    queryKey: ['menu-settings-dishes', scope],
+    queryFn: () => menuService.getSettingsDishes(scope),
+  });
+  const dishes = useMemo(() => dishesQuery.data?.dishes ?? [], [dishesQuery.data]);
+  const savedDisabled = useMemo(() => dishes.filter((d) => d.disabled).map((d) => d.id), [dishes]);
+  const [disabled, setDisabled] = useState<Set<string>>(new Set());
+  const [open, setOpen] = useState<Set<MenuCategory>>(new Set());
 
-  // Adopt the server's list whenever it changes, but leave a section the user is
-  // part-way through editing alone: the query refetches on window focus, and
-  // that would otherwise replace their unsaved ticks with the stored list.
-  const savedKey = saved.join(',');
+  // Adopt the server's lists whenever they change, but leave a section the user
+  // is part-way through editing alone: the query refetches on window focus, and
+  // that would otherwise replace their unsaved ticks with the stored lists.
+  const savedKey = `${saved.join(',')}|${savedDisabled.join(',')}`;
   const [touched, setTouched] = useState(false);
   useEffect(() => {
-    if (!touched) setExcluded(new Set(saved));
+    if (!touched) {
+      setExcluded(new Set(saved));
+      setDisabled(new Set(savedDisabled));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedKey, touched]);
 
@@ -97,9 +111,33 @@ const ScopeSection = ({
     });
   };
 
+  const toggleDish = (id: string) => {
+    setTouched(true);
+    setDisabled((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleOpen = (cat: MenuCategory) => setOpen((prev) => {
+    const next = new Set(prev);
+    if (next.has(cat)) next.delete(cat);
+    else next.add(cat);
+    return next;
+  });
+
+  const byCategory = useMemo(() => {
+    const map = new Map<MenuCategory, MenuItem[]>();
+    for (const d of dishes) map.set(d.category, [...(map.get(d.category) ?? []), d]);
+    return map;
+  }, [dishes]);
+
   const isDirty = useMemo(
-    () => saved.length !== excluded.size || saved.some((c) => !excluded.has(c)),
-    [saved, excluded],
+    () => saved.length !== excluded.size || saved.some((c) => !excluded.has(c))
+      || savedDisabled.length !== disabled.size || savedDisabled.some((id) => !disabled.has(id)),
+    [saved, excluded, savedDisabled, disabled],
   );
 
   return (
@@ -113,8 +151,8 @@ const ScopeSection = ({
         </div>
         <button
           type="button"
-          onClick={() => onSave(scope, [...excluded])}
-          disabled={!isDirty || isSaving}
+          onClick={() => onSave(scope, [...excluded], [...disabled])}
+          disabled={!isDirty || isSaving || !dishesQuery.data}
           className="adm-btn-primary"
           style={{ fontSize: 13 }}
         >
@@ -124,31 +162,88 @@ const ScopeSection = ({
 
       <p style={{ fontSize: 13, color: 'rgba(226,232,240,0.7)', margin: '12px 0' }}>
         {excluded.size > 0 ? t('excluded_count', { count: excluded.size }) : t('nothing_excluded')}
+        {disabled.size > 0 && ` · ${t('dishes_disabled_count', { count: disabled.size })}`}
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
         {ALL_CATEGORIES.map(({ value, key }) => {
           const isExcluded = excluded.has(value);
+          const inCat = byCategory.get(value) ?? [];
+          const offInCat = inCat.filter((d) => disabled.has(d.id)).length;
+          const isOpen = open.has(value) && !isExcluded;
           return (
-            <label
+            <div
               key={value}
+              data-category={value}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
-                cursor: 'pointer', userSelect: 'none',
+                borderRadius: 8,
                 background: isExcluded ? 'rgba(220,38,38,0.1)' : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${isExcluded ? 'rgba(220,38,38,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                gridColumn: isOpen ? '1 / -1' : undefined,
               }}
             >
-              <input
-                type="checkbox"
-                checked={isExcluded}
-                onChange={() => toggle(value)}
-                style={{ accentColor: '#dc2626', width: 16, height: 16 }}
-              />
-              <span style={{ fontSize: 13, color: isExcluded ? '#fca5a5' : '#e2e8f0', fontWeight: isExcluded ? 600 : 500 }}>
-                {t(key)}
-              </span>
-            </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none', flex: 1, minWidth: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={isExcluded}
+                    onChange={() => toggle(value)}
+                    style={{ accentColor: '#dc2626', width: 16, height: 16, flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: 13, color: isExcluded ? '#fca5a5' : '#e2e8f0', fontWeight: isExcluded ? 600 : 500 }}>
+                    {t(key)}
+                  </span>
+                </label>
+                {/* The dishes of a category that is on. A category switched off
+                    whole takes all its dishes with it, so there is nothing to
+                    pick inside it. */}
+                {inCat.length > 0 && !isExcluded && (
+                  <button
+                    type="button"
+                    className="settings-dish-toggle"
+                    aria-expanded={isOpen}
+                    onClick={() => toggleOpen(value)}
+                    style={{
+                      flexShrink: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 999,
+                      color: offInCat ? '#fca5a5' : 'rgba(226,232,240,0.65)',
+                      background: offInCat ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${offInCat ? 'rgba(220,38,38,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                    }}
+                  >
+                    {offInCat ? t('dishes_off_of', { off: offInCat, total: inCat.length }) : t('dishes_count', { count: inCat.length })}
+                    {' '}{isOpen ? '▴' : '▾'}
+                  </button>
+                )}
+              </div>
+              {isOpen && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 6, padding: '0 12px 12px' }}>
+                  {inCat.map((dish) => {
+                    const off = disabled.has(dish.id);
+                    return (
+                      <label
+                        key={dish.id}
+                        data-dish={dish.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
+                          background: off ? 'rgba(220,38,38,0.1)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${off ? 'rgba(220,38,38,0.28)' : 'rgba(255,255,255,0.06)'}`,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={off}
+                          onChange={() => toggleDish(dish.id)}
+                          style={{ accentColor: '#dc2626', width: 15, height: 15, flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: 13, color: off ? '#fca5a5' : '#e2e8f0', textDecoration: off ? 'line-through' : 'none', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {dish.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -204,8 +299,9 @@ export const AdminSettingsPage = () => {
 
   const saveMutation = useMutation({
     // Only the edited scope is sent; the other keeps whatever it already held.
-    mutationFn: ({ scope, categories }: { scope: Scope; categories: MenuCategory[] }) =>
-      menuService.saveSettings({ excludedCategories: { [scope]: categories } }),
+    // Only the edited system's two lists are sent; the others keep what they hold.
+    mutationFn: ({ scope, categories, dishes }: { scope: Scope; categories: MenuCategory[]; dishes: string[] }) =>
+      menuService.saveSettings({ excludedCategories: { [scope]: categories }, disabledDishes: { [scope]: dishes } }),
     onSuccess: () => {
       // Refresh everything that depends on the visible category set.
       queryClient.invalidateQueries();
@@ -239,7 +335,7 @@ export const AdminSettingsPage = () => {
           scope={scope}
           saved={settingsQuery.data.excludedCategories[scope]}
           t={t}
-          onSave={(s, categories) => saveMutation.mutate({ scope: s, categories })}
+          onSave={(s, categories, dishes) => saveMutation.mutate({ scope: s, categories, dishes })}
           isSaving={saveMutation.isPending && saveMutation.variables?.scope === scope}
           isSaved={saveMutation.isSuccess && saveMutation.variables?.scope === scope}
         />

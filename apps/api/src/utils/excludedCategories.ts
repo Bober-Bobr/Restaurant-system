@@ -1,4 +1,4 @@
-import { MenuCategory } from '@prisma/client';
+import { AdminRole, MenuCategory } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 
 /**
@@ -89,4 +89,67 @@ export function excludedEverywhere(excluded: ExcludedCategories): MenuCategory[]
 
 export async function getExcludedEverywhere(restaurantId: string): Promise<MenuCategory[]> {
   return excludedEverywhere(await getExcludedCategoriesBoth(restaurantId));
+}
+
+// ── One system per role: prices and per-dish switches ────────────────────────
+//
+// The golden rule for the dish table: a change made in one system never
+// reaches another. Categories were already split (the three lists above);
+// prices and single dishes are split the same way, one column per scope.
+//
+// And, as with sections, WHICH system a request is for comes from the caller's
+// ROLE: a banquet admin sending `?scope=catering` still reads and writes the
+// banquet columns. Only the platform roles, who run every product, may name
+// one.
+
+export const PRICE_COLUMN = {
+  banquet: 'priceCents',
+  smallBanquet: 'priceCentsSmallBanquet',
+  catering: 'priceCentsCatering',
+} as const satisfies Record<MenuScope, string>;
+
+export const DISABLED_COLUMN = {
+  banquet: 'disabledBanquet',
+  smallBanquet: 'disabledSmallBanquet',
+  catering: 'disabledCatering',
+} as const satisfies Record<MenuScope, string>;
+
+const SCOPE_BY_ROLE: Partial<Record<AdminRole, MenuScope>> = {
+  [AdminRole.ADMIN]: 'banquet',
+  [AdminRole.EMPLOYEE]: 'banquet',
+  [AdminRole.KITCHEN]: 'banquet',
+  [AdminRole.SUPERVISOR]: 'smallBanquet',
+  [AdminRole.SMALL_KITCHEN]: 'smallBanquet',
+  [AdminRole.CATERING_ADMIN]: 'catering',
+  [AdminRole.CATERING_EMPLOYEE]: 'catering',
+};
+
+/** The system a role belongs to, or null for a platform role (who may choose). */
+export function menuScopeForRole(role: AdminRole | undefined | null): MenuScope | null {
+  return (role && SCOPE_BY_ROLE[role]) || null;
+}
+
+/** The system of a request: the role's own, else what a platform role asked for, else the fallback. */
+export function resolveRoleMenuScope(role: AdminRole | undefined | null, requested: unknown, fallback: MenuScope): MenuScope {
+  return menuScopeForRole(role) ?? resolveMenuScope(requested, fallback);
+}
+
+type ScopedColumns = (typeof PRICE_COLUMN)[MenuScope] | (typeof DISABLED_COLUMN)[MenuScope];
+type ScopedRow = { priceCents: number; priceCentsSmallBanquet: number; priceCentsCatering: number;
+  disabledBanquet: boolean; disabledSmallBanquet: boolean; disabledCatering: boolean };
+
+/**
+ * A dish as ONE system sees it: `priceCents` is that system's price, `disabled`
+ * its own switch, and the other systems' prices and switches are not in the
+ * object at all — so no page can display, or send back, a value that is not
+ * its own. Every read of the dish table that leaves the API goes through this.
+ */
+export function presentForScope<T extends ScopedRow>(item: T, scope: MenuScope): Omit<T, ScopedColumns> & { priceCents: number; disabled: boolean } {
+  const {
+    priceCents, priceCentsSmallBanquet, priceCentsCatering,
+    disabledBanquet, disabledSmallBanquet, disabledCatering, ...rest
+  } = item;
+  const prices = { priceCents, priceCentsSmallBanquet, priceCentsCatering };
+  const disabled = { disabledBanquet, disabledSmallBanquet, disabledCatering };
+  return { ...rest, priceCents: prices[PRICE_COLUMN[scope]], disabled: disabled[DISABLED_COLUMN[scope]] };
 }

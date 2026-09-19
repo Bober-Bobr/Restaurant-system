@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { getExcludedCategories } from '../../utils/excludedCategories.js';
 import { prisma } from '../../db/prisma.js';
 import createHttpError from 'http-errors';
 import { generateCode, generateGuestToken, normalizeCode } from './order.code.js';
@@ -30,6 +31,12 @@ const ORDER_INCLUDE = {
 
 export type OrderLineInput = { menuItemId: string; quantity: number };
 
+/** What the catering system sells: not switched off by dish, not by category. */
+async function cateringOnSale(restaurantId: string) {
+  const excluded = await getExcludedCategories(restaurantId, 'catering');
+  return { disabledCatering: false, category: { notIn: excluded } };
+}
+
 export class OrderService {
   // ── Guest side (unauthenticated) ──────────────────────────────────────────
 
@@ -56,9 +63,12 @@ export class OrderService {
     }
     if (wanted.size === 0) throw createHttpError(400, 'The order is empty.');
 
+    // Orders are the CATERING system's: its price, and only dishes it sells —
+    // a dish or category the food admin switched off cannot be ordered, and
+    // the banquet price is never charged here (utils/excludedCategories.ts).
     const menuItems = await prisma.menuItem.findMany({
-      where: { id: { in: [...wanted.keys()] }, restaurantId, isActive: true },
-      select: { id: true, name: true, priceCents: true, isOutOfStock: true },
+      where: { id: { in: [...wanted.keys()] }, restaurantId, isActive: true, ...(await cateringOnSale(restaurantId)) },
+      select: { id: true, name: true, priceCentsCatering: true, isOutOfStock: true },
     });
     const byId = new Map(menuItems.map((m) => [m.id, m]));
 
@@ -76,7 +86,7 @@ export class OrderService {
       return {
         menuItemId,
         nameSnapshot: item.name,
-        unitPriceCents: item.priceCents,
+        unitPriceCents: item.priceCentsCatering,
         quantity,
       };
     });
@@ -216,15 +226,15 @@ export class OrderService {
 
       const order = await prisma.order.findUnique({ where: { id }, select: { restaurantId: true } });
       const menuItems = await prisma.menuItem.findMany({
-        where: { id: { in: [...wanted.keys()] }, restaurantId: order!.restaurantId, isActive: true },
-        select: { id: true, name: true, priceCents: true },
+        where: { id: { in: [...wanted.keys()] }, restaurantId: order!.restaurantId, isActive: true, ...(await cateringOnSale(order!.restaurantId)) },
+        select: { id: true, name: true, priceCentsCatering: true },
       });
       const byId = new Map(menuItems.map((m) => [m.id, m]));
       if (byId.size !== wanted.size) throw createHttpError(409, 'Some dishes are no longer on the menu.');
 
       itemData = [...wanted.entries()].map(([menuItemId, quantity]) => {
         const item = byId.get(menuItemId)!;
-        return { menuItemId, nameSnapshot: item.name, unitPriceCents: item.priceCents, quantity };
+        return { menuItemId, nameSnapshot: item.name, unitPriceCents: item.priceCentsCatering, quantity };
       });
     }
 

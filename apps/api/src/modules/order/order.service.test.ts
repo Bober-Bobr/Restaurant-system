@@ -19,9 +19,10 @@ const { Prisma } = await import('@prisma/client');
 const RESTAURANT = 'rest-1';
 const OPEN_RESTAURANT = { id: RESTAURANT, moduleCatering: true };
 
+// Orders are the catering system's, so they are priced at the CATERING price.
 const MENU = [
-  { id: 'm1', name: 'Lagman', priceCents: 4500000, isOutOfStock: false },
-  { id: 'm2', name: 'Plov', priceCents: 6000000, isOutOfStock: false },
+  { id: 'm1', name: 'Lagman', priceCentsCatering: 4500000, isOutOfStock: false },
+  { id: 'm2', name: 'Plov', priceCentsCatering: 6000000, isOutOfStock: false },
 ];
 
 let service: InstanceType<typeof OrderService>;
@@ -386,5 +387,20 @@ describe('the waiter\'s working set', () => {
     expect(prismaMock.order.findMany.mock.calls[0][0].orderBy[0]).toEqual({
       callPendingAt: { sort: 'asc', nulls: 'last' },
     });
+  });
+});
+
+describe('an order is the catering system\'s, whatever the other systems do', () => {
+  it('charges the catering price — the banquet price is not even read', async () => {
+    await service.placeOrder(RESTAURANT, null, [{ menuItemId: 'm1', quantity: 2 }]);
+    const call = prismaMock.menuItem.findMany.mock.calls[0][0];
+    expect(call.select).toMatchObject({ priceCentsCatering: true });
+    expect(call.select).not.toHaveProperty('priceCents');
+    expect(JSON.stringify(createdOrder())).toContain('4500000');
+  });
+
+  it('cannot order a dish the food admin switched off', async () => {
+    await service.placeOrder(RESTAURANT, null, [{ menuItemId: 'm1', quantity: 1 }]);
+    expect(prismaMock.menuItem.findMany.mock.calls[0][0].where).toMatchObject({ disabledCatering: false });
   });
 });

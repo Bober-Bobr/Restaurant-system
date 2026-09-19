@@ -650,7 +650,23 @@ model MenuItem {
   nameI18n         Json?
   descriptionI18n  Json?
   category         MenuCategory
+  // ── One price per system ────────────────────────────────────────────────
+  // The dish table is shared by three systems, and each sets its OWN price:
+  // changing the catering site's price must not touch the banquet tablet's.
+  // `priceCents` is the BANQUET price (the column predates the split); the
+  // other two were copied from it on migration, and every read resolves the
+  // right one for the system asking (utils/excludedCategories.ts →
+  // presentForScope), under the name `priceCents`, so no page reads a column
+  // that is not its own.
   priceCents       Int
+  priceCentsSmallBanquet Int
+  priceCentsCatering     Int
+  // Switched off for ONE system — the Settings page's per-dish switches,
+  // beside the per-category lists on Restaurant. Unlike `isActive`, which is
+  // the dish itself and applies everywhere.
+  disabledBanquet      Boolean @default(false)
+  disabledSmallBanquet Boolean @default(false)
+  disabledCatering     Boolean @default(false)
   photoUrl         String?
   isActive         Boolean                   @default(true)
   showOnTablet     Boolean                   @default(true)
