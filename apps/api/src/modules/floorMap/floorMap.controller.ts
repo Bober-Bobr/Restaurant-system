@@ -27,6 +27,16 @@ export class FloorMapController {
     response.json(await service.updateArea(...scope(request), id, payload));
   }
 
+  async saveDefaultLayout(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    response.json(await service.saveDefaultLayout(...scope(request), id));
+  }
+
+  async restoreDefaultLayout(request: Request, response: Response) {
+    const { id } = idSchema.parse(request.params);
+    response.json(await service.restoreDefaultLayout(...scope(request), id));
+  }
+
   async createTable(request: Request, response: Response) {
     const payload = createTableSchema.parse(request.body);
     response.status(201).json(await service.createTable(...scope(request), payload));

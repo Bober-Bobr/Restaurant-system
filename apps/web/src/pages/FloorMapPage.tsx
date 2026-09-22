@@ -84,6 +84,9 @@ export const FloorMapPage = () => {
   // a few pixels high. The map scrolls inside its own frame.
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 700 ? 2 : 1));
   const [notice, setNotice] = useState<string | null>(null);
+  /** A confirmation of something that WORKED — the red notice is for failures. */
+  const [flash, setFlash] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [areaForm, setAreaForm] = useState<{ name: string; kind: AreaKind; capacity: string } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -97,6 +100,9 @@ export const FloorMapPage = () => {
   const switchArea = (id: string) => {
     setSelectedId(null);
     setDrag(null);
+    // The flash names what happened to the area being left; it would read as a
+    // statement about the new one.
+    setFlash(null);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('area', id);
@@ -202,6 +208,46 @@ export const FloorMapPage = () => {
         await queryClient.invalidateQueries({ queryKey: ['halls'] });
       },
     );
+  };
+
+  /**
+   * Remember the area as it stands now. There is ONE default per area, so
+   * saving over an existing one asks first — the old layout is not kept, and
+   * the press that replaces it is the same press that saves the first one.
+   */
+  const saveDefaultLayout = async (area: MapArea) => {
+    if (area.defaultLayoutAt && !window.confirm(t('fm_default_replace_confirm', { name: area.name }))) return;
+    setFlash(null);
+    setBusy(true);
+    const row = await commit(null, () => floorMapService.saveDefaultLayout(area.id));
+    setBusy(false);
+    if (row) {
+      patchCache((m) => ({ ...m, areas: m.areas.map((x) => (x.id === row.id ? { ...x, ...row } : x)) }));
+      setFlash(t('fm_default_saved_ok'));
+    }
+  };
+
+  /**
+   * Put the area back to its saved layout. This DELETES the tables standing in
+   * it and writes the saved ones again, so it asks first and says how many
+   * tables are there now. The reply carries the whole area, and it is written
+   * into the cache rather than merged: every table is a new row.
+   */
+  const restoreDefaultLayout = async (area: MapArea) => {
+    const count = tables.filter((x) => x.hallId === area.id).length;
+    if (!window.confirm(t('fm_restore_default_confirm', { name: area.name, count }))) return;
+    setFlash(null);
+    setSelectedId(null);
+    setBusy(true);
+    const result = await commit(null, () => floorMapService.restoreDefaultLayout(area.id));
+    setBusy(false);
+    if (result) {
+      patchCache((m) => ({
+        areas: m.areas.map((x) => (x.id === result.area.id ? { ...x, ...result.area } : x)),
+        tables: [...m.tables.filter((x) => x.hallId !== result.area.id), ...result.tables],
+      }));
+      setFlash(t('fm_default_restored', { count: result.tables.length }));
+    }
   };
 
   const createArea = async () => {
@@ -477,14 +523,24 @@ export const FloorMapPage = () => {
     );
   };
 
+  const savedAtText = (area: MapArea) =>
+    (area.defaultLayoutAt
+      ? new Date(area.defaultLayoutAt).toLocaleString(
+        locale === 'ru' ? 'ru-RU' : locale === 'uz' ? 'uz-UZ' : 'en-US',
+        { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' },
+      )
+      : null);
+
   const areaPanel = (area: MapArea) => {
     const stats = t('fm_area_stats', { tables: areaTables.length, seats: seatsIn(areaTables) });
+    const savedAt = savedAtText(area);
     if (!editing) {
       return (
         <dl className="fm-facts">
           <dt>{t('fm_kind')}</dt><dd>{kindLabel(area.kind)}</dd>
           <dt>{t('capacity')}</dt><dd>{area.capacity}</dd>
           <dt>{t('fm_seats')}</dt><dd>{stats}</dd>
+          <dt>{t('fm_default')}</dt><dd>{savedAt ?? t('fm_default_none')}</dd>
         </dl>
       );
     }
@@ -509,6 +565,24 @@ export const FloorMapPage = () => {
         <p className="fm-caption" style={{ margin: 0 }}>{stats}</p>
         <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
         <button type="button" className="adm-btn-primary" onClick={() => void addTable()}>{t('fm_add_table_here')}</button>
+
+        {/* The area's default layout: how this room is meant to stand, and the
+            way back to it after an evening has moved everything about. */}
+        <div className="fm-default">
+          <span className="fm-caption">{t('fm_default')}</span>
+          <p className="fm-caption" style={{ margin: '4px 0 10px' }}>
+            {savedAt ? t('fm_default_saved_at', { at: savedAt }) : t('fm_default_none_hint')}
+          </p>
+          <button type="button" className="adm-btn-ghost" disabled={busy} onClick={() => void saveDefaultLayout(area)}>
+            {savedAt ? t('fm_default_replace') : t('fm_save_default')}
+          </button>
+          <button type="button" className="adm-btn-ghost" disabled={busy || !savedAt}
+            onClick={() => void restoreDefaultLayout(area)}>
+            {t('fm_restore_default')}
+          </button>
+          {flash && <p className="fm-flash" role="status">{flash}</p>}
+        </div>
+
         <button type="button" className="adm-btn-danger" onClick={() => deleteArea(area)}>{t('fm_delete_area')}</button>
       </div>
     );
@@ -722,6 +796,13 @@ export const FloorMapPage = () => {
           background: transparent; border: 0; color: rgba(var(--adm-text-rgb), 0.7);
         }
         .fm-segmented button.is-on { background: rgba(var(--adm-accent-rgb), 0.16); color: var(--adm-accent); }
+        .fm-default {
+          display: grid; gap: 8px; padding: 12px; border-radius: 4px;
+          border: 1px solid var(--adm-line); background: rgba(var(--adm-text-rgb), 0.03);
+        }
+        .fm-flash {
+          margin: 2px 0 0; font-size: 12px; font-weight: 600; color: var(--adm-accent);
+        }
         .fm-facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0; font-size: 14px; }
         .fm-facts dt { color: rgba(var(--adm-text-rgb), 0.55); }
         .fm-facts dd { margin: 0; font-weight: 600; }

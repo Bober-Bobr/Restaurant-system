@@ -41,6 +41,12 @@ export type MapArea = {
   mapWidth: number | null;
   mapHeight: number | null;
   mapFeatures?: MapFeature[] | null;
+  /**
+   * When this area's default layout was saved, or null when it has none. The
+   * snapshot itself stays on the server — the map never needs to read it, only
+   * to know there is one to go back to.
+   */
+  defaultLayoutAt?: string | null;
 };
 
 export type MapTable = {

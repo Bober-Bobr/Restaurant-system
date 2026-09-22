@@ -1,5 +1,6 @@
 import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
+import { readLayout, snapshotOf } from './floorMap.layout.js';
 import type {
   AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
 } from './floorMap.repository.js';
@@ -76,6 +77,34 @@ export class FloorMapService {
       throw createHttpError(409, 'Hall with this name already exists');
     }
     return this.repo.updateArea(id, payload);
+  }
+
+  /**
+   * Remember the area exactly as it stands now — its tables, its map size and
+   * its drawing — as the layout "revert" puts it back to. Saving again simply
+   * replaces it: there is one default per area, and a second one would be a
+   * list nobody asked for.
+   */
+  async saveDefaultLayout(restaurantId: string, section: Section, id: string): Promise<AreaRow> {
+    const area = await this.areaInScope(restaurantId, section, id);
+    const layout = snapshotOf(area, await this.repo.tablesInArea(id));
+    return this.repo.saveDefaultLayout(id, layout, new Date());
+  }
+
+  /**
+   * Put the area back to its saved default. The area's CURRENT tables are
+   * replaced by the saved ones, so anything added since is gone — which is
+   * what reverting a room means, and why the page asks first.
+   *
+   * With no default saved this is a 409 rather than a restore of nothing: an
+   * area that has never been saved has no "default state" to go back to, and
+   * emptying the room would be the worst possible reading of the button.
+   */
+  async restoreDefaultLayout(restaurantId: string, section: Section, id: string): Promise<{ area: AreaRow; tables: TableRow[] }> {
+    await this.areaInScope(restaurantId, section, id);
+    const layout = readLayout(await this.repo.readDefaultLayout(id));
+    if (!layout) throw createHttpError(409, 'This area has no saved default layout');
+    return this.repo.restoreLayout(id, layout);
   }
 
   async createTable(restaurantId: string, section: Section, payload: TableData): Promise<TableRow> {

@@ -31,6 +31,16 @@ export const floorMapService = {
     const { data } = await httpClient.patch<MapArea>(`/floor-map/areas/${id}`, payload);
     return data;
   },
+  /** Remember this area exactly as it stands — tables, map size and drawing. */
+  async saveDefaultLayout(id: string) {
+    const { data } = await httpClient.post<MapArea>(`/floor-map/areas/${id}/default`, {});
+    return data;
+  },
+  /** Put the area back to that saved layout. Its current tables are replaced. */
+  async restoreDefaultLayout(id: string) {
+    const { data } = await httpClient.post<{ area: MapArea; tables: MapTable[] }>(`/floor-map/areas/${id}/restore`, {});
+    return data;
+  },
   async createTable(payload: TablePayload) {
     const { data } = await httpClient.post<MapTable>('/floor-map/tables', payload);
     return data;

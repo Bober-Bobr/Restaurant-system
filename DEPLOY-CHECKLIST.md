@@ -3140,3 +3140,30 @@ Migration `20260921100000_menu_per_system` on `MenuItem`:
    booking uses the supervisor's.
 7. Opening a table package in the banquet admin still shows every dish it had,
    switched off or not — saving it does not drop them.
+
+## §61 — The floor map remembers how each area is meant to stand (**has a migration**)
+
+Migration `20260922100000_floor_map_default_layout` adds two **nullable**
+columns to `Hall`: `defaultLayout` (JSONB — the saved snapshot) and
+`defaultLayoutAt`. Nothing has a default until somebody saves one, so the
+deploy changes nothing on screen.
+
+**After deploying**, as the SUPERVISOR at `supervisor.v-menu.uz/<slug>`:
+
+1. Open the map → an area → **Edit map**. The panel now has a *Default layout*
+   block reading "No default saved yet".
+2. Arrange the area the way it should normally stand → **Save this layout as
+   the default**. The block shows the date and time; the view-mode facts list
+   shows it too.
+3. Move a table, resize another, add a third, delete a fourth. Then **Revert to
+   the default** → confirm. The area comes back exactly as saved, and the table
+   added in this step is gone.
+4. Resize the area's map (corner handle) and revert again: the map size comes
+   back too, and so does the drawing on a venue that has one.
+5. Switch to another area: its own block still says nothing is saved, and
+   **Revert to the default** is disabled there. Reverting the first area did
+   not touch the second one's tables.
+6. Saving again over an existing default asks first, and the new layout is what
+   a revert then restores.
+7. Sangizar's "Street": after importing the plan (§58), save it as the default
+   straight away — that is the layout the venue goes back to after an evening.

@@ -591,6 +591,15 @@ model Hall {
   // (see floorMap.features.ts). Data rather than code, so a venue's plan is
   // set per restaurant — Sangizar's "Street" is the first.
   mapFeatures  Json        @default("[]")
+  // This area's SAVED DEFAULT layout — its map size, its drawing and every
+  // table on it as of the moment it was saved (see floorMap.layout.ts). An
+  // evening moves the tables about; restoring puts the room back the way it is
+  // meant to stand. Null until a default is saved. The whole snapshot is one
+  // column because it is restored as a unit — a half-applied layout is not a
+  // layout — and `defaultLayoutAt` is separate so "has a default, saved then"
+  // can be answered without reading the snapshot itself.
+  defaultLayout   Json?
+  defaultLayoutAt DateTime?
   restaurantId String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

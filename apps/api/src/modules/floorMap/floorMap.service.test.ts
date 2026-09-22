@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { FloorMapService } from './floorMap.service.js';
 import type { AreaRow, FloorMapRepository, TableData, TableRow } from './floorMap.repository.js';
 import { createTableSchema, updateAreaSchema, updateTableSchema } from './floorMap.schema.js';
+import { layoutSchema } from './floorMap.layout.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
 
@@ -12,6 +13,8 @@ type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
 function fakeRepo() {
   const areas: AreaRow[] = [];
   const tables: TableRow[] = [];
+  /** `Hall.defaultLayout`, kept out of AreaRow exactly as the column is. */
+  const defaults = new Map<string, unknown>();
   let seq = 0;
   const repo: Repo = {
     async listAreas(restaurantId, section) {
@@ -26,7 +29,7 @@ function fakeRepo() {
       return areas.some((a) => a.restaurantId === restaurantId && a.section === section && a.name === name && a.id !== exceptId);
     },
     async createArea(restaurantId, section, data) {
-      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, mapFeatures: [], ...data };
+      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, mapFeatures: [], defaultLayoutAt: null, ...data };
       areas.push(row);
       return row;
     },
@@ -41,6 +44,22 @@ function fakeRepo() {
       const hall = areas.find((a) => a.id === row.hallId)!;
       return { ...row, hall: { restaurantId: hall.restaurantId, section: hall.section } };
     },
+    async tablesInArea(hallId) { return tables.filter((t) => t.hallId === hallId); },
+    async readDefaultLayout(id) { return defaults.get(id) ?? null; },
+    async saveDefaultLayout(id, layout, at) {
+      defaults.set(id, JSON.parse(JSON.stringify(layout)));
+      const row = areas.find((a) => a.id === id)!;
+      row.defaultLayoutAt = at;
+      return row;
+    },
+    async restoreLayout(hallId, layout) {
+      // Like the transaction: the area's tables are replaced, not merged.
+      for (let i = tables.length - 1; i >= 0; i -= 1) if (tables[i].hallId === hallId) tables.splice(i, 1);
+      for (const t of layout.tables) tables.push({ id: `t${++seq}`, hallId, width: null, height: null, ...t });
+      const area = areas.find((a) => a.id === hallId)!;
+      Object.assign(area, { mapWidth: layout.mapWidth, mapHeight: layout.mapHeight, mapFeatures: layout.mapFeatures });
+      return { area, tables: tables.filter((t) => t.hallId === hallId) };
+    },
     async labelsInArea(hallId) { return tables.filter((t) => t.hallId === hallId).map(({ id, label }) => ({ id, label })); },
     async createTable(data: TableData) {
       const row: TableRow = { id: `t${++seq}`, width: null, height: null, ...data };
@@ -54,7 +73,7 @@ function fakeRepo() {
     },
     async deleteTable(id) { tables.splice(tables.findIndex((t) => t.id === id), 1); },
   };
-  return { repo, areas, tables };
+  return { repo, areas, tables, defaults };
 }
 
 async function statusOf(run: () => Promise<unknown>): Promise<number> {
@@ -169,6 +188,122 @@ describe('a table number is unique within its area', () => {
   });
 });
 
+describe('an area\'s saved default layout', () => {
+  /** The room as it is meant to stand: three tables, one of them resized. */
+  const arrange = async (hallId: string) => {
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId, label: '1', x: 100, y: 100 });
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId, label: '2', x: 300, y: 100, seats: 4 });
+    await service.createTable('r1', 'SMALL_BANQUET', {
+      ...TABLE, hallId, label: '3', x: 300, y: 250, shape: 'ROUND', rotation: 0, width: 140, height: 140,
+    });
+  };
+
+  it('remembers the tables, the map size and the drawing, and says when', async () => {
+    await arrange(mine.id);
+    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, {
+      mapWidth: 900, mapHeight: 700,
+      mapFeatures: [{ kind: 'stage', shape: 'rect', x: 0, y: 0, width: 200, height: 100, label: 'Сцена' }],
+    });
+
+    const saved = await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(saved.defaultLayoutAt).toBeInstanceOf(Date);
+
+    const layout = layoutSchema.parse(store.defaults.get(mine.id));
+    expect(layout.tables.map((t) => t.label).sort()).toEqual(['1', '2', '3']);
+    expect(layout.tables.find((t) => t.label === '3')).toMatchObject({ shape: 'ROUND', width: 140, height: 140 });
+    expect(layout).toMatchObject({ version: 1, mapWidth: 900, mapHeight: 700 });
+    expect(layout.mapFeatures).toHaveLength(1);
+    // No table ids: a restore makes fresh rows, because an id in the snapshot
+    // may by then belong to a table moved into ANOTHER area. Read from what
+    // was STORED, not from the parsed copy — zod strips unknown keys, so a
+    // snapshot full of ids would come back through the schema looking clean.
+    expect(JSON.stringify(store.defaults.get(mine.id))).not.toContain('"id"');
+  });
+
+  it('puts the room back: tables moved, resized, added and deleted all return', async () => {
+    await arrange(mine.id);
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+
+    // An evening: table 2 shoved across the room and given two more seats,
+    // table 3 deleted, a table 9 dragged in from somewhere.
+    const two = store.tables.find((t) => t.label === '2')!;
+    const three = store.tables.find((t) => t.label === '3')!;
+    await service.updateTable('r1', 'SMALL_BANQUET', two.id, { x: 500, y: 380, seats: 6 });
+    await service.deleteTable('r1', 'SMALL_BANQUET', three.id);
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '9', x: 420, y: 60 });
+
+    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(tables.map((t) => t.label).sort()).toEqual(['1', '2', '3']);
+    expect(tables.find((t) => t.label === '2')).toMatchObject({ x: 300, y: 100, seats: 4 });
+    expect(tables.find((t) => t.label === '3')).toMatchObject({ shape: 'ROUND', width: 140, height: 140 });
+    // The table added during the evening is gone — that is what reverting means.
+    expect(store.tables.some((t) => t.label === '9')).toBe(false);
+  });
+
+  it('restores the map size and the drawing too — they are part of how the room stands', async () => {
+    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, {
+      mapWidth: 900, mapHeight: 700,
+      mapFeatures: [{ kind: 'water', shape: 'ellipse', x: 100, y: 100, width: 200, height: 120 }],
+    });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, { mapWidth: 1400, mapHeight: 1200, mapFeatures: [] });
+
+    const { area } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(area).toMatchObject({ mapWidth: 900, mapHeight: 700 });
+    expect(area.mapFeatures).toHaveLength(1);
+  });
+
+  it('an area with no default saved refuses to revert — it does not empty the room', async () => {
+    await arrange(mine.id);
+    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id))).toBe(409);
+    expect(store.tables).toHaveLength(3);
+  });
+
+  it('a stored layout that is not a usable one is refused, never applied', async () => {
+    await arrange(mine.id);
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    // Somebody reached the JSON column with psql. A broken snapshot must read
+    // as "no usable default", not as a map wiped by a restore.
+    store.defaults.set(mine.id, { version: 1, tables: [{ label: '1', seats: 'lots' }] });
+    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id))).toBe(409);
+    expect(store.tables).toHaveLength(3);
+  });
+
+  it('saving again replaces the default — there is one per area', async () => {
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '2', x: 300 });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+
+    await service.deleteTable('r1', 'SMALL_BANQUET', store.tables.find((t) => t.label === '2')!.id);
+    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(tables.map((t) => t.label).sort()).toEqual(['1', '2']);
+  });
+
+  it('one area\'s default says nothing about another\'s, and a restore touches only its own room', async () => {
+    const terrace = await service.createArea('r1', 'SMALL_BANQUET', { name: 'Terrace', kind: 'OUTDOOR', capacity: 40, ...LAYOUT });
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: terrace.id, label: 'T1' });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+
+    expect(store.defaults.has(terrace.id)).toBe(false);
+    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', terrace.id))).toBe(409);
+
+    await service.updateTable('r1', 'SMALL_BANQUET', store.tables.find((t) => t.label === 'T1')!.id, { x: 500 });
+    await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    // The terrace's own table was neither moved back nor deleted.
+    expect(store.tables.find((t) => t.hallId === terrace.id)).toMatchObject({ label: 'T1', x: 500 });
+  });
+
+  it('is scoped like every other id: the other section\'s area and another restaurant\'s are 404', async () => {
+    for (const id of [banquet.id, foreign.id]) {
+      expect(await statusOf(() => service.saveDefaultLayout('r1', 'SMALL_BANQUET', id))).toBe(404);
+      expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', id))).toBe(404);
+    }
+    expect(store.defaults.size).toBe(0);
+  });
+});
+
 describe('the request schema', () => {
   it('bounds the seat count and the coordinates', () => {
     const base = { ...TABLE, hallId: 'ckv0000000000000000000000' };
@@ -223,6 +358,33 @@ describe('the wiring', () => {
     expect(src.slice(at, at + 300)).toMatch(/where:\s*\{\s*hall:\s*\{\s*restaurantId,\s*section\s*\}/);
     const areas = src.slice(src.indexOf('async listAreas('), src.indexOf('async listTables('));
     expect(areas).toMatch(/where:\s*\{\s*restaurantId,\s*section\s*\}/);
+  });
+
+  it('a restore replaces the area\'s tables in ONE transaction, and the snapshot never leaves the server', () => {
+    const repo = read('src/modules/floorMap/floorMap.repository.ts');
+    const restore = repo.slice(repo.indexOf('async restoreLayout('), repo.indexOf('async labelsInArea('));
+    // Half a layout is not a layout: the delete, the writes and the area's own
+    // size and drawing either all land or none do.
+    expect(restore).toContain('prisma.$transaction');
+    expect(restore).toMatch(/tx\.floorTable\.deleteMany\(\{\s*where:\s*\{\s*hallId\s*\}/);
+    expect(restore).toContain('tx.floorTable.createMany');
+    // The map is told a default exists and when — never handed the layout.
+    const select = repo.slice(repo.indexOf('const AREA_SELECT'), repo.indexOf('const TABLE_SELECT'));
+    expect(select).toContain('defaultLayoutAt: true');
+    expect(select).not.toContain('defaultLayout: true');
+  });
+
+  it('the migration adds both columns nullable, so nothing has a default until one is saved', () => {
+    const sql = fs.readFileSync(
+      path.join(API_ROOT, 'prisma/migrations/20260922100000_floor_map_default_layout/migration.sql'), 'utf8',
+    );
+    expect(sql).toContain('ADD COLUMN "defaultLayout" JSONB;');
+    expect(sql).toContain('ADD COLUMN "defaultLayoutAt" TIMESTAMP(3);');
+    expect(sql).not.toMatch(/defaultLayout[^;]*NOT NULL/);
+    const schema = read('prisma/schema.prisma');
+    const hall = schema.slice(schema.indexOf('model Hall {'), schema.indexOf('model FloorTable {'));
+    expect(hall).toMatch(/defaultLayout\s+Json\?/);
+    expect(hall).toMatch(/defaultLayoutAt\s+DateTime\?/);
   });
 
   it('is mounted behind the restaurant scope and a role guard that excludes the kitchens and banquet staff', () => {
