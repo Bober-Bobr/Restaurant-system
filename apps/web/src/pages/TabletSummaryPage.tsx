@@ -8,7 +8,9 @@ import { httpClient } from '../services/http';
 import networkingLogoSrc from '../assets/networking-logo.png';
 import { Locale, locales, translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
-import { tabletThemeVars } from '../utils/tabletTheme';
+import { kioskTheme, tabletThemeVars } from '../utils/tabletTheme';
+import { useAuthStore } from '../store/auth.store';
+import { bookingMissing, kioskSessionsFor, kioskSurface, resolveKioskSession, type KioskSession } from '../utils/kioskSession';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
 import { formatSum, groupDigits, parseSumToTiyin } from '../utils/currency';
@@ -217,7 +219,8 @@ export const TabletSummaryPage = () => {
     eventType, setEventType, eventNotes, setEventNotes,
     birthdayPersonName, setBirthdayPersonName,
     brideName, setBrideName, groomName, setGroomName,
-    honoreePersonName, setHonoreePersonName } = useTabletStore();
+    honoreePersonName, setHonoreePersonName,
+    sessionKind, setSessionKind } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -229,9 +232,20 @@ export const TabletSummaryPage = () => {
   const tabletAccentColor = usePublicDataStore((s) => s.tabletAccentColor);
   const tabletBgColor     = usePublicDataStore((s) => s.tabletBgColor);
   const moduleAddons      = usePublicDataStore((s) => s.moduleAddons);
+  const moduleCatering    = usePublicDataStore((s) => s.moduleCatering);
   const isLoading         = usePublicDataStore((s) => s.isLoading);
   const loadPublicData    = usePublicDataStore((s) => s.loadPublicData);
-  const themeStyle = tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties;
+  const role = useAuthStore((s) => s.role);
+  const themeStyle = tabletThemeVars(kioskTheme(role, { accent: tabletAccentColor, bg: tabletBgColor })) as React.CSSProperties;
+
+  // ── Which evening this is ────────────────────────────────────────────────
+  // A General Dining booking has no package, so it has no price, no event
+  // type, no paid services and no Additional Services to offer afterwards.
+  // Which of those this page draws is one table, in utils/kioskSession.ts,
+  // rather than eight `session === 'dining'` tests scattered down the file.
+  const sessions = kioskSessionsFor(role, { moduleCatering });
+  const session = resolveKioskSession(sessionKind, sessions);
+  const surface = kioskSurface(session);
 
   // Reveal-on-scroll: re-scan once data finishes loading and sections render.
   const revealRef = useScrollReveal<HTMLDivElement>([isLoading]);
@@ -250,6 +264,11 @@ export const TabletSummaryPage = () => {
   useEffect(() => { setDepositCents(parseSumToTiyin(depositText) ?? 0); }, [depositText, setDepositCents]);
   const [isSubmitting, setIsSubmitting]             = useState(false);
   const [confirmedEventId, setConfirmedEventId]     = useState<number | null>(null);
+  // Which session the CONFIRMED booking was taken in. Held separately because
+  // confirming calls `reset()`, which clears the draft's session — without
+  // this the confirmed screen falls back to Banquet and offers a dining guest
+  // the Additional Services button that session is supposed to have dropped.
+  const [confirmedSession, setConfirmedSession] = useState<KioskSession | null>(null);
   const [submitError, setSubmitError]               = useState<string | null>(null);
   const [discountEnabled, setDiscountEnabled]       = useState(false);
   const [discountText, setDiscountText]             = useState('');
@@ -308,8 +327,16 @@ export const TabletSummaryPage = () => {
   // entirely blank event for staff to fill in later, which is why the API keeps
   // defaulting `guestCount` to 0 rather than requiring it (§41): the requirement
   // belongs to this screen, not to the record.
-  const confirmDisabled = !customerName.trim() || !customerPhone.trim() || !eventDate || !eventTime
-    || !selectedHallId || !selectedTableCategoryId || guestCount < 1;
+  //
+  // Both sessions ask the same question through one function: a dining booking
+  // is the banquet one minus the area and the package, and written twice the
+  // two lists would drift. `missing` is a translation key, so the message
+  // below names the field rather than the button only going grey.
+  const missing = bookingMissing(session, {
+    customerName, customerPhone, eventDate, eventTime, guestCount,
+    hallId: selectedHallId, tableCategoryId: selectedTableCategoryId,
+  });
+  const confirmDisabled = missing !== null;
 
   // The export lists the dishes that make up the table: the non-course included
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
@@ -468,6 +495,10 @@ export const TabletSummaryPage = () => {
     childReplacements: childrenActive ? childReplacements : {},
     extras: Object.fromEntries(Object.entries(selectedItems).filter(([, q]) => q > 0)),
     extraServiceIds: selectedExtraServiceIds,
+    // Stamped so the two kinds of booking can be told apart afterwards: a
+    // dining booking has no package and no dishes, which otherwise looks
+    // exactly like a banquet booking somebody abandoned half-filled.
+    sessionKind: session,
   });
 
   const handleConfirm = async () => {
@@ -498,14 +529,21 @@ export const TabletSummaryPage = () => {
         ? await eventService.update(editingEventId, menuFields)
         : await eventService.create({
             ...menuFields,
-            eventType,
+            // A general-dining table is a reservation and nothing else, so the
+            // event type is left to the column's own default rather than
+            // sending whatever the hidden menu happened to be left on.
+            ...(surface.eventType ? { eventType } : {}),
             notes: eventNotes.trim() || undefined,
-            birthdayPersonName:  eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
-            brideName:           eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
-            groomName:           eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
-            honoreePersonName:   !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
+            // The honoree fields hang off the event type, so a session that
+            // has no event type sends none of them — the store can still be
+            // carrying a name typed into an earlier banquet draft.
+            birthdayPersonName:  surface.eventType && eventType === 'BIRTHDAY' && birthdayPersonName.trim() ? birthdayPersonName.trim() : undefined,
+            brideName:           surface.eventType && eventType === 'WEDDING' && brideName.trim() ? brideName.trim() : undefined,
+            groomName:           surface.eventType && eventType === 'WEDDING' && groomName.trim() ? groomName.trim() : undefined,
+            honoreePersonName:   surface.eventType && !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName.trim() ? honoreePersonName.trim() : undefined,
           });
       setConfirmedEventId(event.id);
+      setConfirmedSession(session);
       setConfirmedExportSnapshot({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
@@ -628,6 +666,7 @@ export const TabletSummaryPage = () => {
 
   // ── Success screen ────────────────────────────────────────────────────────
   if (confirmedEventId !== null) {
+    const confirmedSurface = kioskSurface(confirmedSession ?? session);
     return (
       <main className="rg-bg relative min-h-screen overflow-x-hidden px-4 py-12 sm:px-6" style={themeStyle}>
         <PageBackground />
@@ -666,8 +705,9 @@ export const TabletSummaryPage = () => {
               </div>
             )}
             {/* Additional Services — only for restaurants that bought the
-                module. Prominent, above the reset/back controls. */}
-            {moduleAddons && (
+                module, and only for a banquet evening: a dining booking sells
+                no services, so the button that opens them goes with them. */}
+            {moduleAddons && confirmedSurface.addonServices && (
               <div className="w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
                 <button
                   type="button"
@@ -692,6 +732,7 @@ export const TabletSummaryPage = () => {
                 type="button"
                 onClick={() => {
                   setConfirmedEventId(null);
+                  setConfirmedSession(null);
                   setCustomerName(''); setCustomerPhone(''); setSecondCustomerName(''); setSecondCustomerPhone(''); setDepositText(''); setEventDate(''); setEventTime('');
                   setEventNotes(''); setEventType('RESERVATION');
                   setBirthdayPersonName(''); setBrideName(''); setGroomName(''); setHonoreePersonName('');
@@ -732,8 +773,16 @@ export const TabletSummaryPage = () => {
         {/* Back to the menu to tweak the current selection — the fromSummary flag
             tells the tablet to keep the saved table/settings/dishes instead of
             resetting to the table-category picker. */}
+        {/* Back. A banquet booking goes to the menu to be adjusted — the
+            fromSummary flag tells the kiosk to keep the table and the dishes
+            rather than resetting to the package chooser. A dining booking has
+            no menu behind it, so "back" is back to the question: the session is
+            cleared and the chooser is what /tablet then shows. */}
         <PageHeader title={t('selection_summary')} locale={locale} setLocale={setLocale} isLoading={isLoading} t={t} restaurantLogoUrl={restaurantLogoUrl} restaurantName={restaurantName}
-          onBack={() => navigate('/tablet', { state: { fromSummary: true } })} />
+          onBack={() => {
+            if (!surface.menu) setSessionKind(null);
+            navigate('/tablet', { state: { fromSummary: true } });
+          }} />
 
         <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
 
@@ -829,6 +878,11 @@ export const TabletSummaryPage = () => {
                     placeholder="0" />
                 </div>
 
+                {/* The event type and the honoree fields it decides between.
+                    A general-dining table is not a wedding or a birthday —
+                    there is nothing to choose — so the menu and all three
+                    follow-up fields go together. */}
+                {surface.eventType && (<>
                 <div className="grid gap-1.5">
                   <label className="rg-label">{t('event_type')}</label>
                   <select className="rg-input" value={eventType}
@@ -871,6 +925,7 @@ export const TabletSummaryPage = () => {
                       value={honoreePersonName} onChange={(e) => setHonoreePersonName(e.target.value)} />
                   </div>
                 )}
+                </>)}
 
                 <div className="grid gap-1.5">
                   <label className="rg-label">
@@ -891,19 +946,26 @@ export const TabletSummaryPage = () => {
               <p className="rg-heading mb-4">{t('event_details')}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {[
-                  { label: t('event_type'), value: t(`event_type_${eventType.toLowerCase()}` as Parameters<typeof t>[0]) },
-                  { label: t('hall'), value: selectedHall?.name || t('not_selected') },
+                  // A dining booking says what it is instead: there is no
+                  // event type to print, and "Hall: not selected" beside it
+                  // would read as something the guest failed to answer.
+                  ...(surface.eventType
+                    ? [{ label: t('event_type'), value: t(`event_type_${eventType.toLowerCase()}` as Parameters<typeof t>[0]) }]
+                    : [{ label: t('kiosk_session_title'), value: t('kiosk_session_dining') }]),
+                  ...(surface.areas ? [{ label: t('hall'), value: selectedHall?.name || t('not_selected') }] : []),
                   // A table category is a price package: naming it without its
                   // rate leaves the guest confirming a total they cannot check.
-                  { label: t('table_category'), value: selectedTableCategory ? tableCategoryLabel(selectedTableCategory, t('person')) : t('not_selected') },
+                  ...(surface.tablePackages
+                    ? [{ label: t('table_category'), value: selectedTableCategory ? tableCategoryLabel(selectedTableCategory, t('person')) : t('not_selected') }]
+                    : []),
                   { label: t('guest_count'), value: String(guestCount) },
                   ...(childrenActive ? [{ label: t('children_table'), value: `${tableCategoryLabel(childrenTableCategory!, t('person'))} · ${childrenCount}` }] : []),
                   ...(eventDate ? [{ label: t('event_date'), value: new Date(eventDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) }] : []),
                   ...(eventTime ? [{ label: t('event_time'), value: eventTime }] : []),
-                  ...(eventType === 'BIRTHDAY' && birthdayPersonName ? [{ label: t('birthday_person_name'), value: birthdayPersonName }] : []),
-                  ...(eventType === 'WEDDING' && brideName ? [{ label: t('bride_name'), value: brideName }] : []),
-                  ...(eventType === 'WEDDING' && groomName ? [{ label: t('groom_name'), value: groomName }] : []),
-                  ...(!['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName ? [{ label: t('honoree_person_name'), value: honoreePersonName }] : []),
+                  ...(surface.eventType && eventType === 'BIRTHDAY' && birthdayPersonName ? [{ label: t('birthday_person_name'), value: birthdayPersonName }] : []),
+                  ...(surface.eventType && eventType === 'WEDDING' && brideName ? [{ label: t('bride_name'), value: brideName }] : []),
+                  ...(surface.eventType && eventType === 'WEDDING' && groomName ? [{ label: t('groom_name'), value: groomName }] : []),
+                  ...(surface.eventType && !['BIRTHDAY', 'WEDDING'].includes(eventType) && honoreePersonName ? [{ label: t('honoree_person_name'), value: honoreePersonName }] : []),
                   ...(eventNotes ? [{ label: t('notes'), value: eventNotes }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-2xl px-4 py-3"
@@ -915,7 +977,9 @@ export const TabletSummaryPage = () => {
               </div>
             </section>
 
-            {/* Selected items */}
+            {/* Selected items — nothing was chosen in a dining session, so the
+                card would be an empty "no dishes" panel on every booking. */}
+            {surface.menu && (
             <section className="rg-card p-4 sm:p-6 reveal">
               <p className="rg-heading mb-4">{t('selected_menu_items')}</p>
               {isLoading ? (
@@ -946,10 +1010,11 @@ export const TabletSummaryPage = () => {
                 </div>
               )}
             </section>
+            )}
 
             {/* Additional restaurant services — shown before the booking is
                 finalized; ticking one adds its price to the total. */}
-            {extraServices.length > 0 && (
+            {surface.extraServices && extraServices.length > 0 && (
               <section className="rg-card p-4 sm:p-6 reveal">
                 <p className="rg-heading">{t('extra_services')}</p>
                 <p className="mt-1 mb-5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -983,6 +1048,11 @@ export const TabletSummaryPage = () => {
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
 
             {/* Pricing */}
+            {/* Pricing — the discount, the manual total, the deposit, the per
+                guest rate and the total. All of it is the table package's
+                per-person rate worked through, so a session with no package
+                has no pricing block at all. */}
+            {surface.pricing && (
             <section className="overflow-hidden rounded-2xl sm:rounded-3xl reveal" style={{
               background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
               <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -1162,6 +1232,7 @@ export const TabletSummaryPage = () => {
                 )}
               </div>
             </section>
+            )}
 
             {/* Actions */}
             <section className="rg-card p-4 sm:p-5 space-y-3 reveal">
@@ -1175,12 +1246,12 @@ export const TabletSummaryPage = () => {
                 {isSubmitting ? t('submitting') : t('confirm')}
               </button>
 
-              {/* Neither can be chosen from this page, so say where to go. */}
-              {(!selectedHallId || !selectedTableCategoryId || guestCount < 1) && (
+              {/* Names the first thing still missing. The area and the package
+                  cannot be chosen from this page, so for those it says where
+                  to go; a dining booking is never waiting on either. */}
+              {missing && (
                 <p className="text-center text-xs" style={{ color: '#fca5a5' }}>
-                  {!selectedHallId ? t('select_room_required')
-                    : !selectedTableCategoryId ? t('choose_table_category')
-                    : t('guest_count_required')}
+                  {t(missing === 'select_table_category_required' ? 'choose_table_category' : missing)}
                 </p>
               )}
 

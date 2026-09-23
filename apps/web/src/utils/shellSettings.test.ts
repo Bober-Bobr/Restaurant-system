@@ -131,7 +131,10 @@ describe('switching animations off never hides a block', () => {
   });
 
   it('both shells carry the class from their own switch', () => {
-    expect(src('app/TabletLayout.tsx')).toMatch(/animations \? undefined : STILL_CLASS/);
+    // The kiosk shell now carries a second class (the Small Banquets scope),
+    // so the still class is one entry of a list rather than the whole
+    // className — what matters is that it still comes from `animations`.
+    expect(src('app/TabletLayout.tsx')).toMatch(/animations \? '' : STILL_CLASS/);
     for (const file of ['pages/CateringSite.tsx', 'foodsite/FoodSiteLayout.tsx']) {
       expect(src(file)).toMatch(/shell\.animations \? '' : ` \$\{STILL_CLASS\}`/);
     }

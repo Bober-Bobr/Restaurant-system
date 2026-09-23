@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { bookingMissing } from '../utils/kioskSession';
 
 const SRC = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(SRC, rel), 'utf8');
@@ -49,10 +50,24 @@ describe('the running total is always on screen', () => {
   });
 });
 
+/**
+ * The requirement lives in `bookingMissing` (utils/kioskSession.ts) now that
+ * the kiosk has two kinds of session, so these call it. It is still the
+ * BANQUET session that needs a hall and a table; the General Dining one has
+ * neither by design, and kioskSession.test.ts covers that side.
+ */
+const READY = {
+  customerName: 'Nodira', customerPhone: '998901234567',
+  eventDate: '2026-10-02', eventTime: '19:00', guestCount: 8,
+  hallId: 'h1', tableCategoryId: 'tc1',
+};
+
 describe('a kiosk booking needs a hall and a table', () => {
   it('Confirm requires the hall and the table', () => {
-    const line = summary.slice(summary.indexOf('const confirmDisabled ='));
-    expect(line.slice(0, line.indexOf(';'))).toMatch(/!selectedHallId \|\| !selectedTableCategoryId/);
+    expect(bookingMissing('banquet', { ...READY, hallId: undefined })).toBe('select_room_required');
+    expect(bookingMissing('banquet', { ...READY, tableCategoryId: undefined })).toBe('select_table_category_required');
+    // And the Summary is wired to it rather than carrying its own copy.
+    expect(summary).toContain('const missing = bookingMissing(session, {');
   });
 
   it('the kiosk stops the guest at the field they need, not a page later', () => {
@@ -71,13 +86,15 @@ describe('a kiosk booking needs a hall and a table', () => {
   });
 
   it('the head count is required too, on both screens', () => {
-    const line = summary.slice(summary.indexOf('const confirmDisabled ='));
-    expect(line.slice(0, line.indexOf(';'))).toContain('guestCount < 1');
-    expect(summary).toContain("t('guest_count_required')");
+    expect(bookingMissing('banquet', { ...READY, guestCount: 0 })).toBe('guest_count_required');
+    expect(menu).toContain("guestCount < 1 ? 'guest_count_required'");
   });
 
   it('and the Summary says which one is missing', () => {
-    expect(summary).toMatch(/\(!selectedHallId \|\| !selectedTableCategoryId \|\| guestCount < 1\) && \(/);
+    // The message names the field. The package is not choosable from this
+    // page, so that one key is swapped for the "go and choose" wording.
+    expect(summary).toMatch(/\{missing && \(/);
+    expect(summary).toContain("t(missing === 'select_table_category_required' ? 'choose_table_category' : missing)");
   });
 
   it('the Events page is deliberately NOT gated', () => {

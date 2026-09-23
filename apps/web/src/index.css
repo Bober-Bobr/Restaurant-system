@@ -1429,3 +1429,63 @@
 }
 .svr-theme .adm-topbar { border-bottom: 1px solid rgba(var(--adm-accent-rgb), 0.2); }
 .svr-theme .adm-topbar::after { display: none; }
+
+/* ── The Small Banquets kiosk ──────────────────────────────────────────────
+   The section's own tablet, distinguished from the banquet kiosk the way the
+   section's admin pages are distinguished from the banquet admin's: a scope
+   class that restates the primitives, never a forked page. `.svr-kiosk` is put
+   on the kiosk shell by TabletLayout when the signed-in role is SUPERVISOR.
+
+   The PALETTE is not here. The kiosk pages set every --rg-* token inline from
+   `kioskTheme()` (utils/tabletTheme.ts), and an inline custom property beats a
+   class, so the tokens below are only the fallback covering the first paint —
+   they must match SMALL_BANQUET_TABLET_THEME, and palette.test.ts holds them
+   together. What this block carries is the SURFACE: where the banquet kiosk is
+   round, glassy and lit from above, the section's is squared, flat and marked
+   by a rail down the leading edge — the same geometry `.svr-theme` gives the
+   section's admin cards, so the two halves of the product match. */
+.svr-kiosk {
+  --rg-accent: #4fd1a5;
+  --rg-accent-rgb: 79, 209, 165;
+  --rg-accent-soft: #7ee8c4;
+  --rg-accent-deep: #1f8f6d;
+  --rg-bg: #0a1512;
+  --rg-bg-rgb: 10, 21, 18;
+  --rg-bg-dark: #061009;
+  --rg-bg-dark-rgb: 6, 16, 9;
+}
+
+/* Squared, flat, rail on the leading edge. The rail is a border rather than a
+   ::before for the reason `.svr-theme .adm-card` gives: the class is carried by
+   elements that already own their pseudo-elements. */
+.svr-kiosk .rg-card {
+  background: rgba(var(--rg-accent-rgb), 0.035);
+  border: 1px solid rgba(var(--rg-accent-rgb), 0.16);
+  border-left: 2px solid rgba(var(--rg-accent-rgb), 0.5);
+  border-radius: 5px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* The heading loses the display serif and becomes a tracked, ruled eyebrow —
+   the strongest cue at tablet distance that this is a different product, and
+   the same treatment the section's admin headings carry. */
+.svr-kiosk .rg-heading {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--rg-accent-rgb), 0.28);
+}
+.svr-kiosk .rg-display { font-family: 'Inter', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+.svr-kiosk .rg-label { color: rgba(var(--rg-accent-rgb), 0.7); letter-spacing: 0.14em; }
+.svr-kiosk .rg-input { border-radius: 4px; }
+
+/* No sweep: it belongs to the other kiosk's gold. Parked at the START of the
+   sweep, exactly as the reduced-motion rule above does and for the same reason
+   — the heading paints itself with a clipped gradient, so an animation merely
+   stopped leaves it part-coloured, and `background-size` must stay put or the
+   gradient is resized under the text. */
+.svr-kiosk .rg-shine { animation: none; background-position: 0% 50%; }

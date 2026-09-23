@@ -8,7 +8,7 @@ import { Locale, locales, translate } from '../utils/translate';
 import type { MenuItem, TableCategory, TableCategoryPackageItem, TableEventType } from '../types/domain';
 import { isFreeChoice, isPaidExtra, tabletStatusOf } from '../utils/tabletStatus';
 import { getPhotoUrl } from '../utils/photoUrl';
-import { tabletThemeVars } from '../utils/tabletTheme';
+import { kioskTheme, tabletThemeVars } from '../utils/tabletTheme';
 import { dishName } from '../utils/menuI18n';
 import { Lightbox } from '../components/ui/lightbox';
 import { formatSum } from '../utils/currency';
@@ -20,6 +20,9 @@ import { startTabletMusic, isTabletWelcomeShown, markTabletWelcomeShown, isTable
 import { FingerTrail, type TrailTemplate } from '../components/FingerTrail';
 import { ParticleField, type ParticleKind } from '../blocks/ParticleField';
 import { useScrollReveal } from '../utils/useScrollReveal';
+import { useAuthStore } from '../store/auth.store';
+import { kioskAsksSession, kioskSessionsFor, kioskSurface, resolveKioskSession, type KioskSession } from '../utils/kioskSession';
+import { KioskSessionChooser } from './KioskSessionChooser';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
@@ -1822,6 +1825,7 @@ export const TabletMenuPage = () => {
     replacements, setReplacement,
     removedPackageItemIds, toggleRemovedPackageItem,
     setGuestCount, locale, setLocale, reset, setRestaurantId,
+    sessionKind, setSessionKind,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -1836,6 +1840,7 @@ export const TabletMenuPage = () => {
   const tabletTrailTemplate     = usePublicDataStore((s) => s.tabletTrailTemplate);
   const tabletTrailColor        = usePublicDataStore((s) => s.tabletTrailColor);
   const tabletTrailImageUrl     = usePublicDataStore((s) => s.tabletTrailImageUrl);
+  const moduleCatering          = usePublicDataStore((s) => s.moduleCatering);
   const tabletMusicOn           = usePublicDataStore((s) => s.tabletMusic);
   const tabletTrailOn           = usePublicDataStore((s) => s.tabletTrail);
   // Switched off while a track is already playing (the settings load after the
@@ -1851,6 +1856,35 @@ export const TabletMenuPage = () => {
   // The paid Extra currently choosing which included dish it should replace.
   const [replacingExtra, setReplacingExtra] = useState<MenuItem | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(isTabletWelcomeShown());
+
+  // ── Which evening this is ────────────────────────────────────────────────
+  // Small Banquets serves two from one tablet; every other kiosk has one and
+  // is never asked. `resolveKioskSession` is what stops a draft naming a
+  // session this kiosk no longer offers — the module can be withdrawn between
+  // one booking and the next.
+  const role = useAuthStore((s) => s.role);
+  const sessions = kioskSessionsFor(role, { moduleCatering });
+  const asksSession = kioskAsksSession(sessions);
+  const session = resolveKioskSession(sessionKind, sessions);
+  const surface = kioskSurface(session);
+  // The question is put once the welcome is out of the way, and only while it
+  // is still unanswered — `sessionKind` is null until the guest picks, which
+  // is why it is not simply defaulted to 'banquet' in the store.
+  const chooserOpen = welcomeShown && asksSession && sessionKind === null;
+
+  const pickSession = (picked: KioskSession) => {
+    setSessionKind(picked);
+    // General Dining has no menu to show: the booking IS the whole flow, so
+    // the kiosk goes straight to the summary.
+    if (picked === 'dining') navigate('/tablet/summary');
+  };
+
+  // A dining session that arrives here anyway — a reload on /tablet after the
+  // choice, a bookmarked URL — is sent on rather than shown a menu page whose
+  // packages, prices and Additional dishes that session does not have.
+  useEffect(() => {
+    if (welcomeShown && sessionKind === 'dining' && session === 'dining') navigate('/tablet/summary', { replace: true });
+  }, [welcomeShown, sessionKind, session, navigate]);
 
   // Reveal-on-scroll: re-scan when major content swaps in (table category chosen,
   // data finishes loading, category filter changes).
@@ -1952,7 +1986,7 @@ export const TabletMenuPage = () => {
 
   return (
     <main className="rg-bg relative min-h-screen overflow-x-hidden px-3 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8"
-      style={tabletThemeVars({ accent: tabletAccentColor, bg: tabletBgColor }) as React.CSSProperties}>
+      style={tabletThemeVars(kioskTheme(role, { accent: tabletAccentColor, bg: tabletBgColor })) as React.CSSProperties}>
       {/* Bottom-right music on/off toggle, like the catering site. */}
       {welcomeShown && tabletMusicOn && <TabletMusicToggle />}
       {welcomeShown && selectedTableCategory && (
@@ -1968,7 +2002,10 @@ export const TabletMenuPage = () => {
           style={{
             position: 'fixed', inset: 0, zIndex: 9998,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(8,18,12,0.85)', backdropFilter: 'blur(10px)',
+            // The kiosk's own ink. This was a hardcoded dark green, which on a
+            // themed restaurant — and on the Small Banquets palette — was the
+            // one full-screen surface that ignored the theme entirely.
+            background: 'rgba(var(--rg-bg-rgb),0.88)', backdropFilter: 'blur(10px)',
             padding: '20px',
           }}
         >
@@ -2063,7 +2100,11 @@ export const TabletMenuPage = () => {
         </div>
       )}
 
-      {welcomeShown && !selectedTableCategoryId && !isLoading &&
+      {chooserOpen && <KioskSessionChooser sessions={sessions} onPick={pickSession} t={t} />}
+
+      {/* The table-package chooser belongs to a banquet evening: it is what
+          prices the booking, and General Dining has no package to sell. */}
+      {welcomeShown && !chooserOpen && surface.tablePackages && !selectedTableCategoryId && !isLoading &&
         tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN').length > 0 && (
           <TableCategoryFullscreen
             tableCategories={tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN')}
@@ -2300,7 +2341,10 @@ export const TabletMenuPage = () => {
               />
             )}
 
-            {/* Additional — premium highlighted section */}
+            {/* Additional — premium highlighted section. Sold against the
+                table package's per-guest rate, so a session with no package
+                has none of it either (utils/kioskSession.ts). */}
+            {surface.additionalDishes && (
             <section className="reveal" style={{
               position: 'relative', borderRadius: 24, padding: 'clamp(16px, 3vw, 26px)',
               background: 'linear-gradient(165deg, rgba(var(--rg-accent-rgb),0.13) 0%, rgba(var(--rg-bg-rgb),0.35) 45%, rgba(255,255,255,0.03) 100%)',
@@ -2395,6 +2439,7 @@ export const TabletMenuPage = () => {
                 </div>
               </div>
             </section>
+            )}
           </div>
         </section>
       </div>

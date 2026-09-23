@@ -3167,3 +3167,32 @@ deploy changes nothing on screen.
    a revert then restores.
 7. Sangizar's "Street": after importing the plan (§58), save it as the default
    straight away — that is the layout the venue goes back to after an evening.
+
+## §62 — The Small Banquets kiosk: its own look, and a General Dining session (**no migration**)
+
+Web only. Nothing on the banquet kiosk (`v-menu.uz/tablet`) changes, and no
+existing booking is affected.
+
+**After deploying**, signed in as the SUPERVISOR at `supervisor.v-menu.uz/<slug>`:
+
+1. Open the kiosk. Past the welcome screen it now asks **"What kind of evening
+   is this?"** — two cards. The whole kiosk is jade on forest, with squared
+   cards and tracked headings, not the banquet gold. Check it on a phone too:
+   the two cards stack.
+2. The chooser appears only when the restaurant has **moduleCatering** on. With
+   it off, the kiosk opens straight into the banquet flow as before.
+3. **Banquet** → the section's existing flow, unchanged: area, table package,
+   courses, Additional dishes, running total, prices on the summary.
+4. **General dining** → straight to the summary. It has **no** pricing block,
+   no event type, no Additional Services section and no dish list — only the
+   contact fields, date, time, head count and notes. Confirm is disabled until
+   the name, phone, date, time and head count are filled, and it names which is
+   missing; it never asks for an area or a package.
+5. Confirm a dining booking → the confirmed screen shows **no Additional
+   Services button**, even on a restaurant that has `moduleAddons`.
+6. "Start again" from there, or Back from a dining summary, returns to the
+   chooser rather than to a menu.
+7. On the Events list the dining booking appears as a normal **Reservation**
+   with no hall and no package; `menuConfig.sessionKind` is `"dining"`.
+8. Sign in as a banquet `EMPLOYEE` at `v-menu.uz/tablet`: no chooser, gold
+   palette, everything exactly as before.

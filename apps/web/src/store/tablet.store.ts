@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Locale, defaultLocale } from '../utils/translate';
 import type { Event, EventMenuConfig } from '../types/domain';
 import { TABLET_DRAFT_KEY } from './tabletDraft';
+import type { KioskSession } from '../utils/kioskSession';
 
 // Draft handed to the tablet when the admin Events page opens the menu flow for
 // an event (new or existing). `config` restores the exact prior selections.
@@ -66,6 +67,15 @@ type SelectionState = {
   // Which restaurant's kiosk this draft belongs to. A draft restored on another
   // restaurant's kiosk names dishes and packages that do not exist there.
   restaurantId: string;
+  // Banquet or General Dining — chosen on entering the Small Banquets kiosk,
+  // and what decides which screens the rest of the visit has (utils/
+  // kioskSession.ts). It sits in the draft rather than in the page's state so
+  // a reload mid-booking does not drop the guest back at the chooser; a
+  // session no longer on offer is resolved away on read, never trusted.
+  // NULL = not asked yet, which is not the same as "chose Banquet": the
+  // chooser needs to tell those apart or it shows itself to a guest who has
+  // already answered.
+  sessionKind: KioskSession | null;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
@@ -105,6 +115,7 @@ type SelectionState = {
   setGroomName: (value: string) => void;
   setHonoreePersonName: (value: string) => void;
   setRestaurantId: (value: string) => void;
+  setSessionKind: (value: KioskSession | null) => void;
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
@@ -140,6 +151,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   groomName: '',
   honoreePersonName: '',
   restaurantId: '',
+  sessionKind: null,
   childrenTableSelected: false,
   childrenCount: 0,
   childHotAppetizerIds: [],
@@ -307,6 +319,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   setGroomName: (value) => { set({ groomName: value }); },
   setHonoreePersonName: (value) => { set({ honoreePersonName: value }); },
   setRestaurantId: (value) => { set((s) => (s.restaurantId === value ? {} : { restaurantId: value })); },
+  setSessionKind: (value) => { set({ sessionKind: value }); },
   setEventDate: (value) => {
     set({ eventDate: value });
   },
@@ -383,6 +396,9 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       brideName: '',
       groomName: '',
       honoreePersonName: '',
+      // The next guest is asked which evening this is, rather than inheriting
+      // the last one's answer.
+      sessionKind: null,
       childrenTableSelected: false,
       childrenCount: 0,
       childHotAppetizerIds: [],

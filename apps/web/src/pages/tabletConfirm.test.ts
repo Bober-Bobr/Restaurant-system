@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { bookingMissing } from '../utils/kioskSession';
 
 /**
  * What the Summary page requires before a booking can be confirmed.
@@ -25,12 +26,17 @@ const SRC = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(SRC, rel), 'utf8');
 const summary = read('pages/TabletSummaryPage.tsx');
 
-// The whole statement, not one line: the condition spans several.
-const confirmDisabled = (() => {
-  const at = summary.indexOf('const confirmDisabled =');
-  if (at === -1) throw new Error('confirmDisabled is gone — this suite needs rewriting');
-  return summary.slice(at, summary.indexOf(';', at));
-})();
+/**
+ * The requirement itself moved into `bookingMissing` when the kiosk gained a
+ * second kind of session (utils/kioskSession.ts), so these call it rather than
+ * reading an expression off the page — which is the stronger test of the two.
+ * What this file still owns is that the SUMMARY is the screen that applies it.
+ */
+const READY = {
+  customerName: 'Nodira', customerPhone: '998901234567',
+  eventDate: '2026-10-02', eventTime: '19:00', guestCount: 8,
+  hallId: 'h1', tableCategoryId: 'tc1',
+};
 
 describe('what the Confirm button waits for', () => {
   it('the guest count IS required again, but only on this screen', () => {
@@ -38,8 +44,11 @@ describe('what the Confirm button waits for', () => {
     // so a kiosk booking with no head count has no total. What §41 established
     // still holds one level down: the API does not require it, because the
     // Events page still creates an entirely blank event.
-    expect(confirmDisabled).toContain('guestCount < 1');
+    expect(bookingMissing('banquet', { ...READY, guestCount: 0 })).toBe('guest_count_required');
     expect(summary).toMatch(/guestCount < 1 && \(/);
+    // …and the page is wired to it, rather than carrying a second copy.
+    expect(summary).toContain('const missing = bookingMissing(session, {');
+    expect(summary).toContain('const confirmDisabled = missing !== null;');
   });
 
   it('the guest input still carries no floor and no ceiling', () => {
@@ -62,8 +71,14 @@ describe('what the Confirm button waits for', () => {
   it('who and when are still required — those are not numbers', () => {
     // The scope of this change. A booking with no caller and no date is not a
     // booking, and removing those would be a different decision.
-    for (const field of ['customerName', 'customerPhone', 'eventDate', 'eventTime']) {
-      expect(confirmDisabled, `${field} is no longer required`).toContain(field);
+    for (const [field, key] of [
+      ['customerName', 'customer_name_required'], ['customerPhone', 'customer_phone_required'],
+      ['eventDate', 'event_date_required'], ['eventTime', 'event_time_required'],
+    ] as const) {
+      expect(bookingMissing('banquet', { ...READY, [field]: '' }), `${field} is no longer required`).toBe(key);
+      // Required in BOTH sessions: a general-dining table drops the package,
+      // not the caller and the date.
+      expect(bookingMissing('dining', { ...READY, [field]: '' }), `${field} in a dining session`).toBe(key);
     }
   });
 

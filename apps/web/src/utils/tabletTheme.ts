@@ -13,6 +13,17 @@ export type TabletTheme = { accent: string; bg: string };
 // this fallback.
 export const DEFAULT_TABLET_THEME: TabletTheme = { accent: '#d8b45f', bg: '#0b1120' };
 
+/**
+ * The Small Banquets kiosk's own palette — the section's jade on forest, the
+ * same pair `.svr-theme` gives its admin pages, so the section reads as one
+ * product from the floor map through to the tablet a guest is handed.
+ *
+ * It must match the `.svr-kiosk` block in index.css, which covers the moment
+ * before the restaurant's data has loaded — the same rule the banquet pair
+ * above follows, and `palette.test.ts` holds both.
+ */
+export const SMALL_BANQUET_TABLET_THEME: TabletTheme = { accent: '#4fd1a5', bg: '#0a1512' };
+
 const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 function normalizeHex(hex: string | null | undefined): string | null {
@@ -45,6 +56,27 @@ function shade(hex: string, amt: number): { r: number; g: number; b: number } {
  * fall back to the default gold palette, so this is always safe to spread onto a
  * page root: `style={{ ...base, ...tabletThemeVars(theme) }}`.
  */
+/**
+ * The palette a kiosk opens in, from the signed-in role.
+ *
+ * The Small Banquets kiosk takes the SECTION's palette and deliberately
+ * **ignores the restaurant's saved tablet colours**. Those are the main
+ * admin's, chosen for the banquet kiosk (the supervisor has no shell settings
+ * of their own — see Shell settings), so honouring them here would paint the
+ * two kiosks identically, which is the one thing this section's tablet must
+ * not do. The trade is that the section's kiosk cannot be themed per
+ * restaurant; the colour is what says which product a guest is holding.
+ *
+ * Every other kiosk is unchanged: the restaurant's colours, else the banquet
+ * default.
+ */
+export function kioskTheme(
+  role: string | null | undefined,
+  saved?: { accent?: string | null; bg?: string | null } | null,
+): { accent?: string | null; bg?: string | null } {
+  return role === 'SUPERVISOR' ? SMALL_BANQUET_TABLET_THEME : (saved ?? {});
+}
+
 export function tabletThemeVars(theme?: { accent?: string | null; bg?: string | null } | null): Record<string, string> {
   const accent = normalizeHex(theme?.accent) ?? DEFAULT_TABLET_THEME.accent;
   const bg = normalizeHex(theme?.bg) ?? DEFAULT_TABLET_THEME.bg;

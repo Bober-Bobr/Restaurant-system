@@ -43,6 +43,11 @@ export type EventMenuConfig = {
   extras: Record<string, number>;
   // Additional paid restaurant services chosen on the Summary page.
   extraServiceIds?: string[];
+  // Which kind of kiosk session took this booking — 'dining' for a General
+  // Dining table, absent for every banquet booking (including all the ones
+  // taken before the two were told apart). `menuConfig` is a free-form JSON
+  // column, so recording it needed no migration.
+  sessionKind?: 'banquet' | 'dining';
 };
 
 export type Event = {

@@ -32,6 +32,10 @@ type PublicDataState = {
   // Whether this restaurant bought the Additional Services module — drives the
   // button on the booking-confirmed screen.
   moduleAddons: boolean;
+  // The General Dining module. On the Small Banquets kiosk it is what decides
+  // whether a "General Dining" session is offered at all — see
+  // utils/kioskSession.ts.
+  moduleCatering: boolean;
   isLoading: boolean;
   error?: string;
   isLoaded: boolean;
@@ -57,12 +61,13 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
   tabletMusic: true,
   tabletTrail: true,
   moduleAddons: false,
+  moduleCatering: false,
   isLoading: false,
   error: undefined,
   isLoaded: false,
   loadPublicData: async (restaurantId: string) => {
     if (!restaurantId) {
-      set({ menuItems: [], halls: [], tableCategories: [], extraServices: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, moduleAddons: false, isLoaded: true, isLoading: false });
+      set({ menuItems: [], halls: [], tableCategories: [], extraServices: [], restaurantName: null, restaurantLogoUrl: null, tabletAccentColor: null, tabletBgColor: null, tabletParticles: null, tabletParticlesColor: null, tabletParticlesImageUrl: null, tabletTrailTemplate: null, tabletTrailColor: null, tabletTrailImageUrl: null, moduleAddons: false, moduleCatering: false, isLoaded: true, isLoading: false });
       return;
     }
     if (get().isLoading) return;
@@ -106,6 +111,7 @@ export const usePublicDataStore = create<PublicDataState>((set, get) => ({
         tabletTrailImageUrl: restaurant.tabletTrailImageUrl ?? null,
         ...(() => { const shell = tabletShell(restaurant); return { tabletAnimations: shell.animations, tabletMusic: shell.music, tabletTrail: shell.trail }; })(),
         moduleAddons: !!restaurant.moduleAddons,
+        moduleCatering: !!restaurant.moduleCatering,
         isLoaded: true
       });
     } catch (error) {
