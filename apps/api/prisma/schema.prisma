@@ -138,6 +138,15 @@ model Event {
   updatedAt       DateTime          @updatedAt
   selections      EventMenuSelection[]
   payments        EventPayment[]
+  // The floor tables this booking takes, with the guests seated at each. The
+  // booking's own `guestCount` is their SUM whenever any are chosen — see
+  // utils/floorBooking.ts.
+  floorTables     EventFloorTable[]
+  // The booking takes the WHOLE area rather than named tables. Allowed only
+  // when every table in that area is free on the day (a venue cannot be let
+  // out from under a booking that already holds a table in it), and while it
+  // stands no other booking can take a table there that day.
+  wholeHall       Boolean           @default(false)
   invitation      Invitation?
   hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
@@ -645,8 +654,35 @@ model FloorTable {
   updatedAt DateTime @updatedAt
   hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
 
+  events    EventFloorTable[]
+
   @@unique([hallId, label])
   @@index([hallId])
+}
+
+/// A floor table held by a booking, and how many guests sit at it.
+///
+/// A join rather than a `floorTableId` on Event, because one booking can take
+/// several tables — which is the whole point of picking them on the map — and
+/// rather than a `eventId` on FloorTable, because a table is furniture that
+/// outlives any one evening and is taken by a different booking each day.
+///
+/// `guestCount` lives HERE and the event's own count is the sum of these (see
+/// utils/floorBooking.ts): two numbers that can disagree about the same party
+/// is a bug waiting on a busy night.
+model EventFloorTable {
+  id           String     @id @default(cuid())
+  eventId      String
+  floorTableId String
+  guestCount   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  floorTable   FloorTable @relation(fields: [floorTableId], references: [id], onDelete: Cascade)
+
+  // One row per table per booking: a table cannot be taken twice by the same
+  // evening, and "is this table free" is then one lookup.
+  @@unique([eventId, floorTableId])
+  @@index([floorTableId])
 }
 
 model MenuItem {

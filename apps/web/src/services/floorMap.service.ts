@@ -1,4 +1,5 @@
 import type { AreaKind, AreaSize, FloorMap, MapArea, MapTable, TableShape } from '../utils/floorMap';
+import type { MapBooking } from '../utils/floorBooking';
 import { httpClient } from './http';
 
 export type TablePayload = {
@@ -39,6 +40,30 @@ export const floorMapService = {
   /** Put the area back to that saved layout. Its current tables are replaced. */
   async restoreDefaultLayout(id: string) {
     const { data } = await httpClient.post<{ area: MapArea; tables: MapTable[] }>(`/floor-map/areas/${id}/restore`, {});
+    return data;
+  },
+  /**
+   * What is taken on a day. The unit is a DAY because a booking holds its
+   * tables for the whole of the one it falls on (utils/floorBooking.ts).
+   */
+  async day(date: string) {
+    const { data } = await httpClient.get<{ day: string; bookings: MapBooking[]; wholeAreaFree: Record<string, boolean> }>(
+      '/floor-map/day', { params: { date } },
+    );
+    return data;
+  },
+  /** The schedule between two days — past and future alike. */
+  async schedule(from: string, to: string) {
+    const { data } = await httpClient.get<{ from: string; to: string; bookings: MapBooking[] }>(
+      '/floor-map/schedule', { params: { from, to } },
+    );
+    return data;
+  },
+  /** The printable plan of one area for one day, as a PDF blob. */
+  async printArea(id: string, date: string) {
+    const { data } = await httpClient.get<Blob>(`/floor-map/areas/${id}/print`, {
+      params: { date }, responseType: 'blob',
+    });
     return data;
   },
   async createTable(payload: TablePayload) {

@@ -3196,3 +3196,40 @@ existing booking is affected.
    with no hall and no package; `menuConfig.sessionKind` is `"dining"`.
 8. Sign in as a banquet `EMPLOYEE` at `v-menu.uz/tablet`: no chooser, gold
    palette, everything exactly as before.
+
+## §63 — Bookings on the floor map (**has a migration**)
+
+Migration `20260923100000_floor_bookings`: adds `Event.wholeHall` (default
+false) and the `EventFloorTable` join. Both additive — every existing booking
+holds no tables, so no map shows anything as taken until somebody books one.
+
+**After deploying**, as the SUPERVISOR at `supervisor.v-menu.uz/<slug>`:
+
+1. **The kiosk, banquet session** → past the table package, a *Where will you
+   sit?* section: indoor/outdoor chips, a tab per area, the plan. Tap a table →
+   it fills in the section's jade and shows `6/6`; the stepper below adjusts
+   the guests. The summary's head count becomes a readout of the total.
+2. **The kiosk, general-dining session** → the same section on the summary.
+3. Confirm. On the Events list the booking carries that head count, and the
+   hall it is in.
+4. **The admin map** (`/`) → the date bar above the plan. On the booking's day
+   the table is grey with the customer's name on it; on any other day it is
+   free. Click it → the booking's details in the panel, with **Open the
+   booking**.
+5. Take a second booking on the **same table and day** from the kiosk: refused,
+   naming the booking that holds it (`#7 (Karimov)`).
+6. **Whole venue**: on a day with nothing booked, *Reserve the whole area* is
+   offered; with one table held it is disabled and says why. Reserve it, then
+   try to book a table there the same day — refused.
+7. **Cancel** that booking on the Events page → the map shows the tables free
+   again the same day.
+8. **Schedule** → a month either side of the chosen day, past bookings greyed.
+   Picking one jumps the map to its day and area.
+9. **New booking** → pick tables on the plan, fill in the name and time, create.
+   It appears on the map at once. With no tables picked it takes the whole area.
+10. **Download the plan (PDF)** → a landscape sheet: the area's map for that
+    day, taken tables filled with `seated/capacity`, the day's bookings beside
+    it with time, name, tables and phone, and a Free/Reserved legend. Check it
+    photocopies legibly in black and white.
+11. **Edit map** → the occupancy colouring disappears while the furniture is
+    being arranged, and comes back on Done.

@@ -11,6 +11,8 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { kioskTheme, tabletThemeVars } from '../utils/tabletTheme';
 import { useAuthStore } from '../store/auth.store';
 import { bookingMissing, kioskSessionsFor, kioskSurface, resolveKioskSession, type KioskSession } from '../utils/kioskSession';
+import { guestCountOf } from '../utils/floorBooking';
+import { KioskFloorSection } from './KioskFloorSection';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
 import { formatSum, groupDigits, parseSumToTiyin } from '../utils/currency';
@@ -220,7 +222,8 @@ export const TabletSummaryPage = () => {
     birthdayPersonName, setBirthdayPersonName,
     brideName, setBrideName, groomName, setGroomName,
     honoreePersonName, setHonoreePersonName,
-    sessionKind, setSessionKind } = useTabletStore();
+    sessionKind, setSessionKind,
+    floorSelections, wholeAreaId } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -243,6 +246,16 @@ export const TabletSummaryPage = () => {
   // type, no paid services and no Additional Services to offer afterwards.
   // Which of those this page draws is one table, in utils/kioskSession.ts,
   // rather than eight `session === 'dining'` tests scattered down the file.
+  // The tables chosen on the map, and the head count that follows from them.
+  // When any table is chosen the booking's count is their SUM — one number,
+  // so the seating and the total cannot disagree about the same party.
+  const floorTables = useMemo(
+    () => Object.entries(floorSelections).map(([floorTableId, guests]) => ({ floorTableId, guestCount: guests })),
+    [floorSelections],
+  );
+  const seatedGuests = guestCountOf(floorTables, guestCount);
+  const guestsFromMap = floorTables.length > 0;
+
   const sessions = kioskSessionsFor(role, { moduleCatering });
   const session = resolveKioskSession(sessionKind, sessions);
   const surface = kioskSurface(session);
@@ -333,7 +346,7 @@ export const TabletSummaryPage = () => {
   // two lists would drift. `missing` is a translation key, so the message
   // below names the field rather than the button only going grey.
   const missing = bookingMissing(session, {
-    customerName, customerPhone, eventDate, eventTime, guestCount,
+    customerName, customerPhone, eventDate, eventTime, guestCount: seatedGuests,
     hallId: selectedHallId, tableCategoryId: selectedTableCategoryId,
   });
   const confirmDisabled = missing !== null;
@@ -516,8 +529,16 @@ export const TabletSummaryPage = () => {
         eventDate: new Date(`${eventDate}T${eventTime}`).toISOString(),
         guestCount,
         status: 'CONFIRMED' as const,
-        hallId: selectedHallId || undefined,
+        // Taking the whole area names that area as the booking's hall: the
+        // server needs to know WHICH venue is being reserved, and in a dining
+        // session there is no hall picker to have set it.
+        hallId: wholeAreaId || selectedHallId || undefined,
         tableCategoryId: selectedTableCategoryId || undefined,
+        // The map's choices. The server re-checks them against the day and
+        // derives the head count itself — a client that reports its own
+        // seating sets its own limits.
+        floorTables,
+        wholeHall: !!wholeAreaId,
         childrenTableCategoryId: childrenActive ? childrenTableCategory!.id : undefined,
         childrenCount: childrenActive ? childrenCount : 0,
         menuConfig: buildMenuConfig(),
@@ -872,10 +893,19 @@ export const TabletSummaryPage = () => {
                       `min` would fight the typing rather than the empty value.
                       Negatives are clamped — the store does it too, but a number
                       typed here reaches the totals before it reaches the store. */}
-                  <input className="rg-input" type="number"
-                    value={guestCount || ''}
-                    onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
-                    placeholder="0" />
+                  {guestsFromMap ? (
+                    // Derived, so it is shown rather than typed: the figure is
+                    // the sum of the guests seated at the chosen tables, and a
+                    // second editable copy of it could only disagree.
+                    <output className="rg-input" style={{ display: 'block' }}>
+                      {seatedGuests} <span style={{ opacity: 0.6, fontSize: 12 }}>· {t('fm_total_guests', { count: seatedGuests })}</span>
+                    </output>
+                  ) : (
+                    <input className="rg-input" type="number"
+                      value={guestCount || ''}
+                      onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+                      placeholder="0" />
+                  )}
                 </div>
 
                 {/* The event type and the honoree fields it decides between.
@@ -940,6 +970,11 @@ export const TabletSummaryPage = () => {
                 </div>
               </div>
             </section>
+
+            {/* The floor map. The banquet session picks its tables on the
+                menu page; the dining session has no menu page, so it picks
+                them here. */}
+            {!surface.menu && <KioskFloorSection date={eventDate} t={t} />}
 
             {/* Event overview */}
             <section className="rg-card p-4 sm:p-6 reveal">

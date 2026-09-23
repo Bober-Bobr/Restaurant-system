@@ -76,6 +76,14 @@ type SelectionState = {
   // chooser needs to tell those apart or it shows itself to a guest who has
   // already answered.
   sessionKind: KioskSession | null;
+  // ── The floor map ────────────────────────────────────────────────────────
+  // Tables chosen on the map, as table id → guests seated there. The booking's
+  // head count is their SUM (utils/floorBooking.ts), so these are the figure
+  // rather than a note beside it.
+  floorSelections: Record<string, number>;
+  // Set instead when the guest takes the WHOLE area. The two are exclusive:
+  // a booking is either the tables it named or the venue, never both.
+  wholeAreaId?: string;
   // ── Optional children's table add-on (its own course selections, priced by childrenCount) ──
   childrenTableSelected: boolean;
   childrenCount: number;
@@ -116,6 +124,9 @@ type SelectionState = {
   setHonoreePersonName: (value: string) => void;
   setRestaurantId: (value: string) => void;
   setSessionKind: (value: KioskSession | null) => void;
+  toggleFloorTable: (tableId: string, seats: number) => void;
+  setFloorTableGuests: (tableId: string, guests: number) => void;
+  setWholeArea: (hallId: string | undefined) => void;
   setEventDate: (value: string) => void;
   setEventTime: (value: string) => void;
   setLocale: (locale: Locale) => void;
@@ -152,6 +163,8 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   honoreePersonName: '',
   restaurantId: '',
   sessionKind: null,
+  floorSelections: {},
+  wholeAreaId: undefined,
   childrenTableSelected: false,
   childrenCount: 0,
   childHotAppetizerIds: [],
@@ -181,6 +194,8 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       replacements: {},
       removedPackageItemIds: [],
       selectedExtraServiceIds: [],
+      floorSelections: {},
+      wholeAreaId: undefined,
       // Reset the children's-table add-on whenever the main table changes.
       childrenTableSelected: false,
       childrenCount: 0,
@@ -320,6 +335,24 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   setHonoreePersonName: (value) => { set({ honoreePersonName: value }); },
   setRestaurantId: (value) => { set((s) => (s.restaurantId === value ? {} : { restaurantId: value })); },
   setSessionKind: (value) => { set({ sessionKind: value }); },
+  // Picking a table seats it FULL by default: that is what a guest asking for
+  // a six-top means, and it saves a second tap on the commonest case.
+  toggleFloorTable: (tableId, seats) => {
+    set((state) => {
+      const next = { ...state.floorSelections };
+      if (tableId in next) delete next[tableId];
+      else next[tableId] = Math.max(1, seats);
+      // Choosing a table is choosing NOT to take the whole area.
+      return { floorSelections: next, wholeAreaId: undefined };
+    });
+  },
+  setFloorTableGuests: (tableId, guests) => {
+    set((state) => (tableId in state.floorSelections
+      ? { floorSelections: { ...state.floorSelections, [tableId]: Math.max(0, guests) } }
+      : {}));
+  },
+  // Taking the whole area drops the individual tables, for the same reason.
+  setWholeArea: (hallId) => { set({ wholeAreaId: hallId, floorSelections: {} }); },
   setEventDate: (value) => {
     set({ eventDate: value });
   },
@@ -399,6 +432,8 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       // The next guest is asked which evening this is, rather than inheriting
       // the last one's answer.
       sessionKind: null,
+      floorSelections: {},
+      wholeAreaId: undefined,
       childrenTableSelected: false,
       childrenCount: 0,
       childHotAppetizerIds: [],

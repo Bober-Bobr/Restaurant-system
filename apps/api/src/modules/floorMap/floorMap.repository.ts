@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
 import type { Section } from '../../utils/section.js';
+import { dayRange, type BookingRow } from '../../utils/floorBooking.js';
 
 export type AreaKind = 'HALL' | 'OUTDOOR';
 export type TableShape = 'RECT' | 'ROUND';
@@ -58,6 +59,14 @@ const AREA_SELECT = {
   // know there is one and when it was taken, and a whole venue's layout on
   // every page load is a payload nothing reads.
   defaultLayoutAt: true,
+} as const;
+
+/** A booking as the map needs it: enough to draw it and to name who holds it. */
+const BOOKING_SELECT = {
+  id: true, eventNumber: true, customerName: true, customerPhone: true,
+  eventDate: true, status: true, guestCount: true, eventType: true, notes: true,
+  hallId: true, wholeHall: true,
+  floorTables: { select: { floorTableId: true, guestCount: true } },
 } as const;
 
 const TABLE_SELECT = {
@@ -118,6 +127,64 @@ export class FloorMapRepository {
       where: { id },
       select: { ...TABLE_SELECT, hall: { select: { restaurantId: true, section: true } } },
     });
+  }
+
+  /**
+   * Every booking in this section touching the floor map on a day — the ones
+   * that name tables and the ones that take a whole area. Read by the DAY the
+   * booking falls on, because that is how long a booking holds its tables
+   * (see utils/floorBooking.ts).
+   */
+  async bookingsOnDay(restaurantId: string, section: Section, day: string): Promise<BookingRow[]> {
+    const rows = await prisma.event.findMany({
+      where: {
+        restaurantId,
+        section,
+        eventDate: dayRange(day),
+        // Only bookings that actually touch the map: the section's other
+        // events are none of this query's business.
+        OR: [{ wholeHall: true }, { floorTables: { some: {} } }],
+      },
+      select: BOOKING_SELECT,
+      orderBy: { eventDate: 'asc' },
+    });
+    return rows as BookingRow[];
+  }
+
+  /**
+   * The section's bookings between two days, for the schedule — past and
+   * future alike, which is what makes it a schedule rather than a list of
+   * what is left.
+   */
+  async bookingsBetween(restaurantId: string, section: Section, from: string, to: string): Promise<BookingRow[]> {
+    const rows = await prisma.event.findMany({
+      where: {
+        restaurantId,
+        section,
+        eventDate: { gte: dayRange(from).gte, lt: dayRange(to).lt },
+        OR: [{ wholeHall: true }, { floorTables: { some: {} } }],
+      },
+      select: BOOKING_SELECT,
+      orderBy: { eventDate: 'asc' },
+    });
+    return rows as BookingRow[];
+  }
+
+  /** For the printed sheet's heading. */
+  async restaurantName(restaurantId: string): Promise<string | null> {
+    const row = await prisma.restaurant.findUnique({ where: { id: restaurantId }, select: { name: true } });
+    return row?.name ?? null;
+  }
+
+  /** Every table id in the section, grouped by the area it stands in. */
+  async tableIdsByHall(restaurantId: string, section: Section): Promise<Map<string, string[]>> {
+    const rows = await prisma.floorTable.findMany({
+      where: { hall: { restaurantId, section } },
+      select: { id: true, hallId: true },
+    });
+    const byHall = new Map<string, string[]>();
+    for (const row of rows) byHall.set(row.hallId, [...(byHall.get(row.hallId) ?? []), row.id]);
+    return byHall;
   }
 
   async tablesInArea(hallId: string): Promise<TableRow[]> {

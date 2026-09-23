@@ -23,6 +23,7 @@ import { useScrollReveal } from '../utils/useScrollReveal';
 import { useAuthStore } from '../store/auth.store';
 import { kioskAsksSession, kioskSessionsFor, kioskSurface, resolveKioskSession, type KioskSession } from '../utils/kioskSession';
 import { KioskSessionChooser } from './KioskSessionChooser';
+import { KioskFloorSection } from './KioskFloorSection';
 
 type MenuCategory = MenuItem['category'];
 type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
@@ -1826,6 +1827,8 @@ export const TabletMenuPage = () => {
     removedPackageItemIds, toggleRemovedPackageItem,
     setGuestCount, locale, setLocale, reset, setRestaurantId,
     sessionKind, setSessionKind,
+    // The map reads occupancy for the booking's own day.
+    eventDate,
   } = useTabletStore();
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -2332,6 +2335,12 @@ export const TabletMenuPage = () => {
                 removedIds={removedPackageItemIds} onToggleRemoved={toggleRemovedPackageItem}
               />
             )}
+
+            {/* The floor map — where the party will sit. In BOTH sessions:
+                the difference between them is packages and prices, not the
+                room. The dining session mounts it on the summary instead,
+                since that session has no menu page. */}
+            <KioskFloorSection date={eventDate} t={t} />
 
             {/* Children's table — optional add-on, shown before Additional */}
             {selectedTableCategory && childrenTableCategory && (

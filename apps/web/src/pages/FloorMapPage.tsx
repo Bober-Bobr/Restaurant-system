@@ -12,6 +12,11 @@ import {
   type AreaKind, type FloorMap, type MapArea, type MapFeature, type MapTable, type TableShape,
 } from '../utils/floorMap';
 import { translate } from '../utils/translate';
+import { dayKey, tableHolders, tablesByHallOf, wholeAreaAvailable, type MapBooking } from '../utils/floorBooking';
+import { eventService } from '../services/event.service';
+import { eventsPath } from '../utils/eventsPath';
+import { useAuthStore } from '../store/auth.store';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * The Small Banquets floor map — the section's main page.
@@ -33,6 +38,9 @@ import { translate } from '../utils/translate';
  */
 
 const MAP_KEY = ['floor-map'] as const;
+/** What is taken, per day — a booking holds its tables for the whole of one. */
+const DAY_KEY = (day: string) => ['floor-map-day', day] as const;
+const SCHEDULE_KEY = (from: string, to: string) => ['floor-map-schedule', from, to] as const;
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2, 3];
 /** How far the pointer must travel, in map units, before a press becomes a drag. */
 const DRAG_THRESHOLD = 4;
@@ -88,6 +96,37 @@ export const FloorMapPage = () => {
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [areaForm, setAreaForm] = useState<{ name: string; kind: AreaKind; capacity: string } | null>(null);
+  const [scheduleShown, setScheduleShown] = useState(false);
+
+  // ── The day being looked at ──────────────────────────────────────────────
+  // The map is a picture of one DAY: which tables are taken depends entirely
+  // on which day is being asked about, so the date sits beside the tabs rather
+  // than inside a panel.
+  const [day, setDay] = useState(() => dayKey(new Date()));
+
+  // The schedule: a month either side of the chosen day, PAST AND FUTURE —
+  // "who was at table 12 last Saturday" is exactly what it is opened for.
+  // Only fetched while the panel is open, since it is a wider read.
+  const schedFrom = useMemo(() => dayKey(new Date(Date.parse(`${day}T00:00:00Z`) - 30 * 86400_000)), [day]);
+  const schedTo = useMemo(() => dayKey(new Date(Date.parse(`${day}T00:00:00Z`) + 30 * 86400_000)), [day]);
+
+  // What is taken on the chosen day. Its own query, keyed on the day, so
+  // moving the date re-reads occupancy without re-reading the whole map.
+  const { data: occupancy } = useQuery({
+    queryKey: DAY_KEY(day),
+    queryFn: () => floorMapService.day(day),
+  });
+  const { data: schedule } = useQuery({
+    queryKey: SCHEDULE_KEY(schedFrom, schedTo),
+    queryFn: () => floorMapService.schedule(schedFrom, schedTo),
+    enabled: scheduleShown,
+  });
+  const [openBooking, setOpenBooking] = useState<MapBooking | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [booking, setBooking] = useState<{ name: string; phone: string; time: string } | null>(null);
+  const [busyBooking, setBusyBooking] = useState(false);
+  const navigate = useNavigate();
+  const role = useAuthStore((s) => s.role);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const stored = current ? areaSize(current, areaTables) : { width: 0, height: 0 };
@@ -96,6 +135,22 @@ export const FloorMapPage = () => {
   const unit = Math.max(1, size.width / 1200);
 
   const selectedTable = areaTables.find((x) => x.id === selectedId) ?? null;
+
+  // ── Who holds what, on the chosen day ────────────────────────────────────
+  const byHall = useMemo(() => tablesByHallOf(tables), [tables]);
+  const holders = useMemo(() => tableHolders(occupancy, byHall), [occupancy, byHall]);
+  const takenHere = areaTables.filter((x) => holders.has(x.id)).length;
+  const wholeAreaBooking = useMemo(
+    () => (current ? (occupancy?.bookings ?? []).find((b) => b.wholeHall && b.hallId === current.id) ?? null : null),
+    [occupancy, current],
+  );
+  const canTakeWholeArea = !!current && wholeAreaAvailable(current.id, occupancy, byHall);
+  /** The booking the admin is drafting, as table id → guests. */
+  const [picked, setPicked] = useState<Record<string, number>>({});
+  const pickedList = useMemo(
+    () => Object.entries(picked).map(([floorTableId, guestCount]) => ({ floorTableId, guestCount })),
+    [picked],
+  );
 
   const switchArea = (id: string) => {
     setSelectedId(null);
@@ -250,6 +305,63 @@ export const FloorMapPage = () => {
     }
   };
 
+  /** The printable plan of this area for the chosen day. */
+  const printArea = async (area: MapArea) => {
+    setFlash(null);
+    setBusy(true);
+    try {
+      const blob = await floorMapService.printArea(area.id, day);
+      // Handed to the browser as a download rather than opened: this is a
+      // sheet for the pass, and a print dialog is the admin's own choice.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${area.name.replace(/[^\w.-]+/g, '-')}-${day}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Revoked on the next tick: revoking immediately cancels the download
+      // in some browsers.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (error) {
+      setNotice(t('fm_print_failed', { message: errorText(error) }));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Create a booking from the map — the admin's own path, beside the kiosk's.
+   * The tables are what was picked on the plan; the server re-checks them
+   * against the day and derives the head count from them.
+   */
+  const saveBooking = async () => {
+    if (!booking || !current) return;
+    const wholeArea = pickedList.length === 0;
+    setBusyBooking(true);
+    setFlash(null);
+    try {
+      const created = await eventService.create({
+        customerName: booking.name.trim(),
+        customerPhone: booking.phone.trim() || undefined,
+        eventDate: new Date(`${day}T${booking.time || '19:00'}`).toISOString(),
+        guestCount: pickedList.reduce((sum, s) => sum + s.guestCount, 0),
+        status: 'CONFIRMED',
+        hallId: current.id,
+        floorTables: pickedList,
+        wholeHall: wholeArea,
+      } as Parameters<typeof eventService.create>[0]);
+      setBooking(null);
+      setPicked({});
+      await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
+      setFlash(t('fm_booking_saved', { number: String(created.id) }));
+    } catch (error) {
+      setNotice(t('fm_booking_failed', { message: errorText(error) }));
+    } finally {
+      setBusyBooking(false);
+    }
+  };
+
   const createArea = async () => {
     if (!areaForm) return;
     const capacity = Number(areaForm.capacity.replace(/\s/g, ''));
@@ -286,6 +398,23 @@ export const FloorMapPage = () => {
 
   const onTablePointerDown = (event: ReactPointerEvent<SVGGElement>, table: MapTable) => {
     setSelectedId(table.id);
+    // Not editing the map: a press is about the BOOKING on that table —
+    // picking it for the one being drafted, or opening the one that holds it.
+    if (!editing) {
+      const holder = holders.get(table.id);
+      if (booking) {
+        if (!holder) {
+          setPicked((prev) => {
+            const next = { ...prev };
+            if (table.id in next) delete next[table.id];
+            else next[table.id] = table.seats;
+            return next;
+          });
+        }
+      } else {
+        setOpenBooking(holder ?? null);
+      }
+    }
     const p = toMap(event);
     beginDrag(event, { type: 'move', id: table.id, dx: p.x - table.x, dy: p.y - table.y, x: table.x, y: table.y, moved: false });
   };
@@ -386,7 +515,18 @@ export const FloorMapPage = () => {
     return (
       <g
         key={table.id}
-        className={`fm-table-group${selected ? ' is-selected' : ''}${overlapping.has(table.id) ? ' is-overlapping' : ''}${editing ? ' is-editable' : ''}${moving ? ' is-dragging' : ''}`}
+        className={[
+          'fm-table-group',
+          selected ? 'is-selected' : '',
+          overlapping.has(table.id) ? 'is-overlapping' : '',
+          editing ? 'is-editable' : '',
+          moving ? 'is-dragging' : '',
+          // The day's bookings. Not while editing: there the map is furniture
+          // being arranged, and colouring it by an evening's bookings would
+          // say a table cannot be moved when it can.
+          !editing && holders.has(table.id) ? 'is-taken' : '',
+          !editing && table.id in picked ? 'is-picked' : '',
+        ].filter(Boolean).join(' ')}
         onPointerDown={(e) => onTablePointerDown(e, table)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(table.id); } }}
         role="button"
@@ -423,7 +563,11 @@ export const FloorMapPage = () => {
           {table.label}
         </text>
         <text className="fm-table-seats" x={cx} y={cy + labelSize * 0.72} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: labelSize * 0.5 }}>
-          {table.seats}
+          {/* Who has it, when somebody does — the number a waiter reads off
+              the map is the party's, not the table's capacity. */}
+          {!editing && picked[table.id] !== undefined ? `${picked[table.id]}/${table.seats}`
+            : !editing && holders.get(table.id) ? holders.get(table.id)!.customerName
+            : table.seats}
         </text>
       </g>
     );
@@ -588,6 +732,87 @@ export const FloorMapPage = () => {
     );
   };
 
+  /** A booking the admin clicked on the map. */
+  const bookingCard = (b: MapBooking) => (
+    <div className="fm-booking-card">
+      <dl className="fm-facts">
+        <dt>{t('fm_booking')}</dt><dd>#{b.eventNumber}</dd>
+        <dt>{t('fm_booked_by')}</dt><dd>{b.customerName}</dd>
+        {b.customerPhone && (<><dt>{t('customer_phone')}</dt><dd>{b.customerPhone}</dd></>)}
+        <dt>{t('event_time')}</dt><dd>{new Date(b.eventDate).toISOString().slice(11, 16)}</dd>
+        <dt>{t('guest_count')}</dt><dd>{b.guestCount}</dd>
+        <dt>{t('status')}</dt><dd>{b.status}</dd>
+        <dt>{t('fm_chosen_tables')}</dt>
+        <dd>
+          {b.wholeHall ? t('fm_whole_area_taken')
+            : b.floorTables
+              .map((x) => tables.find((y) => y.id === x.floorTableId)?.label)
+              .filter(Boolean).join(', ')}
+        </dd>
+        {b.notes && (<><dt>{t('notes')}</dt><dd>{b.notes}</dd></>)}
+      </dl>
+      <button type="button" className="adm-btn-ghost"
+        onClick={() => navigate(`${eventsPath(role)}?event=${b.eventNumber}`)}>
+        {t('fm_open_event')}
+      </button>
+      <button type="button" className="adm-btn-ghost" onClick={() => setOpenBooking(null)}>{t('done')}</button>
+    </div>
+  );
+
+  /** The booking being drafted from the map. */
+  const bookingForm = () => {
+    const guests = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    const wholeArea = pickedList.length === 0;
+    return (
+      <div className="fm-form">
+        <p className="fm-caption" style={{ margin: 0 }}>
+          {wholeArea
+            ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
+            : t('fm_total_guests', { count: guests })}
+        </p>
+        <label>
+          <span>{t('customer_name')}</span>
+          <input className="adm-input" value={booking!.name} autoFocus
+            onChange={(e) => setBooking({ ...booking!, name: e.target.value })} />
+        </label>
+        <label>
+          <span>{t('customer_phone')}</span>
+          <input className="adm-input" type="tel" value={booking!.phone}
+            onChange={(e) => setBooking({ ...booking!, phone: e.target.value })} />
+        </label>
+        <label>
+          <span>{t('event_time')}</span>
+          <input className="adm-input" type="time" value={booking!.time}
+            onChange={(e) => setBooking({ ...booking!, time: e.target.value })} />
+        </label>
+        {pickedList.map((s) => {
+          const table = tables.find((x) => x.id === s.floorTableId);
+          if (!table) return null;
+          return (
+            <div key={s.floorTableId} className="fm-size-row">
+              <span>{t('fm_table', { label: table.label })}</span>
+              <div className="fm-stepper">
+                <button type="button" className="adm-btn-ghost" disabled={s.guestCount <= 1}
+                  onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount - 1 }))}>−</button>
+                <output>{s.guestCount}</output>
+                <button type="button" className="adm-btn-ghost" disabled={s.guestCount >= table.seats}
+                  onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount + 1 }))}>+</button>
+              </div>
+            </div>
+          );
+        })}
+        <button type="button" className="adm-btn-primary"
+          disabled={busyBooking || !booking!.name.trim() || (wholeArea && !canTakeWholeArea)}
+          onClick={() => void saveBooking()}>
+          {t('fm_create')}
+        </button>
+        <button type="button" className="adm-btn-ghost" onClick={() => { setBooking(null); setPicked({}); }}>
+          {t('cancel')}
+        </button>
+      </div>
+    );
+  };
+
   // ── Page ──────────────────────────────────────────────────────────────────
 
   return (
@@ -630,7 +855,40 @@ export const FloorMapPage = () => {
         )}
       </div>
 
-      <p className="fm-caption" style={{ margin: '12px 0' }}>{editing ? t('fm_hint_edit') : t('fm_hint_view')}</p>
+      {/* The day the map is a picture OF. Which tables are taken depends
+          entirely on it, so it sits with the tabs rather than in a panel. */}
+      {!editing && (
+        <div className="fm-daybar">
+          <label className="fm-caption" htmlFor="fm-day">{t('fm_day')}</label>
+          <input id="fm-day" type="date" className="adm-input" value={day}
+            onChange={(e) => { setDay(e.target.value || dayKey(new Date())); setOpenBooking(null); }} />
+          <button type="button" className="adm-btn-ghost" onClick={() => setDay(dayKey(new Date()))}>
+            {t('fm_today')}
+          </button>
+          <button type="button" className="adm-btn-ghost" aria-pressed={scheduleOpen}
+            onClick={() => { setScheduleOpen((v) => !v); setScheduleShown(true); }}>
+            {t('fm_schedule')}
+          </button>
+          <button type="button" className="adm-btn-ghost" disabled={!current || busy}
+            onClick={() => current && void printArea(current)}>
+            {t('fm_print_map')}
+          </button>
+          <button type="button" className="adm-btn-primary" disabled={!current}
+            onClick={() => { setBooking(booking ? null : { name: '', phone: '', time: '19:00' }); setPicked({}); setOpenBooking(null); }}>
+            {booking ? t('cancel') : t('fm_new_booking')}
+          </button>
+          <span className="fm-legend">
+            <span><i className="fm-swatch" style={{ background: 'rgb(var(--adm-surface-rgb))' }} />{t('fm_free')}</span>
+            <span><i className="fm-swatch" style={{ background: 'rgba(148,163,184,0.55)' }} />{t('fm_taken')}</span>
+            <span>{t('fm_occupancy_summary', { taken: takenHere, total: areaTables.length })}</span>
+          </span>
+        </div>
+      )}
+
+      <p className="fm-caption" style={{ margin: '12px 0' }}>
+        {editing ? t('fm_hint_edit') : booking ? t('fm_new_booking_hint') : t('fm_hint_view')}
+      </p>
+      {flash && <p className="fm-flash" role="status" style={{ margin: '0 0 10px' }}>{flash}</p>}
       {notice && <p className="fm-notice" role="alert">{notice}</p>}
 
       {areaForm && (
@@ -661,6 +919,43 @@ export const FloorMapPage = () => {
             </button>
           </div>
         </form>
+      )}
+
+      {scheduleOpen && (
+        <section className="adm-card" style={{ padding: '16px !important', marginTop: 14 }}>
+          <p className="adm-heading" style={{ marginTop: 0 }}>{t('fm_schedule')}</p>
+          <p className="fm-caption" style={{ margin: '0 0 10px' }}>{schedFrom} — {schedTo}</p>
+          <div className="fm-sched">
+            {(schedule?.bookings ?? []).length === 0 && (
+              <p className="fm-caption" style={{ margin: 0 }}>{t('fm_schedule_empty')}</p>
+            )}
+            {(schedule?.bookings ?? []).map((b) => {
+              const when = new Date(b.eventDate);
+              const bookingDay = dayKey(when);
+              const area = areas.find((a) => a.id === b.hallId);
+              return (
+                <button key={b.id} type="button"
+                  className={`fm-sched-row${bookingDay < dayKey(new Date()) ? ' is-past' : ''}`}
+                  onClick={() => {
+                    // Jumping to a booking moves the map to its day and its
+                    // area, which is what "show me this one" means.
+                    setDay(bookingDay);
+                    if (b.hallId) switchArea(b.hallId);
+                    setOpenBooking(b);
+                    setScheduleOpen(false);
+                  }}>
+                  <span className="fm-sched-when">{bookingDay} · {when.toISOString().slice(11, 16)}</span>
+                  <span className="fm-sched-who">#{b.eventNumber} {b.customerName}</span>
+                  <span className="fm-sched-what">
+                    {area?.name ?? '—'} · {b.wholeHall ? t('fm_whole_area_taken')
+                      : b.floorTables.map((x) => tables.find((y) => y.id === x.floorTableId)?.label).filter(Boolean).join(', ')}
+                    {' · '}{b.guestCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <div className="fm-layout">
@@ -702,6 +997,17 @@ export const FloorMapPage = () => {
                 {/* The drawing never takes a click: a press on a zone is a press on the floor. */}
                 <g clipPath="url(#fm-clip)" pointerEvents="none">{features.map(renderFeature)}</g>
                 {areaTables.map(renderTable)}
+                {/* Reserved as a whole: said over the plan, because no single
+                    table carries that fact. */}
+                {!editing && wholeAreaBooking && (
+                  <g pointerEvents="none">
+                    <rect width={size.width} height={size.height} fill="rgba(148,163,184,0.18)" />
+                    <text x={size.width / 2} y={size.height / 2} textAnchor="middle" dominantBaseline="middle"
+                      style={{ fontSize: 42 * unit, fontWeight: 800, fill: 'var(--adm-text)', opacity: 0.6 }}>
+                      {t('fm_whole_area_taken')} · #{wholeAreaBooking.eventNumber}
+                    </text>
+                  </g>
+                )}
                 {editing && (
                   <rect
                     className="fm-resize"
@@ -716,11 +1022,18 @@ export const FloorMapPage = () => {
 
         <aside className="adm-card fm-panel">
           <h3 className="adm-heading" style={{ marginTop: 0 }}>
-            {selectedTable ? t('fm_table', { label: selectedTable.label }) : current?.name ?? t('floor_map')}
+            {booking ? t('fm_new_booking')
+              : openBooking ? t('fm_booking')
+              : selectedTable ? t('fm_table', { label: selectedTable.label })
+              : current?.name ?? t('floor_map')}
           </h3>
-          {selectedTable ? tablePanel(selectedTable) : current ? areaPanel(current) : (
-            <p className="fm-caption" style={{ margin: 0 }}>{t('fm_nothing_selected')}</p>
-          )}
+          {/* What the panel is about, in order of what the admin just did:
+              a booking being drafted, a booking they clicked, then the map. */}
+          {booking ? bookingForm()
+            : openBooking ? bookingCard(openBooking)
+            : selectedTable ? tablePanel(selectedTable)
+            : current ? areaPanel(current)
+            : <p className="fm-caption" style={{ margin: 0 }}>{t('fm_nothing_selected')}</p>}
         </aside>
       </div>
 
@@ -776,6 +1089,31 @@ export const FloorMapPage = () => {
         .fm-table-group.is-selected .fm-top, .fm-table-group:focus-visible .fm-top { stroke: var(--adm-accent); stroke-width: 4; }
         .fm-table-group.is-selected .fm-chair { stroke: var(--adm-accent); }
         .fm-table-group.is-overlapping .fm-top, .fm-table-group.is-overlapping .fm-chair { stroke: #f87171; }
+        /* Taken on the chosen day: filled, so it reads without colour too. */
+        .fm-table-group.is-taken .fm-top { fill: rgba(148,163,184,0.55); stroke: rgba(148,163,184,0.9); }
+        .fm-table-group.is-taken .fm-chair { opacity: 0.4; }
+        .fm-table-group.is-taken .fm-table-seats { fill: rgba(var(--adm-text-rgb), 0.85); font-weight: 700; }
+        /* Picked for the booking being drafted. */
+        .fm-table-group.is-picked .fm-top { fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent); }
+        .fm-table-group.is-picked .fm-table-label,
+        .fm-table-group.is-picked .fm-table-seats { fill: var(--adm-accent-ink, #04120d); }
+
+        .fm-daybar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 14px 0 0; }
+        .fm-daybar input[type="date"] { max-width: 190px; }
+        .fm-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: rgba(var(--adm-text-rgb), 0.6); }
+        .fm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .fm-swatch { width: 14px; height: 10px; border-radius: 2px; border: 1px solid var(--adm-line); display: inline-block; }
+        .fm-booking-card { display: grid; gap: 8px; }
+        .fm-sched { display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+        .fm-sched-row {
+          display: grid; gap: 2px; padding: 8px 10px; border-radius: 4px;
+          border: 1px solid var(--adm-line); border-left: 2px solid rgba(var(--adm-accent-rgb), 0.5);
+          background: rgba(var(--adm-text-rgb), 0.03); cursor: pointer; text-align: left;
+        }
+        .fm-sched-row.is-past { opacity: 0.6; }
+        .fm-sched-when { font-size: 12px; color: var(--adm-accent); font-weight: 700; }
+        .fm-sched-who { font-size: 13px; font-weight: 600; }
+        .fm-sched-what { font-size: 11px; color: rgba(var(--adm-text-rgb), 0.55); }
         .fm-table-label { font-weight: 800; fill: var(--adm-text); pointer-events: none; }
         .fm-table-seats { font-weight: 600; fill: rgba(var(--adm-text-rgb), 0.55); pointer-events: none; }
         .fm-table-handle { cursor: nwse-resize; touch-action: none; }

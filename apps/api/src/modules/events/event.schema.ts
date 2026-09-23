@@ -55,7 +55,16 @@ export const createEventSchema = z
     birthdayPersonName: z.string().max(120).optional(),
     brideName: z.string().max(120).optional(),
     groomName: z.string().max(120).optional(),
-    honoreePersonName: z.string().max(120).optional()
+    honoreePersonName: z.string().max(120).optional(),
+    // ── The floor map ──────────────────────────────────────────────────────
+    // The tables this booking takes and how many sit at each, or the whole
+    // area. The head count is derived from these (never trusted from the
+    // client) and the clash rules live in modules/events/event.floorTables.ts.
+    floorTables: z.array(z.object({
+      floorTableId: z.string().cuid(),
+      guestCount: z.number().int().min(0).max(MAX_INT4),
+    })).max(200).optional(),
+    wholeHall: z.boolean().optional()
   })
   .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {
@@ -93,7 +102,16 @@ export const updateEventSchema = z
     birthdayPersonName: z.string().max(120).optional(),
     brideName: z.string().max(120).optional(),
     groomName: z.string().max(120).optional(),
-    honoreePersonName: z.string().max(120).optional()
+    honoreePersonName: z.string().max(120).optional(),
+    // ── The floor map ──────────────────────────────────────────────────────
+    // The tables this booking takes and how many sit at each, or the whole
+    // area. The head count is derived from these (never trusted from the
+    // client) and the clash rules live in modules/events/event.floorTables.ts.
+    floorTables: z.array(z.object({
+      floorTableId: z.string().cuid(),
+      guestCount: z.number().int().min(0).max(MAX_INT4),
+    })).max(200).optional(),
+    wholeHall: z.boolean().optional()
   })
   .superRefine((data, ctx) => {
     if (data.customerPhone && data.region) {

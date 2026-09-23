@@ -8,6 +8,12 @@ const controller = new FloorMapController();
 // here: an area is a hall, and removing one goes through DELETE /halls/:id,
 // which is the one place that already decides what deleting a hall means.
 router.get('/', controller.get.bind(controller));
+// What is taken, and the schedule. Reads, so GET with the day in the query —
+// a booking holds its tables for a whole day, and that is the unit here.
+router.get('/day', controller.getDay.bind(controller));
+router.get('/schedule', controller.getSchedule.bind(controller));
+// The printable plan of an area for a day.
+router.get('/areas/:id/print', controller.printArea.bind(controller));
 router.post('/areas', controller.createArea.bind(controller));
 router.patch('/areas/:id', controller.updateArea.bind(controller));
 // Both POST rather than PUT/PATCH: each is an action on the area ("remember

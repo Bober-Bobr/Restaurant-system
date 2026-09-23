@@ -54,3 +54,23 @@ export const updateTableSchema = createTableSchema.partial().extend({
 });
 
 export const idSchema = z.object({ id: z.string().cuid() });
+
+/**
+ * A day, as `YYYY-MM-DD`. The unit of occupancy — a booking holds its tables
+ * for the whole day it falls on (see utils/floorBooking.ts) — and a plain
+ * string rather than a datetime so a caller cannot ask about "half of
+ * Tuesday" and be quietly given all of it.
+ */
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD');
+
+export const daySchema = z.object({ date: day.optional() });
+
+/**
+ * A stretch of days for the schedule. Bounded at roughly two years so one
+ * request cannot ask the database for every booking a restaurant has ever
+ * taken; the page asks a month at a time.
+ */
+export const scheduleSchema = z.object({ from: day, to: day }).refine(
+  (v) => v.from <= v.to && (Date.parse(v.to) - Date.parse(v.from)) <= 750 * 24 * 60 * 60 * 1000,
+  { message: 'Ask for a range of up to about two years, earliest day first' },
+);

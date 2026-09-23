@@ -24,6 +24,8 @@ export type CreateEventData = {
   brideName?: string;
   groomName?: string;
   honoreePersonName?: string;
+  /** Takes the whole area rather than named tables — see event.floorTables.ts. */
+  wholeHall?: boolean;
 };
 
 const CREATE_RETRIES = 5;
@@ -47,7 +49,10 @@ const eventInclude = {
   // The dish's identity only. Its price here is the selection's own snapshot
   // (`unitPriceCents`); the dish row would carry every system's price.
   selections: { include: { menuItem: { select: { id: true, name: true, nameI18n: true, category: true, photoUrl: true } } } },
-  payments: { orderBy: { createdAt: 'asc' } }
+  payments: { orderBy: { createdAt: 'asc' } },
+  // The tables this booking holds on the floor map, with the table's own
+  // number so a caller can name it without a second read.
+  floorTables: { select: { floorTableId: true, guestCount: true, floorTable: { select: { label: true, hallId: true } } } }
 } as const;
 
 /**

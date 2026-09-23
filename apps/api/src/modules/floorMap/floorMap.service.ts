@@ -1,6 +1,7 @@
 import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
 import { readLayout, snapshotOf } from './floorMap.layout.js';
+import { dayKey, wholeAreaAvailable, type BookingRow } from '../../utils/floorBooking.js';
 import type {
   AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
 } from './floorMap.repository.js';
@@ -52,6 +53,56 @@ export class FloorMapService {
       this.repo.listTables(restaurantId, section),
     ]);
     return { areas, tables };
+  }
+
+  // ── Bookings on the map ───────────────────────────────────────────────────
+
+  /**
+   * What is taken on a day. The map draws from this: a table with a booking
+   * against it is drawn as taken, and an area somebody has reserved whole is
+   * drawn as a whole.
+   *
+   * The DAY is the unit because a booking holds its tables for the whole of
+   * the day it falls on — see utils/floorBooking.ts.
+   */
+  async getDay(restaurantId: string, section: Section, day: string) {
+    const bookings = await this.repo.bookingsOnDay(restaurantId, section, day);
+    const tablesByHall = await this.repo.tableIdsByHall(restaurantId, section);
+    // Which areas could still be taken whole, so the map does not offer a
+    // button that the save would then refuse.
+    const occupancy = { tables: new Map<string, BookingRow>(), wholeAreas: new Map<string, BookingRow>() };
+    for (const booking of bookings) {
+      if (booking.status === 'CANCELLED') continue;
+      if (booking.wholeHall && booking.hallId) occupancy.wholeAreas.set(booking.hallId, booking);
+      for (const t of booking.floorTables) occupancy.tables.set(t.floorTableId, booking);
+    }
+    const wholeAreaFree: Record<string, boolean> = {};
+    for (const hallId of tablesByHall.keys()) {
+      wholeAreaFree[hallId] = wholeAreaAvailable(hallId, occupancy, tablesByHall);
+    }
+    return { day, bookings, wholeAreaFree };
+  }
+
+  /**
+   * The schedule: every booking on the map between two days, PAST AND FUTURE
+   * alike. A schedule that only looked forward would be a list of what is left
+   * rather than a record of what happened, and the admin asking "who was at
+   * table 12 last Saturday" is exactly the question this answers.
+   */
+  async getSchedule(restaurantId: string, section: Section, from: string, to: string) {
+    const bookings = await this.repo.bookingsBetween(restaurantId, section, from, to);
+    return { from, to, bookings };
+  }
+
+  /** One area, its tables and the day's bookings — what the printed sheet needs. */
+  async getPrintablePlan(restaurantId: string, section: Section, id: string, day: string) {
+    const area = await this.areaInScope(restaurantId, section, id);
+    const [tables, bookings, restaurantName] = await Promise.all([
+      this.repo.tablesInArea(id),
+      this.repo.bookingsOnDay(restaurantId, section, day),
+      this.repo.restaurantName(restaurantId),
+    ]);
+    return { area, tables, bookings, day, restaurantName };
   }
 
   async createArea(

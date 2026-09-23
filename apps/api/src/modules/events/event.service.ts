@@ -3,6 +3,7 @@ import type { Section } from '../../utils/section.js';
 import { invoiceOutstandingCents } from '../../utils/invoice.js';
 import { EventRepository, type CreateEventData } from './event.repository.js';
 import { syncEventToLedger } from './event.ledgerSync.js';
+import { resolveFloorTables, writeFloorTables, type FloorTablesPayload } from './event.floorTables.js';
 
 export class EventService {
   constructor(private readonly eventRepository: EventRepository) {}
@@ -36,15 +37,33 @@ export class EventService {
     return events.map((event) => this.mapEventToExternalId(event));
   }
 
-  async createEvent(restaurantId: string, section: Section, payload: CreateEventData) {
-    const event = await this.eventRepository.create(restaurantId, section, payload);
+  async createEvent(restaurantId: string, section: Section, payload: CreateEventData & FloorTablesPayload) {
+    const { floorTables, wholeHall, ...rest } = payload;
+    // Which tables this booking takes, checked against the day BEFORE the
+    // event row is written — a booking created and then refused its tables
+    // would leave a party with no seats and a number staff have read out.
+    const floor = await resolveFloorTables(restaurantId, section, {
+      eventDate: rest.eventDate,
+      hallId: rest.hallId,
+      guestCount: rest.guestCount,
+      payload: { floorTables, wholeHall },
+    });
+    const event = await this.eventRepository.create(restaurantId, section, {
+      ...rest,
+      // The area follows from the tables when the caller named none, and the
+      // head count is the sum of the tables' — never what the client reported.
+      hallId: floor.hallId ?? rest.hallId,
+      guestCount: floor.guestCount,
+      wholeHall: floor.wholeHall,
+    });
+    if (floor.selections.length > 0) await writeFloorTables(event.id, floor.selections);
     // Mirror the new event into the assigned restaurant manager's expense ledger
     // (morning → Nahor, afternoon → Fotiha, evening → Wedding). Best-effort.
     await syncEventToLedger(event);
     return this.mapEventToExternalId(event);
   }
 
-  async updateEvent(restaurantId: string, section: Section, eventId: number, payload: Partial<CreateEventData>) {
+  async updateEvent(restaurantId: string, section: Section, eventId: number, payload: Partial<CreateEventData> & FloorTablesPayload) {
     const existingEvent = await this.eventRepository.getByNumber(restaurantId, section, eventId);
     if (!existingEvent) throw createHttpError(404, 'Event not found');
 
@@ -83,6 +102,25 @@ export class EventService {
     }
     if (payload.debtDeadline !== undefined) {
       updateData.debtDeadline = payload.debtDeadline; // Date to set, null to clear
+    }
+
+    // The floor tables, when the caller mentions them at all. Absent means
+    // "leave them alone": an admin editing a phone number must not release a
+    // party's tables by omission.
+    const touchesFloor = payload.floorTables !== undefined || payload.wholeHall !== undefined;
+    if (touchesFloor) {
+      const floor = await resolveFloorTables(restaurantId, section, {
+        eventDate: payload.eventDate ?? existingEvent.eventDate,
+        hallId: payload.hallId !== undefined ? payload.hallId : existingEvent.hallId,
+        guestCount: payload.guestCount ?? existingEvent.guestCount,
+        payload: { floorTables: payload.floorTables, wholeHall: payload.wholeHall },
+        // Its own tables are not a clash with itself.
+        exceptEventId: existingEvent.id,
+      });
+      updateData.wholeHall = floor.wholeHall;
+      if (floor.hallId) updateData.hallId = floor.hallId;
+      if (floor.selections.length > 0) updateData.guestCount = floor.guestCount;
+      await writeFloorTables(existingEvent.id, floor.selections);
     }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, section, eventId, updateData);
