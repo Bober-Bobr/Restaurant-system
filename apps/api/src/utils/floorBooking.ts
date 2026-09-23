@@ -127,10 +127,38 @@ export function wholeAreaAvailable(
 
 export type TableSelection = { floorTableId: string; guestCount: number };
 
-/** The booking's head count: the sum of its tables', when it names any. */
-export function guestCountOf(selections: TableSelection[], fallback: number): number {
-  if (selections.length === 0) return fallback;
+/**
+ * The booking's head count.
+ *
+ * **A specified figure WINS and is the cap.** A banquet's head count is typed
+ * before the map is touched — it is what the per-person package is priced on —
+ * so the seating has to fit inside it rather than redefine it. Only when
+ * nothing was specified (a general-dining booking, where the map IS the
+ * booking) do the tables supply it.
+ */
+export function guestCountOf(selections: TableSelection[], specified: number): number {
+  if (specified > 0) return specified;
+  return seatedGuests(selections);
+}
+
+/** How many people the chosen tables seat between them. */
+export function seatedGuests(selections: TableSelection[]): number {
   return selections.reduce((sum, s) => sum + Math.max(0, s.guestCount), 0);
+}
+
+/**
+ * How many seated guests are over the specified head count, or 0 when they
+ * fit. With nothing specified there is no cap to exceed.
+ */
+export function seatingOverflow(selections: TableSelection[], specified: number): number {
+  if (specified <= 0) return 0;
+  return Math.max(0, seatedGuests(selections) - specified);
+}
+
+/** How many more may still be seated, or null when there is no cap. */
+export function seatsRemaining(selections: TableSelection[], specified: number): number | null {
+  if (specified <= 0) return null;
+  return Math.max(0, specified - seatedGuests(selections));
 }
 
 export type ClashReason =

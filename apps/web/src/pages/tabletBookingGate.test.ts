@@ -93,7 +93,7 @@ describe('a kiosk booking needs a hall and a table', () => {
   it('and the Summary says which one is missing', () => {
     // The message names the field. The package is not choosable from this
     // page, so that one key is swapped for the "go and choose" wording.
-    expect(summary).toMatch(/\{missing && \(/);
+    expect(summary).toMatch(/\{missing \? \(/);
     expect(summary).toContain("t(missing === 'select_table_category_required' ? 'choose_table_category' : missing)");
   });
 

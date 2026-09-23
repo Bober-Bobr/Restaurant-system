@@ -48,7 +48,9 @@ describe('what the Confirm button waits for', () => {
     expect(summary).toMatch(/guestCount < 1 && \(/);
     // …and the page is wired to it, rather than carrying a second copy.
     expect(summary).toContain('const missing = bookingMissing(session, {');
-    expect(summary).toContain('const confirmDisabled = missing !== null;');
+    // It also waits on the seating fitting inside the head count — the
+    // server refuses an overflow, so the button must not offer it.
+    expect(summary).toContain('const confirmDisabled = missing !== null || over > 0;');
   });
 
   it('the guest input still carries no floor and no ceiling', () => {

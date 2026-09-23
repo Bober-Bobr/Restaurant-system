@@ -609,6 +609,12 @@ model Hall {
   // can be answered without reading the snapshot itself.
   defaultLayout   Json?
   defaultLayoutAt DateTime?
+  // The day (YYYY-MM-DD, UTC) this area was last put back to its default by
+  // the nightly reset. A day string rather than a timestamp because that is
+  // the question being asked — "has it been done for today?" — and it makes
+  // the sweep idempotent however often it runs or however many times the
+  // process restarts. Null = never reset.
+  lastLayoutResetDay String?
   restaurantId String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

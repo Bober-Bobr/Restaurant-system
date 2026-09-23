@@ -2112,7 +2112,16 @@ export const TabletMenuPage = () => {
           <TableCategoryFullscreen
             tableCategories={tableCategories.filter((tc) => tc.isActive && tc.tableType !== 'CHILDREN')}
             onSelect={(id) => setTableCategory(id)}
-            onBack={() => { reset(); navigate('/'); }}
+            onBack={() => {
+              // Undo the LAST step. On a kiosk that asks which evening this is
+              // (Small Banquets), the step before the table chooser is that
+              // question — so Back returns to it rather than dropping the
+              // guest out of the kiosk altogether. Everywhere else there is no
+              // earlier step, so it leaves as it always has.
+              if (asksSession) { setSessionKind(null); return; }
+              reset();
+              navigate('/');
+            }}
             onLightbox={setLightboxSrc}
             locale={locale}
             setLocale={setLocale}
@@ -2340,7 +2349,7 @@ export const TabletMenuPage = () => {
                 the difference between them is packages and prices, not the
                 room. The dining session mounts it on the summary instead,
                 since that session has no menu page. */}
-            <KioskFloorSection date={eventDate} t={t} />
+            <KioskFloorSection date={eventDate} guestCount={guestCount} t={t} />
 
             {/* Children's table — optional add-on, shown before Additional */}
             {selectedTableCategory && childrenTableCategory && (

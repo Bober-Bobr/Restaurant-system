@@ -79,6 +79,15 @@ describe('the kiosk map', () => {
     expect(summary).toContain('{!surface.menu && <KioskFloorSection date={eventDate}');
   });
 
+  it('the dining map is drawn LARGE — that session is only the map', () => {
+    // There is no menu, package or price beside it, so the plan is the page
+    // rather than a card on it.
+    expect(summary).toMatch(/<KioskFloorSection date=\{eventDate\} large /);
+    // …and the banquet session's, which shares the page with the menu, is not.
+    expect(src('pages/TabletMenuPage.tsx')).not.toMatch(/<KioskFloorSection[^>]*\blarge\b/);
+    expect(kiosk).toContain(".kf-map.is-large { max-height: 82vh;");
+  });
+
   it('taking the whole area and picking tables are exclusive', () => {
     const store = src('store/tablet.store.ts');
     // Each clears the other: a booking is the tables it named or the venue.
@@ -107,11 +116,32 @@ describe('what the booking is sent with', () => {
     expect(summary).toContain('hallId: wholeAreaId || selectedHallId || undefined,');
   });
 
-  it('the head count is the sum of the tables\', and is shown rather than typed', () => {
-    expect(summary).toContain('const seatedGuests = guestCountOf(floorTables, guestCount);');
-    expect(summary).toContain('guestCount: seatedGuests,');
-    // A second editable copy of a derived number could only disagree with it.
-    expect(summary).toContain('{guestsFromMap ? (');
+  it('the head count CAPS the seating, and stays typed', () => {
+    // Superseded the earlier "the sum wins" rule: a banquet's head count is
+    // what the per-person package is priced on, so the map fits inside it
+    // rather than redefining it. With nothing typed the tables supply it.
+    expect(summary).toContain('const seated = seatedGuests(floorTables);');
+    expect(summary).toContain('const bookingGuests = guestCountOf(floorTables, guestCount);');
+    expect(summary).toContain('const over = seatingOverflow(floorTables, guestCount);');
+    expect(summary).toContain('guestCount: bookingGuests,');
+    // The field is an input, not a readout: it is the cap, which is a
+    // decision rather than a derived figure.
+    const field = summary.slice(summary.indexOf("t('guest_count')"));
+    expect(field.slice(0, 600)).toContain('type="number"');
+  });
+
+  it('the kiosk map stops at the head count rather than letting Confirm fail', () => {
+    expect(kiosk).toContain('const remaining = seatsRemaining(selections, guestCount);');
+    // Picking seats a table full, or up to what is left — never past it.
+    expect(kiosk).toContain('toggleFloorTable(table.id, Math.min(table.seats, remaining));');
+    // And the stepper stops there too.
+    expect(kiosk).toContain('disabled={guests >= table.seats || full}');
+  });
+
+  it('but the cap is enforced on the SERVER as well', () => {
+    // The kiosk's steppers are a courtesy; a stale bundle reaches the API too.
+    const api = readFileSync(join(WEB, '..', '..', 'api', 'src', 'modules', 'events', 'event.floorTables.ts'), 'utf8');
+    expect(api).toContain('seatingOverflow(selections, request.guestCount)');
   });
 
   it('a new guest starts with an empty map', () => {

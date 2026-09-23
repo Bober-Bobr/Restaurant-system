@@ -207,19 +207,60 @@ export class FloorMapRepository {
 
   /**
    * Put the area back the way the layout describes it: its map size, its
-   * drawing and its tables, all in ONE transaction. The area's tables are
-   * REPLACED — deleted and written again — because a restore is "the room
-   * stands like this", not "these tables also exist".
+   * drawing and its tables, all in ONE transaction.
+   *
+   * **Tables are reconciled BY LABEL, not deleted and rewritten.** They used
+   * to be replaced wholesale, which was harmless until bookings began holding
+   * them: `EventFloorTable` cascades on the table, so recreating table 5 with
+   * a fresh id silently released every booking sitting on it — including
+   * future ones, and including the nightly reset. Matching on the label keeps
+   * the row, so the booking keeps its table.
+   *
+   * A table in the area but NOT in the layout is removed, unless a booking
+   * from `protectFrom` onward holds it. Putting the room back must never
+   * cancel somebody's evening, so such a table is kept and named in `kept`.
    */
   async restoreLayout(
     hallId: string,
-    layout: { mapWidth: number | null; mapHeight: number | null; mapFeatures: unknown[]; tables: Omit<TableData, 'hallId'>[] },
-  ): Promise<{ area: AreaRow; tables: TableRow[] }> {
+    layout: { mapWidth: number | null; mapHeight: number | null; mapFeatures: unknown[]; tables: (Omit<TableData, 'hallId'> & { label: string })[] },
+    protectFrom?: Date,
+  ): Promise<{ area: AreaRow; tables: TableRow[]; kept: string[] }> {
     return prisma.$transaction(async (tx) => {
-      await tx.floorTable.deleteMany({ where: { hallId } });
-      if (layout.tables.length > 0) {
-        await tx.floorTable.createMany({ data: layout.tables.map((t) => ({ ...t, hallId })) });
+      const existing = await tx.floorTable.findMany({ where: { hallId }, select: { id: true, label: true } });
+      // Case-folded, like the label uniqueness rule itself: "vip 1" and
+      // "VIP 1" are the same table when read aloud.
+      const fold = (label: string) => label.trim().toLowerCase();
+      const byLabel = new Map(existing.map((row) => [fold(row.label), row]));
+
+      const wanted = new Set(layout.tables.map((tb) => fold(tb.label)));
+      for (const table of layout.tables) {
+        const match = byLabel.get(fold(table.label));
+        if (match) await tx.floorTable.update({ where: { id: match.id }, data: { ...table, hallId } });
+        else await tx.floorTable.create({ data: { ...table, hallId } });
       }
+
+      const extras = existing.filter((row) => !wanted.has(fold(row.label)));
+      const kept: string[] = [];
+      if (extras.length > 0) {
+        // Which of them a booking still needs. Cancelled bookings hold
+        // nothing, so they do not protect a table.
+        const booked = protectFrom
+          ? await tx.eventFloorTable.findMany({
+            where: {
+              floorTableId: { in: extras.map((x) => x.id) },
+              event: { eventDate: { gte: protectFrom }, status: { not: 'CANCELLED' } },
+            },
+            select: { floorTableId: true },
+          })
+          : [];
+        const protectedIds = new Set(booked.map((x) => x.floorTableId));
+        const removable = extras.filter((x) => !protectedIds.has(x.id));
+        for (const row of extras) if (protectedIds.has(row.id)) kept.push(row.label);
+        if (removable.length > 0) {
+          await tx.floorTable.deleteMany({ where: { id: { in: removable.map((x) => x.id) } } });
+        }
+      }
+
       const area = await tx.hall.update({
         where: { id: hallId },
         data: {
@@ -230,7 +271,7 @@ export class FloorMapRepository {
         select: AREA_SELECT,
       });
       const tables = await tx.floorTable.findMany({ where: { hallId }, orderBy: { label: 'asc' }, select: TABLE_SELECT });
-      return { area, tables };
+      return { area, tables, kept };
     });
   }
 

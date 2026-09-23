@@ -11,7 +11,7 @@ import { getPhotoUrl } from '../utils/photoUrl';
 import { kioskTheme, tabletThemeVars } from '../utils/tabletTheme';
 import { useAuthStore } from '../store/auth.store';
 import { bookingMissing, kioskSessionsFor, kioskSurface, resolveKioskSession, type KioskSession } from '../utils/kioskSession';
-import { guestCountOf } from '../utils/floorBooking';
+import { guestCountOf, seatedGuests, seatingOverflow } from '../utils/floorBooking';
 import { KioskFloorSection } from './KioskFloorSection';
 import { dishName } from '../utils/menuI18n';
 import type { Event, EventMenuConfig, ExtraService, TableCategoryPackageItem } from '../types/domain';
@@ -253,7 +253,11 @@ export const TabletSummaryPage = () => {
     () => Object.entries(floorSelections).map(([floorTableId, guests]) => ({ floorTableId, guestCount: guests })),
     [floorSelections],
   );
-  const seatedGuests = guestCountOf(floorTables, guestCount);
+  // What the tables seat, what the booking is for, and whether the first
+  // exceeds the second. The server refuses an overflow, so Confirm does too.
+  const seated = seatedGuests(floorTables);
+  const bookingGuests = guestCountOf(floorTables, guestCount);
+  const over = seatingOverflow(floorTables, guestCount);
   const guestsFromMap = floorTables.length > 0;
 
   const sessions = kioskSessionsFor(role, { moduleCatering });
@@ -346,10 +350,10 @@ export const TabletSummaryPage = () => {
   // two lists would drift. `missing` is a translation key, so the message
   // below names the field rather than the button only going grey.
   const missing = bookingMissing(session, {
-    customerName, customerPhone, eventDate, eventTime, guestCount: seatedGuests,
+    customerName, customerPhone, eventDate, eventTime, guestCount: bookingGuests,
     hallId: selectedHallId, tableCategoryId: selectedTableCategoryId,
   });
-  const confirmDisabled = missing !== null;
+  const confirmDisabled = missing !== null || over > 0;
 
   // The export lists the dishes that make up the table: the non-course included
   // dishes (honoring the guest's free swaps) PLUS the first/second/third courses
@@ -893,18 +897,20 @@ export const TabletSummaryPage = () => {
                       `min` would fight the typing rather than the empty value.
                       Negatives are clamped — the store does it too, but a number
                       typed here reaches the totals before it reaches the store. */}
-                  {guestsFromMap ? (
-                    // Derived, so it is shown rather than typed: the figure is
-                    // the sum of the guests seated at the chosen tables, and a
-                    // second editable copy of it could only disagree.
-                    <output className="rg-input" style={{ display: 'block' }}>
-                      {seatedGuests} <span style={{ opacity: 0.6, fontSize: 12 }}>· {t('fm_total_guests', { count: seatedGuests })}</span>
-                    </output>
-                  ) : (
-                    <input className="rg-input" type="number"
-                      value={guestCount || ''}
-                      onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
-                      placeholder="0" />
+                  {/* Always typed. The head count is what the booking is FOR
+                      — a banquet's package is priced on it — so the map has to
+                      fit inside it rather than redefine it. When nothing has
+                      been typed, the tables supply the figure instead. */}
+                  <input className="rg-input" type="number"
+                    value={guestCount || ''}
+                    onChange={(e) => setGuestCount(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+                    placeholder="0" />
+                  {guestsFromMap && (
+                    <p className="text-xs" style={{ margin: 0, color: over > 0 ? '#fca5a5' : 'rgba(255,255,255,0.5)' }}>
+                      {guestCount > 0
+                        ? t('fm_seated_of', { seated: seated, of: guestCount })
+                        : t('fm_total_guests', { count: seated })}
+                    </p>
                   )}
                 </div>
 
@@ -974,7 +980,7 @@ export const TabletSummaryPage = () => {
             {/* The floor map. The banquet session picks its tables on the
                 menu page; the dining session has no menu page, so it picks
                 them here. */}
-            {!surface.menu && <KioskFloorSection date={eventDate} t={t} />}
+            {!surface.menu && <KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />}
 
             {/* Event overview */}
             <section className="rg-card p-4 sm:p-6 reveal">
@@ -1284,11 +1290,17 @@ export const TabletSummaryPage = () => {
               {/* Names the first thing still missing. The area and the package
                   cannot be chosen from this page, so for those it says where
                   to go; a dining booking is never waiting on either. */}
-              {missing && (
+              {missing ? (
                 <p className="text-center text-xs" style={{ color: '#fca5a5' }}>
                   {t(missing === 'select_table_category_required' ? 'choose_table_category' : missing)}
                 </p>
-              )}
+              ) : over > 0 ? (
+                // The tables seat more than the booking is for. The server
+                // refuses it, so the button says so rather than failing later.
+                <p className="text-center text-xs" style={{ color: '#fca5a5' }}>
+                  {t('fm_seated_of', { seated: seated, of: guestCount })}
+                </p>
+              ) : null}
 
               {submitError && (
                 <p className="text-center text-xs" style={{ color: '#fca5a5' }}>{submitError}</p>

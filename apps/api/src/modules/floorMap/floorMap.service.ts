@@ -2,6 +2,7 @@ import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
 import { readLayout, snapshotOf } from './floorMap.layout.js';
 import { dayKey, wholeAreaAvailable, type BookingRow } from '../../utils/floorBooking.js';
+import { startOfDay } from './floorMap.dailyReset.js';
 import type {
   AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
 } from './floorMap.repository.js';
@@ -155,7 +156,10 @@ export class FloorMapService {
     await this.areaInScope(restaurantId, section, id);
     const layout = readLayout(await this.repo.readDefaultLayout(id));
     if (!layout) throw createHttpError(409, 'This area has no saved default layout');
-    return this.repo.restoreLayout(id, layout);
+    // Bookings from the start of today onward keep their tables: reverting a
+    // room must never cancel somebody's evening, whether it is the nightly
+    // sweep doing it or an admin pressing the button.
+    return this.repo.restoreLayout(id, layout, startOfDay(new Date()));
   }
 
   async createTable(restaurantId: string, section: Section, payload: TableData): Promise<TableRow> {

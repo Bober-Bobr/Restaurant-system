@@ -20,8 +20,16 @@ describe('there is always a way back', () => {
     // "← events" button is behind it: without this, choosing a table was the
     // only way out of the kiosk.
     expect(menu).toContain('onBack: () => void;');
-    // Leaving clears the draft — see store/tabletDraft.ts.
-    expect(menu).toMatch(/onBack=\{\(\) => \{ reset\(\); navigate\('\/'\); \}\}/);
+    // Back undoes the LAST step. On a kiosk that asks which kind of evening
+    // this is (Small Banquets), that step is the question — so Back returns
+    // to it instead of dropping the guest out of the kiosk.
+    expect(menu).toContain('if (asksSession) { setSessionKind(null); return; }');
+    // Everywhere else there is no earlier step, so it leaves — and leaving
+    // clears the draft, see store/tabletDraft.ts.
+    const back = menu.slice(menu.indexOf('onBack={() => {'));
+    const body = back.slice(0, back.indexOf('}}'));
+    expect(body).toContain('reset();');
+    expect(body).toContain("navigate('/');");
   });
 
   it('the button is rendered unconditionally, not only on the second step', () => {

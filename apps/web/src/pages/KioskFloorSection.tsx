@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FLOOR_PLAN_CSS, FloorPlanView, type TableState } from '../components/floor/FloorPlanView';
 import { floorMapService } from '../services/floorMap.service';
 import { useTabletStore } from '../store/tablet.store';
-import { dayKey, tableHolders, tablesByHallOf, wholeAreaAvailable } from '../utils/floorBooking';
+import { dayKey, seatedGuests, seatsRemaining, tableHolders, tablesByHallOf, wholeAreaAvailable } from '../utils/floorBooking';
 import type { MapArea, MapTable } from '../utils/floorMap';
 import type { translate } from '../utils/translate';
 
@@ -29,12 +29,25 @@ type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string
 type Props = {
   /** The booking's date, `YYYY-MM-DD`. Empty until the guest picks one. */
   date: string;
+  /**
+   * The head count this booking is for, 0 when none was given. The seating
+   * may not exceed it — the server refuses the save either way, so the
+   * steppers stop short of it rather than letting a guest build something
+   * that will be turned down at Confirm.
+   */
+  guestCount?: number;
+  /**
+   * Drawn large. A general-dining booking is ONLY the map — there is no menu,
+   * no package and no price beside it — so the plan is the page rather than a
+   * card on it, and a table has to be tappable at arm's length.
+   */
+  large?: boolean;
   t: TFn;
 };
 
 type KindFilter = 'ALL' | 'HALL' | 'OUTDOOR';
 
-export const KioskFloorSection = ({ date, t }: Props) => {
+export const KioskFloorSection = ({ date, large = false, guestCount = 0, t }: Props) => {
   const {
     floorSelections, wholeAreaId, toggleFloorTable, setFloorTableGuests, setWholeArea,
   } = useTabletStore();
@@ -83,12 +96,19 @@ export const KioskFloorSection = ({ date, t }: Props) => {
   };
 
   const chosen = Object.entries(floorSelections);
-  const totalGuests = chosen.reduce((sum, [, n]) => sum + n, 0);
+  const selections = chosen.map(([floorTableId, g]) => ({ floorTableId, guestCount: g }));
+  const totalGuests = seatedGuests(selections);
+  // Null when the booking named no head count — a general-dining booking is
+  // whatever the tables seat.
+  const remaining = seatsRemaining(selections, guestCount);
+  const full = remaining === 0;
 
   return (
     <section className="rg-card p-4 sm:p-6 reveal">
       <p className="rg-heading">{t('fm_kiosk_title')}</p>
-      <p className="mt-1 mb-4 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('fm_kiosk_hint')}</p>
+      <p className="mt-1 mb-4 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        {full ? t('fm_seating_full') : t('fm_kiosk_hint')}
+      </p>
 
       {/* Indoor / outdoor, then the areas of that kind. Two rows rather than
           one long list: a venue has a handful of rooms and one terrace, and
@@ -119,13 +139,21 @@ export const KioskFloorSection = ({ date, t }: Props) => {
 
       {area && (
         <>
-          <div className="kf-map">
+          <div className={`kf-map${large ? ' is-large' : ''}`}>
             <FloorPlanView
               area={area}
               tables={areaTables}
               stateOf={stateOf}
               captionOf={captionOf}
-              onTableClick={(table) => toggleFloorTable(table.id, table.seats)}
+              onTableClick={(table) => {
+                // Seats it full, or up to what is left of the head count —
+                // never past it. Already-chosen tables always toggle off.
+                if (table.id in floorSelections || remaining === null) {
+                  toggleFloorTable(table.id, table.seats);
+                } else if (remaining > 0) {
+                  toggleFloorTable(table.id, Math.min(table.seats, remaining));
+                }
+              }}
               wholeAreaLabel={wholeAreaId === area.id ? t('fm_whole_area_taken') : null}
               ariaLabel={area.name}
             />
@@ -162,7 +190,8 @@ export const KioskFloorSection = ({ date, t }: Props) => {
                   <button type="button" aria-label="−" disabled={guests <= 1}
                     onClick={() => setFloorTableGuests(id, guests - 1)}>−</button>
                   <output aria-live="polite">{guests}</output>
-                  <button type="button" aria-label="+" disabled={guests >= table.seats}
+                  <button type="button" aria-label="+"
+                    disabled={guests >= table.seats || full}
                     onClick={() => setFloorTableGuests(id, guests + 1)}>+</button>
                 </div>
                 <button type="button" className="kf-drop" onClick={() => toggleFloorTable(id, table.seats)}>
@@ -171,7 +200,12 @@ export const KioskFloorSection = ({ date, t }: Props) => {
               </div>
             );
           })}
-          <p className="kf-total">{t('fm_total_guests', { count: totalGuests })}</p>
+          <p className="kf-total">
+            {remaining === null
+              ? t('fm_total_guests', { count: totalGuests })
+              : t('fm_seated_of', { seated: totalGuests, of: guestCount })}
+          </p>
+          {full && <p className="kf-note">{t('fm_seating_full')}</p>}
         </div>
       )}
 
@@ -196,6 +230,14 @@ export const KioskFloorSection = ({ date, t }: Props) => {
           --fp-taken-text: rgba(255,255,255,0.75);
           overflow: auto; max-height: 62vh; border-radius: 10px;
           background: rgba(var(--rg-bg-rgb), 0.45);
+        }
+        /* The dining session's map is the whole booking, so it gets the
+           screen: nearly the full viewport height, and the plan scaled up
+           inside it so a table is a comfortable target at arm's length. */
+        .kf-map.is-large { max-height: 82vh; min-height: 56vh; }
+        .kf-map.is-large .fp-svg { width: 150% !important; min-width: 150%; }
+        @media (max-width: 900px) {
+          .kf-map.is-large .fp-svg { width: 260% !important; min-width: 260%; }
         }
         .kf-filters { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .kf-chip {

@@ -2,7 +2,7 @@ import createHttpError from 'http-errors';
 import { prisma } from '../../db/prisma.js';
 import type { Section } from '../../utils/section.js';
 import {
-  bookingClash, dayKey, dayRange, guestCountOf, occupancyOf,
+  bookingClash, dayKey, dayRange, guestCountOf, occupancyOf, seatedGuests, seatingOverflow,
   type BookingRow, type TableSelection,
 } from '../../utils/floorBooking.js';
 
@@ -73,6 +73,16 @@ export async function resolveFloorTables(
 
   const ids = [...new Set(selections.map((s) => s.floorTableId))];
   if (ids.length !== selections.length) throw createHttpError(400, 'The same table was chosen twice');
+
+  // The seating must fit inside the head count the booking was made for. The
+  // kiosk caps its steppers, but the cap is a rule about the booking rather
+  // than about the widget — a stale bundle or a hand-made request reaches here
+  // too.
+  const over = seatingOverflow(selections, request.guestCount);
+  if (over > 0) {
+    throw createHttpError(400,
+      `The tables seat ${seatedGuests(selections)} guests, ${over} more than this booking is for`);
+  }
 
   let hallId = request.hallId ?? null;
 

@@ -15,6 +15,8 @@ function fakeRepo() {
   const tables: TableRow[] = [];
   /** `Hall.defaultLayout`, kept out of AreaRow exactly as the column is. */
   const defaults = new Map<string, unknown>();
+  /** Table ids a booking from today onward holds — what `protectFrom` guards. */
+  const bookedTables = new Set<string>();
   let seq = 0;
   const repo: Repo = {
     async listAreas(restaurantId, section) {
@@ -52,13 +54,26 @@ function fakeRepo() {
       row.defaultLayoutAt = at;
       return row;
     },
-    async restoreLayout(hallId, layout) {
-      // Like the transaction: the area's tables are replaced, not merged.
-      for (let i = tables.length - 1; i >= 0; i -= 1) if (tables[i].hallId === hallId) tables.splice(i, 1);
-      for (const t of layout.tables) tables.push({ id: `t${++seq}`, hallId, width: null, height: null, ...t });
+    async restoreLayout(hallId, layout, protectFrom) {
+      // Reconciled BY LABEL, like the real one: a table that survives keeps
+      // its ROW, so the bookings holding it survive with it.
+      const fold = (label: string) => label.trim().toLowerCase();
+      const wanted = new Set(layout.tables.map((x) => fold(x.label)));
+      for (const t of layout.tables) {
+        const match = tables.find((x) => x.hallId === hallId && fold(x.label) === fold(t.label));
+        if (match) Object.assign(match, t);
+        else tables.push({ id: `t${++seq}`, hallId, width: null, height: null, ...t });
+      }
+      const kept: string[] = [];
+      for (let i = tables.length - 1; i >= 0; i -= 1) {
+        const row = tables[i];
+        if (row.hallId !== hallId || wanted.has(fold(row.label))) continue;
+        if (protectFrom && bookedTables.has(row.id)) { kept.push(row.label); continue; }
+        tables.splice(i, 1);
+      }
       const area = areas.find((a) => a.id === hallId)!;
       Object.assign(area, { mapWidth: layout.mapWidth, mapHeight: layout.mapHeight, mapFeatures: layout.mapFeatures });
-      return { area, tables: tables.filter((t) => t.hallId === hallId) };
+      return { area, tables: tables.filter((t) => t.hallId === hallId), kept };
     },
     async labelsInArea(hallId) { return tables.filter((t) => t.hallId === hallId).map(({ id, label }) => ({ id, label })); },
     async createTable(data: TableData) {
@@ -73,7 +88,7 @@ function fakeRepo() {
     },
     async deleteTable(id) { tables.splice(tables.findIndex((t) => t.id === id), 1); },
   };
-  return { repo, areas, tables, defaults };
+  return { repo, areas, tables, defaults, bookedTables };
 }
 
 async function statusOf(run: () => Promise<unknown>): Promise<number> {
@@ -304,6 +319,46 @@ describe('an area\'s saved default layout', () => {
   });
 });
 
+describe('putting a room back must not cancel an evening', () => {
+  it('a table that survives keeps its ROW, so the bookings on it survive', async () => {
+    // The reason this is reconciled by label rather than rewritten:
+    // EventFloorTable cascades on the table, so a fresh id silently releases
+    // every booking sitting on it.
+    const before = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    await service.updateTable('r1', 'SMALL_BANQUET', before.id, { x: 400, seats: 2 });
+
+    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(tables).toHaveLength(1);
+    expect(tables[0].id).toBe(before.id);
+    expect(tables[0]).toMatchObject({ x: 100, seats: 6 });
+  });
+
+  it('a table added since is removed — unless a booking still holds it', async () => {
+    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    const extra = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '9', x: 300 });
+    const alsoExtra = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '10', x: 400 });
+    // Somebody is booked on table 9 tonight.
+    store.bookedTables.add(extra.id);
+
+    const { tables, kept } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(kept).toEqual(['9']);
+    expect(tables.map((x) => x.label).sort()).toEqual(['1', '9']);
+    expect(store.tables.some((x) => x.id === alsoExtra.id)).toBe(false);
+  });
+
+  it('matches labels case-insensitively, as the uniqueness rule does', async () => {
+    const vip = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: 'VIP 1' });
+    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    await service.updateTable('r1', 'SMALL_BANQUET', vip.id, { label: 'vip 1', x: 500 });
+
+    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
+    expect(tables).toHaveLength(1);
+    expect(tables[0].id).toBe(vip.id);
+  });
+});
+
 describe('the request schema', () => {
   it('bounds the seat count and the coordinates', () => {
     const base = { ...TABLE, hallId: 'ckv0000000000000000000000' };
@@ -360,14 +415,23 @@ describe('the wiring', () => {
     expect(areas).toMatch(/where:\s*\{\s*restaurantId,\s*section\s*\}/);
   });
 
-  it('a restore replaces the area\'s tables in ONE transaction, and the snapshot never leaves the server', () => {
+  it('a restore reconciles the tables BY LABEL in one transaction, and the snapshot never leaves the server', () => {
     const repo = read('src/modules/floorMap/floorMap.repository.ts');
     const restore = repo.slice(repo.indexOf('async restoreLayout('), repo.indexOf('async labelsInArea('));
-    // Half a layout is not a layout: the delete, the writes and the area's own
-    // size and drawing either all land or none do.
+    // Half a layout is not a layout: the writes and the area's own size and
+    // drawing either all land or none do.
     expect(restore).toContain('prisma.$transaction');
-    expect(restore).toMatch(/tx\.floorTable\.deleteMany\(\{\s*where:\s*\{\s*hallId\s*\}/);
-    expect(restore).toContain('tx.floorTable.createMany');
+    // Matched by label and UPDATED, never deleted and rewritten. Rewriting
+    // gives table 5 a fresh id, and EventFloorTable cascades on the table —
+    // so every booking sitting on it was silently released, the nightly reset
+    // included.
+    expect(restore).toContain('tx.floorTable.update(');
+    expect(restore).toContain('byLabel.get(fold(table.label))');
+    expect(restore).not.toMatch(/deleteMany\(\{\s*where:\s*\{\s*hallId\s*\}\s*\}\)/);
+    // A table the layout does not have is removed only when no booking from
+    // the cutoff onward holds it.
+    expect(restore).toContain('status: { not: \'CANCELLED\' }');
+    expect(restore).toContain('removable.map((x) => x.id)');
     // The map is told a default exists and when — never handed the layout.
     const select = repo.slice(repo.indexOf('const AREA_SELECT'), repo.indexOf('const TABLE_SELECT'));
     expect(select).toContain('defaultLayoutAt: true');

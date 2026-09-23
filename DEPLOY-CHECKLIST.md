@@ -3233,3 +3233,38 @@ holds no tables, so no map shows anything as taken until somebody books one.
     photocopies legibly in black and white.
 11. **Edit map** → the occupancy colouring disappears while the furniture is
     being arranged, and comes back on Done.
+
+## §64 — Seating cap, nightly layout reset, kiosk fixes (**has a migration**)
+
+Migration `20260924100000_floor_daily_reset`: adds `Hall.lastLayoutResetDay`,
+nullable. Every area reads as "never reset", so the first sweep after the
+deploy puts each area **with a saved default** back to it — areas with no
+default saved are untouched. Save the defaults you want before deploying, or
+expect the first reset to do nothing.
+
+**After deploying:**
+
+1. **Back** — on the Small Banquets kiosk, pick Banquet, reach the event-type
+   step, press Back: it returns to the "what kind of evening" question, not out
+   to the floor map. On a restaurant with one event type, Back from the table
+   list does the same. The banquet kiosk is unchanged (Back still leaves).
+2. **The dining map is large** — in a general-dining session the plan takes
+   most of the screen and is scaled up; the banquet session's stays a card.
+3. **The seating cap** — set a guest count of 10 on the summary, then seat
+   tables on the map: the steppers stop at 10 in total, tapping a further table
+   seats it only up to what is left, and at 10 the section says every guest is
+   seated. Confirm is blocked while the tables seat more than the count.
+4. Confirm that a request seating more than the count is refused by the API
+   too (a stale tab): the message names how many over it is.
+5. **With no guest count typed** (a dining booking), the tables supply the
+   figure exactly as before.
+6. **The nightly reset** — save a default for an area, move some tables, then
+   wait for the sweep (or restart the API and wait a minute). The area is back
+   to its default, and `pm2 logs` shows `[floor-map] put N area(s) back`.
+7. **It does not cancel bookings** — book a table for tomorrow, move it, add an
+   extra table and book that too, then let the reset run. The booked tables are
+   still booked; an extra table that is booked is KEPT and named in the log
+   (`kept booked table(s): 9`); an unbooked extra is removed.
+8. It runs **once a day**: a second sweep the same day changes nothing.
+9. **Admin spacing** — the floor map's day bar is a bordered strip with the
+   legend at its end, dropping to its own line under 900px.

@@ -1098,15 +1098,38 @@ export const FloorMapPage = () => {
         .fm-table-group.is-picked .fm-table-label,
         .fm-table-group.is-picked .fm-table-seats { fill: var(--adm-accent-ink, #04120d); }
 
-        .fm-daybar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 14px 0 0; }
+        /* The day bar carries a date, four controls and a legend. Given one
+           flat row they run together and the legend crowds the buttons, so it
+           is a bordered strip with its own rhythm: the controls on one line,
+           the legend pushed to the end and onto its own line once there is no
+           room for both. */
+        .fm-daybar {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          margin: 18px 0 0; padding: 12px 14px;
+          border: 1px solid var(--adm-line); border-radius: 6px;
+          background: rgba(var(--adm-text-rgb), 0.03);
+        }
+        .fm-daybar > label { margin-right: -4px; }
         .fm-daybar input[type="date"] { max-width: 190px; }
-        .fm-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: rgba(var(--adm-text-rgb), 0.6); }
+        .fm-legend {
+          display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+          margin-left: auto; padding-left: 14px;
+          border-left: 1px solid var(--adm-line);
+          font-size: 12px; color: rgba(var(--adm-text-rgb), 0.6);
+        }
+        @media (max-width: 900px) {
+          /* No room for both: the legend takes the next line, and the rule
+             that separated them would then be a stray vertical tick. */
+          .fm-legend { margin-left: 0; padding-left: 0; border-left: 0; width: 100%; }
+        }
         .fm-legend span { display: inline-flex; align-items: center; gap: 6px; }
         .fm-swatch { width: 14px; height: 10px; border-radius: 2px; border: 1px solid var(--adm-line); display: inline-block; }
-        .fm-booking-card { display: grid; gap: 8px; }
-        .fm-sched { display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+        .fm-booking-card { display: grid; gap: 10px; }
+        .fm-booking-card .fm-facts { margin-bottom: 4px; }
+        /* Room for the scrollbar, so the last row is not sliced by it. */
+        .fm-sched { display: grid; gap: 10px; max-height: 340px; overflow: auto; padding-right: 4px; }
         .fm-sched-row {
-          display: grid; gap: 2px; padding: 8px 10px; border-radius: 4px;
+          display: grid; gap: 3px; padding: 10px 12px; border-radius: 4px;
           border: 1px solid var(--adm-line); border-left: 2px solid rgba(var(--adm-accent-rgb), 0.5);
           background: rgba(var(--adm-text-rgb), 0.03); cursor: pointer; text-align: left;
         }

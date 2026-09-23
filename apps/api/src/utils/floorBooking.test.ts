@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   bookingClash, dayKey, dayRange, guestCountOf, holdsTables, occupancyOf,
-  takenTableIds, wholeAreaAvailable, type BookingRow,
+  seatedGuests, seatingOverflow, seatsRemaining, takenTableIds, wholeAreaAvailable, type BookingRow,
 } from './floorBooking.js';
 
 /**
@@ -140,9 +140,16 @@ describe('what clashes with what', () => {
   });
 });
 
-describe('the head count is the sum of the tables', () => {
-  it('adds the tables up rather than trusting a reported total', () => {
-    expect(guestCountOf([seat('t1', 6), seat('t2', 4)], 999)).toBe(10);
+describe('the head count, and the cap it puts on the seating', () => {
+  it('a SPECIFIED figure wins — the seating fits inside it, not the other way round', () => {
+    // A banquet's head count is typed before the map is touched and is what
+    // the per-person package is priced on.
+    expect(guestCountOf([seat('t1', 6), seat('t2', 4)], 20)).toBe(20);
+  });
+
+  it('with nothing specified the tables supply it — a dining booking IS its map', () => {
+    expect(guestCountOf([seat('t1', 6), seat('t2', 4)], 0)).toBe(10);
+    expect(seatedGuests([seat('t1', 6), seat('t2', 4)])).toBe(10);
   });
 
   it('falls back to the typed figure when no table is named', () => {
@@ -151,7 +158,25 @@ describe('the head count is the sum of the tables', () => {
   });
 
   it('a negative count cannot subtract from the party', () => {
+    expect(seatedGuests([seat('t1', 6), seat('t2', -5)])).toBe(6);
     expect(guestCountOf([seat('t1', 6), seat('t2', -5)], 0)).toBe(6);
+  });
+
+  it('seating more than the booking is for is an overflow, by exactly the excess', () => {
+    expect(seatingOverflow([seat('t1', 6), seat('t2', 6)], 10)).toBe(2);
+    expect(seatingOverflow([seat('t1', 6), seat('t2', 4)], 10)).toBe(0);
+    expect(seatingOverflow([seat('t1', 4)], 10)).toBe(0);
+  });
+
+  it('with no head count specified there is no cap to exceed', () => {
+    expect(seatingOverflow([seat('t1', 40)], 0)).toBe(0);
+    expect(seatsRemaining([seat('t1', 40)], 0)).toBeNull();
+  });
+
+  it('what is left to seat never goes negative', () => {
+    expect(seatsRemaining([seat('t1', 4)], 10)).toBe(6);
+    expect(seatsRemaining([seat('t1', 12)], 10)).toBe(0);
+    expect(seatsRemaining([], 10)).toBe(10);
   });
 });
 
@@ -160,9 +185,18 @@ describe('the wiring', () => {
   const read = (rel: string) => fs.readFileSync(path.join(API_ROOT, rel), 'utf8')
     .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
 
-  it('the head count stored is the derived one, never the client\'s', () => {
+  it('the head count stored is the resolved one, never the client\'s', () => {
     const service = read('src/modules/events/event.service.ts');
     expect(service).toContain('guestCount: floor.guestCount');
+  });
+
+  it('the server refuses a booking whose tables seat more than it is for', () => {
+    // The kiosk caps its steppers, but the cap is a rule about the booking
+    // rather than about the widget — a stale bundle reaches here too.
+    const floor = read('src/modules/events/event.floorTables.ts');
+    expect(floor).toContain('const over = seatingOverflow(selections, request.guestCount);');
+    expect(floor).toContain('if (over > 0) {');
+    expect(floor).toContain('createHttpError(400');
   });
 
   it('tables are checked BEFORE the booking row is written', () => {

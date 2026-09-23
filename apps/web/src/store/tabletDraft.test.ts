@@ -95,7 +95,16 @@ describe('leaving the kiosk clears it', () => {
   it('both exits reset the draft', () => {
     // "← events" and the chooser's Back are the "I am done" gesture. A reload is
     // not, which is the whole distinction.
-    expect((menu.match(/reset\(\); navigate\('\/'\);/g) ?? []).length).toBe(2);
+    //
+    // The chooser's Back only LEAVES when there is no earlier step to go back
+    // to; on the Small Banquets kiosk it returns to the session question
+    // instead, which is not leaving and so does not reset.
+    expect((menu.match(/reset\(\); navigate\('\/'\);/g) ?? []).length).toBe(1);
+    const back = menu.slice(menu.indexOf('onBack={() => {'));
+    const body = back.slice(0, back.indexOf('}}'));
+    expect(body).toContain('if (asksSession) { setSessionKind(null); return; }');
+    expect(body).toContain('reset();');
+    expect(body).toContain("navigate('/');");
   });
 
   it('and confirming does, so the next guest starts clean', () => {
