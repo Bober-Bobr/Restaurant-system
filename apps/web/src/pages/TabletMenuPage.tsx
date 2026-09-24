@@ -2103,7 +2103,16 @@ export const TabletMenuPage = () => {
         </div>
       )}
 
-      {chooserOpen && <KioskSessionChooser sessions={sessions} onPick={pickSession} t={t} />}
+      {chooserOpen && (
+        <KioskSessionChooser
+          sessions={sessions}
+          onPick={pickSession}
+          // The first step, so Back leaves the kiosk — and leaving clears the
+          // draft, the same gesture the page's own "← events" makes.
+          onBack={() => { reset(); navigate('/'); }}
+          t={t}
+        />
+      )}
 
       {/* The table-package chooser belongs to a banquet evening: it is what
           prices the booking, and General Dining has no package to sell. */}

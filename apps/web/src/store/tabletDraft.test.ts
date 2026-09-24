@@ -92,15 +92,22 @@ describe('where the draft lives', () => {
 describe('leaving the kiosk clears it', () => {
   const menu = read('pages/TabletMenuPage.tsx');
 
-  it('both exits reset the draft', () => {
-    // "← events" and the chooser's Back are the "I am done" gesture. A reload is
-    // not, which is the whole distinction.
+  it('every exit resets the draft', () => {
+    // Leaving is the "I am done" gesture. A reload is not, which is the whole
+    // distinction. There are three ways out, and each clears:
     //
-    // The chooser's Back only LEAVES when there is no earlier step to go back
-    // to; on the Small Banquets kiosk it returns to the session question
-    // instead, which is not leaving and so does not reset.
-    expect((menu.match(/reset\(\); navigate\('\/'\);/g) ?? []).length).toBe(1);
-    const back = menu.slice(menu.indexOf('onBack={() => {'));
+    //   · the page's own "← events";
+    //   · the SESSION CHOOSER's Back — that screen is the first step, so its
+    //     Back leaves rather than undoing anything;
+    //   · the table chooser's Back, but ONLY where there is no earlier step.
+    //     On the Small Banquets kiosk it returns to the session question
+    //     instead, which is not leaving and so does not reset.
+    expect((menu.match(/reset\(\); navigate\('\/'\);/g) ?? []).length).toBe(2);
+
+    const chooser = menu.slice(menu.indexOf('<KioskSessionChooser'));
+    expect(chooser.slice(0, chooser.indexOf('/>'))).toContain("onBack={() => { reset(); navigate('/'); }}");
+
+    const back = menu.slice(menu.indexOf('onBack={() => {\n'));
     const body = back.slice(0, back.indexOf('}}'));
     expect(body).toContain('if (asksSession) { setSessionKind(null); return; }');
     expect(body).toContain('reset();');

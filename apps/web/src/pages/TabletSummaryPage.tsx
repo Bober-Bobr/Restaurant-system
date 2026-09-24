@@ -809,7 +809,13 @@ export const TabletSummaryPage = () => {
             navigate('/tablet', { state: { fromSummary: true } });
           }} />
 
-        <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+        {/* Two columns only when the sidebar has the pricing panel to carry.
+            A general-dining booking has no pricing, so the sidebar would be a
+            narrow strip holding Confirm alone beside a column of half-width
+            fields — the page runs as ONE column instead and the actions fall
+            to the very bottom, full width, which is also where a form's
+            submit belongs. */}
+        <div className={`grid grid-cols-1 gap-4 lg:gap-6${surface.pricing ? ' lg:grid-cols-[1.3fr_0.7fr]' : ''}`}>
 
           {/* ── Left column ── */}
           <div className="min-w-0 space-y-6">
@@ -1086,7 +1092,10 @@ export const TabletSummaryPage = () => {
           </div>
 
           {/* ── Sidebar ── */}
-          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
+          {/* Sticky only while it is a sidebar: at the foot of one column
+              there is nothing for it to stick beside, and a sticky footer
+              would cover the fields above it. */}
+          <aside className={`min-w-0 space-y-4${surface.pricing ? ' lg:sticky lg:top-6 lg:self-start' : ''}`}>
 
             {/* Pricing */}
             {/* Pricing — the discount, the manual total, the deposit, the per

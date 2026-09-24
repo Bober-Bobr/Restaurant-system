@@ -17,6 +17,13 @@ import type { translate } from '../utils/translate';
 type Props = {
   sessions: KioskSession[];
   onPick: (session: KioskSession) => void;
+  /**
+   * Leave the kiosk. This screen is the FIRST step, so there is no earlier one
+   * to undo — without it the only way off a kiosk opened by mistake is to pick
+   * an evening and back out of the screen after it, which is the trap
+   * `TableCategoryFullscreen` was fixed for.
+   */
+  onBack: () => void;
   t: (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
 };
 
@@ -35,7 +42,7 @@ const CARD: Record<KioskSession, { title: Parameters<typeof translate>[0]; body:
   },
 };
 
-export const KioskSessionChooser = ({ sessions, onPick, t }: Props) => (
+export const KioskSessionChooser = ({ sessions, onPick, onBack, t }: Props) => (
   <div
     role="dialog"
     aria-modal="true"
@@ -51,6 +58,11 @@ export const KioskSessionChooser = ({ sessions, onPick, t }: Props) => (
     }}
   >
     <div className="w-full" style={{ maxWidth: 860 }}>
+      {/* Top-left, like every other kiosk overlay's Back. */}
+      <button type="button" onClick={onBack} className="kiosk-session-back">
+        ‹ {t('back')}
+      </button>
+
       <div className="text-center" style={{ marginBottom: 'clamp(20px, 4vh, 38px)' }}>
         <p className="rg-label" style={{ marginBottom: 10 }}>{t('kiosk_session_eyebrow')}</p>
         <h1 className="rg-display" style={{ color: 'white', fontSize: 'clamp(26px, 4.4vw, 40px)', lineHeight: 1.15 }}>
@@ -110,6 +122,14 @@ export const KioskSessionChooser = ({ sessions, onPick, t }: Props) => (
         grid's own class — `[role=dialog] .grid` would reach every other dialog
         the kiosk puts on screen. */}
     <style>{`
+      .kiosk-session-back {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-bottom: clamp(14px, 3vh, 26px);
+        padding: 9px 16px; border-radius: 8px; cursor: pointer;
+        font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+        color: var(--rg-accent); background: rgba(var(--rg-accent-rgb), 0.12);
+        border: 1px solid rgba(var(--rg-accent-rgb), 0.4);
+      }
       @media (max-width: 640px) {
         .kiosk-session-grid { grid-template-columns: minmax(0, 1fr) !important; }
       }

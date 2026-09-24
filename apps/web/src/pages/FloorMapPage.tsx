@@ -922,7 +922,7 @@ export const FloorMapPage = () => {
       )}
 
       {scheduleOpen && (
-        <section className="adm-card" style={{ padding: '16px !important', marginTop: 14 }}>
+        <section className="adm-card fm-sched-card">
           <p className="adm-heading" style={{ marginTop: 0 }}>{t('fm_schedule')}</p>
           <p className="fm-caption" style={{ margin: '0 0 10px' }}>{schedFrom} — {schedTo}</p>
           <div className="fm-sched">
@@ -1124,6 +1124,11 @@ export const FloorMapPage = () => {
         }
         .fm-legend span { display: inline-flex; align-items: center; gap: 6px; }
         .fm-swatch { width: 14px; height: 10px; border-radius: 2px; border: 1px solid var(--adm-line); display: inline-block; }
+        /* .adm-card sets no padding of its own, and an inline !important is
+           silently DROPPED by React — which is how this card came to have none
+           at all and its text sat against the edge. It belongs here. (No
+           backticks in this block: it lives inside a template literal.) */
+        .fm-sched-card { padding: 18px !important; margin-top: 18px; }
         .fm-booking-card { display: grid; gap: 10px; }
         .fm-booking-card .fm-facts { margin-bottom: 4px; }
         /* Room for the scrollbar, so the last row is not sliced by it. */

@@ -194,6 +194,64 @@ describe('the admin map', () => {
   });
 });
 
+describe('nothing on the admin map sits on its own edge', () => {
+  it('no inline style carries !important — React silently DROPS the declaration', () => {
+    // This is how the schedule card came to have no padding at all and its
+    // text sat against the border: `style={{ padding: '16px !important' }}`
+    // looks right and is thrown away. Swept across the whole app, because the
+    // mistake is invisible at the call site.
+    const files = [
+      'pages/FloorMapPage.tsx', 'pages/KioskFloorSection.tsx', 'pages/KioskSessionChooser.tsx',
+      'pages/TabletSummaryPage.tsx', 'pages/TabletMenuPage.tsx',
+    ];
+    for (const file of files) {
+      for (const m of src(file).matchAll(/style=\{\{[^}]*\}\}/g)) {
+        expect(m[0], `${file}: an inline !important is dropped by React`).not.toContain('!important');
+      }
+    }
+  });
+
+  it('the schedule card carries its padding in the stylesheet, where it works', () => {
+    // `.adm-card` sets none of its own, so without this the card has none.
+    expect(admin).toContain('.fm-sched-card { padding: 18px !important;');
+    expect(admin).toContain('<section className="adm-card fm-sched-card">');
+  });
+});
+
+describe('the summary gives a dining booking its full width', () => {
+  it('runs as ONE column when there is no pricing panel to carry', () => {
+    // Otherwise the sidebar is a narrow strip holding Confirm alone, beside a
+    // column of half-width fields.
+    expect(summary).toContain("${surface.pricing ? ' lg:grid-cols-[1.3fr_0.7fr]' : ''}");
+  });
+
+  it('so the actions fall to the very bottom, and stop being sticky there', () => {
+    // A sticky footer at the foot of one column covers the fields above it.
+    expect(summary).toContain("${surface.pricing ? ' lg:sticky lg:top-6 lg:self-start' : ''}");
+    // The actions are still the LAST thing in the DOM, which is what puts
+    // them at the bottom once the grid is a single column.
+    expect(summary.indexOf('<aside className=')).toBeGreaterThan(summary.indexOf('{/* ── Left column ── */}'));
+  });
+});
+
+describe('every kiosk overlay can be left', () => {
+  it('the session chooser has a Back — it is the FIRST step, so it leaves', () => {
+    // Without one, the only way off a kiosk opened by mistake was to pick an
+    // evening and back out of the screen after it.
+    const chooser = src('pages/KioskSessionChooser.tsx');
+    expect(chooser).toContain('onBack: () => void;');
+    expect(chooser).toContain('<button type="button" onClick={onBack} className="kiosk-session-back">');
+    expect(chooser).toContain('.kiosk-session-back {');
+  });
+
+  it('and leaving from it clears the draft, like every other exit', () => {
+    const menu = src('pages/TabletMenuPage.tsx');
+    const at = menu.indexOf('<KioskSessionChooser');
+    expect(at).toBeGreaterThan(-1);
+    expect(menu.slice(at, menu.indexOf('/>', at))).toContain("onBack={() => { reset(); navigate('/'); }}");
+  });
+});
+
 describe('one drawing, two screens', () => {
   it('the kiosk and the admin map both draw the shared plan or the shared geometry', () => {
     // The kiosk uses the shared component; the admin page keeps its editor SVG
