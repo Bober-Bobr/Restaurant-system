@@ -47,7 +47,7 @@ function nameRun(src: string): ('groom' | 'bride')[] {
 it('covers every wedding design', () => {
   // Not a tautology over an empty set, and it fails if a wedding template is
   // added without being considered here.
-  expect(WEDDINGS.length).toBe(9);
+  expect(WEDDINGS.length).toBe(10);
 });
 
 describe.each(WEDDINGS.map((t) => [t.id] as const))('%s', (id) => {

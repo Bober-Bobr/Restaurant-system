@@ -90,6 +90,13 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#8f1d2e', buttonInk: '#f7ecd8', tint: '#f7ece2',
     font: `'EB Garamond', ${SERIF_FALLBACK}`,
   },
+  // Cream paper, indigo ink and the madder red of suzani thread — the only
+  // wedding design here held in DAYLIGHT, which is what a fotiha is.
+  'wedding-fotiha': {
+    ink: '#a8332f', inkDark: '#e9a9a0', border: '#d9932c',
+    button: '#1f3350', buttonInk: '#f6efe2', tint: '#f3e7d3',
+    font: `'Sacramento', ${SERIF_FALLBACK}`,
+  },
   // Deep garden green, dusty rose and engraved gold.
   'wedding-paris': {
     ink: '#6E2733', inkDark: '#e8bdb9', border: '#B08D4F',

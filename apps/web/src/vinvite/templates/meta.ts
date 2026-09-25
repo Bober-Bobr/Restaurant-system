@@ -38,6 +38,7 @@ export const TEMPLATE_META: TemplateMeta[] = [
   { id: 'wedding-celestial', category: 'wedding', nameKey: 'tpl_wedding_celestial', cover: '🌙', accent: '#e7c66b' },
   { id: 'wedding-chateau', category: 'wedding', nameKey: 'tpl_wedding_chateau', cover: '🏰', accent: '#B8924E' },
   { id: 'wedding-eternal-vows', category: 'wedding', nameKey: 'tpl_wedding_eternal_vows', cover: '💍', accent: '#c9a96a' },
+  { id: 'wedding-fotiha', category: 'wedding', nameKey: 'tpl_wedding_fotiha', cover: '🫓', accent: '#a8332f' },
   { id: 'wedding-keepsake', category: 'wedding', nameKey: 'tpl_wedding_keepsake', cover: '🎟', accent: '#7c2e3c' },
   { id: 'wedding-paris', category: 'wedding', nameKey: 'tpl_wedding_paris', cover: '🗼', accent: '#B08D4F' },
   { id: 'wedding-samarkand', category: 'wedding', nameKey: 'tpl_wedding_samarkand', cover: '🏮', accent: '#C9A227' },

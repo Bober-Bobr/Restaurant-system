@@ -5,6 +5,7 @@ import { weddingArabicTemplate } from './wedding-arabic/definition';
 import { weddingCelestialTemplate } from './wedding-celestial/definition';
 import { weddingChateauTemplate } from './wedding-chateau/definition';
 import { weddingEternalVowsTemplate } from './wedding-eternal-vows/definition';
+import { weddingFotihaTemplate } from './wedding-fotiha/definition';
 import { weddingKeepsakeTemplate } from './wedding-keepsake/definition';
 import { weddingParisTemplate } from './wedding-paris/definition';
 import { weddingSamarkandTemplate } from './wedding-samarkand/definition';
@@ -22,6 +23,7 @@ export const RICH_TEMPLATES: TemplateDefinition[] = [
   weddingCelestialTemplate,
   weddingChateauTemplate,
   weddingEternalVowsTemplate,
+  weddingFotihaTemplate,
   weddingKeepsakeTemplate,
   weddingParisTemplate,
   weddingSamarkandTemplate,
