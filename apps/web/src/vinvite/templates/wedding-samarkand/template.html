@@ -129,7 +129,16 @@ section{position:relative}
 /* ============================================================
    1 · THE LANTERN OPENING
    ============================================================ */
-.open{position:relative;height:100vh;height:100svh;min-height:560px;overflow:hidden;background:#000;display:grid;place-items:center}
+/* SCOPED TO THE HEADER. `open` is a state class on two other things in this
+   template — the date plaque (`.plaque.open`) and the reply modal
+   (`.modal.open`) — and an unscoped `.open` handed both of them this screen's
+   `height:100svh`, `display:grid` and black ground. On the plaque that was
+   visible: a definite height plus its own `aspect-ratio:4/5` made the width
+   follow the HEIGHT rather than the column, so it came out 600px (its
+   max-width) inside a 390px phone and the section's `overflow:hidden` sliced
+   it off. The intro's own compound rules below (`.open.arrived` &c.) are only
+   ever put on this header, so they need no scoping. */
+header.open{position:relative;height:100vh;height:100svh;min-height:560px;overflow:hidden;background:#000;display:grid;place-items:center}
 .open__media{position:absolute;inset:0}
 .open__media video,.open__media img{width:100%;height:100%;object-fit:cover}
 .open__poster{position:absolute;inset:0;transition:opacity 1.4s var(--ease-soft)}
@@ -276,8 +285,15 @@ section{position:relative}
   position:relative;max-width:600px;margin:clamp(40px,6vw,70px) auto 0;
   aspect-ratio:4/5;perspective:1600px;
 }
+/* The face is IN FLOW, so the plaque is at least its 4/5 box and grows when
+   the date note needs more room. Absolutely positioned (inset:0) it could only
+   ever be the ratio's height, and a long note — or a narrow phone, where the
+   same words take twice the lines — spilled over the gold border and was cut
+   off by `.date{overflow:hidden}`. The two shutters and the seam stay absolute
+   and still span whatever height the face settles at. */
 .plaque__face{
-  position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+  position:relative;z-index:1;min-height:100%;
+  display:grid;place-items:center;text-align:center;
   background:
     radial-gradient(70% 60% at 50% 40%,rgba(107,27,42,.5),transparent 70%),
     linear-gradient(var(--plum),var(--night-2));
