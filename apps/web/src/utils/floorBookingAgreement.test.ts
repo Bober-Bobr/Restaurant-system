@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../../../api/src/utils/floorBooking';
 import * as apiGeom from '../../../api/src/utils/floorGeometry';
 import * as web from './floorBooking';
+import * as apiPdf from '../../../api/src/modules/floorMap/floorMap.pdf.service';
+import * as apiPdf2 from '../../../api/src/modules/public/pdf.service';
+import { SERVED_CATEGORIES, servedPortions } from './kitchenDishes';
 import { MAX_SEATS, MIN_SEATS, clampSeats, defaultAreaSize, tableSize } from './floorMap';
 
 /**
@@ -110,6 +113,79 @@ describe('a booking that names an area but holds no table', () => {
     )).toBeNull();
     // The web side draws it from the same fact: it holds no table.
     expect(web.tableHolders({ day: '2026-10-02', bookings: [booking] }, byHall).size).toBe(0);
+  });
+});
+
+describe('how full a reserved table is', () => {
+  // The printed sheet has said this since the three fills went in; the screen
+  // said nothing, so the paper and the map disagreed about the same room. One
+  // set of cases through both, like every other rule kept in two places.
+  const pdf = apiPdf;
+  const TABLE = { id: 't1', seats: 10 };
+  const bookingAt = (guestCount: number) => ({
+    id: 'e1', eventNumber: 4, customerName: 'Nodira', eventDate: '2026-10-02T14:00:00.000Z',
+    status: 'CONFIRMED', guestCount, hallId: 'street', wholeHall: false,
+    floorTables: [{ floorTableId: 't1', guestCount }],
+  });
+
+  for (const seated of [0, 1, 3, 9, 10, 11]) {
+    it(`${seated} of 10 seated`, () => {
+      const booking = bookingAt(seated);
+      const day = { day: '2026-10-02', bookings: [booking] };
+      const webFill = web.tableFill(TABLE, web.tableHolders(day, new Map([['street', ['t1']]])), web.seatedAtTables(day));
+      const { held, guests, whole } = pdf.heldTables([booking], 'street');
+      expect(webFill).toBe(pdf.fillOf(TABLE, held, guests, whole));
+    });
+  }
+
+  it('a free table reads free on both', () => {
+    const day = { day: '2026-10-02', bookings: [] as never[] };
+    const { held, guests, whole } = pdf.heldTables([], 'street');
+    expect(web.tableFill(TABLE, web.tableHolders(day, new Map()), web.seatedAtTables(day)))
+      .toBe(pdf.fillOf(TABLE, held, guests, whole));
+  });
+
+  it('a cancelled booking seats nobody', () => {
+    // `tableFill` only reads the seat count for a table something HOLDS, and a
+    // cancelled booking holds nothing — so this is invisible through the map
+    // today and would surface the moment anything else read the counts. The
+    // rule belongs to the function, not to its one caller.
+    const gone = { ...bookingAt(3), status: 'CANCELLED' };
+    expect(web.seatedAtTables({ day: '2026-10-02', bookings: [gone] }).size).toBe(0);
+    // And the API's side agrees: `heldTables` skips it too.
+    expect(pdf.heldTables([gone], 'street').guests.size).toBe(0);
+  });
+
+  it('a whole-area booking reads FULL on both — it has no per-table count', () => {
+    const booking = { ...bookingAt(0), wholeHall: true, floorTables: [] };
+    const day = { day: '2026-10-02', bookings: [booking] };
+    const byHall = new Map([['street', ['t1']]]);
+    const { held, guests, whole } = pdf.heldTables([booking], 'street');
+    expect(web.tableFill(TABLE, web.tableHolders(day, byHall), web.seatedAtTables(day)))
+      .toBe(pdf.fillOf(TABLE, held, guests, whole));
+    expect(web.tableFill(TABLE, web.tableHolders(day, byHall), web.seatedAtTables(day))).toBe('taken');
+  });
+});
+
+describe('how many portions of a dish the kitchen is asked for', () => {
+  // The kitchen page lists the same dishes as the sheet it downloads, so the
+  // two must not disagree about how many plates to make. A hot appetizer is one
+  // per guest; everything else keeps the servings the package declares.
+  const CASES = [
+    { dish: { category: 'HOT_APPETIZERS', servings: 1 }, guests: 200 },
+    { dish: { category: 'HOT_APPETIZERS' }, guests: 0 },
+    { dish: { category: 'SALADS_OIL', servings: 1 }, guests: 200 },
+    { dish: { category: 'FIRST_COURSE', servings: 3 }, guests: 40 },
+    { dish: { category: 'DESSERT' }, guests: 40 },
+  ];
+  for (const [i, c] of CASES.entries()) {
+    it(`case ${i + 1}`, () => {
+      expect(servedPortions(c.dish, c.guests)).toBe(apiPdf2.servedPortions(c.dish, c.guests));
+    });
+  }
+
+  it('and the serving order is the same list', () => {
+    expect([...SERVED_CATEGORIES]).toEqual([...apiPdf2.SERVED_CATEGORIES]);
   });
 });
 

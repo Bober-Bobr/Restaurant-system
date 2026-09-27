@@ -181,7 +181,36 @@ describe('the admin map', () => {
 
   it('clicking a taken table opens the booking that holds it', () => {
     expect(admin).toContain('setOpenBooking(holder ?? null);');
-    expect(admin).toContain('const bookingCard = (b: MapBooking) =>');
+    expect(admin).toContain('const bookingCard = (b: MapBooking, clicked?: MapTable | null) =>');
+  });
+
+  it('and answers for THAT table: how many of its seats are taken', () => {
+    // The card names every table the booking holds; a click on table 7 is
+    // asking about table 7.
+    expect(admin).toContain('setOpenTableId(table.id);');
+    expect(admin).toContain('bookingCard(openBooking, areaTables.find((x) => x.id === openTableId) ?? null)');
+    expect(admin).toContain("t('fm_seats_taken', {");
+    // A whole-area booking has no per-table count, so the table reads as full
+    // and its spare seats are not offered — the room is let as one.
+    expect(admin).toContain('b.wholeHall ? clicked.seats : (seatedAt.get(clicked.id) ?? clicked.seats)');
+    // A table with nothing on it says "free" rather than "0 of 6 taken".
+    expect(admin).toContain("? t('fm_seats_taken', { seated: seatedAt.get(table.id) ?? table.seats, seats: table.seats })");
+  });
+
+  it('draws a part-filled table differently from a full one', () => {
+    // The printed sheet has always distinguished them; the map drew both the
+    // same, so the paper and the screen disagreed about the same room.
+    expect(admin).toContain("!editing && fill === 'partly' ? 'is-partly' : '',");
+    expect(admin).toContain('const fill = tableFill(table, holders, seatedAt);');
+    // The fill carries it, as on the sheet.
+    expect(admin).toContain('.fm-table-group.is-partly .fm-top { fill: rgba(148,163,184,0.26);');
+    // …and it must come AFTER the is-taken rule: a part-filled table carries
+    // both classes and the two rules are equally specific.
+    expect(admin.indexOf('.fm-table-group.is-partly .fm-top'))
+      .toBeGreaterThan(admin.indexOf('.fm-table-group.is-taken .fm-top'));
+    // The legend gains the third swatch, and the count only when there are any.
+    expect(admin).toContain("t('fm_partly')");
+    expect(admin).toContain('{partlyHere > 0 && <span>');
   });
 
   it('occupancy is NOT drawn while the map is being edited', () => {

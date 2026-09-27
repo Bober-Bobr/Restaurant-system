@@ -13,7 +13,8 @@ import {
 } from '../utils/floorMap';
 import { translate } from '../utils/translate';
 import {
-  assignsNoTables, dayKey, seatsRemaining, tableHolders, tablesByHallOf, unassignedBookings, wholeAreaAvailable,
+  assignsNoTables, dayKey, seatedAtTables, seatsRemaining, tableFill, tableHolders, tablesByHallOf,
+  unassignedBookings, wholeAreaAvailable,
   type MapBooking,
 } from '../utils/floorBooking';
 import { eventService } from '../services/event.service';
@@ -141,6 +142,14 @@ export const FloorMapPage = () => {
     enabled: scheduleShown,
   });
   const [openBooking, setOpenBooking] = useState<MapBooking | null>(null);
+  /**
+   * The table that was clicked to open that booking.
+   *
+   * The card names every table the booking holds; this is the one the admin
+   * actually pressed, so it can be answered on its own — "how many of table 7's
+   * ten seats are taken" is the question a click on table 7 is asking.
+   */
+  const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [booking, setBooking] = useState<{ name: string; phone: string; time: string } | null>(null);
   /**
@@ -167,7 +176,13 @@ export const FloorMapPage = () => {
   // ── Who holds what, on the chosen day ────────────────────────────────────
   const byHall = useMemo(() => tablesByHallOf(tables), [tables]);
   const holders = useMemo(() => tableHolders(occupancy, byHall), [occupancy, byHall]);
+  /** How many guests each booking seated at each table — what "part-filled" means. */
+  const seatedAt = useMemo(() => seatedAtTables(occupancy), [occupancy]);
   const takenHere = areaTables.filter((x) => holders.has(x.id)).length;
+  // Reserved but not full. The printed sheet has always distinguished these;
+  // the map drew them exactly like a full table, so the paper and the screen
+  // disagreed about the same room.
+  const partlyHere = areaTables.filter((x) => tableFill(x, holders, seatedAt) === 'partly').length;
   const wholeAreaBooking = useMemo(
     () => (current ? (occupancy?.bookings ?? []).find((b) => b.wholeHall && b.hallId === current.id) ?? null : null),
     [occupancy, current],
@@ -407,6 +422,7 @@ export const FloorMapPage = () => {
   /** Start filling in the tables of a booking that has none. */
   const startAssigning = (b: MapBooking) => {
     setOpenBooking(null);
+    setOpenTableId(null);
     setBooking(null);
     setPicked({});
     setFlash(null);
@@ -497,6 +513,7 @@ export const FloorMapPage = () => {
         }
       } else {
         setOpenBooking(holder ?? null);
+        setOpenTableId(table.id);
       }
     }
     const p = toMap(event);
@@ -595,6 +612,7 @@ export const FloorMapPage = () => {
     const sized = resizing ? { width: resizing.width, height: resizing.height } : table;
     const { width, height } = tableSize(table.shape, table.seats, sized);
     const selected = selectedId === table.id;
+    const fill = tableFill(table, holders, seatedAt);
     const labelSize = clampNum(Math.min(width, height) * 0.36, 14, 30);
     return (
       <g
@@ -609,6 +627,10 @@ export const FloorMapPage = () => {
           // being arranged, and colouring it by an evening's bookings would
           // say a table cannot be moved when it can.
           !editing && holders.has(table.id) ? 'is-taken' : '',
+          // Reserved with seats still to sell. A separate class rather than a
+          // shade of `is-taken`, so the fill can carry it the way the printed
+          // sheet's does.
+          !editing && fill === 'partly' ? 'is-partly' : '',
           !editing && table.id in picked ? 'is-picked' : '',
         ].filter(Boolean).join(' ')}
         onPointerDown={(e) => onTablePointerDown(e, table)}
@@ -650,6 +672,10 @@ export const FloorMapPage = () => {
           {/* Who has it, when somebody does — the number a waiter reads off
               the map is the party's, not the table's capacity. */}
           {!editing && picked[table.id] !== undefined ? `${picked[table.id]}/${table.seats}`
+            // A part-filled table says how full it is, in the sheet's own
+            // notation. A full one keeps the party's NAME, which is what a
+            // waiter reads off the map, and needs no figure: the table is full.
+            : !editing && fill === 'partly' ? `${seatedAt.get(table.id) ?? 0}/${table.seats}`
             : !editing && holders.get(table.id) ? holders.get(table.id)!.customerName
             : table.seats}
         </text>
@@ -676,6 +702,14 @@ export const FloorMapPage = () => {
             <dt>{t('fm_shape')}</dt><dd>{table.shape === 'ROUND' ? t('fm_shape_round') : t('fm_shape_rect')}</dd>
             <dt>{t('fm_size')}</dt><dd>{sizeText}</dd>
             <dt>{t('fm_area')}</dt><dd>{current?.name ?? '—'}</dd>
+            {/* How full it is on the chosen day. A free table says so rather
+                than showing "0 / 6", which reads like a booking for nobody. */}
+            <dt>{t('fm_occupancy')}</dt>
+            <dd>
+              {holders.has(table.id)
+                ? t('fm_seats_taken', { seated: seatedAt.get(table.id) ?? table.seats, seats: table.seats })
+                : t('fm_free')}
+            </dd>
           </dl>
         </>
       );
@@ -816,9 +850,31 @@ export const FloorMapPage = () => {
     );
   };
 
-  /** A booking the admin clicked on the map. */
-  const bookingCard = (b: MapBooking) => (
+  /**
+   * A booking the admin clicked on the map.
+   *
+   * `clicked` is the table they pressed, when they pressed one: its own
+   * seated-of-capacity is answered first, because that is the question the
+   * click asked. The rest of the card is about the whole booking.
+   */
+  const bookingCard = (b: MapBooking, clicked?: MapTable | null) => (
     <div className="fm-booking-card">
+      {clicked && (
+        <div className="fm-seatcount">
+          <span className="fm-caption">{t('fm_table', { label: clicked.label })}</span>
+          <strong>{t('fm_seats_taken', {
+            seated: b.wholeHall ? clicked.seats : (seatedAt.get(clicked.id) ?? clicked.seats),
+            seats: clicked.seats,
+          })}</strong>
+          {/* Only when there are any, and never for a whole-area booking: the
+              room is let as one, so its spare seats are not for sale. */}
+          {!b.wholeHall && (clicked.seats - (seatedAt.get(clicked.id) ?? clicked.seats)) > 0 && (
+            <span className="fm-caption">
+              {t('fm_seats_free', { count: clicked.seats - (seatedAt.get(clicked.id) ?? clicked.seats) })}
+            </span>
+          )}
+        </div>
+      )}
       <dl className="fm-facts">
         <dt>{t('fm_booking')}</dt><dd>#{b.eventNumber}</dd>
         <dt>{t('fm_booked_by')}</dt><dd>{b.customerName}</dd>
@@ -848,7 +904,8 @@ export const FloorMapPage = () => {
         onClick={() => navigate(`${eventsPath(role)}?event=${b.eventNumber}`)}>
         {t('fm_open_event')}
       </button>
-      <button type="button" className="adm-btn-ghost" onClick={() => setOpenBooking(null)}>{t('done')}</button>
+      <button type="button" className="adm-btn-ghost"
+        onClick={() => { setOpenBooking(null); setOpenTableId(null); }}>{t('done')}</button>
     </div>
   );
 
@@ -1001,6 +1058,7 @@ export const FloorMapPage = () => {
               // one day's bookings ends with it.
               setDay(e.target.value || dayKey(new Date()));
               setOpenBooking(null);
+              setOpenTableId(null);
               setAssigning(null);
               setPicked({});
             }} />
@@ -1020,14 +1078,18 @@ export const FloorMapPage = () => {
               setBooking(booking ? null : { name: '', phone: '', time: '19:00' });
               setPicked({});
               setOpenBooking(null);
+              setOpenTableId(null);
               setAssigning(null);
             }}>
             {booking ? t('cancel') : t('fm_new_booking')}
           </button>
           <span className="fm-legend">
             <span><i className="fm-swatch" style={{ background: 'rgb(var(--adm-surface-rgb))' }} />{t('fm_free')}</span>
+            <span><i className="fm-swatch" style={{ background: 'rgba(148,163,184,0.26)' }} />{t('fm_partly')}</span>
             <span><i className="fm-swatch" style={{ background: 'rgba(148,163,184,0.55)' }} />{t('fm_taken')}</span>
             <span>{t('fm_occupancy_summary', { taken: takenHere, total: areaTables.length })}</span>
+            {/* Only when there are any: a standing "0 part-filled" is noise. */}
+            {partlyHere > 0 && <span>{t('fm_partly_summary', { count: partlyHere })}</span>}
           </span>
         </div>
       )}
@@ -1204,7 +1266,7 @@ export const FloorMapPage = () => {
               they clicked, then the map. */}
           {booking ? bookingForm()
             : assigning ? assignForm(assigning)
-            : openBooking ? bookingCard(openBooking)
+            : openBooking ? bookingCard(openBooking, areaTables.find((x) => x.id === openTableId) ?? null)
             : selectedTable ? tablePanel(selectedTable)
             : current ? areaPanel(current)
             : <p className="fm-caption" style={{ margin: 0 }}>{t('fm_nothing_selected')}</p>}
@@ -1267,6 +1329,13 @@ export const FloorMapPage = () => {
         .fm-table-group.is-taken .fm-top { fill: rgba(148,163,184,0.55); stroke: rgba(148,163,184,0.9); }
         .fm-table-group.is-taken .fm-chair { opacity: 0.4; }
         .fm-table-group.is-taken .fm-table-seats { fill: rgba(var(--adm-text-rgb), 0.85); font-weight: 700; }
+        /* Reserved, with seats still to sell. A LIGHTER fill than a full table,
+           the same pair of tones the printed sheet uses, so the two documents
+           say the same thing about the same room. Outlined the same as taken,
+           because it is taken — what differs is how much of it. */
+        .fm-table-group.is-partly .fm-top { fill: rgba(148,163,184,0.26); stroke: rgba(148,163,184,0.9); }
+        .fm-table-group.is-partly .fm-chair { opacity: 0.7; }
+        .fm-table-group.is-partly .fm-table-seats { fill: var(--adm-accent); font-weight: 800; }
         /* Picked for the booking being drafted. */
         .fm-table-group.is-picked .fm-top { fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent); }
         .fm-table-group.is-picked .fm-table-label,
@@ -1304,6 +1373,13 @@ export const FloorMapPage = () => {
            backticks in this block: it lives inside a template literal.) */
         .fm-sched-card { padding: 18px !important; margin-top: 18px; }
         .fm-booking-card { display: grid; gap: 10px; }
+        /* The clicked table's own count, above the booking it belongs to. */
+        .fm-seatcount {
+          display: grid; gap: 2px; padding: 10px 12px; border-radius: 4px;
+          border: 1px solid rgba(var(--adm-accent-rgb), 0.35);
+          background: rgba(var(--adm-accent-rgb), 0.08);
+        }
+        .fm-seatcount strong { font-size: 18px; font-weight: 800; color: var(--adm-accent); font-variant-numeric: tabular-nums; }
         /* Bookings in this room with no tables yet. An amber notice, not the
            red one: nothing has gone wrong, there is something to finish. */
         .fm-pending {

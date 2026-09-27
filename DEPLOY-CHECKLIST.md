@@ -3326,3 +3326,42 @@ Small Banquets kitchen sees the dishes and the tables its cooks are plating for.
     "Additional dishes", exactly as the banquet Kitchen does, and names the
     tables the party sits at (or says they are not assigned yet). Check the
     banquet `KITCHEN` is unchanged.
+
+## §66 — The kitchens' list, and part-filled tables on the map (**no migration**)
+
+Web-only. Nothing to migrate and no script to run.
+
+**After deploying:**
+
+1. **The room, on every kitchen card.** Sign in as `KITCHEN` (and again as
+   `SMALL_KITCHEN`): each booking's hall is a badge beside its number, and a
+   booking with no hall says "not selected" instead of showing nothing.
+2. It is read off the booking, so it is still named if the halls request is slow
+   or the hall has since been deactivated.
+3. **Dishes in collapsible categories.** Both kitchen roles: the package's
+   dishes and the additional ones are grouped, closed to start, each row showing
+   "N dishes · M portions". Pressing one opens it; "Expand all" / "Collapse all"
+   does the block. Open a group, change a filter, and confirm it stays open.
+4. **Served courses first** — hot appetizers, first, main, third — in that order,
+   marked with a spine, matching the order of the PDF from the same card.
+5. **Portions, not servings.** On a banquet for 200, a hot appetizer reads
+   × 200, and a salad reads the servings the package declares. Download the PDF
+   from the same card: the two figures agree.
+6. **Search by booking number.** Type `12`: the list narrows to 12, 120, 1234…
+   `#12` and ` 12 ` work the same. The count above the list reads "N of M
+   bookings" while anything is narrowing it, and "Clear" appears.
+7. **Filters and sorting.** "Today" shows only today's bookings — check one
+   booked for 23:30 tonight is in it, not tomorrow. "Today and later" includes
+   today. Status and hall narrow as expected; the hall picker lists only halls
+   that bookings actually use, and is hidden when there is only one. All five
+   sort orders work.
+8. **Nothing matching** says so, and differently from an empty restaurant.
+9. On a phone the filter bar is two fields per row, not five stacked.
+10. **Part-filled tables on the supervisor's map.** Book 3 guests onto a table
+    for 10 for today. On the floor map that table is a LIGHTER fill than a fully
+    seated one, its caption reads `3/10`, the legend has three swatches and the
+    day bar says "part-filled: 1".
+11. **Clicking it** opens the booking with "3 of 10 seats taken" and "7 seats
+    still free" at the top of the panel. Click a fully seated table: no spare
+    seats are offered. Click a free one: the panel says Free, not "0 of 10".
+12. A whole-area booking's tables read as full, and offer no spare seats.

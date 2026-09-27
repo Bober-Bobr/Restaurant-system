@@ -10,7 +10,9 @@ export type ExcludedCategories = Record<MenuScope, MenuItem['category'][]>;
 
 export type EventMenuSelection = {
   id: string;
-  menuItem: Pick<MenuItem, 'id' | 'name' | 'category'>;
+  // `nameI18n` is sent by the API's event include and was simply missing here,
+  // so a selection could not be named in the reader's language.
+  menuItem: Pick<MenuItem, 'id' | 'name' | 'nameI18n' | 'category'>;
   quantity: number;
   unitPriceCents: number;
 };

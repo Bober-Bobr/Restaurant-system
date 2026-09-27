@@ -132,6 +132,42 @@ export function unassignedBookings(occupancy: MapOccupancy | undefined, hallId?:
     && (!hallId || b.hallId === hallId));
 }
 
+/** table id → how many guests that booking seated at it. */
+export function seatedAtTables(occupancy: MapOccupancy | undefined): Map<string, number> {
+  const seated = new Map<string, number>();
+  for (const booking of occupancy?.bookings ?? []) {
+    if (!holdsTables(booking.status)) continue;
+    for (const t of booking.floorTables) seated.set(t.floorTableId, Math.max(0, t.guestCount));
+  }
+  return seated;
+}
+
+/** How full a reserved table is. Mirrors the printed sheet's `fillOf`. */
+export type TableFill = 'free' | 'partly' | 'taken';
+
+/**
+ * Whether a table is free, part-filled or full.
+ *
+ * **A reserved table is not necessarily a full one**: a party of three at a
+ * ten-top leaves seven seats the restaurant can still sell, and a map that drew
+ * it exactly like a full table hid that. The printed sheet says it already
+ * (`fillOf` in floorMap.pdf.service.ts) and the screen said nothing, so the
+ * paper and the map disagreed about the same room —
+ * `floorBookingAgreement.test.ts` runs one set of cases through both.
+ *
+ * A whole-area booking reads as full: it has no per-table count, and the area
+ * is let as one. Its tables are in `holders` with no entry in `seated`.
+ */
+export function tableFill(
+  table: { id: string; seats: number },
+  holders: Map<string, MapBooking>,
+  seated: Map<string, number>,
+): TableFill {
+  if (!holders.has(table.id)) return 'free';
+  const at = seated.get(table.id) ?? 0;
+  return at > 0 && at < table.seats ? 'partly' : 'taken';
+}
+
 /** The booking holding a whole area on this day, if any. */
 export function areaHolder(occupancy: MapOccupancy | undefined, hallId: string): MapBooking | null {
   return (occupancy?.bookings ?? []).find((b) => b.wholeHall && b.hallId === hallId && holdsTables(b.status)) ?? null;

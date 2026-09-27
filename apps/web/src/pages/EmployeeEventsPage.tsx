@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { hallService } from '../services/hall.service';
@@ -9,6 +10,12 @@ import { useRestaurantBranding } from '../hooks/useRestaurantBranding';
 import { translate } from '../utils/translate';
 import { isKitchenRole } from '../utils/kitchenRole';
 import { menuScopeOfRole } from '../utils/menuScope';
+import { CATEGORY_LABEL_KEY } from '../utils/menuCategories';
+import { dishName } from '../utils/menuI18n';
+import { groupKitchenDishes, servedPortions, type DishGroup } from '../utils/kitchenDishes';
+import {
+  EMPTY_FILTERS, isFiltering, visibleEvents, type KitchenFilters, type KitchenSort,
+} from '../utils/kitchenEvents';
 import type { Event } from '../types/domain';
 import { httpClient } from '../services/http';
 
@@ -63,6 +70,33 @@ export const EmployeeEventsPage = () => {
   const tableCategories = tcQuery.data ?? [];
   const menuItems = menuQuery.data ?? [];
 
+  // ── Finding one booking ───────────────────────────────────────────────────
+  // `/events` is unbounded by design, so this page holds every booking the
+  // restaurant has ever taken. The logic is in utils/kitchenEvents.ts, pure and
+  // tested; this is only the state behind the controls.
+  const [filters, setFilters] = useState<KitchenFilters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<KitchenSort>('date-asc');
+  const shown = useMemo(() => visibleEvents(events, filters, sort), [events, filters, sort]);
+  const narrowed = isFiltering(filters);
+  /** Only the halls that a booking on this page actually names. */
+  const hallOptions = useMemo(() => {
+    const named = new Set(events.map((e) => e.hallId).filter(Boolean) as string[]);
+    return halls.filter((h) => named.has(h.id));
+  }, [events, halls]);
+
+  /**
+   * Which dish groups are open, keyed by booking, block and category.
+   *
+   * Collapsed by default: a wedding runs to forty dishes across eight
+   * categories, and the whole point of grouping them is that the card can be
+   * skimmed. Nothing is lost by it — the collapsed row carries the dish and
+   * portion counts.
+   */
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  const setMany = (keys: string[], value: boolean) =>
+    setOpen((prev) => ({ ...prev, ...Object.fromEntries(keys.map((k) => [k, value])) }));
+
   const downloadEvent = async (event: Event, format: 'pdf' | 'excel') => {
     const hall = halls.find((h) => h.id === event.hallId);
     const tc = tableCategories.find((c) => c.id === event.tableCategoryId);
@@ -110,20 +144,97 @@ export const EmployeeEventsPage = () => {
   return (
     <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
       <h1 className="adm-title" style={{ marginBottom: 6 }}>{t('events')}</h1>
-      <p style={{ color: 'rgba(226,232,240,0.55)', fontSize: 13, marginBottom: 24, marginTop: 0 }}>
-        {events.length} {events.length === 1 ? 'event' : 'events'}
+      {/* The count is of what is ON SCREEN, and says what the whole list holds
+          beside it — a filtered page reporting the full total is a page that
+          contradicts itself. */}
+      <p style={{ color: 'rgba(226,232,240,0.55)', fontSize: 13, marginBottom: 20, marginTop: 0 }}>
+        {narrowed ? t('ke_shown_of', { shown: shown.length, total: events.length }) : `${events.length} ${t('events').toLowerCase()}`}
       </p>
+
+      {/* Search, filters and sorting. The list is every booking the restaurant
+          has ever taken, so this is the way into it. */}
+      <div className="ke-bar">
+        <label className="ke-field ke-search">
+          <span className="adm-label">{t('ke_search')}</span>
+          <input className="adm-input" inputMode="numeric" placeholder={t('ke_search_placeholder')}
+            value={filters.query} onChange={(e) => setFilters({ ...filters, query: e.target.value })} />
+        </label>
+        <label className="ke-field">
+          <span className="adm-label">{t('ke_when')}</span>
+          <select className="adm-input" value={filters.when}
+            onChange={(e) => setFilters({ ...filters, when: e.target.value as KitchenFilters['when'] })}>
+            <option value="all">{t('ke_when_all')}</option>
+            <option value="today">{t('ke_when_today')}</option>
+            <option value="upcoming">{t('ke_when_upcoming')}</option>
+            <option value="past">{t('ke_when_past')}</option>
+          </select>
+        </label>
+        <label className="ke-field">
+          <span className="adm-label">{t('status')}</span>
+          <select className="adm-input" value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value as KitchenFilters['status'] })}>
+            <option value="">{t('ke_any')}</option>
+            {(Object.keys(STATUS_BADGE) as Event['status'][]).map((key) => (
+              <option key={key} value={key}>{t(STATUS_BADGE[key].labelKey)}</option>
+            ))}
+          </select>
+        </label>
+        {/* Only the halls a booking on this page actually names: a picker
+            listing rooms with nothing in them is a list of dead ends. */}
+        {hallOptions.length > 1 && (
+          <label className="ke-field">
+            <span className="adm-label">{t('hall')}</span>
+            <select className="adm-input" value={filters.hallId}
+              onChange={(e) => setFilters({ ...filters, hallId: e.target.value })}>
+              <option value="">{t('ke_any')}</option>
+              {hallOptions.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="ke-field">
+          <span className="adm-label">{t('ke_sort')}</span>
+          <select className="adm-input" value={sort} onChange={(e) => setSort(e.target.value as KitchenSort)}>
+            <option value="date-asc">{t('ke_sort_date_asc')}</option>
+            <option value="date-desc">{t('ke_sort_date_desc')}</option>
+            <option value="number-desc">{t('ke_sort_number_desc')}</option>
+            <option value="number-asc">{t('ke_sort_number_asc')}</option>
+            <option value="guests-desc">{t('ke_sort_guests_desc')}</option>
+          </select>
+        </label>
+        {narrowed && (
+          <button type="button" className="adm-btn-ghost ke-clear" onClick={() => setFilters(EMPTY_FILTERS)}>
+            {t('ke_clear')}
+          </button>
+        )}
+      </div>
 
       {eventsQuery.isLoading && <p style={{ color: 'rgba(226,232,240,0.55)' }}>{t('loading_events')}</p>}
       {eventsQuery.isError && <p style={{ color: '#fca5a5' }}>{t('failed_load_events')}</p>}
 
       <div style={{ display: 'grid', gap: 14 }}>
-        {events.map((event, idx) => {
-          const hall = halls.find((h) => h.id === event.hallId);
+        {shown.map((event, idx) => {
+          // The booking carries its own hall, so the room is named even when the
+          // halls request has not landed, or the hall was retired since. It used
+          // to depend entirely on finding it in that second list.
+          const hall = event.hall ?? halls.find((h) => h.id === event.hallId);
           const tc = tableCategories.find((c) => c.id === event.tableCategoryId);
           const selections = event.selections ?? [];
           const floorTables = event.floorTables ?? [];
           const status = STATUS_BADGE[event.status];
+          // Portions, not servings: a hot appetizer is one per guest, and the
+          // sheet this card downloads has always said so.
+          const packageGroups = groupKitchenDishes((tc?.packageItems ?? []).map((pi) => ({
+            id: pi.id,
+            name: dishName(pi.menuItem, locale),
+            category: pi.menuItem.category,
+            portions: servedPortions({ category: pi.menuItem.category, servings: pi.servings }, event.guestCount),
+          })));
+          const selectionGroups = groupKitchenDishes(selections.map((sel) => ({
+            id: sel.id,
+            name: dishName(sel.menuItem, locale),
+            category: sel.menuItem.category,
+            portions: sel.quantity,
+          })));
 
           return (
             <div key={event.id} className="adm-card adm-card-hover tablet-fade-up" style={{ padding: 20, animationDelay: `${idx * 60}ms` }}>
@@ -137,6 +248,15 @@ export const EmployeeEventsPage = () => {
                 {event.eventType && (
                   <span className="adm-badge" style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}>
                     {t(EVENT_TYPE_LABEL_KEY[event.eventType])}
+                  </span>
+                )}
+                {/* WHICH ROOM, up beside the number. It is the first thing a cook
+                    wants off a list of bookings, and as one cell in the grid
+                    below it was a row that simply vanished when a booking had no
+                    hall — reading as "anywhere" rather than "not chosen". */}
+                {kitchen && (
+                  <span className="adm-badge ke-hall" title={t('hall')}>
+                    {hall?.name ?? t('not_selected')}
                   </span>
                 )}
               </div>
@@ -161,34 +281,22 @@ export const EmployeeEventsPage = () => {
                 )}
               </div>
 
-              {kitchen && tc && (tc.packageItems ?? []).length > 0 && (
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
-                  <p className="adm-label" style={{ marginBottom: 6 }}>
-                    {t('table_category_dishes')} ({(tc.packageItems ?? []).length})
-                  </p>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
-                    {(tc.packageItems ?? []).map((pi) => (
-                      <li key={pi.id} style={{ fontSize: 13, color: '#cbd5e1' }}>
-                        {pi.menuItem.name} <span style={{ color: 'rgba(226,232,240,0.45)' }}>× {pi.servings ?? 1}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {/* The dishes, in categories that fold away. A wedding runs to
+                  forty of them and the flat column they were in could not be
+                  skimmed; the served courses come first, in the order the
+                  printed sheet uses. */}
+              {kitchen && packageGroups.length > 0 && (
+                <DishBlock
+                  label={t('table_category_dishes')} groups={packageGroups}
+                  open={open} onToggle={toggle} onAll={setMany} keyFor={(c) => `${event.id}:pkg:${c}`} t={t}
+                />
               )}
 
-              {selections.length > 0 && (
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
-                  <p className="adm-label" style={{ marginBottom: 6 }}>
-                    {kitchen ? t('additional_dishes') : t('selected_dishes')} ({selections.length})
-                  </p>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
-                    {selections.map((s) => (
-                      <li key={s.id} style={{ fontSize: 13, color: '#cbd5e1' }}>
-                        {s.menuItem.name} <span style={{ color: 'rgba(226,232,240,0.45)' }}>× {s.quantity}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {selectionGroups.length > 0 && (
+                <DishBlock
+                  label={kitchen ? t('additional_dishes') : t('selected_dishes')} groups={selectionGroups}
+                  open={open} onToggle={toggle} onAll={setMany} keyFor={(c) => `${event.id}:add:${c}`} t={t}
+                />
               )}
 
               {event.notes && (
@@ -209,11 +317,133 @@ export const EmployeeEventsPage = () => {
           );
         })}
 
-        {!eventsQuery.isLoading && events.length === 0 && (
-          <p className="adm-empty">{t('no_items_selected')}</p>
+        {/* Two different empty states: nothing to show, and nothing MATCHING.
+            One message for both leaves the reader wondering whether the
+            restaurant has no bookings or their search is simply wrong. */}
+        {!eventsQuery.isLoading && shown.length === 0 && (
+          narrowed
+            ? <p className="adm-empty">{t('ke_none_match')}</p>
+            : <p className="adm-empty">{t('no_items_selected')}</p>
         )}
       </div>
+
+      <style>{`
+        /* Search, filters and sorting. A row of fields that wraps, rather than a
+           grid: the hall picker is not always there, and a fixed grid would
+           leave a hole where it should be. */
+        .ke-bar {
+          display: flex; flex-wrap: wrap; gap: 12px; align-items: end;
+          margin-bottom: 20px; padding: 14px;
+          border: 1px solid var(--adm-line); border-radius: 6px;
+          background: rgba(var(--adm-text-rgb), 0.03);
+        }
+        .ke-field { display: grid; gap: 4px; min-width: 150px; }
+        .ke-search { min-width: 190px; flex: 1 1 190px; }
+        .ke-bar .adm-input { width: 100%; }
+        .ke-clear { align-self: end; }
+        .ke-hall {
+          background: rgba(var(--adm-accent-rgb), 0.16);
+          color: var(--adm-accent);
+          border: 1px solid rgba(var(--adm-accent-rgb), 0.35);
+        }
+
+        .ke-dishes { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; margin-bottom: 12px; }
+        .ke-dishes-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+        .ke-all {
+          background: none; border: 0; cursor: pointer; padding: 2px 4px;
+          font-size: 12px; font-weight: 600; color: var(--adm-accent);
+          text-decoration: underline; text-underline-offset: 3px;
+        }
+        .ke-groups { display: grid; gap: 6px; }
+        .ke-group { border: 1px solid var(--adm-line); border-radius: 4px; overflow: hidden; }
+        /* A served course is what goes out during the evening. Marked with a
+           spine as well as being first in the list, so it still reads where the
+           accent colour does not. */
+        .ke-group.is-served { border-left: 2px solid rgba(var(--adm-accent-rgb), 0.7); }
+        .ke-group-head {
+          display: flex; align-items: center; gap: 8px; width: 100%;
+          padding: 8px 10px; cursor: pointer; text-align: left;
+          background: rgba(var(--adm-text-rgb), 0.03); border: 0; color: inherit;
+        }
+        .ke-group-head:hover { background: rgba(var(--adm-text-rgb), 0.06); }
+        .ke-caret { font-size: 11px; color: var(--adm-accent); width: 10px; }
+        .ke-group-name { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+        .ke-group-meta { margin-left: auto; font-size: 11px; color: rgba(226,232,240,0.5); }
+        .ke-list { margin: 0; padding: 8px 12px 10px 28px; display: grid; gap: 4px; list-style: disc; }
+        .ke-list li { font-size: 13px; color: #cbd5e1; }
+        .ke-portions { color: rgba(226,232,240,0.45); }
+
+        @media (max-width: 640px) {
+          /* Two-up, not stacked. Five full-width fields measured 396px on a
+             390px screen — a whole phone screen of controls before the first
+             booking. The search keeps its own line, since it is the one that is
+             typed into. */
+          .ke-field { min-width: 0; flex: 1 1 calc(50% - 6px); }
+          .ke-search { min-width: 0; flex: 1 1 100%; }
+          .ke-clear { flex: 1 1 100%; }
+        }
+      `}</style>
     </main>
+  );
+};
+
+/**
+ * One block of dishes, grouped into categories that fold away.
+ *
+ * The open/closed state is held by the PAGE, keyed by booking and block, not by
+ * this component: a card re-rendered by a filter change or a refetch would
+ * otherwise snap every group shut under the reader.
+ */
+const DishBlock = ({ label, groups, open, onToggle, onAll, keyFor, t }: {
+  label: string;
+  groups: DishGroup[];
+  open: Record<string, boolean>;
+  onToggle: (key: string) => void;
+  onAll: (keys: string[], value: boolean) => void;
+  keyFor: (category: string) => string;
+  t: (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
+}) => {
+  const keys = groups.map((g) => keyFor(g.category));
+  const anyOpen = keys.some((k) => open[k]);
+  const dishes = groups.reduce((sum, g) => sum + g.dishCount, 0);
+  return (
+    <div className="ke-dishes">
+      <div className="ke-dishes-head">
+        <p className="adm-label" style={{ margin: 0 }}>{label} ({dishes})</p>
+        <button type="button" className="ke-all" onClick={() => onAll(keys, !anyOpen)}>
+          {anyOpen ? t('ke_collapse_all') : t('ke_expand_all')}
+        </button>
+      </div>
+      <div className="ke-groups">
+        {groups.map((group) => {
+          const key = keyFor(group.category);
+          const shown = !!open[key];
+          const categoryLabel = CATEGORY_LABEL_KEY[group.category as keyof typeof CATEGORY_LABEL_KEY];
+          return (
+            <div key={key} className={`ke-group${group.served ? ' is-served' : ''}`}>
+              <button type="button" className="ke-group-head" aria-expanded={shown} onClick={() => onToggle(key)}>
+                <span className="ke-caret" aria-hidden="true">{shown ? '▾' : '▸'}</span>
+                <span className="ke-group-name">{categoryLabel ? t(categoryLabel) : group.category}</span>
+                {/* Both counts on the closed row, so folding a group away hides
+                    no number the prep depends on. */}
+                <span className="ke-group-meta">
+                  {t('ke_group_meta', { dishes: group.dishCount, portions: group.portions })}
+                </span>
+              </button>
+              {shown && (
+                <ul className="ke-list">
+                  {group.dishes.map((d) => (
+                    <li key={d.id}>
+                      {d.name} <span className="ke-portions">× {d.portions}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 };
 
