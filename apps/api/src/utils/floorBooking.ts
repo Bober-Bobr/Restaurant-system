@@ -70,7 +70,40 @@ export type Occupancy = {
   tables: Map<string, BookingRow>;
   /** hall id → the booking holding the whole area. */
   wholeAreas: Map<string, BookingRow>;
+  /**
+   * hall id → the bookings that name that area but hold nothing on its map.
+   * They take no table (see `assignsNoTables`), but the room is in use, so the
+   * whole of it cannot be let over the top of them.
+   */
+  unassigned: Map<string, BookingRow[]>;
 };
+
+/**
+ * A booking that names an area but holds nothing on its map.
+ *
+ * Every booking made on the Events page is one of these: that form has a hall
+ * picker and no table picker, so the evening is real, the room is taken and the
+ * map showed **nothing at all** — which is what "events created for a hall do
+ * not appear on the map" was. They are read and listed, deliberately WITHOUT
+ * being counted as holding tables: which tables such a party sits at is exactly
+ * what nobody has decided yet, and filling them in on its behalf would invent
+ * an arrangement the staff never made.
+ *
+ * What it does prevent is letting the WHOLE area over the top of one — see
+ * `wholeAreaAvailable`. A single table is still bookable, because assigning
+ * this party its tables is the remedy, not a conflict.
+ */
+export function assignsNoTables(booking: Pick<BookingRow, 'wholeHall' | 'floorTables'>): boolean {
+  return !booking.wholeHall && booking.floorTables.length === 0;
+}
+
+/** Those of the day's bookings that name an area and hold nothing in it. */
+export function unassignedBookings(bookings: BookingRow[], hallId?: string): BookingRow[] {
+  return bookings.filter((b) => holdsTables(b.status)
+    && assignsNoTables(b)
+    && !!b.hallId
+    && (!hallId || b.hallId === hallId));
+}
 
 /**
  * Read the day's bookings into "what is taken".
@@ -83,12 +116,16 @@ export type Occupancy = {
 export function occupancyOf(bookings: BookingRow[]): Occupancy {
   const tables = new Map<string, BookingRow>();
   const wholeAreas = new Map<string, BookingRow>();
+  const unassigned = new Map<string, BookingRow[]>();
   for (const booking of bookings) {
     if (!holdsTables(booking.status)) continue;
     if (booking.wholeHall && booking.hallId) wholeAreas.set(booking.hallId, booking);
     for (const t of booking.floorTables) tables.set(t.floorTableId, booking);
+    if (assignsNoTables(booking) && booking.hallId) {
+      unassigned.set(booking.hallId, [...(unassigned.get(booking.hallId) ?? []), booking]);
+    }
   }
-  return { tables, wholeAreas };
+  return { tables, wholeAreas, unassigned };
 }
 
 /** Every table id that is unavailable, including those inside a booked area. */
@@ -108,6 +145,11 @@ export function takenTableIds(
  * it is free. A venue cannot be let out from under a booking that already
  * holds a table in it — and an area with no tables drawn on it yet cannot be
  * let either, since "all of nothing" is not a venue anyone can seat.
+ *
+ * A booking that names the area and holds no table blocks it too. It holds
+ * nothing, so every individual table there is still bookable; but letting the
+ * WHOLE room while a party is already booked into it is a double-booking of the
+ * room, and the map has no way to draw both.
  */
 export function wholeAreaAvailable(
   hallId: string,
@@ -119,6 +161,7 @@ export function wholeAreaAvailable(
   if (tables.length === 0) return false;
   const holder = occupancy.wholeAreas.get(hallId);
   if (holder && holder.id !== exceptEventId) return false;
+  if ((occupancy.unassigned.get(hallId) ?? []).some((b) => b.id !== exceptEventId)) return false;
   return tables.every((id) => {
     const taker = occupancy.tables.get(id);
     return !taker || taker.id === exceptEventId;
@@ -183,6 +226,9 @@ export function bookingClash(
     // Whichever booking stands in the way is named, so the message can say who.
     const holder = occupancy.wholeAreas.get(hallId);
     if (holder && holder.id !== exceptEventId) return { kind: 'area', hallId, booking: holder };
+    // A party already booked into this room, even without tables of its own.
+    const inRoom = (occupancy.unassigned.get(hallId) ?? []).find((b) => b.id !== exceptEventId);
+    if (inRoom) return { kind: 'area', hallId, booking: inRoom };
     for (const id of tablesByHall.get(hallId) ?? []) {
       const taker = occupancy.tables.get(id);
       if (taker && taker.id !== exceptEventId) return { kind: 'table', floorTableId: id, booking: taker };

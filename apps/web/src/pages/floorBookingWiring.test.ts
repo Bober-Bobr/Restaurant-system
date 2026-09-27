@@ -74,18 +74,39 @@ describe('the kiosk map', () => {
     expect(plan).toContain('.fp-table.is-taken { cursor: not-allowed; }');
   });
 
-  it('is mounted in BOTH sessions — the menu page and, for dining, the summary', () => {
-    expect(src('pages/TabletMenuPage.tsx')).toContain('<KioskFloorSection date={eventDate}');
-    expect(summary).toContain('{!surface.menu && <KioskFloorSection date={eventDate}');
+  it('is mounted on the SUMMARY in both sessions, and nowhere else', () => {
+    // It used to sit on the menu page for a banquet evening, a page away from
+    // the date and time that decide what is free. The summary is where those
+    // fields are, so that is where the plan is — in both sessions.
+    expect(summary).toContain('<KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />');
+    expect(src('pages/TabletMenuPage.tsx'), 'the menu page carries the map again')
+      .not.toContain('<KioskFloorSection');
+    // Not behind a session test any more: both kinds of evening pick a room.
+    expect(summary).not.toContain('surface.menu && <KioskFloorSection');
   });
 
-  it('the dining map is drawn LARGE — that session is only the map', () => {
-    // There is no menu, package or price beside it, so the plan is the page
-    // rather than a card on it.
-    expect(summary).toMatch(/<KioskFloorSection date=\{eventDate\} large /);
-    // …and the banquet session's, which shares the page with the menu, is not.
-    expect(src('pages/TabletMenuPage.tsx')).not.toMatch(/<KioskFloorSection[^>]*\blarge\b/);
-    expect(kiosk).toContain(".kf-map.is-large { max-height: 82vh;");
+  it('nothing is drawn until the guest has said WHEN', () => {
+    // What is free is entirely a question about a day. Today's availability
+    // shown against next Saturday's booking is worse than a prompt, because
+    // the guest cannot tell it is the wrong day.
+    expect(kiosk).toContain('enabled: !!map && !!date,');
+    expect(kiosk).toContain("if (!date) {");
+    expect(kiosk).toContain("t('fm_date_first')");
+  });
+
+  it('the plan FITS its section rather than being blown up past it', () => {
+    // It was drawn at 150% of its frame (260% on a phone), so a whole venue
+    // had to be dragged about in two directions to find a table.
+    expect(kiosk).toContain('.kf-map .fp-svg { width: 100%; min-width: 0; }');
+    // The only rule allowed to draw it wider is the phone one, and the cutoff
+    // has to stay below a tablet's width — a tablet is what this kiosk runs on,
+    // and at 768px the plan fits with a 61×35 table. Measured in a browser.
+    const wide = kiosk.slice(0, kiosk.indexOf('@media (max-width: 699px)'));
+    const widths = [...wide.matchAll(/\.fp-svg \{[^}]*\bwidth: (\d+)%/g)].map((m) => Number(m[1]));
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect(w, 'the plan is wider than its frame again').toBeLessThanOrEqual(100);
+    // Height is what it gets instead.
+    expect(kiosk).toContain('.kf-map.is-large { max-height: 74vh;');
   });
 
   it('taking the whole area and picking tables are exclusive', () => {
@@ -184,13 +205,51 @@ describe('the admin map', () => {
     expect(admin).toContain('wholeHall: wholeArea,');
   });
 
-  it('the printed plan is asked for by area AND day', () => {
-    expect(admin).toContain('floorMapService.printArea(area.id, day)');
-    expect(src('services/floorMap.service.ts')).toMatch(/\/floor-map\/areas\/\$\{id\}\/print`, \{\s*params: \{ date \}, responseType: 'blob'/);
+  it('the printed plan is asked for by area, day, LANGUAGE and timezone', () => {
+    // The sheet is translated whole on the server and cannot be switched once
+    // it is on paper; and a booking's time is an instant, so printed as UTC a
+    // 19:00 banquet came out as 14:00.
+    expect(admin).toContain('floorMapService.printArea(area.id, day, locale)');
+    expect(src('services/floorMap.service.ts'))
+      .toContain("params: { date, lang, tz: -new Date().getTimezoneOffset() }, responseType: 'blob'");
   });
 
   it('a whole-area booking is said over the plan — no single table carries it', () => {
     expect(admin).toContain('!editing && wholeAreaBooking && (');
+  });
+
+  it('shows the bookings that name this area and hold no table', () => {
+    // Every booking made on the Events page is one — that form has a hall
+    // picker and no table picker — and they were nowhere on the map at all,
+    // which is what "events created for a hall do not appear" was.
+    expect(admin).toContain('unassignedBookings(occupancy, current.id)');
+    expect(admin).toContain('!editing && pendingHere.length > 0 && (');
+    expect(admin).toContain("t('fm_pending_head', { count: pendingHere.length })");
+  });
+
+  it('and lets the admin give one its tables from the plan', () => {
+    expect(admin).toContain('const startAssigning = (b: MapBooking) => {');
+    // A PATCH carrying the tables ONLY: the rest of the evening was decided on
+    // the Events page and must not be rewritten from the map.
+    expect(admin).toContain('eventService.update(assigning.eventNumber, { floorTables: pickedList, hallId: current.id })');
+    expect(admin).toContain('if (booking || assigning) {');
+    // Stopping at the head count the booking is already priced on.
+    expect(admin).toContain('seatsRemaining(Object.entries(next).map(');
+  });
+
+  it('but does not draw them as holding a table, because they hold none', () => {
+    // Which tables such a party sits at is exactly what nobody has decided;
+    // choosing one on its behalf would invent an arrangement.
+    const holders = tableHolders(day([b({ id: 'pending', floorTables: [] })]), byHall);
+    expect(holders.size).toBe(0);
+  });
+
+  it('reads every time in the reader\'s own timezone, never UTC', () => {
+    // `toISOString().slice(11, 16)` is UTC: Uzbekistan is five hours ahead, so
+    // a 19:00 banquet displayed as 14:00 — the middle of lunch.
+    expect(admin).toContain('const clockOf = (value: string | Date) => {');
+    expect(admin).toContain('d.getHours()');
+    expect(admin.match(/toISOString\(\)\.slice\(11/g), 'a UTC clock time is back on the map').toBeNull();
   });
 });
 
@@ -218,19 +277,34 @@ describe('nothing on the admin map sits on its own edge', () => {
   });
 });
 
-describe('the summary gives a dining booking its full width', () => {
-  it('runs as ONE column when there is no pricing panel to carry', () => {
-    // Otherwise the sidebar is a narrow strip holding Confirm alone, beside a
-    // column of half-width fields.
-    expect(summary).toContain("${surface.pricing ? ' lg:grid-cols-[1.3fr_0.7fr]' : ''}");
+describe('the summary is one column, in both sessions', () => {
+  it('there is no sidebar left to squeeze the floor plan', () => {
+    // Pricing used to be a sticky 0.7fr column down the right-hand side, which
+    // left a plan of a whole venue 0.65 of a page to be read in.
+    expect(summary).toContain('<div className="grid grid-cols-1 gap-4 lg:gap-6">');
+    expect(summary, 'the two-column layout is back').not.toContain('lg:grid-cols-[1.3fr_0.7fr]');
+    expect(summary, 'the sidebar is sticky again').not.toContain('lg:sticky lg:top-6 lg:self-start');
   });
 
-  it('so the actions fall to the very bottom, and stop being sticky there', () => {
-    // A sticky footer at the foot of one column covers the fields above it.
-    expect(summary).toContain("${surface.pricing ? ' lg:sticky lg:top-6 lg:self-start' : ''}");
-    // The actions are still the LAST thing in the DOM, which is what puts
-    // them at the bottom once the grid is a single column.
+  it('pricing sits near the bottom, BELOW the map and the other blocks', () => {
+    const map = summary.indexOf('<KioskFloorSection');
+    const pricing = summary.indexOf("t('pricing')");
+    expect(map).toBeGreaterThan(-1);
+    expect(pricing, 'pricing is above the map again').toBeGreaterThan(map);
+  });
+
+  it('and the actions are still the very last thing on the page', () => {
+    // Which is what puts them at the bottom, now that the grid is one column.
     expect(summary.indexOf('<aside className=')).toBeGreaterThan(summary.indexOf('{/* ── Left column ── */}'));
+    expect(summary.indexOf("t('actions')")).toBeGreaterThan(summary.indexOf("t('pricing')"));
+  });
+
+  it('the map is directly under the date and time it depends on', () => {
+    const date = summary.indexOf("t('event_date')");
+    const map = summary.indexOf('<KioskFloorSection');
+    const overview = summary.indexOf("t('event_details')");
+    expect(date).toBeLessThan(map);
+    expect(map).toBeLessThan(overview);
   });
 });
 

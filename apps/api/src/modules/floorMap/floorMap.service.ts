@@ -1,7 +1,7 @@
 import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
 import { readLayout, snapshotOf } from './floorMap.layout.js';
-import { dayKey, wholeAreaAvailable, type BookingRow } from '../../utils/floorBooking.js';
+import { occupancyOf, wholeAreaAvailable } from '../../utils/floorBooking.js';
 import { startOfDay } from './floorMap.dailyReset.js';
 import type {
   AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
@@ -65,18 +65,18 @@ export class FloorMapService {
    *
    * The DAY is the unit because a booking holds its tables for the whole of
    * the day it falls on — see utils/floorBooking.ts.
+   *
+   * The list includes bookings that merely NAME an area and hold no table:
+   * they are what the Events page creates, and the map has to show them or an
+   * evening the restaurant has sold is nowhere on the picture of that day.
    */
   async getDay(restaurantId: string, section: Section, day: string) {
     const bookings = await this.repo.bookingsOnDay(restaurantId, section, day);
     const tablesByHall = await this.repo.tableIdsByHall(restaurantId, section);
     // Which areas could still be taken whole, so the map does not offer a
-    // button that the save would then refuse.
-    const occupancy = { tables: new Map<string, BookingRow>(), wholeAreas: new Map<string, BookingRow>() };
-    for (const booking of bookings) {
-      if (booking.status === 'CANCELLED') continue;
-      if (booking.wholeHall && booking.hallId) occupancy.wholeAreas.set(booking.hallId, booking);
-      for (const t of booking.floorTables) occupancy.tables.set(t.floorTableId, booking);
-    }
+    // button that the save would then refuse. Built by the shared reader, not
+    // by hand here, so "what is taken" cannot mean two things.
+    const occupancy = occupancyOf(bookings);
     const wholeAreaFree: Record<string, boolean> = {};
     for (const hallId of tablesByHall.keys()) {
       wholeAreaFree[hallId] = wholeAreaAvailable(hallId, occupancy, tablesByHall);

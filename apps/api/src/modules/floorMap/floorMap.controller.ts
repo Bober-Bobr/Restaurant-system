@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { DEFAULT_SECTION } from '../../utils/section.js';
 import { FloorMapRepository } from './floorMap.repository.js';
 import {
-  createAreaSchema, createTableSchema, daySchema, idSchema, scheduleSchema,
+  createAreaSchema, createTableSchema, daySchema, idSchema, printSchema, scheduleSchema,
   updateAreaSchema, updateTableSchema,
 } from './floorMap.schema.js';
 import { dayKey } from '../../utils/floorBooking.js';
@@ -38,10 +38,12 @@ export class FloorMapController {
    */
   async printArea(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
-    const { date } = daySchema.parse(request.query);
+    // The sheet is translated whole and its times are the reader's own, so both
+    // come from the request; the schema clamps the offset.
+    const { date, lang, tz } = printSchema.parse(request.query);
     const day = date ?? dayKey(new Date());
     const plan = await service.getPrintablePlan(...scope(request), id, day);
-    const doc = buildFloorPlanPdf(plan);
+    const doc = buildFloorPlanPdf({ ...plan, lang, tzOffsetMinutes: tz });
     response.setHeader('Content-Type', 'application/pdf');
     // A name the admin can file: the area and the day it is a plan OF.
     const safe = plan.area.name.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'area';

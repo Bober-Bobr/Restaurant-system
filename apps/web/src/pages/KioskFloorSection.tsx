@@ -37,9 +37,9 @@ type Props = {
    */
   guestCount?: number;
   /**
-   * Drawn large. A general-dining booking is ONLY the map — there is no menu,
-   * no package and no price beside it — so the plan is the page rather than a
-   * card on it, and a table has to be tappable at arm's length.
+   * Drawn tall. The plan always fits the width of its section — it is the page
+   * the booking is made on, in both sessions — and this is how much HEIGHT it
+   * is allowed before it starts to scroll inside its own frame.
    */
   large?: boolean;
   t: TFn;
@@ -61,7 +61,11 @@ export const KioskFloorSection = ({ date, large = false, guestCount = 0, t }: Pr
   const { data: occupancy } = useQuery({
     queryKey: ['kiosk-floor-day', day],
     queryFn: () => floorMapService.day(day),
-    enabled: !!map,
+    // Not until the guest has said WHEN. What is free depends entirely on the
+    // day, so with no date there is nothing truthful to draw — and today's
+    // availability shown against next Saturday's booking is worse than an
+    // honest prompt, because the guest cannot tell it is the wrong day.
+    enabled: !!map && !!date,
   });
 
   const areas = useMemo(() => (map?.areas ?? []).filter((a) => a.isActive !== false), [map]);
@@ -102,6 +106,17 @@ export const KioskFloorSection = ({ date, large = false, guestCount = 0, t }: Pr
   // whatever the tables seat.
   const remaining = seatsRemaining(selections, guestCount);
   const full = remaining === 0;
+
+  // No date yet: the section says what it is waiting for rather than drawing a
+  // plan of the wrong day. The field it names is directly above it.
+  if (!date) {
+    return (
+      <section className="rg-card p-4 sm:p-6 reveal">
+        <p className="rg-heading">{t('fm_kiosk_title')}</p>
+        <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>{t('fm_date_first')}</p>
+      </section>
+    );
+  }
 
   return (
     <section className="rg-card p-4 sm:p-6 reveal">
@@ -231,13 +246,23 @@ export const KioskFloorSection = ({ date, large = false, guestCount = 0, t }: Pr
           overflow: auto; max-height: 62vh; border-radius: 10px;
           background: rgba(var(--rg-bg-rgb), 0.45);
         }
-        /* The dining session's map is the whole booking, so it gets the
-           screen: nearly the full viewport height, and the plan scaled up
-           inside it so a table is a comfortable target at arm's length. */
-        .kf-map.is-large { max-height: 82vh; min-height: 56vh; }
-        .kf-map.is-large .fp-svg { width: 150% !important; min-width: 150%; }
-        @media (max-width: 900px) {
-          .kf-map.is-large .fp-svg { width: 260% !important; min-width: 260%; }
+        /* The plan FITS THE SECTION. It was drawn at 150% of the frame (260% on
+           a phone) so a table would be a comfortable target, but the whole
+           point of a floor plan is seeing the room at once — at that scale the
+           map had to be dragged about in two directions to find a table, and
+           the section it sits in is now the full width of the page anyway. So
+           the width is left at the frame's and the frame is given the height
+           instead; a genuinely venue-sized plan still scrolls inside it. */
+        .kf-map .fp-svg { width: 100%; min-width: 0; }
+        .kf-map.is-large { max-height: 74vh; min-height: 40vh; }
+        /* The one exception, and it is measured: a 1600-unit venue fitted to a
+           390px phone draws a four-top 28×16px, which nobody can tap. Below a
+           tablet's width the plan is allowed past the frame again — 170% puts
+           that table at ~48px — and the frame scrolls. A tablet, which is what
+           this kiosk runs on, is never in here: at 768px the same table is
+           61×35 and the plan fits. */
+        @media (max-width: 699px) {
+          .kf-map .fp-svg { width: 170%; min-width: 170%; }
         }
         .kf-filters { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .kf-chip {

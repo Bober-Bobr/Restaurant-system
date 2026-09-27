@@ -7,6 +7,8 @@ import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
 import { useRestaurantBranding } from '../hooks/useRestaurantBranding';
 import { translate } from '../utils/translate';
+import { isKitchenRole } from '../utils/kitchenRole';
+import { menuScopeOfRole } from '../utils/menuScope';
 import type { Event } from '../types/domain';
 import { httpClient } from '../services/http';
 
@@ -46,7 +48,15 @@ export const EmployeeEventsPage = () => {
   const eventsQuery = useQuery<Event[]>({ queryKey: ['events'], queryFn: () => eventService.list() });
   const hallsQuery = useQuery({ queryKey: ['halls'], queryFn: () => hallService.list() });
   const tcQuery = useQuery({ queryKey: ['tableCategories'], queryFn: () => tableCategoryService.list() });
-  const menuQuery = useQuery({ queryKey: ['menu', 'banquet'], queryFn: () => menuService.list('banquet') });
+  // The system this role reads the shared dish table through — 'banquet' was
+  // hardcoded, which had the Small Banquets cooks exporting the banquet side's
+  // prices and switched-off dishes. The server pins it from the role in any
+  // case; this makes the query key agree with what comes back.
+  const scope = menuScopeOfRole(role) ?? 'banquet';
+  const menuQuery = useQuery({ queryKey: ['menu', scope], queryFn: () => menuService.list(scope) });
+  // SMALL_KITCHEN reads a booking exactly as KITCHEN does: the section's cooks
+  // need the same food on the card. A positive list, in utils/kitchenRole.ts.
+  const kitchen = isKitchenRole(role);
 
   const events = eventsQuery.data ?? [];
   const halls = hallsQuery.data ?? [];
@@ -112,6 +122,7 @@ export const EmployeeEventsPage = () => {
           const hall = halls.find((h) => h.id === event.hallId);
           const tc = tableCategories.find((c) => c.id === event.tableCategoryId);
           const selections = event.selections ?? [];
+          const floorTables = event.floorTables ?? [];
           const status = STATUS_BADGE[event.status];
 
           return (
@@ -135,9 +146,22 @@ export const EmployeeEventsPage = () => {
                 <Detail label={t('guests')} value={String(event.guestCount)} />
                 {hall && <Detail label={t('hall')} value={hall.name} />}
                 {tc && <Detail label={t('table_category')} value={tc.name} />}
+                {/* Where in that room the party sits. A cook plating for table
+                    7 needs the number, not only the name of the hall — and a
+                    booking with a hall and no tables says so, rather than
+                    leaving a gap that reads as "anywhere". */}
+                {hall && (
+                  <Detail
+                    label={t('fm_chosen_tables')}
+                    value={event.wholeHall ? t('fm_whole_area_taken')
+                      : floorTables.length > 0
+                        ? floorTables.map((x) => `${x.floorTable?.label ?? '—'} · ${x.guestCount}`).join(', ')
+                        : t('fm_no_tables_yet')}
+                  />
+                )}
               </div>
 
-              {role === 'KITCHEN' && tc && (tc.packageItems ?? []).length > 0 && (
+              {kitchen && tc && (tc.packageItems ?? []).length > 0 && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
                   <p className="adm-label" style={{ marginBottom: 6 }}>
                     {t('table_category_dishes')} ({(tc.packageItems ?? []).length})
@@ -155,7 +179,7 @@ export const EmployeeEventsPage = () => {
               {selections.length > 0 && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 12 }}>
                   <p className="adm-label" style={{ marginBottom: 6 }}>
-                    {role === 'KITCHEN' ? t('additional_dishes') : t('selected_dishes')} ({selections.length})
+                    {kitchen ? t('additional_dishes') : t('selected_dishes')} ({selections.length})
                   </p>
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
                     {selections.map((s) => (

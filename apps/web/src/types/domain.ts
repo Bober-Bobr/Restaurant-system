@@ -82,6 +82,13 @@ export type Event = {
   tableCategory?: TableCategory;
   selections?: EventMenuSelection[];
   notes?: string;
+  /**
+   * Where this booking sits on the floor map: the tables it holds with the
+   * guests at each, or the whole area. Absent on a booking made from a form
+   * with no table picker — the map shows those as "no tables assigned".
+   */
+  floorTables?: { floorTableId: string; guestCount: number; floorTable?: { label: string; hallId: string } }[];
+  wholeHall?: boolean;
 };
 
 export type Hall = {

@@ -66,6 +66,21 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-
 export const daySchema = z.object({ date: day.optional() });
 
 /**
+ * What the printed sheet needs beyond the day.
+ *
+ * `lang` is the language the admin has the app in — the whole document is
+ * translated, and it cannot be switched once it is on paper. `tz` is their
+ * offset from UTC in minutes, the same parameter the order statistics take and
+ * clamped to the same real-world range: times are stored as instants, so
+ * without it a 19:00 banquet printed as 14:00.
+ */
+export const printSchema = z.object({
+  date: day.optional(),
+  lang: z.enum(['en', 'ru', 'uz']).optional(),
+  tz: z.coerce.number().int().min(-720).max(840).optional(),
+});
+
+/**
  * A stretch of days for the schedule. Bounded at roughly two years so one
  * request cannot ask the database for every booking a restaurant has ever
  * taken; the page asks a month at a time.

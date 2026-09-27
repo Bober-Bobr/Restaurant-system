@@ -59,10 +59,17 @@ export const floorMapService = {
     );
     return data;
   },
-  /** The printable plan of one area for one day, as a PDF blob. */
-  async printArea(id: string, date: string) {
+  /**
+   * The printable plan of one area for one day, as a PDF blob.
+   *
+   * The LANGUAGE and the reader's TIMEZONE go with the request. The sheet is
+   * translated whole on the server and cannot be switched once it is on paper,
+   * and a booking's time is stored as an instant — printed as UTC a 19:00
+   * banquet came out as 14:00.
+   */
+  async printArea(id: string, date: string, lang: string) {
     const { data } = await httpClient.get<Blob>(`/floor-map/areas/${id}/print`, {
-      params: { date }, responseType: 'blob',
+      params: { date, lang, tz: -new Date().getTimezoneOffset() }, responseType: 'blob',
     });
     return data;
   },

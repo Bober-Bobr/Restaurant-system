@@ -12,7 +12,10 @@ import {
   type AreaKind, type FloorMap, type MapArea, type MapFeature, type MapTable, type TableShape,
 } from '../utils/floorMap';
 import { translate } from '../utils/translate';
-import { dayKey, tableHolders, tablesByHallOf, wholeAreaAvailable, type MapBooking } from '../utils/floorBooking';
+import {
+  assignsNoTables, dayKey, seatsRemaining, tableHolders, tablesByHallOf, unassignedBookings, wholeAreaAvailable,
+  type MapBooking,
+} from '../utils/floorBooking';
 import { eventService } from '../services/event.service';
 import { eventsPath } from '../utils/eventsPath';
 import { useAuthStore } from '../store/auth.store';
@@ -67,6 +70,22 @@ const FEATURE_PAINT: Record<MapFeature['kind'], { fill: number; stroke: number }
 };
 
 const clampNum = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * A booking's clock time, in the reader's OWN timezone.
+ *
+ * It used to be `toISOString().slice(11, 16)`, which prints UTC — and that is
+ * how an evening booking came to read as a lunch slot: Uzbekistan is five hours
+ * ahead, so a 19:00 banquet showed as 14:00. Both forms that write `eventDate`
+ * build it with `new Date('YYYY-MM-DDTHH:mm')`, which is LOCAL, so local is
+ * what reading it back has to mean. Not `toLocaleTimeString`, which would give
+ * an en-US reader "7:00 PM" where every other time on this page is 24-hour.
+ */
+const clockOf = (value: string | Date) => {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 export const FloorMapPage = () => {
   const { locale } = useAdminStore();
@@ -124,6 +143,15 @@ export const FloorMapPage = () => {
   const [openBooking, setOpenBooking] = useState<MapBooking | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [booking, setBooking] = useState<{ name: string; phone: string; time: string } | null>(null);
+  /**
+   * The existing booking whose tables are being filled in.
+   *
+   * A booking made on the Events page names a hall and no tables — that form
+   * has no table picker — so it held nothing and the map drew nothing. It is
+   * now listed, and this is the way to give it its tables without retyping the
+   * whole evening: pick them on the plan, exactly as a new booking does.
+   */
+  const [assigning, setAssigning] = useState<MapBooking | null>(null);
   const [busyBooking, setBusyBooking] = useState(false);
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.role);
@@ -145,6 +173,17 @@ export const FloorMapPage = () => {
     [occupancy, current],
   );
   const canTakeWholeArea = !!current && wholeAreaAvailable(current.id, occupancy, byHall);
+  /**
+   * The day's bookings in THIS area that hold no table yet. Every booking made
+   * on the Events page is one, and leaving them off the map was the whole of
+   * "events created for a hall sometimes do not appear". They are shown without
+   * being drawn as taken — which tables such a party sits at is exactly what
+   * nobody has decided.
+   */
+  const pendingHere = useMemo(
+    () => (current ? unassignedBookings(occupancy, current.id) : []),
+    [occupancy, current],
+  );
   /** The booking the admin is drafting, as table id → guests. */
   const [picked, setPicked] = useState<Record<string, number>>({});
   const pickedList = useMemo(
@@ -155,6 +194,9 @@ export const FloorMapPage = () => {
   const switchArea = (id: string) => {
     setSelectedId(null);
     setDrag(null);
+    // A booking is given tables in ONE area, so moving to another ends it.
+    setAssigning(null);
+    setPicked({});
     // The flash names what happened to the area being left; it would read as a
     // statement about the new one.
     setFlash(null);
@@ -310,7 +352,7 @@ export const FloorMapPage = () => {
     setFlash(null);
     setBusy(true);
     try {
-      const blob = await floorMapService.printArea(area.id, day);
+      const blob = await floorMapService.printArea(area.id, day, locale);
       // Handed to the browser as a download rather than opened: this is a
       // sheet for the pass, and a print dialog is the admin's own choice.
       const url = URL.createObjectURL(blob);
@@ -350,11 +392,46 @@ export const FloorMapPage = () => {
         hallId: current.id,
         floorTables: pickedList,
         wholeHall: wholeArea,
-      } as Parameters<typeof eventService.create>[0]);
+      });
       setBooking(null);
       setPicked({});
       await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
       setFlash(t('fm_booking_saved', { number: String(created.id) }));
+    } catch (error) {
+      setNotice(t('fm_booking_failed', { message: errorText(error) }));
+    } finally {
+      setBusyBooking(false);
+    }
+  };
+
+  /** Start filling in the tables of a booking that has none. */
+  const startAssigning = (b: MapBooking) => {
+    setOpenBooking(null);
+    setBooking(null);
+    setPicked({});
+    setFlash(null);
+    // Its own area, so the tables being picked are the ones it was booked into.
+    if (b.hallId && b.hallId !== current?.id) switchArea(b.hallId);
+    setAssigning(b);
+  };
+
+  /**
+   * Give an existing booking the tables picked on the plan. A PATCH carrying
+   * `floorTables` only — everything else about the evening was decided on the
+   * Events page and must not be rewritten from here.
+   */
+  const saveAssignment = async () => {
+    if (!assigning || !current || pickedList.length === 0) return;
+    setBusyBooking(true);
+    setFlash(null);
+    try {
+      await eventService.update(assigning.eventNumber, { floorTables: pickedList, hallId: current.id });
+      const { eventNumber } = assigning;
+      setAssigning(null);
+      setPicked({});
+      await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
+      await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY(schedFrom, schedTo) });
+      setFlash(t('fm_tables_assigned', { number: String(eventNumber) }));
     } catch (error) {
       setNotice(t('fm_booking_failed', { message: errorText(error) }));
     } finally {
@@ -402,12 +479,19 @@ export const FloorMapPage = () => {
     // picking it for the one being drafted, or opening the one that holds it.
     if (!editing) {
       const holder = holders.get(table.id);
-      if (booking) {
+      if (booking || assigning) {
         if (!holder) {
           setPicked((prev) => {
             const next = { ...prev };
-            if (table.id in next) delete next[table.id];
-            else next[table.id] = table.seats;
+            if (table.id in next) { delete next[table.id]; return next; }
+            // Seats it full, or up to what is left of the head count the
+            // booking was made for — the server refuses an over-seated booking,
+            // so the map stops short of one rather than failing on save.
+            const left = assigning
+              ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), assigning.guestCount)
+              : null;
+            if (left === 0) return next;
+            next[table.id] = left === null ? table.seats : Math.min(table.seats, left);
             return next;
           });
         }
@@ -739,18 +823,27 @@ export const FloorMapPage = () => {
         <dt>{t('fm_booking')}</dt><dd>#{b.eventNumber}</dd>
         <dt>{t('fm_booked_by')}</dt><dd>{b.customerName}</dd>
         {b.customerPhone && (<><dt>{t('customer_phone')}</dt><dd>{b.customerPhone}</dd></>)}
-        <dt>{t('event_time')}</dt><dd>{new Date(b.eventDate).toISOString().slice(11, 16)}</dd>
+        <dt>{t('event_time')}</dt><dd>{clockOf(b.eventDate)}</dd>
         <dt>{t('guest_count')}</dt><dd>{b.guestCount}</dd>
         <dt>{t('status')}</dt><dd>{b.status}</dd>
         <dt>{t('fm_chosen_tables')}</dt>
         <dd>
           {b.wholeHall ? t('fm_whole_area_taken')
+            : assignsNoTables(b) ? t('fm_no_tables_yet')
             : b.floorTables
               .map((x) => tables.find((y) => y.id === x.floorTableId)?.label)
               .filter(Boolean).join(', ')}
         </dd>
         {b.notes && (<><dt>{t('notes')}</dt><dd>{b.notes}</dd></>)}
       </dl>
+      {/* The remedy for a booking with no tables, and the reason one is
+          listed at all: pick them on the plan rather than retyping the
+          evening on the Events page. */}
+      {assignsNoTables(b) && !editing && (
+        <button type="button" className="adm-btn-primary" onClick={() => startAssigning(b)}>
+          {t('fm_assign_tables')}
+        </button>
+      )}
       <button type="button" className="adm-btn-ghost"
         onClick={() => navigate(`${eventsPath(role)}?event=${b.eventNumber}`)}>
         {t('fm_open_event')}
@@ -758,6 +851,63 @@ export const FloorMapPage = () => {
       <button type="button" className="adm-btn-ghost" onClick={() => setOpenBooking(null)}>{t('done')}</button>
     </div>
   );
+
+  /**
+   * The chosen tables with the guests at each.
+   *
+   * `cap` is the head count the booking was made for, or null when the tables
+   * themselves supply it: a new booking from the map has no figure typed
+   * anywhere, while an existing one is already priced on its own — so there the
+   * stepper stops when the seats reach it.
+   */
+  const tableSteppers = (cap: number | null) => {
+    const left = cap === null ? null : seatsRemaining(pickedList, cap);
+    return pickedList.map((s) => {
+      const table = tables.find((x) => x.id === s.floorTableId);
+      if (!table) return null;
+      return (
+        <div key={s.floorTableId} className="fm-size-row">
+          <span>{t('fm_table', { label: table.label })}</span>
+          <div className="fm-stepper">
+            <button type="button" className="adm-btn-ghost" disabled={s.guestCount <= 1}
+              onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount - 1 }))}>−</button>
+            <output>{s.guestCount}</output>
+            <button type="button" className="adm-btn-ghost" disabled={s.guestCount >= table.seats || left === 0}
+              onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount + 1 }))}>+</button>
+          </div>
+        </div>
+      );
+    });
+  };
+
+  /** Filling in the tables of a booking that arrived without any. */
+  const assignForm = (b: MapBooking) => {
+    const seated = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    return (
+      <div className="fm-form">
+        <dl className="fm-facts">
+          <dt>{t('fm_booking')}</dt><dd>#{b.eventNumber}</dd>
+          <dt>{t('fm_booked_by')}</dt><dd>{b.customerName}</dd>
+          <dt>{t('event_time')}</dt><dd>{clockOf(b.eventDate)}</dd>
+        </dl>
+        <p className="fm-caption" style={{ margin: 0 }}>
+          {b.guestCount > 0
+            ? t('fm_seated_of', { seated, of: b.guestCount })
+            : t('fm_total_guests', { count: seated })}
+        </p>
+        {pickedList.length === 0 && <p className="fm-caption" style={{ margin: 0 }}>{t('fm_assign_hint')}</p>}
+        {tableSteppers(b.guestCount > 0 ? b.guestCount : null)}
+        <button type="button" className="adm-btn-primary"
+          disabled={busyBooking || pickedList.length === 0}
+          onClick={() => void saveAssignment()}>
+          {t('save')}
+        </button>
+        <button type="button" className="adm-btn-ghost" onClick={() => { setAssigning(null); setPicked({}); }}>
+          {t('cancel')}
+        </button>
+      </div>
+    );
+  };
 
   /** The booking being drafted from the map. */
   const bookingForm = () => {
@@ -785,22 +935,7 @@ export const FloorMapPage = () => {
           <input className="adm-input" type="time" value={booking!.time}
             onChange={(e) => setBooking({ ...booking!, time: e.target.value })} />
         </label>
-        {pickedList.map((s) => {
-          const table = tables.find((x) => x.id === s.floorTableId);
-          if (!table) return null;
-          return (
-            <div key={s.floorTableId} className="fm-size-row">
-              <span>{t('fm_table', { label: table.label })}</span>
-              <div className="fm-stepper">
-                <button type="button" className="adm-btn-ghost" disabled={s.guestCount <= 1}
-                  onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount - 1 }))}>−</button>
-                <output>{s.guestCount}</output>
-                <button type="button" className="adm-btn-ghost" disabled={s.guestCount >= table.seats}
-                  onClick={() => setPicked((p) => ({ ...p, [s.floorTableId]: s.guestCount + 1 }))}>+</button>
-              </div>
-            </div>
-          );
-        })}
+        {tableSteppers(null)}
         <button type="button" className="adm-btn-primary"
           disabled={busyBooking || !booking!.name.trim() || (wholeArea && !canTakeWholeArea)}
           onClick={() => void saveBooking()}>
@@ -861,7 +996,14 @@ export const FloorMapPage = () => {
         <div className="fm-daybar">
           <label className="fm-caption" htmlFor="fm-day">{t('fm_day')}</label>
           <input id="fm-day" type="date" className="adm-input" value={day}
-            onChange={(e) => { setDay(e.target.value || dayKey(new Date())); setOpenBooking(null); }} />
+            onChange={(e) => {
+              // The map is a picture of one day, so everything being done to
+              // one day's bookings ends with it.
+              setDay(e.target.value || dayKey(new Date()));
+              setOpenBooking(null);
+              setAssigning(null);
+              setPicked({});
+            }} />
           <button type="button" className="adm-btn-ghost" onClick={() => setDay(dayKey(new Date()))}>
             {t('fm_today')}
           </button>
@@ -874,7 +1016,12 @@ export const FloorMapPage = () => {
             {t('fm_print_map')}
           </button>
           <button type="button" className="adm-btn-primary" disabled={!current}
-            onClick={() => { setBooking(booking ? null : { name: '', phone: '', time: '19:00' }); setPicked({}); setOpenBooking(null); }}>
+            onClick={() => {
+              setBooking(booking ? null : { name: '', phone: '', time: '19:00' });
+              setPicked({});
+              setOpenBooking(null);
+              setAssigning(null);
+            }}>
             {booking ? t('cancel') : t('fm_new_booking')}
           </button>
           <span className="fm-legend">
@@ -885,8 +1032,32 @@ export const FloorMapPage = () => {
         </div>
       )}
 
+      {/* Bookings in this room that hold no table yet — the ones the Events
+          page makes, which the map used to leave out entirely. Drawn as a
+          notice rather than on the plan: they take no table, and picking one
+          for them would invent an arrangement nobody made. */}
+      {!editing && pendingHere.length > 0 && (
+        <section className="fm-pending">
+          <p className="fm-pending-head">{t('fm_pending_head', { count: pendingHere.length })}</p>
+          <p className="fm-caption" style={{ margin: 0 }}>{t('fm_pending_hint')}</p>
+          <div className="fm-pending-list">
+            {pendingHere.map((b) => (
+              <button key={b.id} type="button" className="fm-sched-row"
+                onClick={() => { setBooking(null); setAssigning(null); setPicked({}); setOpenBooking(b); }}>
+                <span className="fm-sched-when">{clockOf(b.eventDate)}</span>
+                <span className="fm-sched-who">#{b.eventNumber} {b.customerName}</span>
+                <span className="fm-sched-what">{t('guest_count')}: {b.guestCount}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <p className="fm-caption" style={{ margin: '12px 0' }}>
-        {editing ? t('fm_hint_edit') : booking ? t('fm_new_booking_hint') : t('fm_hint_view')}
+        {editing ? t('fm_hint_edit')
+          : booking ? t('fm_new_booking_hint')
+          : assigning ? t('fm_assign_hint')
+          : t('fm_hint_view')}
       </p>
       {flash && <p className="fm-flash" role="status" style={{ margin: '0 0 10px' }}>{flash}</p>}
       {notice && <p className="fm-notice" role="alert">{notice}</p>}
@@ -944,7 +1115,7 @@ export const FloorMapPage = () => {
                     setOpenBooking(b);
                     setScheduleOpen(false);
                   }}>
-                  <span className="fm-sched-when">{bookingDay} · {when.toISOString().slice(11, 16)}</span>
+                  <span className="fm-sched-when">{bookingDay} · {clockOf(when)}</span>
                   <span className="fm-sched-who">#{b.eventNumber} {b.customerName}</span>
                   <span className="fm-sched-what">
                     {area?.name ?? '—'} · {b.wholeHall ? t('fm_whole_area_taken')
@@ -1023,13 +1194,16 @@ export const FloorMapPage = () => {
         <aside className="adm-card fm-panel">
           <h3 className="adm-heading" style={{ marginTop: 0 }}>
             {booking ? t('fm_new_booking')
+              : assigning ? t('fm_assign_tables')
               : openBooking ? t('fm_booking')
               : selectedTable ? t('fm_table', { label: selectedTable.label })
               : current?.name ?? t('floor_map')}
           </h3>
           {/* What the panel is about, in order of what the admin just did:
-              a booking being drafted, a booking they clicked, then the map. */}
+              a booking being drafted, one being given its tables, a booking
+              they clicked, then the map. */}
           {booking ? bookingForm()
+            : assigning ? assignForm(assigning)
             : openBooking ? bookingCard(openBooking)
             : selectedTable ? tablePanel(selectedTable)
             : current ? areaPanel(current)
@@ -1130,6 +1304,14 @@ export const FloorMapPage = () => {
            backticks in this block: it lives inside a template literal.) */
         .fm-sched-card { padding: 18px !important; margin-top: 18px; }
         .fm-booking-card { display: grid; gap: 10px; }
+        /* Bookings in this room with no tables yet. An amber notice, not the
+           red one: nothing has gone wrong, there is something to finish. */
+        .fm-pending {
+          display: grid; gap: 8px; margin: 14px 0 0; padding: 12px 14px; border-radius: 6px;
+          border: 1px solid rgba(217, 119, 6, 0.45); background: rgba(217, 119, 6, 0.1);
+        }
+        .fm-pending-head { margin: 0; font-size: 13px; font-weight: 700; color: #fcd34d; }
+        .fm-pending-list { display: grid; gap: 8px; max-height: 200px; overflow: auto; padding-right: 4px; }
         .fm-booking-card .fm-facts { margin-bottom: 4px; }
         /* Room for the scrollbar, so the last row is not sliced by it. */
         .fm-sched { display: grid; gap: 10px; max-height: 340px; overflow: auto; padding-right: 4px; }

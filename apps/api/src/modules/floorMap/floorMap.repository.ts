@@ -141,9 +141,12 @@ export class FloorMapRepository {
         restaurantId,
         section,
         eventDate: dayRange(day),
-        // Only bookings that actually touch the map: the section's other
-        // events are none of this query's business.
-        OR: [{ wholeHall: true }, { floorTables: { some: {} } }],
+        // Only bookings that touch the map: the section's other events are none
+        // of this query's business. **A booking that merely names an area is
+        // one of them** — every booking made on the Events page is, since that
+        // form has a hall picker and no table picker, and leaving them out is
+        // what made an evening booked into a hall invisible here.
+        OR: [{ wholeHall: true }, { floorTables: { some: {} } }, { hallId: { not: null } }],
       },
       select: BOOKING_SELECT,
       orderBy: { eventDate: 'asc' },
@@ -162,7 +165,7 @@ export class FloorMapRepository {
         restaurantId,
         section,
         eventDate: { gte: dayRange(from).gte, lt: dayRange(to).lt },
-        OR: [{ wholeHall: true }, { floorTables: { some: {} } }],
+        OR: [{ wholeHall: true }, { floorTables: { some: {} } }, { hallId: { not: null } }],
       },
       select: BOOKING_SELECT,
       orderBy: { eventDate: 'asc' },

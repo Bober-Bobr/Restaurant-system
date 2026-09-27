@@ -56,6 +56,63 @@ describe('which bookings still hold their tables', () => {
   });
 });
 
+describe('a booking that names an area but holds no table', () => {
+  // The Events page creates one of these every time: it has a hall picker and
+  // no table picker. Both sides have to agree, or the map lists an evening the
+  // server does not think is there — or refuses a whole-area booking the kiosk
+  // offered.
+  const CASES = [
+    { wholeHall: false, floorTables: [] },
+    { wholeHall: false, floorTables: [{ floorTableId: 't1', guestCount: 4 }] },
+    { wholeHall: true, floorTables: [] },
+    { wholeHall: true, floorTables: [{ floorTableId: 't1', guestCount: 4 }] },
+  ];
+  for (const [i, c] of CASES.entries()) {
+    it(`case ${i + 1}`, () => {
+      expect(web.assignsNoTables(c)).toBe(api.assignsNoTables(c));
+    });
+  }
+
+  it('and it blocks the whole area on both sides', () => {
+    const booking = {
+      id: 'e1', eventNumber: 7, customerName: 'Nodira', eventDate: '2026-10-02T19:00:00.000Z',
+      status: 'CONFIRMED', guestCount: 40, hallId: 'street', wholeHall: false, floorTables: [],
+    };
+    const byHall = new Map([['street', ['t1', 't2']]]);
+    expect(web.wholeAreaAvailable('street', { day: '2026-10-02', bookings: [booking] }, byHall)).toBe(false);
+    expect(api.wholeAreaAvailable('street', api.occupancyOf([booking]), byHall)).toBe(false);
+    // …and an empty day still offers it, on both.
+    expect(web.wholeAreaAvailable('street', { day: '2026-10-02', bookings: [] }, byHall)).toBe(true);
+    expect(api.wholeAreaAvailable('street', api.occupancyOf([]), byHall)).toBe(true);
+  });
+
+  it('a CANCELLED one blocks nothing, on both', () => {
+    const booking = {
+      id: 'e1', eventNumber: 7, customerName: 'Nodira', eventDate: '2026-10-02T19:00:00.000Z',
+      status: 'CANCELLED', guestCount: 40, hallId: 'street', wholeHall: false, floorTables: [],
+    };
+    const byHall = new Map([['street', ['t1', 't2']]]);
+    expect(web.wholeAreaAvailable('street', { day: '2026-10-02', bookings: [booking] }, byHall)).toBe(true);
+    expect(api.wholeAreaAvailable('street', api.occupancyOf([booking]), byHall)).toBe(true);
+    expect(web.unassignedBookings({ day: '2026-10-02', bookings: [booking] })).toEqual([]);
+    expect(api.unassignedBookings([booking])).toEqual([]);
+  });
+
+  it('but a single table in that room is still bookable — assigning them is the remedy', () => {
+    const booking = {
+      id: 'e1', eventNumber: 7, customerName: 'Nodira', eventDate: '2026-10-02T19:00:00.000Z',
+      status: 'CONFIRMED', guestCount: 40, hallId: 'street', wholeHall: false, floorTables: [],
+    };
+    const byHall = new Map([['street', ['t1', 't2']]]);
+    expect(api.bookingClash(
+      { hallId: 'street', wholeHall: false, selections: [{ floorTableId: 't1', guestCount: 4 }] },
+      api.occupancyOf([booking]), byHall,
+    )).toBeNull();
+    // The web side draws it from the same fact: it holds no table.
+    expect(web.tableHolders({ day: '2026-10-02', bookings: [booking] }, byHall).size).toBe(0);
+  });
+});
+
 describe('the head count a booking is stored with', () => {
   const CASES: { selections: { floorTableId: string; guestCount: number }[]; fallback: number }[] = [
     { selections: [], fallback: 25 },

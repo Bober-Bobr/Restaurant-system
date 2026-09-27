@@ -3268,3 +3268,61 @@ expect the first reset to do nothing.
 8. It runs **once a day**: a second sweep the same day changes nothing.
 9. **Admin spacing** — the floor map's day bar is a bordered strip with the
    legend at its end, dropping to its own line under 900px.
+
+## §65 — Bookings without tables on the map, the map on the Summary, the printed sheet in three languages (**no migration**)
+
+Web + API code only. Nothing to migrate and no script to run.
+
+**What changed, in one line each:** a booking that names a hall and no table —
+which is every booking made on the Events page — is now ON the map instead of
+invisible; the floor plan has moved to the Summary page for banquet evenings
+too and fits its section; every time on the map and on the sheet is the
+restaurant's own rather than UTC; the printed plan embeds a Cyrillic font, is
+translated whole, and distinguishes a part-filled table from a full one; and the
+Small Banquets kitchen sees the dishes and the tables its cooks are plating for.
+
+**After deploying:**
+
+1. **A booking with no tables shows up.** On the Events page (as the supervisor)
+   create a booking for today naming a hall, with no tables. Open the floor map
+   on that hall: an amber strip says "Bookings here with no tables yet: 1" and
+   lists it with its time and head count. Every table in the room is still free
+   and still bookable — it holds none.
+2. **Assign its tables.** Click the row, press "Assign tables", pick tables on
+   the plan, Save. The strip goes, the tables draw as taken with that party's
+   name, and the booking on the Events page is otherwise untouched — same head
+   count, same phone, same notes.
+3. **The steppers stop at its head count.** A booking for 10 cannot be seated
+   past 10 from the map; the API refuses it too.
+4. **The whole area is refused over one.** While a hall-only booking stands for
+   that day, "Take the whole area" is unavailable on the kiosk, and creating a
+   whole-area booking from the map is refused by name (`#N (Customer)`). One
+   individual table in the same room still books fine.
+5. **Times read correctly.** A booking made for 19:00 shows 19:00 on the map's
+   booking card, in the Schedule and on the printed sheet. Before this it read
+   14:00 — five hours early, in the middle of lunch.
+6. **The map is on the Summary, for both sessions.** On the Small Banquets
+   kiosk pick Banquet: the menu page no longer has a floor plan, and the Summary
+   has one directly under the date and time. With no date entered it says to
+   enter one rather than drawing a plan of today.
+7. **It fits.** The plan fills the width of its section and is not dragged
+   sideways to find a table. On a phone (under 700px) it is deliberately wider
+   than its frame and scrolls — a fitted plan draws a four-top 28px wide there.
+8. **Pricing has moved down.** The Summary is one column: customer details, the
+   map, the event overview, dishes, services, then pricing, then the actions
+   last. Nothing is sticky.
+9. **The printed sheet.** With the admin in Russian, download a hall's plan:
+   the heading, legend, list and every Cyrillic name are readable text, not
+   random glyphs. Switch to Uzbek and English and download again — the whole
+   sheet changes language each time.
+10. **Part-filled tables.** Seat 3 guests at a table for 10 and print: that
+    table is shaded rather than solid, carries `3/10`, its booking line says
+    "7 seats free", and the legend has three entries. Photocopy it in black and
+    white — the three tones still read apart.
+11. **A booking with no tables is on the sheet**, under "No tables assigned
+    yet", with its time, head count and phone.
+12. **The Small Banquets kitchen.** Sign in as a `SMALL_KITCHEN` account: each
+    booking card lists the table package's dishes and heads the rest
+    "Additional dishes", exactly as the banquet Kitchen does, and names the
+    tables the party sits at (or says they are not assigned yet). Check the
+    banquet `KITCHEN` is unchanged.

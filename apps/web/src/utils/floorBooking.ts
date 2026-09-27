@@ -111,6 +111,27 @@ export function tableHolders(
   return holders;
 }
 
+/**
+ * A booking that names an area but holds nothing on its map.
+ *
+ * Mirrors the API's rule. Every booking made on the Events page is one of
+ * these — that form has a hall picker and no table picker — so the evening is
+ * real, the room is taken and the map showed nothing at all. They are LISTED
+ * rather than counted as holding tables: which tables the party sits at is
+ * precisely what nobody has decided yet.
+ */
+export function assignsNoTables(booking: Pick<MapBooking, 'wholeHall' | 'floorTables'>): boolean {
+  return !booking.wholeHall && booking.floorTables.length === 0;
+}
+
+/** Those of the day's bookings that name an area and hold nothing in it. */
+export function unassignedBookings(occupancy: MapOccupancy | undefined, hallId?: string): MapBooking[] {
+  return (occupancy?.bookings ?? []).filter((b) => holdsTables(b.status)
+    && assignsNoTables(b)
+    && !!b.hallId
+    && (!hallId || b.hallId === hallId));
+}
+
 /** The booking holding a whole area on this day, if any. */
 export function areaHolder(occupancy: MapOccupancy | undefined, hallId: string): MapBooking | null {
   return (occupancy?.bookings ?? []).find((b) => b.wholeHall && b.hallId === hallId && holdsTables(b.status)) ?? null;
@@ -119,6 +140,10 @@ export function areaHolder(occupancy: MapOccupancy | undefined, hallId: string):
 /**
  * Whether the whole area can still be taken: every table in it free. An area
  * with no tables drawn cannot be let — "all of nothing" is not a venue.
+ *
+ * A booking that names the area and holds no table blocks it too, as on the
+ * server: each table there is still bookable, but letting the WHOLE room out
+ * from under a party already booked into it is a double-booking of the room.
  */
 export function wholeAreaAvailable(
   hallId: string,
@@ -127,6 +152,7 @@ export function wholeAreaAvailable(
 ): boolean {
   const tables = tablesByHall.get(hallId) ?? [];
   if (tables.length === 0) return false;
+  if (unassignedBookings(occupancy, hallId).length > 0) return false;
   const holders = tableHolders(occupancy, tablesByHall);
   return tables.every((id) => !holders.has(id));
 }

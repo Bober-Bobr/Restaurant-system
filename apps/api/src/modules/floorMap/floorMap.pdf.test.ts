@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bookingsForArea, buildFloorPlanPdf, heldTables } from './floorMap.pdf.service.js';
+import { readFileSync } from 'node:fs';
+import { bookingsForArea, buildFloorPlanPdf, fillOf, heldTables, stringsFor, timeOf } from './floorMap.pdf.service.js';
 import type { BookingRow } from '../../utils/floorBooking.js';
 import type { AreaRow, TableRow } from './floorMap.repository.js';
 
@@ -74,6 +75,121 @@ describe('which bookings belong on this sheet', () => {
   });
 });
 
+describe('a reserved table says whether it is FULL', () => {
+  // A party of three at a ten-top leaves seven seats the restaurant can still
+  // sell; a sheet that draws that exactly like a full table hides it.
+  const held = (seated: number) => heldTables(
+    [booking({ id: 'e1', floorTables: [{ floorTableId: 't1', guestCount: seated }] })], 'street',
+  );
+
+  it('part-filled, full and free are three different states', () => {
+    const six = { id: 't1', seats: 6 };
+    const part = held(3);
+    expect(fillOf(six, part.held, part.guests, part.whole)).toBe('partly');
+    const all = held(6);
+    expect(fillOf(six, all.held, all.guests, all.whole)).toBe('taken');
+    expect(fillOf({ id: 't2', seats: 6 }, all.held, all.guests, all.whole)).toBe('free');
+  });
+
+  it('a whole-area booking is full — it has no per-table count', () => {
+    const { held: h, guests, whole } = heldTables([booking({ id: 'w', wholeHall: true })], 'street');
+    expect(whole).not.toBeNull();
+    expect(fillOf({ id: 't1', seats: 6 }, h, guests, whole)).toBe('taken');
+  });
+
+  it('and the three tones are distinct, so the sheet survives a mono photocopy', () => {
+    // Read off the source: the fills are what carries the state on paper.
+    const src = readFileSync(new URL('./floorMap.pdf.service.ts', import.meta.url), 'utf8');
+    const fills = [...src.matchAll(/^const (TAKEN_FILL|PARTLY_FILL|FREE_FILL) = '(#[0-9a-f]{6})';/gm)]
+      .map((m) => m[2]);
+    expect(fills).toHaveLength(3);
+    expect(new Set(fills).size).toBe(3);
+  });
+});
+
+describe('the sheet is translated whole, and its clock is the reader\'s', () => {
+  it('every language declares every string — a half-translated sheet cannot be switched on paper', () => {
+    const en = stringsFor('en');
+    for (const lang of ['ru', 'uz']) {
+      const s = stringsFor(lang);
+      expect(Object.keys(s).sort(), lang).toEqual(Object.keys(en).sort());
+      for (const [key, value] of Object.entries(s)) {
+        expect(value, `${lang}.${key} is empty`).toBeTruthy();
+        expect(value, `${lang}.${key} was never translated`).not.toBe((en as Record<string, string>)[key]);
+      }
+    }
+  });
+
+  it('an unknown or missing language reads in English rather than blank', () => {
+    expect(stringsFor(undefined)).toEqual(stringsFor('en'));
+    expect(stringsFor('de')).toEqual(stringsFor('en'));
+    // Case is not a language.
+    expect(stringsFor('RU')).toEqual(stringsFor('ru'));
+  });
+
+  it('the uz strings carry no apostrophes, like every other uz string here', () => {
+    for (const value of Object.values(stringsFor('uz'))) expect(value).not.toMatch(/['’]/);
+  });
+
+  it('a 19:00 booking prints as 19:00 in the restaurant\'s own timezone', () => {
+    // Stored as an instant: five hours earlier in UTC. Printed as UTC it read
+    // 14:00 — the middle of lunch — which is what item 4 was.
+    expect(timeOf('2026-10-02T14:00:00.000Z', 300)).toBe('19:00');
+    // No offset given is UTC, unchanged behaviour for any caller that sends none.
+    expect(timeOf('2026-10-02T14:00:00.000Z')).toBe('14:00');
+    // Over midnight, and unparseable input.
+    expect(timeOf('2026-10-02T22:30:00.000Z', 300)).toBe('03:30');
+    expect(timeOf('nonsense', 300)).toBe('');
+  });
+
+  it('the Cyrillic font is registered, with a fallback that still produces a sheet', () => {
+    const src = readFileSync(new URL('./floorMap.pdf.service.ts', import.meta.url), 'utf8');
+    // Helvetica is WinAnsi-encoded: every Russian letter came out as a random
+    // glyph. The other exports here register the same font the same way.
+    expect(src).toContain("doc.registerFont('R', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')");
+    expect(src).toContain("doc.registerFont('B', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')");
+    expect(src).toContain('catch { /* keep Helvetica */ }');
+    // And nothing draws with the built-in font any more, or that line reverts
+    // to mojibake on its own.
+    const body = src.slice(src.indexOf('export function buildFloorPlanPdf'));
+    expect(body.match(/\.font\('Helvetica(-Bold)?'\)/g), 'a draw call still names Helvetica').toBeNull();
+  });
+});
+
+describe('what reaches the sheet from the request and the database', () => {
+  const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+
+  it('the controller forwards the language and the timezone it was sent', () => {
+    // Parsed but dropped, the sheet silently reverts to English UTC — which
+    // looks exactly like the bug it fixes.
+    const controller = read('./floorMap.controller.ts');
+    expect(controller).toContain('printSchema.parse(request.query)');
+    expect(controller).toContain('buildFloorPlanPdf({ ...plan, lang, tzOffsetMinutes: tz })');
+  });
+
+  it('and the day is read with the bookings that merely NAME an area', () => {
+    // Source-reading, like `sectionScoping.test.ts`: there is no database in
+    // this suite and what matters is the shape of the query. Without the third
+    // arm, a booking made on the Events page is nowhere on the map or the
+    // sheet, which is what item 1 was.
+    const repo = read('./floorMap.repository.ts');
+    const both = [...repo.matchAll(/OR: \[[^\]]*\]/g)].map((m) => m[0]);
+    expect(both.length, 'the day and schedule queries').toBe(2);
+    for (const clause of both) {
+      expect(clause).toContain('{ wholeHall: true }');
+      expect(clause).toContain('{ floorTables: { some: {} } }');
+      expect(clause, 'a booking that only names an area is filtered out again').toContain('{ hallId: { not: null } }');
+    }
+  });
+
+  it('as is the clash check that refuses a whole-area booking over one', () => {
+    const floor = read('../events/event.floorTables.ts');
+    const clause = floor.match(/OR: \[[^\]]*\]/)?.[0] ?? '';
+    expect(clause).toContain('{ hallId: { not: null } }');
+  });
+});
+
 describe('the document itself', () => {
   const render = (doc: PDFKit.PDFDocument): Promise<Buffer> => new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -110,6 +226,35 @@ describe('the document itself', () => {
       tables: TABLES,
       bookings: [],
       day: '2026-10-03',
+    });
+    expect((await render(doc)).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('builds a Russian sheet with Cyrillic names throughout', async () => {
+    // What garbled: the area's name, the zone labels and the customers'.
+    const doc = buildFloorPlanPdf({
+      area: area({
+        name: 'Новый зал',
+        mapFeatures: [{ kind: 'zone', shape: 'rect', x: 40, y: 40, width: 300, height: 200, label: 'Терраса' }],
+      }),
+      tables: TABLES,
+      bookings: [booking({ id: 'e1', customerName: 'Каримов', floorTables: [{ floorTableId: 't1', guestCount: 4 }] })],
+      day: '2026-10-02',
+      restaurantName: 'Сангизар',
+      lang: 'ru',
+      tzOffsetMinutes: 300,
+    });
+    expect((await render(doc)).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('builds one listing a booking that names the area and holds no table', async () => {
+    // The Events page makes these; they used to be nowhere on the sheet.
+    const doc = buildFloorPlanPdf({
+      area: area(),
+      tables: TABLES,
+      bookings: [booking({ id: 'pending', eventNumber: 12, guestCount: 40, customerPhone: '+998901112233' })],
+      day: '2026-10-02',
+      lang: 'uz',
     });
     expect((await render(doc)).subarray(0, 5).toString()).toBe('%PDF-');
   });

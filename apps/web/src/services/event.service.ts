@@ -27,6 +27,13 @@ export const eventService = {
     brideName?: string;
     groomName?: string;
     honoreePersonName?: string;
+    /**
+     * Where the booking sits on the floor map — the tables it takes, or the
+     * whole area. Checked server-side against the day (event.floorTables.ts);
+     * omitting them on an update leaves a booking's tables alone.
+     */
+    floorTables?: { floorTableId: string; guestCount: number }[];
+    wholeHall?: boolean;
   }) {
     const { data } = await httpClient.post<Event>('/events', payload);
     return data;
@@ -52,6 +59,13 @@ export const eventService = {
     brideName?: string;
     groomName?: string;
     honoreePersonName?: string;
+    /**
+     * Where the booking sits on the floor map — the tables it takes, or the
+     * whole area. Checked server-side against the day (event.floorTables.ts);
+     * omitting them on an update leaves a booking's tables alone.
+     */
+    floorTables?: { floorTableId: string; guestCount: number }[];
+    wholeHall?: boolean;
   }>) {
     const { data } = await httpClient.patch<Event>(`/events/${eventId}`, payload);
     return data;

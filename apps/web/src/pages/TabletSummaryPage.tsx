@@ -809,13 +809,15 @@ export const TabletSummaryPage = () => {
             navigate('/tablet', { state: { fromSummary: true } });
           }} />
 
-        {/* Two columns only when the sidebar has the pricing panel to carry.
-            A general-dining booking has no pricing, so the sidebar would be a
-            narrow strip holding Confirm alone beside a column of half-width
-            fields — the page runs as ONE column instead and the actions fall
-            to the very bottom, full width, which is also where a form's
-            submit belongs. */}
-        <div className={`grid grid-cols-1 gap-4 lg:gap-6${surface.pricing ? ' lg:grid-cols-[1.3fr_0.7fr]' : ''}`}>
+        {/* ONE column, in both sessions.
+            It used to be two whenever there was a pricing panel to carry, with
+            pricing sticky down the right-hand side. The floor plan is now on
+            this page for a banquet as well, and a plan of a venue in 0.65 of a
+            page is a plan nobody can read — so the sidebar is gone, pricing
+            has moved down into the flow near the bottom, and the map and the
+            other blocks have the full width. The actions stay LAST, which is
+            where a form's submit belongs. */}
+        <div className="grid grid-cols-1 gap-4 lg:gap-6">
 
           {/* ── Left column ── */}
           <div className="min-w-0 space-y-6">
@@ -983,10 +985,13 @@ export const TabletSummaryPage = () => {
               </div>
             </section>
 
-            {/* The floor map. The banquet session picks its tables on the
-                menu page; the dining session has no menu page, so it picks
-                them here. */}
-            {!surface.menu && <KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />}
+            {/* The floor map — where the party will sit, in BOTH sessions.
+                It used to be on the menu page for a banquet evening, which put
+                it a page away from the date and time it depends on: what is
+                free is entirely a question about a DAY, and the day is typed
+                directly above. So it lives here, under those fields, and the
+                menu page no longer carries it at all. */}
+            <KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />
 
             {/* Event overview */}
             <section className="rg-card p-4 sm:p-6 reveal">
@@ -1091,11 +1096,11 @@ export const TabletSummaryPage = () => {
             )}
           </div>
 
-          {/* ── Sidebar ── */}
-          {/* Sticky only while it is a sidebar: at the foot of one column
-              there is nothing for it to stick beside, and a sticky footer
-              would cover the fields above it. */}
-          <aside className={`min-w-0 space-y-4${surface.pricing ? ' lg:sticky lg:top-6 lg:self-start' : ''}`}>
+          {/* ── The foot of the page: what it costs, then what to do ──
+              Never sticky. This is the bottom of one column now, so there is
+              nothing for it to stick beside and a sticky footer would sit over
+              the fields above it. */}
+          <aside className="min-w-0 space-y-4">
 
             {/* Pricing */}
             {/* Pricing — the discount, the manual total, the deposit, the per

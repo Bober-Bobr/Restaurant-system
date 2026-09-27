@@ -114,7 +114,10 @@ export async function resolveFloorTables(
         where: {
           restaurantId, section,
           eventDate: dayRange(day),
-          OR: [{ wholeHall: true }, { floorTables: { some: {} } }],
+          // Whole-area bookings, bookings holding tables, and bookings that
+          // merely name an area: the last hold nothing, but the whole of a room
+          // cannot be let over the top of one (see `wholeAreaAvailable`).
+          OR: [{ wholeHall: true }, { floorTables: { some: {} } }, { hallId: { not: null } }],
         },
         select: {
           id: true, eventNumber: true, customerName: true, customerPhone: true,
