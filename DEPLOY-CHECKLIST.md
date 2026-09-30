@@ -3423,3 +3423,15 @@ Sign in as an **OWNER** at `cabinet.v-menu.uz` and open **Reports**.
     owner asking for a restaurant they do not own gets **404**, not 403.
 16. The Reports chunk is fetched only when the tab is pressed, and the four
     sections each fetch only when opened (check the network tab).
+17. **The cabinet's own navigation on a phone.** At 390px the row of four tabs
+    (Companies / Reports / Users / Devices) is replaced by a menu button at the
+    top left. Press it: a panel lists all four, with a tick on the one you are
+    on. Pick another and confirm the page changes AND the panel closes.
+18. The button's label is the page you are on — check it changes to "Users"
+    after picking Users. Switch the language to **Uzbek** (the longest labels)
+    and confirm nothing is clipped.
+19. **Dismissal.** The panel closes on Escape, on a tap outside it, and on
+    picking a page. Pressing the button while it is open closes it — it must not
+    close and immediately re-open.
+20. **Above 720px the tabs come back** and the button disappears; there must be
+    no width that shows both or neither. Check at 700 and 760.

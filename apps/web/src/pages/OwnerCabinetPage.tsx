@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Fragment, Suspense, lazy, useState } from 'react';
+import { Fragment, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
 import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { DevicesPanel } from '../components/DevicesPanel';
@@ -28,6 +28,21 @@ type Tab = 'companies' | 'reports' | 'users' | 'devices';
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 /**
+ * The cabinet's four pages, in one list.
+ *
+ * Stated once because the row of tabs and the mobile menu are two renderings of
+ * the SAME four destinations — written out twice, a page added later reaches one
+ * of them and is invisible on the other, which on a phone means invisible full
+ * stop.
+ */
+const TABS: { id: Tab; key: Parameters<typeof translate>[0] }[] = [
+  { id: 'companies', key: 'companies' },
+  { id: 'reports', key: 'reports' },
+  { id: 'users', key: 'users' },
+  { id: 'devices', key: 'devices' },
+];
+
+/**
  * Reports are LAZY, and that is not incidental.
  *
  * The owner's cabinet is imported statically by App.tsx, so everything it pulls
@@ -48,6 +63,44 @@ export const OwnerCabinetPage = () => {
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
   const [tab, setTab] = useState<Tab>('companies');
+
+  // ── The mobile menu ───────────────────────────────────────────────────────
+  // The four tabs are a single flex row, and in Russian they measure wider than
+  // a phone. `.adm-bg` CLIPS horizontally rather than scrolling (it has to — a
+  // scroll container there would break every `position: sticky` descendant, see
+  // CLAUDE.md), so the tabs past the edge were not merely awkward: they could
+  // not be reached at all. Below the breakpoint the row is replaced by this.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const burgerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      // Escape closes it and gives focus BACK to the button that opened it —
+      // otherwise focus is left on a node that has just been unmounted and the
+      // next Tab starts again from the top of the document.
+      if (event.key === 'Escape') { setMenuOpen(false); burgerRef.current?.focus(); }
+    };
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || burgerRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    // `pointerdown`, not `click`: a click fires after the press, so a tap that
+    // began outside and ended on the panel would close it under the finger.
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [menuOpen]);
+
+  // Moving to a page closes the menu. Written here rather than in each handler
+  // so a destination added to TABS cannot forget it and leave the sheet covering
+  // the page it just opened.
+  const goTo = (next: Tab) => { setTab(next); setMenuOpen(false); };
 
   // ── Companies ──
   const companiesQuery = useQuery<Company[]>({
@@ -224,7 +277,29 @@ export const OwnerCabinetPage = () => {
         padding: '14px 24px',
         flexWrap: 'wrap', gap: 12,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          {/* The button leads the header, where a thumb reaches it and where
+              every other app on the phone puts one. It carries the CURRENT page
+              as its label, so the header still answers "where am I" — a bare
+              icon takes that away, and it is the one thing a collapsed nav must
+              not lose. */}
+          <button
+            ref={burgerRef}
+            type="button"
+            className="owner-burger"
+            aria-expanded={menuOpen}
+            aria-controls="owner-menu"
+            aria-label={t('menu_navigation')}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              {menuOpen
+                ? <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+                : <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>}
+            </svg>
+            <span className="owner-burger-label">{t(TABS.find((one) => one.id === tab)!.key)}</span>
+          </button>
           <img src={networkingLogoSrc} alt="Networking" style={{ height: 44, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
           <div>
             <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>{t('owner_cabinet')}</h1>
@@ -273,20 +348,51 @@ export const OwnerCabinetPage = () => {
         </div>
       </header>
 
-      <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(var(--adm-bg-rgb),0.5)' }}>
-        <button onClick={() => setTab('companies')} style={tabStyle(tab === 'companies')}>
-          {t('companies')}
-        </button>
-        <button onClick={() => setTab('reports')} style={tabStyle(tab === 'reports')}>
-          {t('reports')}
-        </button>
-        <button onClick={() => setTab('users')} style={tabStyle(tab === 'users')}>
-          {t('users')}
-        </button>
-        <button onClick={() => setTab('devices')} style={tabStyle(tab === 'devices')}>
-          {t('devices')}
-        </button>
+      {/* The wide nav. Hidden below the breakpoint, where the button above
+          carries the same four destinations. */}
+      <nav className="owner-nav" style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(var(--adm-bg-rgb),0.5)' }}>
+        {TABS.map((one) => (
+          <button key={one.id} onClick={() => goTo(one.id)} style={tabStyle(tab === one.id)}>
+            {t(one.key)}
+          </button>
+        ))}
       </nav>
+
+      {/* The mobile menu. Rendered only while open, rather than hidden in CSS,
+          so its items are not in the tab order or findable by ctrl-F on a
+          desktop where the button itself is not shown. */}
+      {menuOpen && (
+        <div className="owner-menu-wrap">
+          <div
+            id="owner-menu"
+            ref={menuRef}
+            className="owner-menu"
+            role="menu"
+            aria-label={t('menu_navigation')}
+          >
+            {TABS.map((one) => (
+              <button
+                key={one.id}
+                type="button"
+                role="menuitem"
+                // `aria-current`, not just a colour: a screen reader gets the
+                // same "you are here" the highlight gives everyone else.
+                aria-current={tab === one.id ? 'page' : undefined}
+                className={`owner-menu-item${tab === one.id ? ' is-active' : ''}`}
+                onClick={() => goTo(one.id)}
+              >
+                {t(one.key)}
+                {tab === one.id && (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <main className="tablet-fade-in" style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 24px', position: 'relative', zIndex: 1 }}>
 
@@ -612,6 +718,68 @@ export const OwnerCabinetPage = () => {
       </main>
 
       <style>{`
+        /* ── The mobile menu ───────────────────────────────────────────────
+           The four tabs are ONE flex row that neither wraps nor scrolls, and
+           .adm-bg clips horizontally rather than scrolling (it must — a scroll
+           container there would break every sticky descendant, see CLAUDE.md).
+           So a tab past the right edge was not awkward, it was
+           UNREACHABLE. Measured, the row needs 444px in English, 542px in
+           Russian and 588px in Uzbek — which is the default locale, so the
+           worst case is the usual one: at 390px two of the four had no way to be
+           pressed.
+
+           720px is the breakpoint because it clears the worst language with room
+           to spare and is the one this file already uses for its other mobile
+           rules; a second, nearby breakpoint would just be a second number to
+           keep in step. */
+        .owner-burger { display: none; }
+        @media (max-width: 720px) {
+          .owner-nav { display: none !important; }
+          .owner-burger {
+            display: inline-flex; align-items: center; gap: 8px;
+            /* 44px tall: a tap target, not a link. */
+            min-height: 44px; padding: 8px 13px;
+            border-radius: 10px; cursor: pointer;
+            border: 1px solid rgba(var(--adm-accent-rgb),0.34);
+            background: rgba(var(--adm-accent-rgb),0.11);
+            color: var(--adm-accent);
+            font-size: 13px; font-weight: 700; font-family: inherit;
+            max-width: 52vw;
+          }
+          .owner-burger-label {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+          }
+        }
+        .owner-menu-wrap {
+          position: sticky; top: 0; z-index: 40;
+          padding: 0 16px;
+        }
+        .owner-menu {
+          display: grid; gap: 4px;
+          margin: 8px 0 0; padding: 7px;
+          border-radius: 13px;
+          border: 1px solid rgba(255,255,255,0.12);
+          /* Opaque, not translucent: it sits over the page's own cards and
+             anything see-through makes both unreadable at once. */
+          background: #131c30;
+          box-shadow: 0 18px 40px rgba(0,0,0,0.5);
+        }
+        .owner-menu-item {
+          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+          width: 100%; min-height: 46px; padding: 11px 14px;
+          border: 0; border-radius: 9px; cursor: pointer;
+          background: transparent; color: #e2e8f0;
+          font-size: 14.5px; font-weight: 600; font-family: inherit; text-align: left;
+        }
+        .owner-menu-item:hover { background: rgba(255,255,255,0.055); }
+        .owner-menu-item.is-active {
+          background: rgba(var(--adm-accent-rgb),0.15);
+          color: var(--adm-accent);
+        }
+        .owner-menu-item:focus-visible {
+          outline: 2px solid var(--adm-accent); outline-offset: -2px;
+        }
+
         @media (max-width: 720px) {
           .owner-company-header {
             flex-wrap: wrap;
