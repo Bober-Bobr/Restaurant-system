@@ -34,6 +34,7 @@ import { telegramRouter } from './modules/telegram/telegram.routes.js';
 import { adminOrInviteAuthMiddleware } from './modules/vinvite/vinvite.middleware.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { expenseRouter } from './modules/expense/expense.routes.js';
+import { reportRouter } from './modules/report/report.routes.js';
 
 export const app = express();
 
@@ -95,6 +96,12 @@ protectedApi.use('/orders', requireRestaurant, orderRouter);
 protectedApi.use('/restaurants', restaurantRouter);
 // Restaurant Manager expense ledger — scoped to the calling manager, not a restaurant.
 protectedApi.use('/expenses', requireRole(AdminRole.RESTAURANT_MANAGER, AdminRole.CHIEF_ADMIN), expenseRouter);
+// The owner's Reports page. No requireRestaurant: an OWNER is a platform role
+// whose own `restaurantId` is null and who owns several restaurants, so the
+// scope is resolved from what they actually own — see report.scope.ts. Read-only,
+// which is what makes it safe for this to be the one place all three systems'
+// prices are shown side by side.
+protectedApi.use('/reports', requireRole(AdminRole.OWNER, AdminRole.CHIEF_ADMIN), reportRouter);
 protectedApi.use('/companies', companyRouter);
 // Performers and hosts: not tied to a restaurant, so no requireRestaurant. Each
 // route inside is PERFORMER/HOST-only and scoped to the caller's own id.

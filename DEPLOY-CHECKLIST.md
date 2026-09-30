@@ -3365,3 +3365,61 @@ Web-only. Nothing to migrate and no script to run.
     still free" at the top of the panel. Click a fully seated table: no spare
     seats are offered. Click a free one: the panel says Free, not "0 of 10".
 12. A whole-area booking's tables read as full, and offer no spare seats.
+
+## §67 — The owner's Reports page (**no migration**)
+
+New: a fourth tab in the owner's cabinet with profit and loss, dining areas, the
+dish table and staff, plus five read-only endpoints under `/api/reports`. No
+schema change — everything is read from tables that already exist.
+
+Sign in as an **OWNER** at `cabinet.v-menu.uz` and open **Reports**.
+
+1. **The restaurant picker** lists every restaurant that owner owns, and "All my
+    restaurants" rolls them together. Pick one: every figure on every tab changes.
+2. **The window.** 30 / 90 / 365 days and a custom range. Set a custom range
+    ending today and confirm **today's** takings are in it — a window that stopped
+    at midnight would drop the day. Reverse the dates: the report swaps them
+    rather than going blank.
+3. **The headline** is net profit, green, with the margin beneath. Force a loss
+    month in the ledger and confirm the figure goes red and reads "Net loss" —
+    it must never be floored at zero.
+4. **Revenue and spending by month** shows two bars per month, and every month in
+    the window has a column even if the restaurant was shut. Hover one: the
+    tooltip names the month and both figures.
+5. **Profit and loss by month** draws losses BELOW the zero line in red. Check a
+    small loss beside a large profit: the loss bar must be short, not half the
+    chart — both arms share one step.
+6. **Bookings are NOT in the profit figure.** Add up a month's bookings and
+    confirm the revenue figure is not that plus the ledger. The panel says why.
+7. **"N bookings cannot be in the ledger"** appears when a day has two bookings
+    in the same sitting (morning / afternoon / evening). Make two evening
+    bookings on one day to see it.
+8. **A restaurant with no Restaurant Manager** shows the amber "no expense
+    ledger" notice and no profit — not a flat zero. Create a manager for it and
+    the notice goes.
+9. **Day expenses.** Enter a day-level additional expense in the ledger. It
+    appears under "What was spent on" and LOWERS the owner's profit — the
+    Restaurant Manager's own day total will still not include it, and the note on
+    the panel says so. Confirm the two figures differ by exactly that amount.
+10. **Dining areas.** Each hall shows bookings, guests, fill %, invoiced,
+    collected and still owed, in both sections. The blue notice states that
+    spending is not recorded per area — check no per-area profit is shown
+    anywhere. Bookings with no hall appear as a "No room named" row.
+11. **Menu.** Every dish with all three prices side by side; a price switched off
+    for one system is struck through with "off" beside it. Change the banquet
+    price of a dish in the admin app and confirm only the banquet column moves.
+    The page is read-only — there must be no way to edit a price from here.
+12. Search a dish by name, filter by category, and try all four sort orders. The
+    count reads "Showing N of M".
+13. **Staff.** Waiter rows show orders, revenue, average order, tables and the
+    last order. Close an order as a Food Employee and confirm it appears. Delete
+    a waiter account: their closed orders stay, as one "Former staff" row — the
+    per-waiter figures must still add up to the restaurant total.
+14. **A phone (390px).** All four sub-tabs are visible as a 2×2 grid — none
+    hidden behind a scroll. No chart is cut off at the right edge, no month label
+    is clipped, and the wide tables scroll sideways within their panel while the
+    page itself does not scroll sideways at all.
+15. **A CHIEF_ADMIN** can open the same endpoints; any other role gets 403. An
+    owner asking for a restaurant they do not own gets **404**, not 403.
+16. The Reports chunk is fetched only when the tab is pressed, and the four
+    sections each fetch only when opened (check the network tab).

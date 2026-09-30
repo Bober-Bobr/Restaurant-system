@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Fragment, useState } from 'react';
+import { Fragment, Suspense, lazy, useState } from 'react';
 import { authService, type AdminUser } from '../services/auth.service';
 import { EditCredentialsForm } from '../components/EditCredentialsForm';
 import { DevicesPanel } from '../components/DevicesPanel';
@@ -24,8 +24,21 @@ const formatError = (error: unknown): string => {
   return 'Something went wrong';
 };
 
-type Tab = 'companies' | 'users' | 'devices';
+type Tab = 'companies' | 'reports' | 'users' | 'devices';
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
+
+/**
+ * Reports are LAZY, and that is not incidental.
+ *
+ * The owner's cabinet is imported statically by App.tsx, so everything it pulls
+ * in lands in the entry chunk that every public page downloads — the catering
+ * site, a published invitation, the page behind an NFC tag. The Reports page
+ * carries the chart kit and five payload type surfaces and is opened by one role
+ * on purpose, so it is split off. Same reasoning as the product roots in App.tsx
+ * (see CLAUDE.md, "Code splitting").
+ */
+const OwnerReportsPage = lazy(() =>
+  import('./OwnerReportsPage').then((module) => ({ default: module.OwnerReportsPage })));
 
 export const OwnerCabinetPage = () => {
   const username = useAuthStore((s) => s.username);
@@ -263,6 +276,9 @@ export const OwnerCabinetPage = () => {
       <nav style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(var(--adm-bg-rgb),0.5)' }}>
         <button onClick={() => setTab('companies')} style={tabStyle(tab === 'companies')}>
           {t('companies')}
+        </button>
+        <button onClick={() => setTab('reports')} style={tabStyle(tab === 'reports')}>
+          {t('reports')}
         </button>
         <button onClick={() => setTab('users')} style={tabStyle(tab === 'users')}>
           {t('users')}
@@ -581,6 +597,15 @@ export const OwnerCabinetPage = () => {
               </div>
             </section>
           </>
+        )}
+
+        {tab === 'reports' && (
+          // The fallback is a shimmer rather than blank: this chunk is fetched on
+          // the tab press, and an empty panel for a round trip reads as a tab
+          // that does nothing.
+          <Suspense fallback={<div className="skeleton-shimmer" style={{ height: 260, borderRadius: 12 }} />}>
+            <OwnerReportsPage locale={locale} />
+          </Suspense>
         )}
 
         {tab === 'devices' && <DevicesPanel locale={locale} />}
