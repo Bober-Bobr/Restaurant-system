@@ -12,6 +12,7 @@ import { MoneyInput } from '../components/ui/MoneyInput';
 import { AutosaveStatus } from '../components/ui/AutosaveStatus';
 import { useAutosave } from '../hooks/useAutosave';
 import type { ExtraService } from '../types/domain';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 
 const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
 
@@ -59,7 +60,7 @@ function MediaField({
           {uploading ? t('uploading') : t('add_video')}
         </Button>
         {error && <span style={{ color: '#fca5a5', fontSize: 12 }}>{error}</span>}
-        <input ref={photoInputRef} type="file" accept="image/*" multiple hidden
+        <input ref={photoInputRef} type="file" accept={IMAGE_ACCEPT} multiple hidden
           onChange={(e) => upload(e.target.files, 'photo')} />
         <input ref={videoInputRef} type="file" accept="video/*" multiple hidden
           onChange={(e) => upload(e.target.files, 'video')} />

@@ -3435,3 +3435,42 @@ Sign in as an **OWNER** at `cabinet.v-menu.uz` and open **Reports**.
     close and immediately re-open.
 20. **Above 720px the tabs come back** and the button disappears; there must be
     no width that shows both or neither. Check at 700 and 760.
+
+## §68 — HEIC photos (**no migration**)
+
+An iPhone photographs in HEIC and no browser but Safari draws one, so those
+uploads have been landing on disk and showing as broken images. New uploads are
+now re-encoded to JPEG; the ones already uploaded are converted when served.
+
+**One new dependency** — `heic-convert` (pure JS/wasm, no native build, no system
+package). `deploy.sh` runs `npm install`, so nothing extra is needed on the
+server; just confirm the install picked it up.
+
+1. **Upload a HEIC from an iPhone** on the Menu page's photo picker. It appears
+    immediately — not as a broken image — and the stored URL ends in **`.jpg`**.
+2. Check the file on the server: `ls apps/api/uploads/<restaurantId>/menu/` shows
+    a `.jpg`, and `file <name>` says `JPEG image data`.
+3. **The same photo through every other picker**: Halls, Table categories, the
+    Photos page, a restaurant/company logo, a performer's avatar and gallery,
+    extra-service photos, the Additional Services invitation form, and the guest
+    **review** form on the catering site. All display.
+4. **An already-uploaded HEIC now displays.** Find a photo that was broken before
+    this deploy and open the page it is on — it draws. Its URL still ends in
+    `.heic`; that is expected, the bytes come back as JPEG.
+5. The first load of such a photo takes about 1.5 s; **reload and it is instant**
+    (a `.jpeg-cache` directory appears beside the original). Confirm the photo
+    picker still shows **one** copy of each photo, not two.
+6. **JPEG and PNG uploads are untouched** — upload one of each and confirm the
+    bytes on disk are identical to the file you chose.
+7. **An AVIF still uploads and displays.** This is the regression to watch: AVIF
+    is the same container as HEIC and must not be sent to the HEIC decoder.
+8. **A damaged HEIC is refused with a clear message** ("This HEIC photo could not
+    be read…"), not stored. Truncate a HEIC to a few hundred bytes to test.
+9. **The server stays responsive during a big upload.** Send ten HEICs at once
+    and load another page meanwhile — it must not hang. (The decode runs on a
+    worker thread; on the main thread this froze everything for ~13 s.)
+10. Check the API logs after step 8: there must be **no `Could not parse HEIF
+    file` noise** — libheif prints that on stdout and the worker detaches it.
+11. On a phone, confirm the file dialog actually OFFERS HEIC from every picker
+    listed in step 3 — the four that used to send a bare `image/*` are the ones
+    to check (performer avatar/gallery, extra services, Additional Services).

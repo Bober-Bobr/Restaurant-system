@@ -5,6 +5,7 @@ import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
 import { getPhotoUrl } from '../utils/photoUrl';
 import { FilePickButton } from '../components/ui/FilePickButton';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 
 // A performer's or host's own profile: the avatar, gallery and showreel that
 // guests see in the matching Additional Services block. Identical for both
@@ -124,7 +125,7 @@ export const PerformerProfilePage = () => {
                 </div>
               )}
               <FilePickButton
-                accept="image/*"
+                accept={IMAGE_ACCEPT}
                 disabled={uploading !== null}
                 onPick={(files) => void upload('avatar', files)}
                 className="adm-filepick"
@@ -226,7 +227,7 @@ export const PerformerProfilePage = () => {
       {/* ── Gallery ── */}
       <MediaSection
         title={t('pf_photos')} items={draft.photos} kind="photos" t={t}
-        uploading={uploading === 'photos'} accept="image/*"
+        uploading={uploading === 'photos'} accept={IMAGE_ACCEPT}
         onUpload={(files) => void upload('photos', files)}
         onRemove={(url) => setDraft({ ...draft, photos: draft.photos.filter((p) => p !== url) })}
       />

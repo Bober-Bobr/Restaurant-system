@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { AdminRole } from '@prisma/client';
 import { requireRole } from '../../middleware/auth.middleware.js';
 import { PerformerController } from './performer.controller.js';
-import { isAllowedImage } from '../../utils/imageUpload.js';
+import { isAllowedImage, prepareUpload } from '../../utils/imageUpload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = Router();
@@ -48,9 +48,15 @@ router.post('/me/media', performerOnly, mediaUpload.array('file', 10), async (re
     await fs.mkdir(dir, { recursive: true });
     const urls: string[] = [];
     for (const file of files) {
-      const ext = path.extname(file.originalname).toLowerCase() || '.bin';
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-      await fs.writeFile(path.join(dir, filename), file.buffer);
+      // This route takes a showreel as well as photos, so only the images go
+      // through the HEIC conversion — a video keeps its own container and its
+      // own extension, and `.bin` stays its fallback.
+      const isVideo = file.mimetype.startsWith('video/');
+      const { buffer, extension } = isVideo
+        ? { buffer: file.buffer, extension: path.extname(file.originalname).toLowerCase() || '.bin' }
+        : await prepareUpload(file);
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`;
+      await fs.writeFile(path.join(dir, filename), buffer);
       urls.push(`/uploads/performers/${req.admin!.id}/${filename}`);
     }
     res.json({ urls, url: urls[0] });

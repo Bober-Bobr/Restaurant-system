@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import createHttpError from 'http-errors';
 import { getExcludedEverywhere } from '../../utils/excludedCategories.js';
-import { IMAGE_EXTENSIONS } from '../../utils/imageUpload.js';
+import { IMAGE_EXTENSIONS, prepareUpload } from '../../utils/imageUpload.js';
 
 export type PhotoCategory = 'menu' | 'hall' | 'table' | 'invitation';
 
@@ -58,9 +58,11 @@ export class PhotoService {
     for (const file of files) {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 8);
-      const extension = path.extname(file.originalname).toLowerCase();
+      // An iPhone photographs in HEIC, which only Safari draws — `prepareUpload`
+      // re-encodes it to JPEG and reports the extension to store it under.
+      const { buffer, extension } = await prepareUpload(file);
       const filename = `${timestamp}-${random}${extension}`;
-      await fs.writeFile(path.join(dir, filename), file.buffer);
+      await fs.writeFile(path.join(dir, filename), buffer);
       const urlPath = category === 'menu' && dishCategory
         ? `/uploads/${slug}/${category}/${dishCategory}/${filename}`
         : `/uploads/${slug}/${category}/${filename}`;

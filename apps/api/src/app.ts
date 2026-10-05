@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { AdminRole } from '@prisma/client';
 import { adminAuthMiddleware, requireRestaurant, requireRole } from './middleware/auth.middleware.js';
+import { heicUploads } from './middleware/heicUploads.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { notFoundMiddleware } from './middleware/notFound.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
@@ -55,7 +56,13 @@ const uploadsDir = path.resolve(__dirname, '..', 'uploads');
 app.use('/uploads', (_req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
-}, express.static(uploadsDir, {
+},
+// Photos uploaded BEFORE HEIC was converted on the way in are still on disk and
+// still referenced from a dozen tables and several JSON blobs; this hands them
+// back as JPEG so they draw. Ahead of express.static, or the static server would
+// answer first with `image/heic` and the browser would show nothing.
+heicUploads(uploadsDir),
+express.static(uploadsDir, {
   maxAge: '1y',
   etag: false
 }));

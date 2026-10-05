@@ -8,6 +8,7 @@ import { translate, defaultLocale, locales, type Locale } from '../utils/transla
 import { getPhotoUrl } from '../utils/photoUrl';
 import { FilePickButton } from '../components/ui/FilePickButton';
 import networkingLogoSrc from '../assets/networking-logo.png';
+import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 
 // The banquet product's event types, reused verbatim so an order that came from
 // a confirmed event carries the same type through. Labels come from the shared
@@ -309,7 +310,7 @@ function InvitationSection({ t, prefill }: {
         )}
         {photoUrls.length < MAX_PHOTOS && (
           <FilePickButton
-            accept="image/*"
+            accept={IMAGE_ACCEPT}
             multiple
             disabled={uploading}
             onPick={(files) => void pickPhotos(files)}

@@ -19,7 +19,7 @@ import { GuestInvitationController } from '../guestInvitation/guestInvitation.co
 import { ReviewController } from '../review/review.controller.js';
 import { NfcPlaqueController } from '../nfcPlaque/nfcPlaque.controller.js';
 import { PlatformContactService } from '../platformContact/platformContact.service.js';
-import { isAllowedImage } from '../../utils/imageUpload.js';
+import { isAllowedImage, prepareUpload } from '../../utils/imageUpload.js';
 import { InviteRequestService } from '../inviteRequest/inviteRequest.service.js';
 import { createInviteRequestSchema } from '../inviteRequest/inviteRequest.schema.js';
 import { InviteOrderService } from '../inviteOrder/inviteOrder.service.js';
@@ -90,9 +90,11 @@ router.post('/review-photo', reviewPhotoUpload.single('file'), async (req, res, 
     if (!req.file) { res.status(400).json({ message: 'No file provided' }); return; }
     const dir = path.resolve(__dirname, '..', '..', '..', 'uploads', 'reviews');
     await fs.mkdir(dir, { recursive: true });
-    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    await fs.writeFile(path.join(dir, filename), req.file.buffer);
+    // A guest reviewing on an iPhone photographs in HEIC, which only Safari
+    // draws; `prepareUpload` re-encodes it to JPEG.
+    const { buffer, extension } = await prepareUpload(req.file);
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`;
+    await fs.writeFile(path.join(dir, filename), buffer);
     res.json({ url: `/uploads/reviews/${filename}` });
   } catch (err) { next(err); }
 });
@@ -139,9 +141,9 @@ router.post('/invite-request-photo', reviewPhotoUpload.array('file', 10), async 
     await fs.mkdir(dir, { recursive: true });
     const urls: string[] = [];
     for (const file of files) {
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-      await fs.writeFile(path.join(dir, filename), file.buffer);
+      const { buffer, extension } = await prepareUpload(file);
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`;
+      await fs.writeFile(path.join(dir, filename), buffer);
       urls.push(`/uploads/invite-requests/${filename}`);
     }
     // `url` is kept alongside `urls` so a single-file caller still works.

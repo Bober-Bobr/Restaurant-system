@@ -23,6 +23,7 @@
     "dotenv": "latest",
     "exceljs": "latest",
     "express": "latest",
+    "heic-convert": "^2.1.0",
     "helmet": "latest",
     "http-errors": "latest",
     "jsonwebtoken": "latest",
