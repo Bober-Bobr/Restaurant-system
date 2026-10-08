@@ -1084,9 +1084,9 @@ export const FloorMapPage = () => {
             {booking ? t('cancel') : t('fm_new_booking')}
           </button>
           <span className="fm-legend">
-            <span><i className="fm-swatch" style={{ background: 'rgb(var(--adm-surface-rgb))' }} />{t('fm_free')}</span>
-            <span><i className="fm-swatch" style={{ background: 'rgba(148,163,184,0.26)' }} />{t('fm_partly')}</span>
-            <span><i className="fm-swatch" style={{ background: 'rgba(148,163,184,0.55)' }} />{t('fm_taken')}</span>
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-free)' }} />{t('fm_free')}</span>
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-partly)' }} />{t('fm_partly')}</span>
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-taken)' }} />{t('fm_taken')}</span>
             <span>{t('fm_occupancy_summary', { taken: takenHere, total: areaTables.length })}</span>
             {/* Only when there are any: a standing "0 part-filled" is noise. */}
             {partlyHere > 0 && <span>{t('fm_partly_summary', { count: partlyHere })}</span>}
@@ -1317,6 +1317,19 @@ export const FloorMapPage = () => {
         .fm-feature.is-label .fm-feature-label { fill: rgba(var(--adm-text-rgb), 0.75); font-weight: 700; }
         .fm-resize { fill: var(--adm-accent); opacity: 0.85; cursor: nwse-resize; touch-action: none; }
 
+        /* The three states, declared ONCE. The legend swatches used to repeat
+           these as literals beside the rules, so changing a fill changed the
+           plan and left the legend describing the old one. */
+        .fm-page {
+          --fm-free: rgb(var(--adm-surface-rgb));
+          --fm-taken: rgba(239, 68, 68, 0.92);
+          --fm-taken-line: #ef4444;
+          --fm-taken-ink: #fff5f5;
+          --fm-partly: #fde047;
+          --fm-partly-line: #fde047;
+          --fm-partly-ink: #3a2c05;
+        }
+
         .fm-table-group { cursor: pointer; outline: none; }
         .fm-table-group.is-editable { cursor: grab; touch-action: none; }
         .fm-table-group.is-dragging { cursor: grabbing; opacity: 0.85; }
@@ -1325,17 +1338,32 @@ export const FloorMapPage = () => {
         .fm-table-group.is-selected .fm-top, .fm-table-group:focus-visible .fm-top { stroke: var(--adm-accent); stroke-width: 4; }
         .fm-table-group.is-selected .fm-chair { stroke: var(--adm-accent); }
         .fm-table-group.is-overlapping .fm-top, .fm-table-group.is-overlapping .fm-chair { stroke: #f87171; }
-        /* Taken on the chosen day: filled, so it reads without colour too. */
-        .fm-table-group.is-taken .fm-top { fill: rgba(148,163,184,0.55); stroke: rgba(148,163,184,0.9); }
+        /* Taken on the chosen day: RED, and still filled, so a photograph of
+           the screen or a colour-blind reader has the fill to go on as well.
+           The red stops short of the brightest available because the table
+           NUMBER is printed on it in light ink: at rgba(239,68,68,0.92) the
+           number holds 3.6:1 and the table holds 3.9:1 against the ground,
+           and a brighter red buys visibility by taking it off the number. */
+        .fm-table-group.is-taken .fm-top { fill: var(--fm-taken); stroke: var(--fm-taken-line); }
         .fm-table-group.is-taken .fm-chair { opacity: 0.4; }
-        .fm-table-group.is-taken .fm-table-seats { fill: rgba(var(--adm-text-rgb), 0.85); font-weight: 700; }
-        /* Reserved, with seats still to sell. A LIGHTER fill than a full table,
-           the same pair of tones the printed sheet uses, so the two documents
-           say the same thing about the same room. Outlined the same as taken,
-           because it is taken — what differs is how much of it. */
-        .fm-table-group.is-partly .fm-top { fill: rgba(148,163,184,0.26); stroke: rgba(148,163,184,0.9); }
+        .fm-table-group.is-taken .fm-table-label,
+        .fm-table-group.is-taken .fm-table-seats { fill: var(--fm-taken-ink); font-weight: 700; }
+        /* Reserved, with seats still to sell: YELLOW, the same answer the
+           printed sheet gives, so the two documents agree about the same room.
+           Outlined like taken, because it IS taken — what differs is how much.
+
+           The yellow is fully opaque and deliberately far more saturated than
+           the gold accent: is-picked paints a drafting booking in that gold,
+           and at the first yellow tried the two sat 4.5 apart in OKLab, so a
+           part-filled table and one you had just picked looked identical. At
+           this yellow they are 21 apart, and 20 under both common kinds of
+           colour blindness. */
+        .fm-table-group.is-partly .fm-top { fill: var(--fm-partly); stroke: var(--fm-partly-line); }
         .fm-table-group.is-partly .fm-chair { opacity: 0.7; }
-        .fm-table-group.is-partly .fm-table-seats { fill: var(--adm-accent); font-weight: 800; }
+        /* Dark ink, not the accent: gold on yellow cannot be read, and the
+           number is the thing this table is being drawn for. */
+        .fm-table-group.is-partly .fm-table-label,
+        .fm-table-group.is-partly .fm-table-seats { fill: var(--fm-partly-ink); font-weight: 800; }
         /* Picked for the booking being drafted. */
         .fm-table-group.is-picked .fm-top { fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent); }
         .fm-table-group.is-picked .fm-table-label,

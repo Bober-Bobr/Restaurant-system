@@ -97,13 +97,58 @@ describe('a reserved table says whether it is FULL', () => {
     expect(fillOf({ id: 't1', seats: 6 }, h, guests, whole)).toBe('taken');
   });
 
-  it('and the three tones are distinct, so the sheet survives a mono photocopy', () => {
-    // Read off the source: the fills are what carries the state on paper.
+  it('and the three fills survive a mono photocopy, which is what fixes them', () => {
+    // The fills are red / yellow / open now rather than three greys, and the
+    // photocopy argument is the thing that still decides WHICH red and yellow.
+    // A scanner sees BT.601 luma: these have to stay plainly different greys,
+    // in the order taken ‹ partly ‹ free. Three distinct hex strings is not
+    // enough — two colours can differ and photocopy to the same shade, which
+    // is the failure nobody notices until somebody is holding the copy.
     const src = readFileSync(new URL('./floorMap.pdf.service.ts', import.meta.url), 'utf8');
-    const fills = [...src.matchAll(/^const (TAKEN_FILL|PARTLY_FILL|FREE_FILL) = '(#[0-9a-f]{6})';/gm)]
-      .map((m) => m[2]);
-    expect(fills).toHaveLength(3);
-    expect(new Set(fills).size).toBe(3);
+    const named = Object.fromEntries(
+      [...src.matchAll(/^const (TAKEN_FILL|PARTLY_FILL|FREE_FILL) = '(#[0-9a-f]{6})';/gm)]
+        .map((m) => [m[1], m[2]]),
+    ) as Record<string, string>;
+    expect(Object.keys(named).sort()).toEqual(['FREE_FILL', 'PARTLY_FILL', 'TAKEN_FILL']);
+
+    const luma = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    };
+    const taken = luma(named.TAKEN_FILL);
+    const partly = luma(named.PARTLY_FILL);
+    const free = luma(named.FREE_FILL);
+
+    expect(taken, 'taken must photocopy darkest').toBeLessThan(partly);
+    expect(partly, 'part-filled must photocopy lighter than taken').toBeLessThan(free);
+    // Far enough apart to read as different shades on a poor copier.
+    expect(partly - taken, 'taken vs part-filled').toBeGreaterThan(60);
+    expect(free - partly, 'part-filled vs free').toBeGreaterThan(30);
+  });
+
+  it('prints a label the table\'s own fill can carry', () => {
+    // White goes on the red and ink on the yellow, so each number is readable
+    // against the thing it is written on. WCAG 4.5:1 both ways.
+    const src = readFileSync(new URL('./floorMap.pdf.service.ts', import.meta.url), 'utf8');
+    const fill = (name: string) =>
+      new RegExp(`^const ${name} = '(#[0-9a-f]{6})';`, 'm').exec(src)![1];
+
+    const channel = (c: number) => (c / 255 <= 0.04045 ? c / 255 / 12.92 : (((c / 255) + 0.055) / 1.055) ** 2.4);
+    const relLum = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => channel(parseInt(hex.slice(i, i + 2), 16)));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const contrast = (a: string, b: string) => {
+      const [hi, lo] = [relLum(a), relLum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+
+    expect(contrast('#ffffff', fill('TAKEN_FILL')), 'white number on the red')
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast('#111827', fill('PARTLY_FILL')), 'ink number on the yellow')
+      .toBeGreaterThanOrEqual(4.5);
+    // And the sheet actually draws them that way round.
+    expect(src).toMatch(/fillColor\(state === 'taken' \? '#ffffff' : INK\)/);
   });
 });
 

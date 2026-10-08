@@ -116,12 +116,24 @@ const INK = '#111827';
 const MUTED = '#6b7280';
 const LINE = '#d1d5db';
 /**
- * A taken table is filled, a part-filled one is shaded and a free one is left
- * open — three tones, not three colours, because the sheet is photocopied and
- * the fill has to carry the state on its own.
+ * Taken is RED, part-filled is YELLOW, free is left open.
+ *
+ * These were three greys, on the reasoning that the sheet gets photocopied and
+ * a colour cannot be relied on. The greys were hard to read across a room, so
+ * they are colours now — but **the photocopy argument still holds**, and it is
+ * what fixes the particular red and yellow rather than any others: a mono
+ * scanner sees BT.601 luma, and these three land at **95 / 207 / 255**, which
+ * is still three plainly different greys in the order taken ‹ partly ‹ free.
+ * Pick a darker yellow or a lighter red and the colour sheet still looks fine
+ * while its photocopy goes flat — which is the failure nobody notices until
+ * somebody is holding the copy.
+ *
+ * The red is also dark enough to carry the WHITE table number printed on it
+ * (4.8:1), and the yellow light enough to carry the INK one (12.5:1); those two
+ * are the real bounds on how bright either can go.
  */
-const TAKEN_FILL = '#9ca3af';
-const PARTLY_FILL = '#e5e7eb';
+const TAKEN_FILL = '#d92d20';
+const PARTLY_FILL = '#ffd43b';
 const FREE_FILL = '#ffffff';
 
 const FEATURE_FILL: Record<string, string> = {
@@ -288,8 +300,10 @@ export function buildFloorPlanPdf(plan: PrintablePlan): PDFKit.PDFDocument {
     doc.translate(X(table.x), Y(table.y)).rotate(table.rotation);
     if (table.shape === 'ROUND') doc.ellipse(0, 0, w / 2, h / 2);
     else doc.roundedRect(-w / 2, -h / 2, w, h, Math.min(3, w / 6));
-    // A part-filled table is outlined heavier as well as shaded: at the size a
-    // table is drawn on an A4 plan, two greys alone are easy to mistake.
+    // A part-filled table is outlined heavier as well as filled. That began as
+    // the only thing separating two greys; it is kept now that they are
+    // colours, because it is also what survives the photocopy and what a
+    // red/green reader has left when red and yellow converge.
     doc.lineWidth(state === 'partly' ? 1.6 : 0.7).fillAndStroke(fill, INK);
     doc.restore();
     doc.lineWidth(1);
@@ -297,7 +311,9 @@ export function buildFloorPlanPdf(plan: PrintablePlan): PDFKit.PDFDocument {
     // The number is drawn UPRIGHT whatever the table's rotation — a label
     // turned 45° is a label nobody reads across a room.
     const size = Math.max(5, Math.min(11, Math.min(w, h) * 0.42));
-    // Ink on the shaded fill, not white: white on #e5e7eb is unreadable.
+    // White on the red, ink on the yellow and on the open table. White on
+    // #ffd43b would be unreadable, which is what sets this apart per state
+    // rather than one colour for every number.
     doc.fillColor(state === 'taken' ? '#ffffff' : INK).font(B).fontSize(size)
       .text(table.label, X(table.x) - 30, Y(table.y) - size * 0.75, { width: 60, align: 'center' });
     const seated = guestsAt.get(table.id);

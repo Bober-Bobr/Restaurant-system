@@ -3474,3 +3474,34 @@ server; just confirm the install picked it up.
 11. On a phone, confirm the file dialog actually OFFERS HEIC from every picker
     listed in step 3 — the four that used to send a bare `image/*` are the ones
     to check (performer avatar/gallery, extra services, Additional Services).
+
+## §69 — Table status colours on the map and the printed sheet (**no migration**)
+
+The three table states were two shades of the same blue-grey and a white. They
+are now **taken = red, part-filled = yellow, free = unchanged**, on the
+supervisor's floor map and on the PDF it prints.
+
+1. **The map** (`supervisor.v-menu.uz/<slug>/`). Pick a day with bookings on it.
+    A fully seated table is **red** with its number in white; a part-filled one
+    is **yellow** with its number in dark ink; a free one is unchanged — dark
+    with a gold outline.
+2. **The legend in the day bar matches the plan.** Compare each swatch against a
+    table of that state: they are drawn from the same values, so any difference
+    means something has been hard-coded again.
+3. **A table being picked for a new booking is still clearly its own colour.**
+    Press "New booking", pick a free table, and check the gold it turns is not
+    mistakable for a part-filled table's yellow with both on screen.
+4. **Edit the map.** In edit mode no table is red or yellow — occupancy is not
+    drawn there. Drag two tables until they overlap: the overlap warning outlines
+    them in red, and that must be the only red on the screen.
+5. **The PDF** ("Print the plan" for the same day). Taken tables are red with
+    white numbers, part-filled yellow with dark numbers and a heavier outline,
+    free ones open. The legend under the plan matches.
+6. **Photocopy it, or print it on a mono printer.** The three states must still
+    be three different shades — dark, light, white — and the number on the dark
+    one still readable. This is the check that matters most; the colours were
+    chosen so the copy survives.
+7. Print in all three languages and confirm nothing about the legend shifted.
+8. **The guest kiosk is deliberately unchanged** — its plan has no part-filled
+    state and a guest-facing grid of red tables was not what was asked for. If it
+    should follow, that is a separate change to `FloorPlanView`'s `--fp-*`.

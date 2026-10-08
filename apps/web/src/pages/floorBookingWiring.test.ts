@@ -203,7 +203,7 @@ describe('the admin map', () => {
     expect(admin).toContain("!editing && fill === 'partly' ? 'is-partly' : '',");
     expect(admin).toContain('const fill = tableFill(table, holders, seatedAt);');
     // The fill carries it, as on the sheet.
-    expect(admin).toContain('.fm-table-group.is-partly .fm-top { fill: rgba(148,163,184,0.26);');
+    expect(admin).toContain('.fm-table-group.is-partly .fm-top { fill: var(--fm-partly);');
     // …and it must come AFTER the is-taken rule: a part-filled table carries
     // both classes and the two rules are equally specific.
     expect(admin.indexOf('.fm-table-group.is-partly .fm-top'))
@@ -370,5 +370,63 @@ describe('one drawing, two screens', () => {
   it('the plan\'s styles are exported, not copied into each caller', () => {
     expect(plan).toContain('export const FLOOR_PLAN_CSS');
     expect(kiosk).toContain('${FLOOR_PLAN_CSS}');
+  });
+});
+
+
+// ── The three table states, and the one place their colours live ────────────
+// Taken is red, part-filled yellow, free left as it was. These are read off the
+// source because there is no DOM here; what the browser actually paints was
+// measured separately (see CLAUDE.md).
+
+describe('the status colours are declared once', () => {
+  const page = readFileSync(join(__dirname, 'FloorMapPage.tsx'), 'utf8');
+  const styleBlock = (): string => {
+    const start = page.indexOf('<style>{`');
+    const end = page.indexOf('`}</style>');
+    expect(start).toBeGreaterThan(-1);
+    return page.slice(start + '<style>{`'.length, end);
+  };
+
+  it('declares every state as a custom property on the page root', () => {
+    const tokens = /\.fm-page \{([\s\S]*?)\}/.exec(styleBlock())?.[1] ?? '';
+    for (const name of ['--fm-free', '--fm-taken', '--fm-partly']) {
+      expect(tokens, name).toContain(`${name}:`);
+    }
+  });
+
+  it('paints the LEGEND from those same properties, never from its own copy', () => {
+    // The swatches used to repeat the fills as literals beside the rules, so a
+    // changed fill left the legend describing the colour the plan no longer
+    // used — a key that disagrees with the map it explains.
+    for (const token of ['var(--fm-free)', 'var(--fm-partly)', 'var(--fm-taken)']) {
+      expect(page).toContain(`background: '${token}'`);
+    }
+    expect(page).not.toContain('rgba(148,163,184,0.55)');
+    expect(page).not.toContain('rgba(148,163,184,0.26)');
+  });
+
+  it('gives the part-filled table DARK ink', () => {
+    // Its number used to be drawn in the gold accent, which on yellow cannot be
+    // read — and the number is what the table is being drawn for.
+    expect(styleBlock()).toMatch(/\.fm-table-group\.is-partly \.fm-table-seats \{ fill: var\(--fm-partly-ink\)/);
+    expect(styleBlock()).toMatch(/\.fm-table-group\.is-partly \.fm-table-label,/);
+  });
+
+  it('keeps occupancy off the map while it is being EDITED', () => {
+    // The whole reason a red `is-taken` can coexist with the red `is-overlapping`
+    // stroke: they are never on screen together. Drop the guard and a table
+    // flagged as overlapping becomes indistinguishable from a booked one.
+    for (const cls of ['is-taken', 'is-partly']) {
+      expect(page).toContain(`!editing && `);
+      expect(page).toMatch(new RegExp(`!editing && [^\\n]*'${cls}'`));
+    }
+  });
+
+  it('has no backtick inside the style block, which would end it early', () => {
+    // A prose comment written with code spans terminates the template literal
+    // and the file stops compiling. That happened while these colours were
+    // being written.
+    expect(styleBlock()).not.toContain('`');
   });
 });
