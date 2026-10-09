@@ -10,6 +10,7 @@ import { translate, locales, type Locale } from '../utils/translate';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 import { getPhotoUrl } from '../utils/photoUrl';
+import { hallPhotoList, hallPhotoPayload } from '../utils/hallPhotos';
 import { buildAbsoluteUrl } from '../utils/subdomain';
 import { PhotoUploadField } from '../components/PhotoUploadField';
 import networkingLogoSrc from '../assets/networking-logo.png';
@@ -391,18 +392,14 @@ function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; res
   const [name, setName] = useState(hall.name);
   const [capacity, setCapacity] = useState(String(hall.capacity));
   const [description, setDescription] = useState(hall.description ?? '');
-  const [photos, setPhotos] = useState<string[]>(() => {
-    const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
-    return Array.from(new Set(all));
-  });
+  const [photos, setPhotos] = useState<string[]>(() => hallPhotoList(hall));
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setName(hall.name);
     setCapacity(String(hall.capacity));
     setDescription(hall.description ?? '');
-    const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
-    setPhotos(Array.from(new Set(all)));
+    setPhotos(hallPhotoList(hall));
   }, [hall.id, hall.name, hall.capacity, hall.description, hall.photoUrl, hall.photos]);
 
   const save = useMutation({
@@ -412,8 +409,7 @@ function HallEditor({ hall, restaurantId, locale, onChanged }: { hall: Hall; res
         name: name.trim() || hall.name,
         capacity: Number(capacity) || hall.capacity,
         description: description.trim() || null,
-        photoUrl: list[0] ?? null,
-        photos: list,
+        ...hallPhotoPayload(list),
       });
     },
     onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 1500); onChanged(); },

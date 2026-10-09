@@ -3,15 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { publicHallService } from '../services/publicHall.service';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { hallPhotoList } from '../utils/hallPhotos';
 import type { Hall } from '../types/domain';
 import { Lightbox } from './Lightbox';
 import { SectionHeading, useT } from './ui';
-
-// Combine a hall's single photoUrl + photos array into a unique, ordered list.
-function hallPhotoList(hall: Hall): string[] {
-  const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
-  return Array.from(new Set(all));
-}
 
 function useHalls(restaurantId: string) {
   return useQuery({

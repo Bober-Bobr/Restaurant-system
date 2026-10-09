@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
-import { translate } from '../utils/translate';
+import { translate, type TranslationKey } from '../utils/translate';
+import type { Hall } from '../types/domain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { MAX_HALL_PHOTOS, hallPhotoList, hallPhotoPayload } from '../utils/hallPhotos';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { MoneyInput } from '../components/ui/MoneyInput';
@@ -26,6 +28,39 @@ const parsePositiveInt = (value: string): number | null => {
   return parsed;
 };
 
+/**
+ * The cover photo in the list, with how many more there are behind it.
+ *
+ * A hall with one photo and a hall with nine look identical from a cover alone,
+ * so the count is what says a gallery exists at all without opening the editor.
+ */
+const HallThumb = ({ hall, t }: { hall: Hall; t: (key: TranslationKey, params?: Record<string, string | number>) => string }) => {
+  const photos = hallPhotoList(hall);
+  if (photos.length === 0) return null;
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <img
+        src={getPhotoUrl(photos[0])}
+        alt={hall.name}
+        style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', display: 'block' }}
+      />
+      {photos.length > 1 && (
+        <span
+          title={t('hall_photos_count', { count: photos.length })}
+          style={{
+            position: 'absolute', bottom: 3, right: 3,
+            padding: '1px 5px', borderRadius: 999,
+            background: 'rgba(0,0,0,0.65)', color: '#fff',
+            fontSize: 10, fontWeight: 700,
+          }}
+        >
+          +{photos.length - 1}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export const AdminHallsPage = () => {
   const queryClient = useQueryClient();
   const { locale } = useAdminStore();
@@ -38,14 +73,14 @@ export const AdminHallsPage = () => {
   const [name, setName] = useState('');
   const [capacityText, setCapacityText] = useState('100');
   const [description, setDescription] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editCapacityText, setEditCapacityText] = useState('100');
   const [editDescription, setEditDescription] = useState('');
-  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [editPhotos, setEditPhotos] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
 
   const validation = useMemo(() => {
@@ -84,7 +119,7 @@ export const AdminHallsPage = () => {
         name: name.trim(),
         capacity: validation.capacity,
         description: description.trim() ? description.trim() : undefined,
-        photoUrl: photoUrl.trim() ? photoUrl.trim() : undefined,
+        ...hallPhotoPayload(photos),
         isActive: true
       });
     },
@@ -92,6 +127,11 @@ export const AdminHallsPage = () => {
       setName('');
       setCapacityText('100');
       setDescription('');
+      // The gallery is cleared with the rest of the form. It was not before —
+      // when this field held one photo that was a small annoyance; eight photos
+      // of the room just created, pre-attached to the next one, is a mistake
+      // waiting to be saved.
+      setPhotos([]);
       await queryClient.invalidateQueries({ queryKey: ['halls'] });
     }
   });
@@ -117,7 +157,7 @@ export const AdminHallsPage = () => {
     setEditName(hall.name);
     setEditCapacityText(hall.capacity.toString());
     setEditDescription(hall.description || '');
-    setEditPhotoUrl(hall.photoUrl || '');
+    setEditPhotos(hallPhotoList(hall));
     setEditIsActive(hall.isActive);
   };
 
@@ -134,11 +174,11 @@ export const AdminHallsPage = () => {
         name: editName.trim(),
         capacity: editValidation.capacity,
         description: editDescription.trim() || undefined,
-        photoUrl: editPhotoUrl.trim() ? editPhotoUrl.trim() : undefined,
+        ...hallPhotoPayload(editPhotos),
         isActive: editIsActive,
       },
     };
-  }, [editingId, editValidation, editName, editDescription, editPhotoUrl, editIsActive]);
+  }, [editingId, editValidation, editName, editDescription, editPhotos, editIsActive]);
 
   const autosave = useAutosave({
     value: editPayload,
@@ -175,9 +215,11 @@ export const AdminHallsPage = () => {
           <div style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
             <PhotoSelector
               category="hall"
-              selectedPhotoUrl={photoUrl || undefined}
-              onPhotoSelect={(url: string | undefined) => setPhotoUrl(url || '')}
-              placeholder={t('select_hall_photo')}
+              multiple
+              selectedPhotoUrls={photos}
+              onPhotosChange={setPhotos}
+              max={MAX_HALL_PHOTOS}
+              placeholder={t('select_hall_photos')}
             />
           </div>
           <label style={{ display: 'grid', gap: 6, gridColumn: '1 / -1' }}>
@@ -248,9 +290,11 @@ export const AdminHallsPage = () => {
                       <div style={{ marginBottom: 12 }}>
                         <PhotoSelector
                           category="hall"
-                          selectedPhotoUrl={editPhotoUrl || undefined}
-                          onPhotoSelect={(url) => setEditPhotoUrl(url || '')}
-                          placeholder={t('select_hall_photo')}
+                          multiple
+                          selectedPhotoUrls={editPhotos}
+                          onPhotosChange={setEditPhotos}
+                          max={MAX_HALL_PHOTOS}
+                          placeholder={t('select_hall_photos')}
                         />
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -273,13 +317,7 @@ export const AdminHallsPage = () => {
                   ) : (
                     <>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                        {hall.photoUrl ? (
-                          <img
-                            src={getPhotoUrl(hall.photoUrl)}
-                            alt={hall.name}
-                            style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)' }}
-                          />
-                        ) : null}
+                        <HallThumb hall={hall} t={t} />
                         <div>
                           <strong style={{ color: '#f8fafc', fontSize: 15 }}>{hall.name}</strong>
                           <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(226,232,240,0.6)' }}>

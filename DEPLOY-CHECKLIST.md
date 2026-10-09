@@ -3505,3 +3505,44 @@ supervisor's floor map and on the PDF it prints.
 8. **The guest kiosk is deliberately unchanged** — its plan has no part-filled
     state and a guest-facing grid of red tables was not what was asked for. If it
     should follow, that is a separate change to `FloorPlanView`'s `--fp-*`.
+
+## §70 — Several photos per hall, in both sections (**no migration**)
+
+`Hall.photos` has existed for a while and **only the manager portal could ever
+write it**, so a restaurant's own admin could attach exactly one photo to a room
+while both public sites already drew a gallery from the column. The Halls page
+now takes as many as thirty, in an order, and `photoUrl` is kept as a mirror of
+the first — the cover — so every single-photo screen still shows the room.
+
+1. **Banquet** (`banquet.v-menu.uz/<slug>` → Halls). In "Create hall", press
+    **Upload from device** and pick **several files at once**. All of them must
+    appear in the chosen strip, numbered, the first badged "Cover" — before this
+    the picker kept one and dropped the rest.
+2. Tick a few more from the library below. The tiles carry their **position**,
+    not a tick, and the strip and the library agree about the order.
+3. Press the **‹ ›** arrows on a photo. Moving one to the front changes which is
+    badged "Cover". The arrows are dead at the two ends.
+4. Create the hall, then confirm the create form's gallery is **empty** — eight
+    photos of the room just made, still attached to the next one, is a mistake
+    waiting to be saved.
+5. **Edit** that hall. The editor opens with every photo it has. Add and remove
+    some: there is no Save button here, so watch the autosave status go to saved.
+6. **Remove every photo** and reload. The hall must come back with none — this
+    is the one that used to fail silently (the payload left the key out, so the
+    server kept the old photo).
+7. **Small Banquets** (`supervisor.v-menu.uz/<slug>` → Halls): repeat steps 1–6.
+    It is the same page over the section's own halls, so the behaviour must be
+    identical. The **photo library is shared** with the banquet side — it is one
+    restaurant's folder, not a per-section one, and that is pre-existing.
+8. **The cover reaches the single-photo screens.** Check the hall row's thumbnail
+    in the list (with a "+N" badge for the rest), the kiosk's hall picker and the
+    booking form: each shows the cover, not a blank.
+9. **The public gallery.** On `v-menu.uz/<slug>` → Halls, the card shows the
+    cover with a count and the hall's own page lists every photo in the chosen
+    order. Same on `test.v-menu.uz/<slug>`.
+10. **The limit.** Choose thirty photos: the upload button goes dead and a line
+    says why. A 31st tick is refused rather than evicting one already arranged —
+    the API refuses the write at the same number.
+11. **The manager portal** (`manager.v-menu.uz` → a restaurant → Halls) still
+    works as before; it now writes the pair through the same helper.
+12. **An iPhone HEIC still converts** (§68) when uploaded here — several at once.

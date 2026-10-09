@@ -19,14 +19,16 @@ export const hallService = {
     name: string;
     capacity: number;
     description?: string;
-    photoUrl?: string;
+    // Nullable, so an empty gallery can state that there is no cover rather
+    // than leaving the key out — see hallPhotoPayload.
+    photoUrl?: string | null;
     photos?: string[];
     isActive?: boolean;
   }) {
     const { data } = await httpClient.post<Hall>('/halls', payload);
     return data;
   },
-  async update(id: string, payload: Partial<Omit<Hall, 'id'>>) {
+  async update(id: string, payload: HallPayload) {
     const { data } = await httpClient.patch<Hall>(`/halls/${id}`, payload);
     return data;
   },

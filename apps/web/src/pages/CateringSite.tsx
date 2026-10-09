@@ -9,6 +9,7 @@ import { useAdminStore } from '../store/admin.store';
 import { Locale, locales, translate } from '../utils/translate';
 import { toSubdomainSlug } from '../utils/subdomain';
 import { getPhotoUrl } from '../utils/photoUrl';
+import { hallPhotoList } from '../utils/hallPhotos';
 import { IMAGE_ACCEPT } from '../utils/uploadFormats';
 import { dishName, dishDescription } from '../utils/menuI18n';
 import { formatSum } from '../utils/currency';
@@ -29,12 +30,6 @@ const C = {
   starOff: 'rgba(255,255,255,0.22)',
   line: 'rgba(255,255,255,0.12)',
 };
-
-// Combine a hall's single photoUrl + photos array into a unique, ordered list.
-function hallPhotoList(hall: Hall): string[] {
-  const all = [hall.photoUrl, ...(hall.photos ?? [])].filter((p): p is string => !!p);
-  return Array.from(new Set(all));
-}
 
 // Star marking a bestseller dish. `dark` renders a black star (for amber backgrounds).
 function BestsellerBadge({ on, size = 16, dark = false }: { on: boolean; size?: number; dark?: boolean }) {
