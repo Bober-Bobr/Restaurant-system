@@ -1,4 +1,4 @@
-import type { AreaKind, AreaSize, FloorMap, MapArea, MapTable, TableShape } from '../utils/floorMap';
+import type { AreaKind, AreaSize, FloorMap, MapArea, MapFeature, MapTable, TableShape } from '../utils/floorMap';
 import type { MapBooking } from '../utils/floorBooking';
 import { httpClient } from './http';
 
@@ -28,7 +28,16 @@ export const floorMapService = {
     const { data } = await httpClient.post<MapArea>('/floor-map/areas', payload);
     return data;
   },
-  async updateArea(id: string, payload: Partial<AreaSize & { name: string; kind: AreaKind }>) {
+  /**
+   * An area's own fields, and its DRAWING.
+   *
+   * `mapFeatures` is sent as the whole array, because that is the column: there
+   * is no per-shape endpoint and adding one would mean inventing ids for
+   * shapes that have none. The consequence is worth knowing — one bad shape is
+   * a 400 that refuses the whole drawing — which is why the editor is held to
+   * the server's own bounds in utils/floorFeatures.ts.
+   */
+  async updateArea(id: string, payload: Partial<AreaSize & { name: string; kind: AreaKind; mapFeatures: MapFeature[] }>) {
     const { data } = await httpClient.patch<MapArea>(`/floor-map/areas/${id}`, payload);
     return data;
   },

@@ -11,6 +11,12 @@ import {
   seatsIn, tableSize,
   type AreaKind, type FloorMap, type MapArea, type MapFeature, type MapTable, type TableShape,
 } from '../utils/floorMap';
+import {
+  DEFAULT_FEATURE_COLOR,
+  EDITABLE_KINDS, FEATURE_LIMITS, FEATURE_PALETTE, addPolygonCorner, canAddFeature, clearLabelAt, featureAt,
+  featureBox, firstBadFeature, moveFeature, moveLabelTo, newFeature, removePolygonCorner, reorderFeature,
+  resizeFeature, setBoxShape, setPolygonPoint, toPolygon, withColor, withLabel,
+} from '../utils/floorFeatures';
 import { translate } from '../utils/translate';
 import {
   assignsNoTables, dayKey, seatedAtTables, seatsRemaining, tableFill, tableHolders, tablesByHallOf,
@@ -31,10 +37,21 @@ import { useNavigate } from 'react-router-dom';
  * one. Under the tables sits the area's drawing (zones, the pool, the stage),
  * which is data on the area rather than code here.
  *
- * Two modes, because the map is a home page as well as an editor: a supervisor
- * opening it to look must not be able to shove a table across the room with a
- * stray swipe. Viewing selects; "Edit map" is what makes tables draggable and
- * resizable and the area's map resizable.
+ * THREE modes, because the map is a home page as well as two different
+ * editors, and a supervisor opening it to look must not be able to shove a
+ * table across the room with a stray swipe:
+ *
+ *   · viewing      — the day's bookings. A press selects, or opens a booking.
+ *   · the LAYOUT   — "Change table layout": tables move, resize, arrive and go.
+ *   · the DRAWING  — "Edit map": the zones, the pool, the stage, the walkways
+ *                    and the standing labels under the tables.
+ *
+ * They are separate because they are separate jobs on separate things, and
+ * because the gestures collide: dragging in one means moving a table and in
+ * the other means moving the room it stands in. Which mode a press belongs to
+ * is therefore decided by the MODE and never by what is under the finger —
+ * tables stop taking pointer events entirely while the drawing is being
+ * edited, so a press goes to the zone beneath them.
  *
  * The geometry — a table's size, where its chairs stand, what may overlap —
  * lives in utils/floorMap.ts and is tested there. This file is the pointer
@@ -49,10 +66,24 @@ const ZOOM_STEPS = [0.5, 0.75, 1, 1.5, 2, 3];
 /** How far the pointer must travel, in map units, before a press becomes a drag. */
 const DRAG_THRESHOLD = 4;
 
+/**
+ * What the map is for at this moment. Not two booleans: "arranging tables" and
+ * "drawing the room" are mutually exclusive, and a pair of flags can be both
+ * at once, which is a map where one gesture does two things.
+ */
+type EditMode = 'view' | 'tables' | 'zones';
+
 type Drag =
   | { type: 'move'; id: string; dx: number; dy: number; x: number; y: number; moved: boolean }
   | { type: 'resize-table'; id: string; width: number; height: number; moved: boolean }
-  | { type: 'resize-area'; startX: number; startY: number; baseW: number; baseH: number; width: number; height: number; moved: boolean };
+  | { type: 'resize-area'; startX: number; startY: number; baseW: number; baseH: number; width: number; height: number; moved: boolean }
+  // The drawing. `index` is the feature's place in the area's array, which is
+  // its only identity — a stored shape carries no id, and inventing one here
+  // would be stripped by the schema on the way back in.
+  | { type: 'move-feature'; index: number; dx: number; dy: number; baseX: number; baseY: number; x: number; y: number; moved: boolean }
+  | { type: 'resize-feature'; index: number; width: number; height: number; moved: boolean }
+  | { type: 'move-vertex'; index: number; at: number; x: number; y: number; moved: boolean }
+  | { type: 'move-label'; index: number; x: number; y: number; moved: boolean };
 
 type TablePatch = Partial<Pick<MapTable, 'hallId' | 'label' | 'seats' | 'shape' | 'x' | 'y' | 'rotation' | 'width' | 'height'>>;
 
@@ -105,8 +136,21 @@ export const FloorMapPage = () => {
   const features = useMemo(() => (current ? featuresOf(current) : []), [current]);
   const overlapping = useMemo(() => overlappingTables(areaTables), [areaTables]);
 
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<EditMode>('view');
+  /** Nothing is drawn by the day's bookings in either editor — see renderTable. */
+  const editing = mode !== 'view';
+  const editingTables = mode === 'tables';
+  const editingZones = mode === 'zones';
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * The shape being edited, by its place in the array.
+   *
+   * An index rather than a reference, because every edit rewrites the array
+   * and a held object would go stale on the first keystroke. Reordering
+   * follows the move, deleting clears it, and switching area or mode clears it
+   * — an index into another area's drawing points at a different shape.
+   */
+  const [selectedFeature, setSelectedFeature] = useState<number | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   // A phone opens zoomed in: a whole venue fitted to 390px draws table numbers
   // a few pixels high. The map scrolls inside its own frame.
@@ -172,6 +216,14 @@ export const FloorMapPage = () => {
   const unit = Math.max(1, size.width / 1200);
 
   const selectedTable = areaTables.find((x) => x.id === selectedId) ?? null;
+  /**
+   * The shape the drawing editor is on, or null.
+   *
+   * Read through the index every render rather than held, so it is always the
+   * array's current contents: an edit rewrites the array, and a held copy
+   * would leave the panel showing the colour from before the last press.
+   */
+  const selectedShape = editingZones && selectedFeature !== null ? features[selectedFeature] ?? null : null;
 
   // ── Who holds what, on the chosen day ────────────────────────────────────
   const byHall = useMemo(() => tablesByHallOf(tables), [tables]);
@@ -208,6 +260,8 @@ export const FloorMapPage = () => {
 
   const switchArea = (id: string) => {
     setSelectedId(null);
+    // An index into THIS area's drawing means something else in the next one.
+    setSelectedFeature(null);
     setDrag(null);
     // A booking is given tables in ONE area, so moving to another ends it.
     setAssigning(null);
@@ -220,6 +274,27 @@ export const FloorMapPage = () => {
       next.set('area', id);
       return next;
     }, { replace: true });
+  };
+
+  /**
+   * Change what the map is for.
+   *
+   * One place, because every mode change has to drop the same four things: a
+   * drag in flight (its target may not even be editable in the next mode), the
+   * table selection, the shape selection, and anything to do with a booking —
+   * an editor is not where a booking is drafted, and leaving the draft open
+   * would have the plan painted by a booking nobody can finish from here.
+   */
+  const switchMode = (next: EditMode) => {
+    setMode(next);
+    setDrag(null);
+    setSelectedId(null);
+    setSelectedFeature(null);
+    setOpenBooking(null);
+    setOpenTableId(null);
+    setBooking(null);
+    setAssigning(null);
+    setPicked({});
   };
 
   // ── Writing ───────────────────────────────────────────────────────────────
@@ -279,6 +354,75 @@ export const FloorMapPage = () => {
       (m) => ({ ...m, areas: m.areas.map((x) => (x.id === area.id ? { ...x, ...patch } : x)) }),
       () => floorMapService.updateArea(area.id, patch),
     );
+  };
+
+  /**
+   * Write the area's whole drawing.
+   *
+   * The column holds the array, and there is no per-shape endpoint — so every
+   * change to one zone rewrites all of them. Two consequences are handled
+   * here rather than discovered later: the drawing is CHECKED first, because a
+   * single bad shape is a 400 that refuses every other shape with it; and the
+   * cache is patched optimistically like a table move, so dragging a zone is
+   * as smooth as dragging a table.
+   */
+  const writeFeatures = (next: MapFeature[]) => {
+    if (!current) return;
+    const bad = firstBadFeature(next);
+    if (bad !== null) {
+      // Which shape, by its position in the list the panel shows, so it can be
+      // found. A bare "save failed" on a drawing of forty zones is useless.
+      setNotice(t('fm_feature_invalid', { n: bad + 1 }));
+      return;
+    }
+    const area = current;
+    void commit(
+      (m) => ({ ...m, areas: m.areas.map((a) => (a.id === area.id ? { ...a, mapFeatures: next } : a)) }),
+      () => floorMapService.updateArea(area.id, { mapFeatures: next }),
+    );
+  };
+
+  /** Change one shape, leaving the rest of the drawing alone. */
+  const editFeature = (index: number, fn: (f: MapFeature) => MapFeature) => {
+    const target = features[index];
+    if (!target) return;
+    const replaced = fn(target);
+    // Nothing changed — a colour re-picked to the same hex, a name committed
+    // unedited on blur — so nothing is sent.
+    if (JSON.stringify(replaced) === JSON.stringify(target)) return;
+    writeFeatures(features.map((f, i) => (i === index ? replaced : f)));
+  };
+
+  const addFeature = (kind: MapFeature['kind']) => {
+    if (!current) return;
+    if (!canAddFeature(features)) {
+      setNotice(t('fm_feature_limit', { max: FEATURE_LIMITS.maxFeatures }));
+      return;
+    }
+    const next = [...features, newFeature(kind, stored)];
+    // Selected at once: a shape appears in the middle of the map and the next
+    // thing anybody does is give it a name, a colour or a place.
+    setSelectedFeature(next.length - 1);
+    writeFeatures(next);
+  };
+
+  const deleteFeature = (index: number) => {
+    const target = features[index];
+    if (!target) return;
+    const name = target.label ?? t(`fm_kind_${target.kind}` as Parameters<typeof translate>[0]);
+    if (!window.confirm(t('fm_delete_feature_confirm', { name }))) return;
+    setSelectedFeature(null);
+    writeFeatures(features.filter((_, i) => i !== index));
+  };
+
+  /** Move a shape up or down the painting order — the array IS the z-order. */
+  const moveFeatureOrder = (index: number, to: number) => {
+    const next = reorderFeature(features, index, to);
+    if (next === features) return;
+    // The selection follows the shape, not the slot: it is the same zone, and
+    // leaving the index behind would select whichever shape took its place.
+    setSelectedFeature(to);
+    writeFeatures(next);
   };
 
   const addTable = async () => {
@@ -490,6 +634,9 @@ export const FloorMapPage = () => {
   };
 
   const onTablePointerDown = (event: ReactPointerEvent<SVGGElement>, table: MapTable) => {
+    // While the drawing is being edited the tables take no pointer events at
+    // all (see the CSS), so this cannot be reached from there — which is what
+    // lets a press land on the zone UNDER a table.
     setSelectedId(table.id);
     // Not editing the map: a press is about the BOOKING on that table —
     // picking it for the one being drafted, or opening the one that holds it.
@@ -530,6 +677,49 @@ export const FloorMapPage = () => {
     beginDrag(event, { type: 'resize-area', startX: p.x, startY: p.y, baseW: stored.width, baseH: stored.height, ...stored, moved: false });
   };
 
+  /**
+   * A press on the drawing.
+   *
+   * The whole feature layer takes the press, not each shape, because shapes
+   * overlap by design — a zone over a walkway — and an SVG child only receives
+   * what is not covered by a sibling above it. `featureAt` answers with the
+   * TOPMOST shape under the point, which is the one a person believes they
+   * pressed.
+   */
+  const onFeatureLayerPointerDown = (event: ReactPointerEvent<SVGGElement>) => {
+    if (!editingZones) return;
+    const p = toMap(event);
+    const index = featureAt(features, p.x, p.y);
+    setSelectedFeature(index);
+    if (index === null) return;
+    const box = featureBox(features[index]);
+    beginDrag(event, {
+      type: 'move-feature', index,
+      dx: p.x - box.x, dy: p.y - box.y, baseX: box.x, baseY: box.y, x: box.x, y: box.y, moved: false,
+    });
+  };
+
+  const onFeatureHandlePointerDown = (event: ReactPointerEvent<SVGElement>, index: number) => {
+    const f = features[index];
+    if (!f || (f.shape !== 'rect' && f.shape !== 'ellipse')) return;
+    beginDrag(event, { type: 'resize-feature', index, width: f.width, height: f.height, moved: false });
+  };
+
+  const onVertexPointerDown = (event: ReactPointerEvent<SVGElement>, index: number, at: number) => {
+    const f = features[index];
+    if (!f || f.shape !== 'polygon') return;
+    const [x, y] = f.points[at];
+    beginDrag(event, { type: 'move-vertex', index, at, x, y, moved: false });
+  };
+
+  const onFeatureLabelPointerDown = (event: ReactPointerEvent<SVGElement>, index: number) => {
+    const f = features[index];
+    if (!f) return;
+    const [x, y] = featureLabelAt(f);
+    setSelectedFeature(index);
+    beginDrag(event, { type: 'move-label', index, x, y, moved: false });
+  };
+
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (!drag) return;
     const p = toMap(event);
@@ -551,6 +741,20 @@ export const FloorMapPage = () => {
       const wanted = table.shape === 'ROUND' ? { w: 2 * Math.max(lx, ly), h: 2 * Math.max(lx, ly) } : { w: 2 * lx, h: 2 * ly };
       const fitted = fitTableSize(table.shape, table.seats, wanted.w, wanted.h);
       setDrag({ ...drag, ...fitted, moved: true });
+    } else if (drag.type === 'move-feature') {
+      const x = p.x - drag.dx;
+      const y = p.y - drag.dy;
+      setDrag({ ...drag, x, y, moved: drag.moved || Math.hypot(x - drag.baseX, y - drag.baseY) > DRAG_THRESHOLD });
+    } else if (drag.type === 'resize-feature') {
+      const f = features[drag.index];
+      if (!f || (f.shape !== 'rect' && f.shape !== 'ellipse')) return;
+      // The top-left corner stays put and the bottom-right follows the finger,
+      // which is how the table handle and the map handle both already work.
+      setDrag({ ...drag, width: Math.round(p.x - f.x), height: Math.round(p.y - f.y), moved: true });
+    } else if (drag.type === 'move-vertex') {
+      setDrag({ ...drag, x: p.x, y: p.y, moved: true });
+    } else if (drag.type === 'move-label') {
+      setDrag({ ...drag, x: p.x, y: p.y, moved: true });
     } else {
       const min = minAreaSize(areaTables);
       const width = Math.max(min.width, Math.round(drag.baseW + p.x - drag.startX));
@@ -567,6 +771,22 @@ export const FloorMapPage = () => {
       updateArea(current, { mapWidth: done.width, mapHeight: done.height });
       return;
     }
+    if (done.type === 'move-feature') {
+      editFeature(done.index, (f) => moveFeature(f, done.x - done.baseX, done.y - done.baseY));
+      return;
+    }
+    if (done.type === 'resize-feature') {
+      editFeature(done.index, (f) => resizeFeature(f, done.width, done.height));
+      return;
+    }
+    if (done.type === 'move-vertex') {
+      editFeature(done.index, (f) => setPolygonPoint(f, done.at, done.x, done.y));
+      return;
+    }
+    if (done.type === 'move-label') {
+      editFeature(done.index, (f) => moveLabelTo(f, done.x, done.y));
+      return;
+    }
     const table = areaTables.find((x) => x.id === done.id);
     if (!table) return;
     if (done.type === 'move') updateTable(table, { x: Math.round(done.x), y: Math.round(done.y) });
@@ -575,7 +795,7 @@ export const FloorMapPage = () => {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedId(null);
+      if (event.key === 'Escape') { setSelectedId(null); setSelectedFeature(null); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -583,7 +803,25 @@ export const FloorMapPage = () => {
 
   // ── Drawing ───────────────────────────────────────────────────────────────
 
-  const renderFeature = (f: MapFeature, i: number) => {
+  /**
+   * The shape as it stands mid-drag.
+   *
+   * Deliberately the SAME pure functions the commit uses, so what is on screen
+   * during a drag is exactly what is written when the finger comes up. A
+   * separate preview transform is a second implementation of the geometry, and
+   * the two drift into a shape that jumps on release.
+   */
+  const previewFeature = (f: MapFeature, i: number): MapFeature => {
+    if (!drag) return f;
+    if (drag.type === 'move-feature' && drag.index === i) return moveFeature(f, drag.x - drag.baseX, drag.y - drag.baseY);
+    if (drag.type === 'resize-feature' && drag.index === i) return resizeFeature(f, drag.width, drag.height);
+    if (drag.type === 'move-vertex' && drag.index === i) return setPolygonPoint(f, drag.at, drag.x, drag.y);
+    if (drag.type === 'move-label' && drag.index === i) return moveLabelTo(f, drag.x, drag.y);
+    return f;
+  };
+
+  const renderFeature = (raw: MapFeature, i: number) => {
+    const f = previewFeature(raw, i);
     const paint = FEATURE_PAINT[f.kind] ?? FEATURE_PAINT.zone;
     const color = f.color ?? 'var(--adm-accent)';
     const style = { fill: color, fillOpacity: paint.fill, stroke: paint.stroke ? color : 'none', strokeOpacity: paint.stroke, strokeWidth: 3 * unit };
@@ -592,11 +830,51 @@ export const FloorMapPage = () => {
     else if (f.shape === 'ellipse') body = <ellipse cx={f.x + f.width / 2} cy={f.y + f.height / 2} rx={f.width / 2} ry={f.height / 2} style={style} />;
     else if (f.shape === 'polygon') body = <polygon points={f.points.map((p) => p.join(',')).join(' ')} style={style} />;
     const [lx, ly] = featureLabelAt(f);
+    const picked = editingZones && selectedFeature === i;
+    const box = featureBox(f);
     return (
-      <g key={i} className={`fm-feature is-${f.kind}`}>
+      <g key={i} className={`fm-feature is-${f.kind}${picked ? ' is-picked' : ''}`}>
         {body}
+        {/* A standing label has no shape of its own, so in the editor it is
+            given a visible anchor — otherwise an unnamed one is invisible and
+            cannot be found again to name it. */}
+        {editingZones && f.shape === 'point' && (
+          <circle className="fm-feature-anchor" cx={f.x} cy={f.y} r={10 * unit} />
+        )}
+        {picked && (
+          <>
+            {/* The outline of what is selected, round the shape's box. Drawn
+                for every shape including a polygon, so a selected shape reads
+                as selected whatever it is. */}
+            <rect
+              className="fm-feature-frame"
+              x={box.x} y={box.y} width={box.width} height={box.height}
+              strokeWidth={2 * unit}
+            />
+            {(f.shape === 'rect' || f.shape === 'ellipse') && (
+              <g className="fm-feature-handle" onPointerDown={(e) => onFeatureHandlePointerDown(e, i)}>
+                <circle cx={f.x + f.width} cy={f.y + f.height} r={18 * unit} className="fm-hit" />
+                <rect
+                  x={f.x + f.width - 8 * unit} y={f.y + f.height - 8 * unit}
+                  width={16 * unit} height={16 * unit} rx={3 * unit}
+                />
+              </g>
+            )}
+            {f.shape === 'polygon' && f.points.map((pt, at) => (
+              <g key={at} className="fm-feature-vertex" onPointerDown={(e) => onVertexPointerDown(e, i, at)}>
+                <circle cx={pt[0]} cy={pt[1]} r={16 * unit} className="fm-hit" />
+                <circle cx={pt[0]} cy={pt[1]} r={7 * unit} />
+              </g>
+            ))}
+          </>
+        )}
         {f.label && (
-          <text className="fm-feature-label" x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26 * unit }}>
+          <text
+            className={`fm-feature-label${editingZones ? ' is-draggable' : ''}`}
+            x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
+            style={{ fontSize: 26 * unit }}
+            onPointerDown={editingZones ? (e) => onFeatureLabelPointerDown(e, i) : undefined}
+          >
             {f.label}
           </text>
         )}
@@ -621,7 +899,11 @@ export const FloorMapPage = () => {
           'fm-table-group',
           selected ? 'is-selected' : '',
           overlapping.has(table.id) ? 'is-overlapping' : '',
-          editing ? 'is-editable' : '',
+          editingTables ? 'is-editable' : '',
+          // Inert while the DRAWING is edited, so a press reaches the zone
+          // under the table — "tables sit on top of zones" has to be true of
+          // the pointer as well as of the paint.
+          editingZones ? 'is-inert' : '',
           moving ? 'is-dragging' : '',
           // The day's bookings. Not while editing: there the map is furniture
           // being arranged, and colouring it by an evening's bookings would
@@ -655,7 +937,7 @@ export const FloorMapPage = () => {
           {table.shape === 'ROUND'
             ? <circle className="fm-top" r={width / 2} />
             : <rect className="fm-top" x={-width / 2} y={-height / 2} width={width} height={height} rx={Math.min(8, width / 6)} />}
-          {editing && selected && (
+          {editingTables && selected && (
             // The resize handle, on the table's own corner so it turns with it.
             <g className="fm-table-handle" onPointerDown={(e) => onTableHandlePointerDown(e, table)}>
               <circle cx={width / 2} cy={height / 2} r={18 * unit} className="fm-hit" />
@@ -692,7 +974,7 @@ export const FloorMapPage = () => {
     const dims = tableSize(table.shape, table.seats, table);
     const resized = table.width != null && table.height != null;
     const sizeText = `${Math.round(dims.width)} × ${Math.round(dims.height)}`;
-    if (!editing) {
+    if (!editingTables) {
       return (
         <>
           {clash}
@@ -796,40 +1078,59 @@ export const FloorMapPage = () => {
   const areaPanel = (area: MapArea) => {
     const stats = t('fm_area_stats', { tables: areaTables.length, seats: seatsIn(areaTables) });
     const savedAt = savedAtText(area);
-    if (!editing) {
+    if (mode === 'view') {
       return (
         <dl className="fm-facts">
           <dt>{t('fm_kind')}</dt><dd>{kindLabel(area.kind)}</dd>
           <dt>{t('capacity')}</dt><dd>{area.capacity}</dd>
           <dt>{t('fm_seats')}</dt><dd>{stats}</dd>
+          <dt>{t('fm_drawing')}</dt><dd>{t('fm_features_count', { count: features.length })}</dd>
           <dt>{t('fm_default')}</dt><dd>{savedAt ?? t('fm_default_none')}</dd>
         </dl>
       );
     }
+
+    // ── The drawing ─────────────────────────────────────────────────────────
+    // "Edit map" is about what the room IS: its name, what kind of area it is,
+    // and the shapes under the tables. The furniture is the other mode's.
+    if (editingZones) {
+      return (
+        <div className="fm-form">
+          <label>
+            <span>{t('name')}</span>
+            <LabelField key={area.id} value={area.name} maxLength={100} onCommit={(name) => updateArea(area, { name })} />
+          </label>
+          <div>
+            <span className="fm-caption">{t('fm_kind')}</span>
+            <div className="fm-segmented">
+              {(['HALL', 'OUTDOOR'] as const).map((kind) => (
+                <button key={kind} type="button" aria-pressed={area.kind === kind}
+                  className={area.kind === kind ? 'is-on' : ''}
+                  onClick={() => area.kind !== kind && updateArea(area, { kind })}>
+                  {kindLabel(kind)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
+
+          <button type="button" className="adm-btn-danger" onClick={() => deleteArea(area)}>{t('fm_delete_area')}</button>
+        </div>
+      );
+    }
+
+    // ── The table layout ────────────────────────────────────────────────────
     return (
       <div className="fm-form">
-        <label>
-          <span>{t('name')}</span>
-          <LabelField key={area.id} value={area.name} maxLength={100} onCommit={(name) => updateArea(area, { name })} />
-        </label>
-        <div>
-          <span className="fm-caption">{t('fm_kind')}</span>
-          <div className="fm-segmented">
-            {(['HALL', 'OUTDOOR'] as const).map((kind) => (
-              <button key={kind} type="button" aria-pressed={area.kind === kind}
-                className={area.kind === kind ? 'is-on' : ''}
-                onClick={() => area.kind !== kind && updateArea(area, { kind })}>
-                {kindLabel(kind)}
-              </button>
-            ))}
-          </div>
-        </div>
         <p className="fm-caption" style={{ margin: 0 }}>{stats}</p>
         <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
         <button type="button" className="adm-btn-primary" onClick={() => void addTable()}>{t('fm_add_table_here')}</button>
 
         {/* The area's default layout: how this room is meant to stand, and the
-            way back to it after an evening has moved everything about. */}
+            way back to it after an evening has moved everything about. It is
+            the TABLE layout's, because that is what an evening moves — though
+            the snapshot carries the drawing and the map size too, so a revert
+            puts all three back. */}
         <div className="fm-default">
           <span className="fm-caption">{t('fm_default')}</span>
           <p className="fm-caption" style={{ margin: '4px 0 10px' }}>
@@ -844,8 +1145,205 @@ export const FloorMapPage = () => {
           </button>
           {flash && <p className="fm-flash" role="status">{flash}</p>}
         </div>
+      </div>
+    );
+  };
 
-        <button type="button" className="adm-btn-danger" onClick={() => deleteArea(area)}>{t('fm_delete_area')}</button>
+  /**
+   * The palette and the list of shapes — ALWAYS up while the drawing is being
+   * edited, never a branch of the panel below.
+   *
+   * It was a part of the area's panel at first, which meant that selecting a
+   * shape replaced the one row that adds another: drawing a second zone
+   * required deselecting the first, which nothing on the screen said. Adding
+   * shapes IS the job in this mode, so it does not get hidden by doing it.
+   *
+   * The list is in PAINTING ORDER, which is what "send back" and "bring
+   * forward" move a shape through — and it is the only way to reach a shape
+   * that another one covers completely.
+   */
+  const drawingPalette = () => (
+    <div className="fm-draw">
+        <span className="fm-caption">{t('fm_add_shape')}</span>
+        <div className="fm-draw-kinds">
+          {EDITABLE_KINDS.map((kind) => (
+            <button key={kind} type="button" className="adm-btn-ghost"
+              disabled={!canAddFeature(features)}
+              onClick={() => addFeature(kind)}>
+              + {t(`fm_kind_${kind}` as Parameters<typeof translate>[0])}
+            </button>
+          ))}
+        </div>
+      <p className="fm-caption" style={{ margin: '8px 0 0' }}>{t('fm_tables_over_zones')}</p>
+    </div>
+  );
+
+  /**
+   * Every shape, in painting order.
+   *
+   * LAST in the panel, below the selected shape's own controls: it is the
+   * tallest block and the least often used, and above them it pushed the
+   * controls for the shape somebody had just pressed off the bottom of the
+   * screen.
+   */
+  const drawingList = () => (
+      <div className="fm-draw">
+        <span className="fm-caption">{t('fm_drawing')} · {features.length}</span>
+        {features.length === 0 ? (
+          <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_no_features')}</p>
+        ) : (
+          <div className="fm-feature-list">
+            {features.map((f, i) => (
+              <button key={i} type="button"
+                className={`fm-feature-row${selectedFeature === i ? ' is-on' : ''}`}
+                onClick={() => setSelectedFeature(i)}>
+                <i className="fm-swatch" style={{ background: f.color ?? 'var(--adm-accent)' }} />
+                <span className="fm-feature-row-name">
+                  {f.label || t(`fm_kind_${f.kind}` as Parameters<typeof translate>[0])}
+                </span>
+                <span className="fm-feature-row-kind">{t(`fm_kind_${f.kind}` as Parameters<typeof translate>[0])}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+  );
+
+  /**
+   * The shape being edited.
+   *
+   * Its own panel rather than a branch of the area's, because this is the one
+   * place in the product where a drawing is made and it needs the room: a
+   * kind, a name, a colour, a shape, its corners and its place in the
+   * painting order.
+   */
+  const featurePanel = (f: MapFeature, index: number) => {
+    const box = featureBox(f);
+    const isBox = f.shape === 'rect' || f.shape === 'ellipse';
+    return (
+      <div className="fm-form">
+        <div>
+          <span className="fm-caption">{t('fm_feature_kind')}</span>
+          <div className="fm-segmented is-wrap">
+            {EDITABLE_KINDS.map((kind) => (
+              <button key={kind} type="button" aria-pressed={f.kind === kind}
+                className={f.kind === kind ? 'is-on' : ''}
+                onClick={() => f.kind !== kind && editFeature(index, (x) => ({ ...x, kind }))}>
+                {t(`fm_kind_${kind}` as Parameters<typeof translate>[0])}
+              </button>
+            ))}
+          </div>
+          {/* Where nobody is seated. Said here because it is the whole
+              difference between a zone and the pool, and it is invisible
+              otherwise until somebody wonders why a table will not go there. */}
+          <p className="fm-caption" style={{ margin: '8px 0 0' }}>
+            {f.kind === 'water' || f.kind === 'stage' ? t('fm_feature_blocking') : t('fm_feature_seatable')}
+          </p>
+        </div>
+
+        <label>
+          <span>{t('fm_feature_name')}</span>
+          {/* Clearable, unlike a table number: a zone with no name is an
+              ordinary thing, and an empty name must DELETE the key rather than
+              store an empty string, which the server refuses. */}
+          <LabelField key={`${index}-label`} value={f.label ?? ''} maxLength={FEATURE_LIMITS.labelMax} allowEmpty
+            onCommit={(label) => editFeature(index, (x) => withLabel(x, label))} />
+        </label>
+
+        <div>
+          <span className="fm-caption">{t('fm_feature_color')}</span>
+          <div className="fm-colors">
+            <ColorField
+              key={`${index}-color`}
+              value={f.color ?? DEFAULT_FEATURE_COLOR[f.kind]}
+              label={t('fm_feature_color')}
+              onCommit={(color) => editFeature(index, (x) => withColor(x, color))}
+            />
+            {FEATURE_PALETTE.map((hex) => (
+              <button key={hex} type="button" className={`fm-color${f.color === hex ? ' is-on' : ''}`}
+                style={{ background: hex }} title={hex} aria-label={hex}
+                onClick={() => editFeature(index, (x) => withColor(x, hex))} />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="fm-caption">{t('fm_feature_shape')}</span>
+          {f.shape === 'point' ? (
+            <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_shape_point_hint')}</p>
+          ) : (
+            <>
+              <div className="fm-segmented">
+                {(['rect', 'ellipse'] as const).map((shape) => (
+                  <button key={shape} type="button" aria-pressed={f.shape === shape}
+                    className={f.shape === shape ? 'is-on' : ''}
+                    onClick={() => editFeature(index, (x) => setBoxShape(x, shape))}>
+                    {shape === 'rect' ? t('fm_shape_rect') : t('fm_shape_ellipse')}
+                  </button>
+                ))}
+                <button type="button" aria-pressed={f.shape === 'polygon'}
+                  className={f.shape === 'polygon' ? 'is-on' : ''}
+                  onClick={() => f.shape !== 'polygon' && editFeature(index, toPolygon)}>
+                  {t('fm_shape_polygon')}
+                </button>
+              </div>
+              {/* The way to an arbitrary outline without a freehand tool: draw
+                  the rectangle the zone roughly is, make it a polygon, then
+                  drag its corners onto the real walls. */}
+              {f.shape !== 'polygon' && (
+                <p className="fm-caption" style={{ margin: '8px 0 0' }}>{t('fm_polygon_hint')}</p>
+              )}
+              {f.shape === 'polygon' && (
+                <div className="fm-size-row">
+                  <span className="fm-caption">{t('fm_corners', { count: f.points.length })}</span>
+                  <div className="fm-stepper">
+                    <button type="button" className="adm-btn-ghost"
+                      disabled={f.points.length <= FEATURE_LIMITS.polygonMin}
+                      title={t('fm_remove_corner')} aria-label={t('fm_remove_corner')}
+                      onClick={() => editFeature(index, (x) => removePolygonCorner(x, x.shape === 'polygon' ? x.points.length - 1 : 0))}>−</button>
+                    <button type="button" className="adm-btn-ghost"
+                      disabled={f.points.length >= FEATURE_LIMITS.polygonMax}
+                      title={t('fm_add_corner')} aria-label={t('fm_add_corner')}
+                      onClick={() => editFeature(index, addPolygonCorner)}>+</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {isBox && (
+          <p className="fm-caption" style={{ margin: 0 }}>
+            {t('fm_size')}: {Math.round(box.width)} × {Math.round(box.height)}
+          </p>
+        )}
+
+        {/* Where the name sits. Dragged on the plan; this is the way back. */}
+        {f.label && (
+          <div className="fm-size-row">
+            <span className="fm-caption">{f.labelAt ? t('fm_name_moved') : t('fm_name_centred')}</span>
+            <button type="button" className="adm-btn-ghost" disabled={!f.labelAt}
+              onClick={() => editFeature(index, clearLabelAt)}>
+              {t('fm_centre_name')}
+            </button>
+          </div>
+        )}
+
+        {/* The painting order. A zone drawn after a walkway simply covers it,
+            and without this there is no way back but deleting one of them. */}
+        <div>
+          <span className="fm-caption">{t('fm_feature_order', { n: index + 1, of: features.length })}</span>
+          <div className="fm-size-row">
+            <button type="button" className="adm-btn-ghost" disabled={index === 0}
+              onClick={() => moveFeatureOrder(index, index - 1)}>{t('fm_send_back')}</button>
+            <button type="button" className="adm-btn-ghost" disabled={index >= features.length - 1}
+              onClick={() => moveFeatureOrder(index, index + 1)}>{t('fm_bring_forward')}</button>
+          </div>
+        </div>
+
+        <button type="button" className="adm-btn-danger" onClick={() => deleteFeature(index)}>
+          {t('fm_delete_feature')}
+        </button>
       </div>
     );
   };
@@ -1015,13 +1513,24 @@ export const FloorMapPage = () => {
           <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_subtitle')}</p>
         </div>
         <div className="fm-toolbar">
-          {editing && (
+          {editingTables && (
             <button type="button" className="adm-btn-ghost" disabled={!current} onClick={() => void addTable()}>
               {t('fm_add_table')}
             </button>
           )}
-          <button type="button" className="adm-btn-primary" onClick={() => { setEditing((v) => !v); setDrag(null); }}>
-            {editing ? t('fm_done') : t('fm_edit')}
+          {/* Two editors, never both: each is a toggle that leaves the other
+              off, and `switchMode` is the one place that drops the selections
+              and any drag in flight — a table selected in the layout editor
+              means nothing to the drawing editor. */}
+          <button type="button" className={editingTables ? 'adm-btn-primary' : 'adm-btn-ghost'}
+            aria-pressed={editingTables} disabled={!current}
+            onClick={() => switchMode(editingTables ? 'view' : 'tables')}>
+            {editingTables ? t('fm_done') : t('fm_edit_tables')}
+          </button>
+          <button type="button" className={editingZones ? 'adm-btn-primary' : 'adm-btn-ghost'}
+            aria-pressed={editingZones} disabled={!current}
+            onClick={() => switchMode(editingZones ? 'view' : 'zones')}>
+            {editingZones ? t('fm_done') : t('fm_edit')}
           </button>
         </div>
       </div>
@@ -1040,7 +1549,9 @@ export const FloorMapPage = () => {
             </button>
           );
         })}
-        {editing && (
+        {/* Creating a venue is a map-level act, so it belongs to "Edit map"
+            rather than to the table layout. */}
+        {editingZones && (
           <button type="button" className="fm-tab fm-tab-add" onClick={() => setAreaForm({ name: '', kind: 'OUTDOOR', capacity: '' })}>
             + {t('fm_add_area')}
           </button>
@@ -1116,7 +1627,8 @@ export const FloorMapPage = () => {
       )}
 
       <p className="fm-caption" style={{ margin: '12px 0' }}>
-        {editing ? t('fm_hint_edit')
+        {editingTables ? t('fm_hint_edit')
+          : editingZones ? t('fm_hint_zones')
           : booking ? t('fm_new_booking_hint')
           : assigning ? t('fm_assign_hint')
           : t('fm_hint_view')}
@@ -1210,7 +1722,7 @@ export const FloorMapPage = () => {
               <svg
                 ref={svgRef}
                 key={current.id}
-                className={`fm-svg${editing ? ' is-editing' : ''}${current.kind === 'OUTDOOR' ? ' is-outdoor' : ''}`}
+                className={`fm-svg${editing ? ' is-editing' : ''}${editingZones ? ' is-drawing' : ''}${current.kind === 'OUTDOOR' ? ' is-outdoor' : ''}`}
                 viewBox={`0 0 ${size.width} ${size.height}`}
                 style={{ width: `${zoom * 100}%` }}
                 onPointerMove={onPointerMove}
@@ -1225,10 +1737,24 @@ export const FloorMapPage = () => {
                   </pattern>
                   <clipPath id="fm-clip"><rect width={size.width} height={size.height} /></clipPath>
                 </defs>
-                <rect className="fm-ground" width={size.width} height={size.height} onPointerDown={() => setSelectedId(null)} />
+                {/* Bare floor. A press on a painted shape never reaches this —
+                    the shape is above it and is not its child — so this is
+                    "nothing was pressed" and clears both selections. */}
+                <rect className="fm-ground" width={size.width} height={size.height}
+                  onPointerDown={() => { setSelectedId(null); setSelectedFeature(null); }} />
                 <rect width={size.width} height={size.height} fill="url(#fm-grid)" pointerEvents="none" />
-                {/* The drawing never takes a click: a press on a zone is a press on the floor. */}
-                <g clipPath="url(#fm-clip)" pointerEvents="none">{features.map(renderFeature)}</g>
+                {/* The drawing takes a press ONLY while it is being edited.
+                    Anywhere else a press on a zone is a press on the floor —
+                    leaving it clickable would have a zone swallow the press
+                    meant for the table standing on it. */}
+                <g
+                  clipPath="url(#fm-clip)"
+                  className={`fm-features${editingZones ? ' is-editing' : ''}`}
+                  pointerEvents={editingZones ? 'auto' : 'none'}
+                  onPointerDown={editingZones ? onFeatureLayerPointerDown : undefined}
+                >
+                  {features.map(renderFeature)}
+                </g>
                 {areaTables.map(renderTable)}
                 {/* Reserved as a whole: said over the plan, because no single
                     table carries that fact. */}
@@ -1258,18 +1784,26 @@ export const FloorMapPage = () => {
             {booking ? t('fm_new_booking')
               : assigning ? t('fm_assign_tables')
               : openBooking ? t('fm_booking')
+              : selectedShape ? (selectedShape.label || t(`fm_kind_${selectedShape.kind}` as Parameters<typeof translate>[0]))
               : selectedTable ? t('fm_table', { label: selectedTable.label })
               : current?.name ?? t('floor_map')}
           </h3>
+          {/* The drawing's palette and layer list, up for as long as the
+              drawing is being edited. */}
+          {editingZones && drawingPalette()}
           {/* What the panel is about, in order of what the admin just did:
               a booking being drafted, one being given its tables, a booking
               they clicked, then the map. */}
           {booking ? bookingForm()
             : assigning ? assignForm(assigning)
             : openBooking ? bookingCard(openBooking, areaTables.find((x) => x.id === openTableId) ?? null)
+            // The shape comes before the table: while the drawing is being
+            // edited a table is not what any press is about.
+            : selectedShape && selectedFeature !== null ? featurePanel(selectedShape, selectedFeature)
             : selectedTable ? tablePanel(selectedTable)
             : current ? areaPanel(current)
             : <p className="fm-caption" style={{ margin: 0 }}>{t('fm_nothing_selected')}</p>}
+          {editingZones && drawingList()}
         </aside>
       </div>
 
@@ -1316,6 +1850,68 @@ export const FloorMapPage = () => {
         }
         .fm-feature.is-label .fm-feature-label { fill: rgba(var(--adm-text-rgb), 0.75); font-weight: 700; }
         .fm-resize { fill: var(--adm-accent); opacity: 0.85; cursor: nwse-resize; touch-action: none; }
+
+        /* ── The drawing editor ──────────────────────────────────────────────
+           Every one of these rules is scoped to .is-editing on the feature
+           layer, so nothing about the drawing changes on the day view or on
+           the printed sheet: outside the editor a zone is paint, with no
+           cursor, no frame and no handles. */
+        .fm-features.is-editing { cursor: pointer; touch-action: none; }
+        .fm-features.is-editing .fm-feature:hover > rect,
+        .fm-features.is-editing .fm-feature:hover > ellipse,
+        .fm-features.is-editing .fm-feature:hover > polygon { fill-opacity: 0.5; }
+        .fm-feature-frame {
+          fill: none; stroke: var(--adm-accent); stroke-dasharray: 10 7;
+          pointer-events: none;
+        }
+        .fm-feature-handle { cursor: nwse-resize; touch-action: none; }
+        .fm-feature-handle rect { fill: var(--adm-accent); stroke: rgb(var(--adm-bg-rgb)); stroke-width: 2; }
+        .fm-feature-vertex { cursor: move; touch-action: none; }
+        .fm-feature-vertex circle:last-of-type {
+          fill: rgb(var(--adm-bg-rgb)); stroke: var(--adm-accent); stroke-width: 3;
+        }
+        /* The anchor of a standing label, which otherwise has no shape at all
+           — an unnamed one would be invisible and impossible to select. */
+        .fm-feature-anchor {
+          fill: rgba(var(--adm-accent-rgb), 0.35); stroke: var(--adm-accent); stroke-width: 2;
+        }
+        .fm-feature-label.is-draggable { cursor: move; touch-action: none; }
+        /* Tables are paint only while the drawing is edited, so a press goes
+           to the shape beneath them. They stay VISIBLE — the whole point of a
+           zone is what stands on it. */
+        .fm-table-group.is-inert { pointer-events: none; cursor: default; }
+
+        .fm-draw {
+          display: grid; gap: 6px; padding: 12px; border-radius: 4px;
+          border: 1px solid var(--adm-line); background: rgba(var(--adm-text-rgb), 0.03);
+        }
+        .fm-draw-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .fm-draw-kinds button { flex: 1 1 auto; font-size: 12px; padding: 6px 10px; }
+        .fm-feature-list { display: grid; gap: 4px; margin-top: 6px; max-height: 220px; overflow: auto; padding-right: 4px; }
+        .fm-feature-row {
+          display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center;
+          padding: 7px 9px; border-radius: 4px; cursor: pointer; text-align: left;
+          border: 1px solid var(--adm-line); background: rgba(var(--adm-text-rgb), 0.03);
+          color: inherit;
+        }
+        .fm-feature-row.is-on { border-color: var(--adm-accent); background: rgba(var(--adm-accent-rgb), 0.12); }
+        /* min-width: 0 on the name, or a long zone name makes the row wider
+           than the panel and the overflow is CLIPPED by .adm-bg with no
+           scrollbar to say so. */
+        .fm-feature-row-name { font-size: 13px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fm-feature-row-kind { font-size: 11px; color: rgba(var(--adm-text-rgb), 0.5); }
+        .fm-colors { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+        .fm-color-input {
+          width: 44px; height: 30px; padding: 0; border: 1px solid var(--adm-line);
+          border-radius: 4px; background: transparent; cursor: pointer;
+        }
+        .fm-color {
+          width: 30px; height: 30px; border-radius: 4px; cursor: pointer;
+          border: 1px solid var(--adm-line);
+        }
+        .fm-color.is-on { box-shadow: 0 0 0 2px var(--adm-accent); }
+        .fm-segmented.is-wrap { flex-wrap: wrap; }
+        .fm-segmented.is-wrap button { flex: 1 0 33%; }
 
         /* The three states, declared ONCE. The legend swatches used to repeat
            these as literals beside the rules, so changing a fill changed the
@@ -1477,16 +2073,55 @@ export const FloorMapPage = () => {
 };
 
 /**
+ * The colour picker for a shape.
+ *
+ * It holds its own draft for one reason that is easy to get wrong: a
+ * controlled `value` with no `onChange` makes React render the input
+ * **read-only**, so the swatch could be opened, a colour chosen, and nothing
+ * whatever would happen. (It did. A browser found it; no test here would
+ * have.) So `onChange` keeps the draft, which also gives a live preview in the
+ * swatch, and the WRITE waits for the blur — a colour input fires
+ * continuously while the picker is dragged, and each of those events would be
+ * a request that rewrites the whole drawing.
+ */
+const ColorField = ({ value, onCommit, label }: { value: string; onCommit: (next: string) => void; label: string }) => {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return (
+    <input
+      type="color"
+      className="fm-color-input"
+      aria-label={label}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (draft !== value) onCommit(draft); }}
+    />
+  );
+};
+
+/**
  * A text field that commits on blur or Enter, never per keystroke: every commit
  * is a request, and a table number half-typed on the way to "12" would collide
  * with table 1.
  */
-const LabelField = ({ value, onCommit, maxLength = 20 }: { value: string; onCommit: (next: string) => void; maxLength?: number }) => {
+const LabelField = ({ value, onCommit, maxLength = 20, allowEmpty = false }: {
+  value: string;
+  onCommit: (next: string) => void;
+  maxLength?: number;
+  /**
+   * Whether clearing the field means something.
+   *
+   * A table number cannot be blank — every table has one — so there an empty
+   * field is a half-typed edit and is put back. A ZONE's name can be taken
+   * away, and refusing to do so would leave a label nobody can remove.
+   */
+  allowEmpty?: boolean;
+}) => {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   const commitDraft = () => {
     const next = draft.trim();
-    if (!next) { setDraft(value); return; }
+    if (!next && !allowEmpty) { setDraft(value); return; }
     if (next !== value) onCommit(next);
   };
   return (

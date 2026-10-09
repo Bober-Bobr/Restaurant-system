@@ -3546,3 +3546,52 @@ the first — the cover — so every single-photo screen still shows the room.
 11. **The manager portal** (`manager.v-menu.uz` → a restaurant → Halls) still
     works as before; it now writes the pair through the same helper.
 12. **An iPhone HEIC still converts** (§68) when uploaded here — several at once.
+
+## §71 — Two editors on the floor map: the table layout, and the drawing (**no migration**)
+
+The map's one "Edit map" button is now two. **"Change table layout"** is
+everything that button used to do — moving, resizing, adding and deleting
+tables — and **"Edit map"** is a new drawing editor for the zones, the water,
+the stage, the walkways and the standing text under them. Nothing on the API
+changed: `Hall.mapFeatures` already had a schema, a PATCH, a place on the
+printed sheet and a place in the default-layout snapshot, and no editor.
+
+1. **The day view is unchanged** (`supervisor.v-menu.uz/<slug>/`). Pick a day
+    with bookings: taken tables red, part-filled yellow, the legend, the
+    schedule, "New booking" and the amber strip of bookings with no tables all
+    behave as before. There are now **two buttons** in the top right.
+2. **"Change table layout"**: drag a table, resize it by its corner, add one,
+    delete one, change its seats, shape and area, rotate it, and drag the
+    corner of the map. All as before. No table is red or yellow in here.
+3. **"Edit map"**: the panel shows "Add a shape" with five buttons. Press
+    **+ Zone** — a rectangle appears in the middle of the map and is selected.
+4. Drag it. Drag its corner handle. Give it a **name** in the panel and drag the
+    name itself somewhere else; press "Centre it" to put it back.
+5. Pick a **colour**, both from the swatches and from the colour input. Confirm
+    the input actually opens and takes a colour — it was read-only once.
+6. Press **Outline**, then drag the corners where the walls really run. Press
+    **+** and **−** beside "corners" and watch a corner appear on the longest
+    edge and the last one go.
+7. **+ Water** and **+ Stage**: the panel says no table is put there
+    automatically. Then in the layout editor press "Add table" repeatedly and
+    confirm none lands in the water. **Drag** a table onto a zone — that must be
+    allowed, and the table must draw on top of the zone.
+8. **The press goes to the right thing.** In "Edit map", press a spot where a
+    table sits on a zone: the **zone** is selected. Leave the editor and press
+    the same spot: the **table's booking** opens.
+9. **Send back / bring forward**: draw a zone over a walkway, send the zone
+    back, and confirm the walkway is visible again. The shape list in the panel
+    is in that same order; press a row to select a shape the plan has covered.
+10. **Clear a shape's name** and reload: the name must be gone, not blank. (An
+    empty name is refused by the server, and the whole drawing is written at
+    once, so this is the one that would have refused everything.)
+11. **Delete a shape** — it asks first, naming it.
+12. **The drawing reaches everything that already drew it.** Print the plan for
+    the day: the new zones, their colours and their names are on the sheet.
+    Open the Small Banquets kiosk and confirm the same shapes are under the
+    tables there. Save the area's default layout, move things about, revert —
+    the drawing comes back with the tables.
+13. **Add an area** from the tabs (it is in "Edit map" now, not the layout
+    editor) and draw in it. Switching areas must not carry a selection over.
+14. **On a phone** (390px): both buttons are reachable, the five shape buttons
+    wrap, and there is no horizontal page scroll in either editor.
