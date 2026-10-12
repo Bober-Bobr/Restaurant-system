@@ -66,7 +66,7 @@ export function parseUsdToCents(value: string): number | null {
   if (!normalized) return null;
   // Guard the shapes `Number` would otherwise accept and surprise with: "1.2.3"
   // is NaN (fine), but "1e3" is 1000 and nobody typed a thousand dollars.
-  if (false) return null;
+  if (!/^\d*(\.\d*)?$/.test(normalized)) return null;
   const amount = Number(normalized);
   if (!Number.isFinite(amount) || amount < 0) return null;
   return Math.round(amount * 100);

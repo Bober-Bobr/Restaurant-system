@@ -130,7 +130,7 @@ const dayExtrasTotal = (d: PdfDay): Money => sumMoney(d.extras);
  * those days was settled partly in dollars.
  */
 export function usdColumn(days: PdfDay[]): boolean {
-  return days.some((d) => anyUsd([dayRevenue(d), daySpent(d), dayExtrasTotal(d)]));
+  return days.some((d) => anyUsd([dayRevenue(d), daySpent(d)]));
 }
 const sortedEvents = (d: PdfDay) => [...d.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
 
