@@ -3595,3 +3595,60 @@ printed sheet and a place in the default-layout snapshot, and no editor.
     editor) and draw in it. Switching areas must not carry a selection over.
 14. **On a phone** (390px): both buttons are reachable, the five shape buttons
     wrap, and there is no horizontal page scroll in either editor.
+
+## §72 — A dollar amount beside every price in the expense ledger (**MIGRATION**)
+
+Every money field the restaurant manager types can now carry a second amount in
+dollars: the per-guest price, the manual override of the guest revenue, and
+every product / salary / additional-expense / service / day-extra line. The two
+currencies are **never added together** — there is no exchange rate anywhere in
+this product and deliberately no column for one — so every total, and every
+balance, is a pair of figures.
+
+**Migration: `20261012100000_ledger_usd_amounts`.** Seven columns, all
+defaulting to 0 (the two overrides nullable), so a ledger already kept in so'm
+is untouched and reads exactly as it did.
+
+1. **Deploy, then check a ledger that has no dollars in it at all**
+    (`rmanager.v-menu.uz` → Expense ledger). Open a day and a department:
+    there must be **no dollar field anywhere**, no `$0.00` beside any total, and
+    every figure must read exactly as it did before — this is the check that
+    matters most, because most ledgers are so'm only.
+2. The department overview has a new **"Dollar amounts"** switch. Tick it: a
+    dollar field appears beside every amount, including the per-guest price, and
+    each block grows an "Amount ($)" column header.
+3. Type `150.25` into a product line's dollar field. The products total becomes
+    `… so'm · $150.25`, the day's "Amount spent" follows, and **"Remaining"
+    shows the two currencies separately** — it can be in profit in so'm and
+    negative in dollars at once, which is the point.
+4. Type `12,50` with a **comma**. It must be read as $12.50 — the ledger is
+    typed on a layout where the comma is the decimal point.
+5. Type nonsense (`abc`): the field must snap back and **nothing** must be
+    saved. Then **clear** a dollar field: that saves zero, taking the amount off
+    the line (the only way to remove one).
+6. Go back to the overview. The switch is now **ticked and disabled**, with a
+    tooltip saying why: a recorded dollar amount can never be hidden. Clear
+    every dollar figure in the day and it becomes free again.
+7. **The per-guest price in dollars multiplies by the same guest count.** Set
+    100 guests, `$12.50`, and check the Booking total reads `$1 250.00`.
+8. Tick **"Edit amount manually"**. Both currencies are seeded from their own
+    multiplication — the dollar figure must not be left following the price
+    while the so'm one is typed by hand.
+9. **The day-extras page** (Additional expenses) has the same switch and the
+    same field, and shares the one preference with the ledger page.
+10. **The accounts page** shows both currencies on Budget / Spent / Remaining.
+11. **The PDF.** Export a day with no dollars: the sheet must have **two**
+    columns, exactly as before. Export a day with dollars: it has a third,
+    "Amount ($)", with an em dash on lines that have none — and the so'm column
+    must not have narrowed. Export a RANGE where only one day has dollars: every
+    page must have the same three columns.
+12. The per-department PDF page prints the dollar price per guest and the dollar
+    guest revenue on their own info line, and the balance goes red when **either**
+    currency is negative.
+13. **The owner's Reports page** (`cabinet.v-menu.uz` → Reports → Profit and
+    loss) for a period with no dollars: unchanged, no dollar figure anywhere.
+    For a period with dollars: a dollar line under the net figure with its own
+    margin, a dollar sub-line on Revenue and Spent, and three extra columns on
+    the by-department table. **No chart changes** — two currencies cannot share
+    an axis.
+14. Print all three languages and confirm the new labels are translated.

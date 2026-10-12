@@ -12,6 +12,7 @@ import {
 } from '../services/report.service';
 import { CATEGORY_LABEL_KEY } from '../utils/menuCategories';
 import { formatSum } from '../utils/currency';
+import { formatUsd } from '../utils/ledgerMoney';
 import { translate, type Locale, type TranslationKey } from '../utils/translate';
 
 /**
@@ -228,6 +229,15 @@ function ProfitSection({
   const withYear = spansYears(months);
   const labels = months.map((month) => monthLabel(month, locale, withYear));
   const profitable = data.total.balanceCents >= 0;
+  /**
+   * Whether this period recorded anything in dollars.
+   *
+   * One flag for the whole tab, from the server, so a dollar figure appears
+   * everywhere here or nowhere — a restaurant keeping its ledger in so'm sees
+   * the report it always has, not one with a second zero beside every number.
+   */
+  const usd = data.total.hasUsd;
+  const profitableUsd = data.total.balanceUsdCents >= 0;
 
   return (
     <>
@@ -249,6 +259,16 @@ function ProfitSection({
               ? t('rep_margin_na')
               : `${t('rep_margin')} ${data.total.marginPct}%`}
           </span>
+          {/* The dollar balance on its own line, with its OWN margin. Not a
+              second figure on the same line and never summed with the so'm
+              one: a period can be in profit in one currency and short in the
+              other, and a single number cannot say that. */}
+          {usd && (
+            <span className="rep-usd" style={{ color: profitableUsd ? CH.revenue : CH.loss }}>
+              {profitableUsd ? t('rep_net_usd') : t('rep_net_loss_usd')}: {formatUsd(data.total.balanceUsdCents)}
+              {data.total.marginPctUsd !== null && ` · ${t('rep_margin')} ${data.total.marginPctUsd}%`}
+            </span>
+          )}
         </div>
         <Sparkline
           values={data.byMonth.map((row) => row.balanceCents)}
@@ -259,8 +279,10 @@ function ProfitSection({
       </section>
 
       <div className="rep-stats">
-        <Stat label={t('rep_revenue')} value={money(data.total.revenueCents)} swatch={CH.revenue} />
-        <Stat label={t('rep_spent')} value={money(data.total.spentCents)} swatch={CH.spend} />
+        <Stat label={t('rep_revenue')} value={money(data.total.revenueCents)} swatch={CH.revenue}
+          sub={usd ? formatUsd(data.total.revenueUsdCents) : undefined} />
+        <Stat label={t('rep_spent')} value={money(data.total.spentCents)} swatch={CH.spend}
+          sub={usd ? formatUsd(data.total.spentUsdCents) : undefined} />
         <Stat label={t('rep_bookings')} value={String(data.bookings.count)}
           sub={t('rep_avg_guests') + ': ' + data.bookings.averageGuests} />
         <Stat label={t('rep_orders')} value={String(data.orders.count)}
@@ -348,6 +370,11 @@ function ProfitSection({
                 <th className="num">{t('rep_spent')}</th>
                 <th className="num">{t('rep_profit')}</th>
                 <th className="num">{t('rep_margin')}</th>
+                {/* Only when the period has dollars — otherwise three columns
+                    of dashes across a table that is already wide. */}
+                {usd && <th className="num">{t('rep_revenue_usd')}</th>}
+                {usd && <th className="num">{t('rep_spent_usd')}</th>}
+                {usd && <th className="num">{t('rep_profit_usd')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -361,6 +388,13 @@ function ProfitSection({
                     {money(row.balanceCents)}
                   </td>
                   <td className="num">{row.marginPct === null ? '—' : `${row.marginPct}%`}</td>
+                  {usd && <td className="num">{formatUsd(row.revenueUsdCents)}</td>}
+                  {usd && <td className="num">{formatUsd(row.spentUsdCents)}</td>}
+                  {usd && (
+                    <td className="num" style={{ color: row.balanceUsdCents >= 0 ? CH.revenue : CH.loss }}>
+                      {formatUsd(row.balanceUsdCents)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -976,6 +1010,10 @@ const PAGE_CSS = `
 .rep-panel { padding: 16px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 .rep-panel-head { display: grid; gap: 3px; }
 .rep-note { font-size: 11.5px; color: rgba(226,232,240,0.52); line-height: 1.5; }
+/* The dollar balance, on its OWN line under the so'm one — side by side the
+   two read as a single amount, which is the one reading to prevent. Tabular
+   figures so a column of them lines up. */
+.rep-usd { display: block; margin-top: 4px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .rep-two { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr)); }
 
 .rep-notice {

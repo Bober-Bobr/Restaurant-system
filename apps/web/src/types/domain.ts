@@ -202,6 +202,8 @@ export type ProductExpense = {
   quantity: number;
   unit: string;
   amountSum: number; // whole so'm
+  /** The same line in DOLLARS (US cents), beside the so'm amount and never added to it. */
+  amountUsdCents: number;
   sortOrder: number;
   eventId: string;
 };
@@ -210,6 +212,8 @@ export type SalaryExpense = {
   id: string;
   name: string;
   amountSum: number; // whole so'm
+  /** The same line in DOLLARS (US cents), beside the so'm amount and never added to it. */
+  amountUsdCents: number;
   sortOrder: number;
   eventId: string;
 };
@@ -218,6 +222,8 @@ export type AdditionalExpense = {
   id: string;
   name: string;
   amountSum: number; // whole so'm
+  /** The same line in DOLLARS (US cents), beside the so'm amount and never added to it. */
+  amountUsdCents: number;
   sortOrder: number;
   eventId: string;
 };
@@ -228,6 +234,8 @@ export type ServiceExpense = {
   id: string;
   name: string;
   amountSum: number; // whole so'm
+  /** The same line in DOLLARS (US cents), beside the so'm amount and never added to it. */
+  amountUsdCents: number;
   sortOrder: number;
   eventId: string;
 };
@@ -241,9 +249,13 @@ export type DayEvent = {
   bookingName: string | null;
   guestCount: number;
   pricePerGuestSum: number; // whole so'm
+  /** The per-guest price in DOLLARS (US cents). Multiplied by the same guest count. */
+  pricePerGuestUsdCents: number;
   report: string | null;
   // null = guest revenue is guests x price per guest; a number overrides it.
   manualGuestsSum: number | null;
+  /** The same override in DOLLARS (US cents). Each currency falls back to its own multiplication. */
+  manualGuestsUsdCents: number | null;
   products: ProductExpense[];
   salaries: SalaryExpense[];
   additionals: AdditionalExpense[];
@@ -254,6 +266,8 @@ export type DayExtraExpense = {
   id: string;
   name: string;
   amountSum: number; // whole so'm
+  /** The same line in DOLLARS (US cents), beside the so'm amount and never added to it. */
+  amountUsdCents: number;
   sortOrder: number;
   dayId: string;
 };

@@ -6,7 +6,7 @@ import { QUERY_KEY, daySpent, dayRevenue } from './ExpenseLedgerPage';
 import type { ExpenseDay } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { formatWholeSum } from '../utils/currency';
+import { formatMoney, subtractMoney } from '../utils/ledgerMoney';
 
 export const AccountsPage = () => {
   const { locale } = useAdminStore();
@@ -131,7 +131,10 @@ export const AccountsPage = () => {
           {days.map((day) => {
             const spent = daySpent(day);
             const budget = dayRevenue(day);
-            const balance = budget - spent;
+            // A pair, per currency — see utils/ledgerMoney.ts. `formatMoney`
+            // prints the dollar half only when there is one, so a day kept in
+            // so'm reads exactly as it did.
+            const balance = subtractMoney(budget, spent);
             const isSelected = selected.has(day.id);
             return (
               <div key={day.id} className="adm-card tablet-fade-up"
@@ -152,9 +155,10 @@ export const AccountsPage = () => {
                   )}
                 </div>
 
-                <Stat label={t('budget')} value={formatWholeSum(budget)} />
-                <Stat label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
-                <Stat label={t('remaining')} value={formatWholeSum(balance)} color={balance < 0 ? '#f87171' : '#4ade80'} />
+                <Stat label={t('budget')} value={formatMoney(budget)} />
+                <Stat label={t('amount_spent')} value={formatMoney(spent)} color="#fbbf24" />
+                <Stat label={t('remaining')} value={formatMoney(balance)}
+                  color={balance.sum < 0 || balance.usdCents < 0 ? '#f87171' : '#4ade80'} />
 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                   <button type="button" className="adm-btn-ghost"

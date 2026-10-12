@@ -36,7 +36,7 @@
 import { AdminRole } from '@prisma/client';
 import { invoiceOutstandingCents, invoicePaidCents, invoiceTotalCents } from '../../utils/invoice.js';
 import {
-  dayProfit, departmentProfit, marginPct, toTiyin, totalProfit,
+  addProfit, dayProfit, departmentProfit, marginPct, marginPctUsd, toTiyin, totalProfit, zeroProfit,
   type LedgerDay, type Profit,
 } from './report.finance.js';
 import {
@@ -47,27 +47,10 @@ import * as repo from './report.repository.js';
 // The ledger's four departments, in the order the ledger itself shows them.
 const DEPARTMENTS = ['NAHOR', 'FOTIHA', 'TUI', 'OTHERS'] as const;
 
-const zeroProfit = (): Profit => ({
-  guestsRevenueCents: 0, servicesRevenueCents: 0, revenueCents: 0,
-  productsCents: 0, salariesCents: 0, additionalsCents: 0, extrasCents: 0,
-  spentCents: 0, balanceCents: 0,
-});
-
-const addProfit = (a: Profit, b: Profit): Profit => {
-  const guestsRevenueCents = a.guestsRevenueCents + b.guestsRevenueCents;
-  const servicesRevenueCents = a.servicesRevenueCents + b.servicesRevenueCents;
-  const productsCents = a.productsCents + b.productsCents;
-  const salariesCents = a.salariesCents + b.salariesCents;
-  const additionalsCents = a.additionalsCents + b.additionalsCents;
-  const extrasCents = a.extrasCents + b.extrasCents;
-  const revenueCents = guestsRevenueCents + servicesRevenueCents;
-  const spentCents = productsCents + salariesCents + additionalsCents + extrasCents;
-  return {
-    guestsRevenueCents, servicesRevenueCents, revenueCents,
-    productsCents, salariesCents, additionalsCents, extrasCents,
-    spentCents, balanceCents: revenueCents - spentCents,
-  };
-};
+// `zeroProfit` and `addProfit` were written out again here, which with a second
+// currency would have been a FOURTH copy of the same nine sums — and the one
+// most likely to be forgotten. They live in report.finance.ts now, beside the
+// field list they have to agree with.
 
 // ── Profit and loss ─────────────────────────────────────────────────────────
 
@@ -118,7 +101,11 @@ export async function financeReport(scope: ReportScope) {
         if (department.guestCount > 0 || department.manualGuestsSum != null) recorded += 1;
       }
     }
-    return { type, ...profit, guests, days: recorded, marginPct: marginPct(profit) };
+    return {
+      type, ...profit, guests, days: recorded,
+      marginPct: marginPct(profit),
+      marginPctUsd: marginPctUsd(profit),
+    };
   });
 
   // ── Bookings, never added to the P&L (see the header) ──
@@ -134,6 +121,13 @@ export async function financeReport(scope: ReportScope) {
   const totalRevenueCents = ledger.revenueCents + orders.revenueCents;
   const totalSpentCents = ledger.spentCents;
   const totalBalanceCents = totalRevenueCents - totalSpentCents;
+  // The dollar headline. Orders have NO dollar side — the food-service side
+  // prices everything in so'm and there is no dollar column anywhere near it —
+  // so this is the ledger's dollars alone, which is why it is not
+  // `+ orders.revenueUsdCents`: that field would be an invention.
+  const totalRevenueUsdCents = ledger.revenueUsdCents;
+  const totalSpentUsdCents = ledger.spentUsdCents;
+  const totalBalanceUsdCents = totalRevenueUsdCents - totalSpentUsdCents;
 
   return {
     range: { from: scope.from.toISOString(), to: scope.to.toISOString(), fromKey, toKey },
@@ -142,6 +136,19 @@ export async function financeReport(scope: ReportScope) {
       spentCents: totalSpentCents,
       balanceCents: totalBalanceCents,
       marginPct: marginPct({ revenueCents: totalRevenueCents, balanceCents: totalBalanceCents }),
+      revenueUsdCents: totalRevenueUsdCents,
+      spentUsdCents: totalSpentUsdCents,
+      balanceUsdCents: totalBalanceUsdCents,
+      marginPctUsd: marginPctUsd({ revenueUsdCents: totalRevenueUsdCents, balanceUsdCents: totalBalanceUsdCents }),
+      /**
+       * Whether this period recorded anything in dollars.
+       *
+       * One flag for the whole report, so the page shows a dollar figure
+       * everywhere or nowhere. A restaurant that keeps its ledger in so'm sees
+       * the report it has always seen rather than one with a second zero beside
+       * every number.
+       */
+      hasUsd: totalRevenueUsdCents !== 0 || totalSpentUsdCents !== 0,
     },
     ledger: {
       ...ledger,
@@ -151,6 +158,7 @@ export async function financeReport(scope: ReportScope) {
       /** Budget the manager was allocated, for the "was it spent?" question. */
       allocatedCents: days.reduce((sum, day) => sum + toTiyin(day.allocatedSum), 0),
       marginPct: marginPct(ledger),
+      marginPctUsd: marginPctUsd(ledger),
       byDepartment,
     },
     /**

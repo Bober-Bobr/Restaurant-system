@@ -31,20 +31,27 @@ export const expenseService = {
   async updateEvent(
     id: string,
     // manualGuestsSum: a number overrides guests x price per guest, null clears
-    // the override. Omit the key to leave it untouched.
-    payload: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualGuestsSum: number | null }>
+    // the override. Omit the key to leave it untouched. The `*UsdCents` fields
+    // are the same three figures in dollars — a second amount, never a
+    // conversion (utils/ledgerMoney.ts).
+    payload: Partial<{
+      bookingName: string | null; guestCount: number;
+      pricePerGuestSum: number; pricePerGuestUsdCents: number;
+      report: string | null;
+      manualGuestsSum: number | null; manualGuestsUsdCents: number | null;
+    }>
   ) {
     const { data } = await httpClient.patch<DayEvent>(`/expenses/events/${id}`, payload);
     return data;
   },
 
-  async addProduct(eventId: string, payload: { name: string; quantity?: number; unit?: string; amountSum?: number }) {
+  async addProduct(eventId: string, payload: { name: string; quantity?: number; unit?: string; amountSum?: number; amountUsdCents?: number }) {
     const { data } = await httpClient.post<ProductExpense>(`/expenses/events/${eventId}/products`, payload);
     return data;
   },
   async updateProduct(
     id: string,
-    payload: Partial<{ name: string; quantity: number; unit: string; amountSum: number }>
+    payload: Partial<{ name: string; quantity: number; unit: string; amountSum: number; amountUsdCents: number }>
   ) {
     const { data } = await httpClient.patch<ProductExpense>(`/expenses/products/${id}`, payload);
     return data;
@@ -53,11 +60,11 @@ export const expenseService = {
     await httpClient.delete(`/expenses/products/${id}`);
   },
 
-  async addSalary(eventId: string, payload: { name: string; amountSum?: number }) {
+  async addSalary(eventId: string, payload: { name: string; amountSum?: number; amountUsdCents?: number }) {
     const { data } = await httpClient.post<SalaryExpense>(`/expenses/events/${eventId}/salaries`, payload);
     return data;
   },
-  async updateSalary(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+  async updateSalary(id: string, payload: Partial<{ name: string; amountSum: number; amountUsdCents: number }>) {
     const { data } = await httpClient.patch<SalaryExpense>(`/expenses/salaries/${id}`, payload);
     return data;
   },
@@ -65,11 +72,11 @@ export const expenseService = {
     await httpClient.delete(`/expenses/salaries/${id}`);
   },
 
-  async addAdditional(eventId: string, payload: { name: string; amountSum?: number }) {
+  async addAdditional(eventId: string, payload: { name: string; amountSum?: number; amountUsdCents?: number }) {
     const { data } = await httpClient.post<AdditionalExpense>(`/expenses/events/${eventId}/additionals`, payload);
     return data;
   },
-  async updateAdditional(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+  async updateAdditional(id: string, payload: Partial<{ name: string; amountSum: number; amountUsdCents: number }>) {
     const { data } = await httpClient.patch<AdditionalExpense>(`/expenses/additionals/${id}`, payload);
     return data;
   },
@@ -78,11 +85,11 @@ export const expenseService = {
   },
 
   // Per-event "Additional Services" lines (distinct from additionals above).
-  async addService(eventId: string, payload: { name: string; amountSum?: number }) {
+  async addService(eventId: string, payload: { name: string; amountSum?: number; amountUsdCents?: number }) {
     const { data } = await httpClient.post<ServiceExpense>(`/expenses/events/${eventId}/services`, payload);
     return data;
   },
-  async updateService(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+  async updateService(id: string, payload: Partial<{ name: string; amountSum: number; amountUsdCents: number }>) {
     const { data } = await httpClient.patch<ServiceExpense>(`/expenses/services/${id}`, payload);
     return data;
   },
@@ -91,11 +98,11 @@ export const expenseService = {
   },
 
   // Day-level additional expenses (separate from the per-event main expenses).
-  async addExtra(dayId: string, payload: { name: string; amountSum?: number }) {
+  async addExtra(dayId: string, payload: { name: string; amountSum?: number; amountUsdCents?: number }) {
     const { data } = await httpClient.post<DayExtraExpense>(`/expenses/days/${dayId}/extras`, payload);
     return data;
   },
-  async updateExtra(id: string, payload: Partial<{ name: string; amountSum: number }>) {
+  async updateExtra(id: string, payload: Partial<{ name: string; amountSum: number; amountUsdCents: number }>) {
     const { data } = await httpClient.patch<DayExtraExpense>(`/expenses/extras/${id}`, payload);
     return data;
   },

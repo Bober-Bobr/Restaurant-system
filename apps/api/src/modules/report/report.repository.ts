@@ -50,15 +50,17 @@ export async function ledgerDays(managerIds: string[], fromKey: string, toKey: s
     orderBy: { date: 'asc' },
     select: {
       id: true, date: true, managerId: true, allocatedSum: true, isClosed: true,
-      extras: { select: { amountSum: true }, orderBy: lineOrder },
+      extras: { select: { amountSum: true, amountUsdCents: true }, orderBy: lineOrder },
       events: {
         orderBy: { createdAt: 'asc' },
         select: {
-          type: true, guestCount: true, pricePerGuestSum: true, manualGuestsSum: true,
-          products: { select: { amountSum: true }, orderBy: lineOrder },
-          salaries: { select: { amountSum: true }, orderBy: lineOrder },
-          additionals: { select: { amountSum: true }, orderBy: lineOrder },
-          services: { select: { amountSum: true }, orderBy: lineOrder },
+          type: true, guestCount: true,
+          pricePerGuestSum: true, pricePerGuestUsdCents: true,
+          manualGuestsSum: true, manualGuestsUsdCents: true,
+          products: { select: { amountSum: true, amountUsdCents: true }, orderBy: lineOrder },
+          salaries: { select: { amountSum: true, amountUsdCents: true }, orderBy: lineOrder },
+          additionals: { select: { amountSum: true, amountUsdCents: true }, orderBy: lineOrder },
+          services: { select: { amountSum: true, amountUsdCents: true }, orderBy: lineOrder },
         },
       },
     },

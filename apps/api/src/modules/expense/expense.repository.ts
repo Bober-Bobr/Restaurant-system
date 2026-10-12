@@ -24,9 +24,15 @@ export type UpdateEventData = {
   bookingName?: string | null;
   guestCount?: number;
   pricePerGuestSum?: number;
+  // The per-guest price in dollars (US cents), beside the so'm one. Never
+  // added to it — see utils/ledgerMoney.ts.
+  pricePerGuestUsdCents?: number;
   report?: string | null;
-  // null clears the override and returns to guests x price per guest.
+  // null clears the override and returns to guests x price per guest. Each
+  // currency carries its own override and falls back to its own computed
+  // figure, so overriding one can never silently zero the other.
   manualGuestsSum?: number | null;
+  manualGuestsUsdCents?: number | null;
 };
 
 export type ProductData = {
@@ -34,11 +40,13 @@ export type ProductData = {
   quantity?: number;
   unit?: string;
   amountSum?: number;
+  amountUsdCents?: number;
 };
 
 export type LineData = {
   name: string;
   amountSum?: number;
+  amountUsdCents?: number;
 };
 
 export class ExpenseRepository {
@@ -82,10 +90,10 @@ export class ExpenseRepository {
   // Copy line *structure* (names/units) into an event, with blank numbers.
   async cloneLines(eventId: string, products: ProductData[], salaries: LineData[], additionals: LineData[], services: LineData[]) {
     const ops = [
-      ...products.map((p, i) => prisma.productExpense.create({ data: { name: p.name, unit: p.unit, quantity: 0, amountSum: 0, eventId, sortOrder: i } })),
-      ...salaries.map((s, i) => prisma.salaryExpense.create({ data: { name: s.name, amountSum: 0, eventId, sortOrder: i } })),
-      ...additionals.map((a, i) => prisma.additionalExpense.create({ data: { name: a.name, amountSum: 0, eventId, sortOrder: i } })),
-      ...services.map((s, i) => prisma.serviceExpense.create({ data: { name: s.name, amountSum: 0, eventId, sortOrder: i } }))
+      ...products.map((p, i) => prisma.productExpense.create({ data: { name: p.name, unit: p.unit, quantity: 0, amountSum: 0, amountUsdCents: 0, eventId, sortOrder: i } })),
+      ...salaries.map((s, i) => prisma.salaryExpense.create({ data: { name: s.name, amountSum: 0, amountUsdCents: 0, eventId, sortOrder: i } })),
+      ...additionals.map((a, i) => prisma.additionalExpense.create({ data: { name: a.name, amountSum: 0, amountUsdCents: 0, eventId, sortOrder: i } })),
+      ...services.map((s, i) => prisma.serviceExpense.create({ data: { name: s.name, amountSum: 0, amountUsdCents: 0, eventId, sortOrder: i } }))
     ];
     if (ops.length) await prisma.$transaction(ops);
   }

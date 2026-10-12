@@ -277,6 +277,12 @@ model DayExtraExpense {
   id          String     @id @default(cuid())
   name        String
   amountSum   Int        @default(0) // whole so'm (not tiyin)
+  // The same amount of money, in DOLLARS, when part of it was settled in cash
+  // dollars. US cents, so $12.50 is 1250 — see utils/ledgerMoney.ts. It is a
+  // SECOND amount beside the so'm one and is never added to it: there is no
+  // exchange rate in this product, and a total built from two currencies is a
+  // figure nobody can reconcile against the money that moved.
+  amountUsdCents Int   @default(0)
   sortOrder   Int        @default(0)
   dayId       String
   day         ExpenseDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
@@ -296,6 +302,10 @@ model DayEvent {
   bookingName      String?
   guestCount       Int            @default(0)
   pricePerGuestSum Int            @default(0) // whole so'm (not tiyin)
+  // The per-guest price in DOLLARS (US cents), beside the so'm one. Guest
+  // revenue in dollars is guestCount x this — the same multiplication, run
+  // per currency. See utils/ledgerMoney.ts.
+  pricePerGuestUsdCents Int       @default(0)
   report           String? // free-text notes for this event/department
   // Manual override of the guest revenue (the "revenue for all guests" figure).
   // Null means "guests x price per guest", which is the normal case; a number
@@ -304,6 +314,11 @@ model DayEvent {
   // the manual total on the tablet Summary page. Additional services are added
   // on top of this either way, so overriding does not hide them.
   manualGuestsSum  Int?
+  // The same override, in DOLLARS (US cents). Nullable for the same reason and
+  // read the same way — each currency falls back to its OWN computed figure, so
+  // overriding the so'm total can never silently zero the dollars (and a row
+  // written before this column existed still computes its dollars correctly).
+  manualGuestsUsdCents Int?
   products    ProductExpense[]
   salaries    SalaryExpense[]
   additionals AdditionalExpense[]
@@ -320,6 +335,12 @@ model ProductExpense {
   quantity    Float    @default(0)
   unit        String   @default("kg")
   amountSum   Int      @default(0) // whole so'm (not tiyin)
+  // The same amount of money, in DOLLARS, when part of it was settled in cash
+  // dollars. US cents, so $12.50 is 1250 — see utils/ledgerMoney.ts. It is a
+  // SECOND amount beside the so'm one and is never added to it: there is no
+  // exchange rate in this product, and a total built from two currencies is a
+  // figure nobody can reconcile against the money that moved.
+  amountUsdCents Int   @default(0)
   sortOrder   Int      @default(0)
   eventId     String
   event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -332,6 +353,12 @@ model SalaryExpense {
   id          String   @id @default(cuid())
   name        String
   amountSum   Int      @default(0) // whole so'm (not tiyin)
+  // The same amount of money, in DOLLARS, when part of it was settled in cash
+  // dollars. US cents, so $12.50 is 1250 — see utils/ledgerMoney.ts. It is a
+  // SECOND amount beside the so'm one and is never added to it: there is no
+  // exchange rate in this product, and a total built from two currencies is a
+  // figure nobody can reconcile against the money that moved.
+  amountUsdCents Int   @default(0)
   sortOrder   Int      @default(0)
   eventId     String
   event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -344,6 +371,12 @@ model AdditionalExpense {
   id          String   @id @default(cuid())
   name        String
   amountSum   Int      @default(0) // whole so'm (not tiyin)
+  // The same amount of money, in DOLLARS, when part of it was settled in cash
+  // dollars. US cents, so $12.50 is 1250 — see utils/ledgerMoney.ts. It is a
+  // SECOND amount beside the so'm one and is never added to it: there is no
+  // exchange rate in this product, and a total built from two currencies is a
+  // figure nobody can reconcile against the money that moved.
+  amountUsdCents Int   @default(0)
   sortOrder   Int      @default(0)
   eventId     String
   event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -364,6 +397,12 @@ model ServiceExpense {
   id          String   @id @default(cuid())
   name        String
   amountSum   Int      @default(0) // whole so'm (not tiyin)
+  // The same amount of money, in DOLLARS, when part of it was settled in cash
+  // dollars. US cents, so $12.50 is 1250 — see utils/ledgerMoney.ts. It is a
+  // SECOND amount beside the so'm one and is never added to it: there is no
+  // exchange rate in this product, and a total built from two currencies is a
+  // figure nobody can reconcile against the money that moved.
+  amountUsdCents Int   @default(0)
   sortOrder   Int      @default(0)
   eventId     String
   event       DayEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)

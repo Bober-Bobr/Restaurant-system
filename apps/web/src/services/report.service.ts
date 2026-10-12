@@ -44,6 +44,19 @@ export type Profit = {
   extrasCents: number;
   spentCents: number;
   balanceCents: number;
+
+  // The same figures in DOLLARS (US cents), from the ledger's second amount
+  // per line. A separate set, never summed with the above: there is no
+  // exchange rate in this product — see utils/ledgerMoney.ts.
+  guestsRevenueUsdCents: number;
+  servicesRevenueUsdCents: number;
+  revenueUsdCents: number;
+  productsUsdCents: number;
+  salariesUsdCents: number;
+  additionalsUsdCents: number;
+  extrasUsdCents: number;
+  spentUsdCents: number;
+  balanceUsdCents: number;
 };
 
 export type DepartmentRow = Profit & {
@@ -51,6 +64,8 @@ export type DepartmentRow = Profit & {
   guests: number;
   days: number;
   marginPct: number | null;
+  /** The margin on the dollar side, as its own ratio — see marginPctUsd. */
+  marginPctUsd: number | null;
 };
 
 export type MonthRow = {
@@ -94,12 +109,24 @@ export type BookingsSummary = {
 
 export type FinanceReport = {
   range: { from: string; to: string; fromKey: string; toKey: string };
-  total: { revenueCents: number; spentCents: number; balanceCents: number; marginPct: number | null };
+  total: {
+    revenueCents: number; spentCents: number; balanceCents: number; marginPct: number | null;
+    revenueUsdCents: number; spentUsdCents: number; balanceUsdCents: number; marginPctUsd: number | null;
+    /**
+     * Whether this period recorded anything in dollars at all.
+     *
+     * One flag for the whole report, so the page shows dollar figures
+     * everywhere or nowhere — a restaurant keeping its ledger in so'm must see
+     * the report it always has, not one with a second zero beside every number.
+     */
+    hasUsd: boolean;
+  };
   ledger: Profit & {
     daysRecorded: number;
     daysClosed: number;
     allocatedCents: number;
     marginPct: number | null;
+    marginPctUsd: number | null;
     byDepartment: DepartmentRow[];
   };
   /** Empty means nobody keeps this ledger — there is then no spending side at all. */

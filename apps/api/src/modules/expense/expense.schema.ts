@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_USD_CENTS } from '../../utils/ledgerMoney.js';
 
 const dateString = z
   .string()
@@ -7,6 +8,13 @@ const dateString = z
 // Whole so'm; capped at one billion so values stay within the 32-bit Int range.
 const MAX_SUM = 1_000_000_000;
 const sum = z.number().int().min(0).max(MAX_SUM);
+
+/**
+ * The same amount in DOLLARS, as US cents — a second figure beside the so'm
+ * one, never a conversion of it (utils/ledgerMoney.ts). Capped at a million
+ * dollars, which in cents is still comfortably inside a 32-bit Int.
+ */
+const usdCents = z.number().int().min(0).max(MAX_USD_CENTS);
 
 export const createDaySchema = z.object({
   date: dateString.optional()
@@ -21,17 +29,20 @@ export const updateEventSchema = z.object({
   bookingName: z.string().max(120).nullable().optional(),
   guestCount: z.number().int().min(0).max(1_000_000).optional(),
   pricePerGuestSum: sum.optional(),
+  pricePerGuestUsdCents: usdCents.optional(),
   report: z.string().max(5000).nullable().optional(),
-  // Manual override of the guest revenue. Explicit null clears the override;
-  // omitting it leaves the current value be.
-  manualGuestsSum: sum.nullable().optional()
+  // Manual override of the guest revenue, per currency. Explicit null clears
+  // that currency's override; omitting it leaves the current value be.
+  manualGuestsSum: sum.nullable().optional(),
+  manualGuestsUsdCents: usdCents.nullable().optional()
 });
 
 export const createProductSchema = z.object({
   name: z.string().min(1).max(120),
   quantity: z.number().min(0).max(1_000_000).optional(),
   unit: z.string().min(1).max(20).optional(),
-  amountSum: sum.optional()
+  amountSum: sum.optional(),
+  amountUsdCents: usdCents.optional()
 });
 
 export const updateProductSchema = createProductSchema.partial();
@@ -39,7 +50,8 @@ export const updateProductSchema = createProductSchema.partial();
 // Salaries and additional expenses share the same { name, amountSum } shape.
 export const createLineSchema = z.object({
   name: z.string().min(1).max(120),
-  amountSum: sum.optional()
+  amountSum: sum.optional(),
+  amountUsdCents: usdCents.optional()
 });
 
 export const updateLineSchema = createLineSchema.partial();

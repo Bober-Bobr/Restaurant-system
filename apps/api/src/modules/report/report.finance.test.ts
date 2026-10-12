@@ -15,6 +15,24 @@ import {
 // be the worst kind of bug here, two people reading different profits off one
 // set of numbers with no way to tell which is wrong.
 
+/**
+ * A case by NAME, never by position.
+ *
+ * These were `caseNamed(GUESTS_ONLY)`, `[3]`, `[7]` — which silently pointed at
+ * different cases the moment the dollar cases were inserted into the middle of
+ * the list. One of them turned a loss into a profit and the test caught it; the
+ * other two would have gone on passing against the wrong case.
+ */
+const caseNamed = (name: string) => {
+  const found = LEDGER_CASES.find((c) => c.name === name);
+  if (!found) throw new Error(`no ledger case named "${name}"`);
+  return found;
+};
+
+const GUESTS_ONLY = 'guest revenue is guests × price per guest';
+const FULL_DEPARTMENT = 'spending is products + salaries + additional expenses only';
+const AT_A_LOSS = 'a department can run at a loss';
+
 const asDepartment = (event: (typeof LEDGER_CASES)[number]['event']): LedgerDepartment => ({
   type: event.type,
   guestCount: event.guestCount,
@@ -54,12 +72,12 @@ describe('the report’s own two departures from the ledger screen', () => {
   it('reports in tiyin, not the ledger’s whole so’m', () => {
     // Every other money column in the product is tiyin. A payload carrying both
     // units is a page that multiplies by 100 in some places and not others.
-    const department = asDepartment(LEDGER_CASES[1].event);
-    expect(departmentProfit(department).revenueCents).toBe(LEDGER_CASES[1].expected.revenue * 100);
+    const department = asDepartment(caseNamed(GUESTS_ONLY).event);
+    expect(departmentProfit(department).revenueCents).toBe(caseNamed(GUESTS_ONLY).expected.revenue * 100);
   });
 
   it('counts day-level extras as spending, unlike daySpent on the other two sides', () => {
-    const department = asDepartment(LEDGER_CASES[1].event); // 10 200 000 revenue, no spend
+    const department = asDepartment(caseNamed(GUESTS_ONLY).event); // 10 200 000 revenue, no spend
     const day: LedgerDay = {
       date: '2026-08-12', events: [department], extras: [{ amountSum: 250_000 }, { amountSum: 50_000 }],
     };
@@ -75,14 +93,14 @@ describe('the report’s own two departures from the ledger screen', () => {
   it('keeps extras out of a DEPARTMENT’s figures — they belong to the day', () => {
     // A department has no extras of its own, so attributing the day's to one
     // would make the four departments add up to more than the day.
-    expect(departmentProfit(asDepartment(LEDGER_CASES[3].event)).extrasCents).toBe(0);
+    expect(departmentProfit(asDepartment(caseNamed(FULL_DEPARTMENT).event)).extrasCents).toBe(0);
   });
 });
 
 describe('totals are recomputed from the parts', () => {
   it('sums several days', () => {
-    const one: LedgerDay = { date: '2026-08-01', events: [asDepartment(LEDGER_CASES[1].event)], extras: [] };
-    const two: LedgerDay = { date: '2026-08-02', events: [asDepartment(LEDGER_CASES[3].event)], extras: [{ amountSum: 10_000 }] };
+    const one: LedgerDay = { date: '2026-08-01', events: [asDepartment(caseNamed(GUESTS_ONLY).event)], extras: [] };
+    const two: LedgerDay = { date: '2026-08-02', events: [asDepartment(caseNamed(FULL_DEPARTMENT).event)], extras: [{ amountSum: 10_000 }] };
     const total = totalProfit([one, two]);
     expect(total.revenueCents).toBe(toTiyin(10_200_000 + 23_000_000));
     expect(total.spentCents).toBe(toTiyin(6_100_000 + 10_000));
@@ -92,7 +110,7 @@ describe('totals are recomputed from the parts', () => {
   it('a loss stays negative rather than being floored at zero', () => {
     // An owner has to be able to see a loss. `Math.max(0, …)` belongs on an
     // invoice balance, not here.
-    const day: LedgerDay = { date: '2026-08-03', events: [asDepartment(LEDGER_CASES[7].event)], extras: [] };
+    const day: LedgerDay = { date: '2026-08-03', events: [asDepartment(caseNamed(AT_A_LOSS).event)], extras: [] };
     expect(dayProfit(day).balanceCents).toBe(toTiyin(-400_000));
   });
 

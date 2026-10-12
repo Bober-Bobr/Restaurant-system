@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eventRevenue, daySpent, dayRevenue } from './ExpenseLedgerPage';
-import { LEDGER_CASES, LEDGER_DAY } from '../../../api/src/test/ledgerCases';
+import { LEDGER_CASES, LEDGER_DAY, expectedUsd } from '../../../api/src/test/ledgerCases';
 import type { DayEvent, ExpenseDay } from '../types/domain';
 
 // ── The ledger arithmetic, checked against the PDF's copy ───────────────────
@@ -12,18 +12,23 @@ import type { DayEvent, ExpenseDay } from '../types/domain';
 const asEvent = (e: unknown) => e as DayEvent;
 
 describe('expense ledger arithmetic (page side)', () => {
-  for (const { name, event, expected } of LEDGER_CASES) {
+  for (const c of LEDGER_CASES) {
+    const { name, event, expected } = c;
     it(name, () => {
-      expect(eventRevenue(asEvent(event))).toBe(expected.revenue);
-      // The page exports the revenue and the day roll-ups; spending is checked
-      // through the day total below and directly on the PDF side.
+      // Both halves of the pair. The page exports the revenue and the day
+      // roll-ups; spending is checked through the day total below and directly
+      // on the PDF side.
+      expect(eventRevenue(asEvent(event)).sum).toBe(expected.revenue);
+      expect(eventRevenue(asEvent(event)).usdCents).toBe(expectedUsd(c).revenue);
     });
   }
 
   it('rolls a day up as the sum of its departments', () => {
     const day = { ...LEDGER_DAY, allocatedSum: 0, extras: [] } as unknown as ExpenseDay;
-    expect(dayRevenue(day)).toBe(LEDGER_DAY.expected.revenue);
-    expect(daySpent(day)).toBe(LEDGER_DAY.expected.spent);
+    expect(dayRevenue(day).sum).toBe(LEDGER_DAY.expected.revenue);
+    expect(daySpent(day).sum).toBe(LEDGER_DAY.expected.spent);
+    expect(dayRevenue(day).usdCents).toBe(LEDGER_DAY.expected.usd.revenue);
+    expect(daySpent(day).usdCents).toBe(LEDGER_DAY.expected.usd.spent);
   });
 
   it('counts a service as revenue, never as spending', () => {
@@ -35,8 +40,8 @@ describe('expense ledger arithmetic (page side)', () => {
       services: [{ name: 'Host', amountSum: 1000000 }],
     });
     const day = { date: '2026-08-12', allocatedSum: 0, extras: [], events: [withService] } as unknown as ExpenseDay;
-    expect(dayRevenue(day)).toBe(1000000);
-    expect(daySpent(day)).toBe(0);
+    expect(dayRevenue(day).sum).toBe(1000000);
+    expect(daySpent(day).sum).toBe(0);
   });
 
   it('honours a manual guest figure of zero', () => {
@@ -46,7 +51,7 @@ describe('expense ledger arithmetic (page side)', () => {
       type: 'NIGHT', guestCount: 100, pricePerGuestSum: 90000, manualGuestsSum: 0,
       products: [], salaries: [], additionals: [], services: [],
     });
-    expect(eventRevenue(overridden)).toBe(0);
+    expect(eventRevenue(overridden).sum).toBe(0);
   });
 
   it('adds services on top of a manual guest figure', () => {
@@ -55,6 +60,6 @@ describe('expense ledger arithmetic (page side)', () => {
       products: [], salaries: [], additionals: [],
       services: [{ name: 'Invitations', amountSum: 400000 }],
     });
-    expect(eventRevenue(overridden)).toBe(5400000);
+    expect(eventRevenue(overridden).sum).toBe(5400000);
   });
 });

@@ -5,7 +5,11 @@ import { expenseService } from '../services/expense.service';
 import type { DayEvent, DayEventType, ExpenseDay, ProductExpense } from '../types/domain';
 import { useAdminStore } from '../store/admin.store';
 import { translate } from '../utils/translate';
-import { formatWholeSum, groupDigits, parseWholeSum } from '../utils/currency';
+import { groupDigits, parseUsdToCents, parseWholeSum, usdInputValue } from '../utils/currency';
+import {
+  MAX_USD_CENTS, ZERO_MONEY, addMoney, anyUsd, formatMoney, hasUsd, money, scaleMoney, subtractMoney, sumMoney,
+  type Money,
+} from '../utils/ledgerMoney';
 
 export const QUERY_KEY = ['expense-days'];
 const UNITS = ['kg', 'g', 'l', 'ml', 'pcs'];
@@ -20,6 +24,7 @@ type Locale = 'en' | 'ru' | 'uz';
 type TFn = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
 
 const clampSum = (n: number) => Math.max(0, Math.min(MAX_SUM, n));
+const clampUsd = (n: number) => Math.max(0, Math.min(MAX_USD_CENTS, Math.round(n)));
 
 const saveBlob = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -33,28 +38,76 @@ const saveBlob = (blob: Blob, filename: string) => {
 };
 
 // ── Revenue ──
+// Every figure on this page is a PAIR — so'm and dollars — because a line can
+// carry an amount in each and the two are never added together (there is no
+// exchange rate in this product; see utils/ledgerMoney.ts). The helper names
+// are the same as before and so is the arithmetic; what changed is that they
+// return `Money` instead of a number, which is what makes mixing the two
+// currencies impossible to write rather than merely discouraged.
+//
 // What a department takes in. Guest revenue is guests × price per guest unless
 // a figure was typed in by hand, which wins outright — the ledger can then
 // record what was actually charged when the multiplication does not describe it.
-const computedGuests = (e: DayEvent) => e.guestCount * e.pricePerGuestSum;
-const guestsRevenue = (e: DayEvent) =>
-  (e.manualGuestsSum != null ? e.manualGuestsSum : computedGuests(e));
+const perGuest = (e: DayEvent): Money => money(e.pricePerGuestSum, e.pricePerGuestUsdCents);
+const computedGuests = (e: DayEvent): Money => scaleMoney(perGuest(e), e.guestCount);
+// Each currency honours its OWN override and otherwise falls back to its own
+// multiplication. One `!= null` test for both would have a so'm override
+// silently zero the dollars that were recorded beside it.
+const guestsRevenue = (e: DayEvent): Money => ({
+  sum: e.manualGuestsSum != null ? e.manualGuestsSum : computedGuests(e).sum,
+  usdCents: e.manualGuestsUsdCents != null ? e.manualGuestsUsdCents : computedGuests(e).usdCents,
+});
 // Additional services are SOLD, so they are revenue too and add to the
 // department total. They sit outside the manual override on purpose: typing a
 // guest figure by hand must not silently drop the services sold alongside it.
-const servicesRevenue = (e: DayEvent) => e.services.reduce((s, p) => s + p.amountSum, 0);
-export const eventRevenue = (e: DayEvent) => guestsRevenue(e) + servicesRevenue(e);
+const servicesRevenue = (e: DayEvent): Money => sumMoney(e.services);
+export const eventRevenue = (e: DayEvent): Money => addMoney(guestsRevenue(e), servicesRevenue(e));
 
 // ── Spending ──
 // Products, salaries and additional expenses. Services are revenue, not spend.
-const eventSpent = (e: DayEvent) =>
-  e.products.reduce((s, p) => s + p.amountSum, 0) +
-  e.salaries.reduce((s, p) => s + p.amountSum, 0) +
-  e.additionals.reduce((s, p) => s + p.amountSum, 0);
+const eventSpent = (e: DayEvent): Money =>
+  addMoney(addMoney(sumMoney(e.products), sumMoney(e.salaries)), sumMoney(e.additionals));
 
 // Day-wide roll-ups. The PDF service mirrors these exactly.
-export const daySpent = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventSpent(e), 0);
-export const dayRevenue = (day: ExpenseDay) => day.events.reduce((s, e) => s + eventRevenue(e), 0);
+export const daySpent = (day: ExpenseDay): Money =>
+  day.events.reduce<Money>((acc, e) => addMoney(acc, eventSpent(e)), ZERO_MONEY);
+export const dayRevenue = (day: ExpenseDay): Money =>
+  day.events.reduce<Money>((acc, e) => addMoney(acc, eventRevenue(e)), ZERO_MONEY);
+
+/** Anything at all recorded, in either currency. */
+const isSomething = (m: Money) => m.sum > 0 || m.usdCents !== 0;
+
+/**
+ * Whether the dollar column is shown.
+ *
+ * Most ledgers are kept entirely in so'm, and a permanently empty second field
+ * on every row of four sections is clutter on an already dense page — so it is
+ * a column you switch on, remembered per browser like the other per-viewer
+ * conveniences here.
+ *
+ * **Data beats the preference.** If any line already carries a dollar figure
+ * the column is shown whether or not the switch is on: a stored amount that
+ * cannot be seen is money the ledger is hiding, which is worse than clutter.
+ * That also makes the switch safe to default off — nothing already recorded
+ * can disappear behind it.
+ */
+const USD_PREF_KEY = 'vmenu-ledger-usd';
+
+export const readUsdPref = (): boolean => {
+  try {
+    return window.localStorage.getItem(USD_PREF_KEY) === '1';
+  } catch {
+    // Private windows and blocked site data throw on access, and the ledger
+    // must still open.
+    return false;
+  }
+};
+
+export const writeUsdPref = (on: boolean) => {
+  try {
+    window.localStorage.setItem(USD_PREF_KEY, on ? '1' : '0');
+  } catch { /* nothing to do — the column still works for this visit */ }
+};
 
 const sortedEvents = (day: ExpenseDay) =>
   [...day.events].sort((a, b) => EVENT_ORDER.indexOf(a.type) - EVENT_ORDER.indexOf(b.type));
@@ -206,20 +259,55 @@ const colHeader: React.CSSProperties = {
 // Column widths mirror the row inputs below them exactly, so the labels sit
 // over the fields they name. The trailing spacer stands in for the row's
 // delete / add button.
-const LineHeader = ({ t, nameLabel }: { t: TFn; nameLabel: string }) => (
+const LineHeader = ({ t, nameLabel, showUsd }: { t: TFn; nameLabel: string; showUsd: boolean }) => (
   <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '2px 2px 0' }}>
     <span style={{ ...colHeader, flex: 2, minWidth: 160 }}>{nameLabel}</span>
     <span style={{ ...colHeader, width: 150, textAlign: 'right' }}>{t('amount')}</span>
+    {showUsd && <span style={{ ...colHeader, width: USD_W, textAlign: 'right' }}>{t('amount_usd')}</span>}
     <span style={{ width: 34, flexShrink: 0 }} />
   </div>
 );
 
-const ProductHeader = ({ t }: { t: TFn }) => (
+/**
+ * The dollar field's width, and the field itself.
+ *
+ * Narrower than the so'm field because the figures are: $18 500.00 is about as
+ * long as a dollar amount in a restaurant's day gets, where its so'm twin runs
+ * to nine digits.
+ */
+const USD_W = 118;
+
+const UsdField = ({ value, onCommit, t, label }: {
+  value: number; onCommit: (usdCents: number) => void; t: TFn; label?: string;
+}) => {
+  const [text, setText] = useState(value ? usdInputValue(value) : '');
+  useEffect(() => { setText(value ? usdInputValue(value) : ''); }, [value]);
+  const commit = () => {
+    // An emptied field means nothing in dollars — zero, not "leave it be" —
+    // because that is the only way to take a dollar amount back off a line.
+    const next = text.trim() === '' ? 0 : parseUsdToCents(text);
+    if (next === null) { setText(value ? usdInputValue(value) : ''); return; }
+    if (clampUsd(next) !== value) onCommit(clampUsd(next));
+  };
+  const field = (
+    <input className="adm-input" inputMode="decimal" value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+      placeholder={t('amount_usd_placeholder')}
+      aria-label={t('amount_usd')}
+      style={{ ...rowInput, width: USD_W, textAlign: 'right' }} />
+  );
+  return label ? <label style={{ ...fieldLabelStyle, width: USD_W }}>{label}{field}</label> : field;
+};
+
+const ProductHeader = ({ t, showUsd }: { t: TFn; showUsd: boolean }) => (
   <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '2px 2px 0', flexWrap: 'wrap' }}>
     <span style={{ ...colHeader, flex: 2, minWidth: 140 }}>{t('product_name')}</span>
     <span style={{ ...colHeader, width: 80 }}>{t('quantity')}</span>
     <span style={{ ...colHeader, width: 78 }}>{t('unit_label')}</span>
     <span style={{ ...colHeader, width: 150, textAlign: 'right' }}>{t('amount')}</span>
+    {showUsd && <span style={{ ...colHeader, width: USD_W, textAlign: 'right' }}>{t('amount_usd')}</span>}
     <span style={{ width: 34, flexShrink: 0 }} />
   </div>
 );
@@ -295,7 +383,14 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
   // totals are only shown on the department overview.
   const budget = activeEvent ? eventRevenue(activeEvent) : dayRevenue(day);
   const spent = activeEvent ? eventSpent(activeEvent) : daySpent(day);
-  const remaining = budget - spent;
+  const remaining = subtractMoney(budget, spent);
+
+  // The dollar column: the manager's own switch, forced on by any dollar
+  // figure already recorded anywhere in this day.
+  const dayHasUsd = anyUsd([dayRevenue(day), daySpent(day), sumMoney(day.extras)]);
+  const [usdPref, setUsdPref] = useState(readUsdPref);
+  const showUsd = usdPref || dayHasUsd;
+  const toggleUsd = (on: boolean) => { setUsdPref(on); writeUsdPref(on); };
 
   return (
     <section className="adm-card tablet-fade-up" style={{ padding: 0, overflow: 'hidden' }}>
@@ -304,8 +399,8 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
             guests × price) PLUS the additional services sold. The two parts stay
             visible as the Booking and Additional services section totals below,
             so the breakdown is never hidden behind this one number. */}
-        {activeEvent && eventRevenue(activeEvent) > 0
-          ? <Total label={t('total_revenue')} value={formatWholeSum(eventRevenue(activeEvent))} color="#4ade80" />
+        {activeEvent && isSomething(eventRevenue(activeEvent))
+          ? <Total label={t('total_revenue')} value={formatMoney(eventRevenue(activeEvent))} color="#4ade80" />
           : <span />}
         {/* The day-delete button is only available on the department overview. */}
         {!activeEvent
@@ -334,6 +429,17 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
                   {t('clear_selection')}
                 </button>
               )}
+              {/* Shown here rather than per section: it is one column across
+                  the whole day, and a switch per block would be four switches
+                  that can disagree. Disabled while the day already holds a
+                  dollar figure, because turning it off would hide it. */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', cursor: dayHasUsd ? 'default' : 'pointer', fontSize: 13, color: 'rgba(226,232,240,0.75)' }}
+                title={dayHasUsd ? t('usd_column_locked') : undefined}>
+                <input type="checkbox" checked={showUsd} disabled={dayHasUsd}
+                  onChange={(e) => toggleUsd(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: dayHasUsd ? 'default' : 'pointer' }} />
+                {t('usd_column')}
+              </label>
             </div>
 
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
@@ -361,12 +467,12 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
                         <span style={{ color: 'var(--adm-accent)', fontSize: 18, marginLeft: 'auto' }}>›</span>
                       </div>
                       <p style={{ ...labelStyle, margin: '10px 0 2px' }}>{t('budget')}</p>
-                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: evBudget > 0 ? '#e2e8f0' : 'rgba(226,232,240,0.45)' }}>
-                        {formatWholeSum(evBudget)}
+                      <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: isSomething(evBudget) ? '#e2e8f0' : 'rgba(226,232,240,0.45)' }}>
+                        {formatMoney(evBudget)}
                       </p>
                       <p style={{ ...labelStyle, margin: '8px 0 2px' }}>{t('amount_spent')}</p>
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: evSpent > 0 ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
-                        {formatWholeSum(evSpent)}
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: isSomething(evSpent) ? '#fbbf24' : 'rgba(226,232,240,0.45)' }}>
+                        {formatMoney(evSpent)}
                       </p>
                     </button>
                   </div>
@@ -381,16 +487,20 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
               style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-accent)', fontSize: 15, fontWeight: 700, padding: 0 }}>
               ‹ {t(EVENT_LABEL_KEY[activeEvent.type])}
             </button>
-            <EventPanel event={activeEvent} t={t} onChanged={invalidate} />
+            <EventPanel event={activeEvent} t={t} onChanged={invalidate} showUsd={showUsd} />
           </div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 28, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', flexWrap: 'wrap' }}>
           {/* Only on the day overview: with a department open the same figure is
               already in the header above. */}
-          {!activeEvent && <Total label={t('total_revenue')} value={formatWholeSum(budget)} color="#4ade80" />}
-          <Total label={t('amount_spent')} value={formatWholeSum(spent)} color="#fbbf24" />
-          <Total label={t('remaining')} value={formatWholeSum(remaining)} color={remaining < 0 ? '#f87171' : '#4ade80'} />
+          {!activeEvent && <Total label={t('total_revenue')} value={formatMoney(budget)} color="#4ade80" />}
+          <Total label={t('amount_spent')} value={formatMoney(spent)} color="#fbbf24" />
+          {/* A balance can be in profit in one currency and at a loss in the
+              other, so the colour follows whichever side is negative — and the
+              two figures are shown, never one summed number. */}
+          <Total label={t('remaining')} value={formatMoney(remaining)}
+            color={remaining.sum < 0 || remaining.usdCents < 0 ? '#f87171' : '#4ade80'} />
         </div>
 
         {/* End-of-day report */}
@@ -429,15 +539,20 @@ const Total = ({ label, value, color }: { label: string; value: string; color: s
 
 // One department's booking, four expense blocks (products / salaries /
 // additionals / services), the manual total override and notes.
-const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChanged: () => void }) => {
-  const productsTotal = event.products.reduce((s, p) => s + p.amountSum, 0);
-  const salariesTotal = event.salaries.reduce((s, p) => s + p.amountSum, 0);
-  const additionalsTotal = event.additionals.reduce((s, p) => s + p.amountSum, 0);
-  const servicesTotal = event.services.reduce((s, p) => s + p.amountSum, 0);
+const EventPanel = ({ event, t, onChanged, showUsd }: {
+  event: DayEvent; t: TFn; onChanged: () => void; showUsd: boolean;
+}) => {
+  const productsTotal = sumMoney(event.products);
+  const salariesTotal = sumMoney(event.salaries);
+  const additionalsTotal = sumMoney(event.additionals);
+  const servicesTotal = sumMoney(event.services);
 
   const updateEvent = useMutation({
-    mutationFn: (patch: Partial<{ bookingName: string | null; guestCount: number; pricePerGuestSum: number; report: string | null; manualGuestsSum: number | null }>) =>
-      expenseService.updateEvent(event.id, patch),
+    mutationFn: (patch: Partial<{
+      bookingName: string | null; guestCount: number; pricePerGuestSum: number;
+      pricePerGuestUsdCents: number; report: string | null;
+      manualGuestsSum: number | null; manualGuestsUsdCents: number | null;
+    }>) => expenseService.updateEvent(event.id, patch),
     onSuccess: onChanged,
   });
 
@@ -455,7 +570,7 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
       {/* Booking: guests × price per guest is this department's guest revenue.
           Every field carries its own gold label rather than relying on a
           placeholder that disappears the moment something is typed. */}
-      <Block title={t('booking')} total={formatWholeSum(guestsRevenue(event))} tone="revenue">
+      <Block title={t('booking')} total={formatMoney(guestsRevenue(event))} tone="revenue">
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <label style={{ ...fieldLabelStyle, flex: 2, minWidth: 180 }}>
             {t('booking_name')}
@@ -476,8 +591,16 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
               onBlur={() => { const c = parseWholeSum(price); if (c !== null && clampSum(c) !== event.pricePerGuestSum) updateEvent.mutate({ pricePerGuestSum: clampSum(c) }); }}
               style={{ ...rowInput, textAlign: 'right' }} />
           </label>
+          {/* The per-guest price in dollars. Multiplied by the same guest count
+              as the so'm price — one booking, two prices, two revenue figures. */}
+          {showUsd && (
+            <UsdField t={t} label={t('price_per_guest_usd')} value={event.pricePerGuestUsdCents ?? 0}
+              onCommit={(usd) => updateEvent.mutate({ pricePerGuestUsdCents: usd })} />
+          )}
         </div>
-        <ManualGuestsField event={event} t={t} onSave={(v) => updateEvent.mutate({ manualGuestsSum: v })} />
+        <ManualGuestsField event={event} t={t} showUsd={showUsd}
+          onSave={(v) => updateEvent.mutate({ manualGuestsSum: v })}
+          onSaveUsd={(v) => updateEvent.mutate({ manualGuestsUsdCents: v })} />
       </Block>
 
       {/* The "Additional Services" product (performers, hosts, invitations…).
@@ -485,49 +608,49 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
           revenue above to make the department total, never counted against it.
           Placed directly after the booking so it is filled in first, before any
           of the spending sections. */}
-      <Block title={t('services_revenue')} total={formatWholeSum(servicesTotal)} tone="revenue">
+      <Block title={t('services_revenue')} total={formatMoney(servicesTotal)} tone="revenue">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <LineHeader t={t} nameLabel={t('service_name')} />
+          <LineHeader t={t} nameLabel={t('service_name')} showUsd={showUsd} />
           {event.services.map((s) => (
-            <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t}
+            <LineRow key={s.id} line={s} placeholder={t('service_name')} t={t} showUsd={showUsd}
               onUpdate={(patch) => expenseService.updateService(s.id, patch)}
               onRemove={() => expenseService.removeService(s.id)} onChanged={onChanged} />
           ))}
-          <AddLineRow placeholder={t('service_name')}
+          <AddLineRow placeholder={t('service_name')} t={t} showUsd={showUsd}
             onAdd={(payload) => expenseService.addService(event.id, payload)} onAdded={onChanged} />
         </div>
       </Block>
 
-      <Block title={t('product_expenses')} total={formatWholeSum(productsTotal)}>
+      <Block title={t('product_expenses')} total={formatMoney(productsTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ProductHeader t={t} />
-          {event.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={onChanged} />)}
-          <AddProductRow eventId={event.id} t={t} onAdded={onChanged} />
+          <ProductHeader t={t} showUsd={showUsd} />
+          {event.products.map((p) => <ProductRow key={p.id} product={p} t={t} onChanged={onChanged} showUsd={showUsd} />)}
+          <AddProductRow eventId={event.id} t={t} onAdded={onChanged} showUsd={showUsd} />
         </div>
       </Block>
 
-      <Block title={t('employee_salaries')} total={formatWholeSum(salariesTotal)}>
+      <Block title={t('employee_salaries')} total={formatMoney(salariesTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <LineHeader t={t} nameLabel={t('employee_name')} />
+          <LineHeader t={t} nameLabel={t('employee_name')} showUsd={showUsd} />
           {event.salaries.map((s) => (
-            <LineRow key={s.id} line={s} placeholder={t('employee_name')} t={t}
+            <LineRow key={s.id} line={s} placeholder={t('employee_name')} t={t} showUsd={showUsd}
               onUpdate={(patch) => expenseService.updateSalary(s.id, patch)}
               onRemove={() => expenseService.removeSalary(s.id)} onChanged={onChanged} />
           ))}
-          <AddLineRow placeholder={t('employee_name')}
+          <AddLineRow placeholder={t('employee_name')} t={t} showUsd={showUsd}
             onAdd={(payload) => expenseService.addSalary(event.id, payload)} onAdded={onChanged} />
         </div>
       </Block>
 
-      <Block title={t('additional_expenses')} total={formatWholeSum(additionalsTotal)}>
+      <Block title={t('additional_expenses')} total={formatMoney(additionalsTotal)}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <LineHeader t={t} nameLabel={t('note')} />
+          <LineHeader t={t} nameLabel={t('note')} showUsd={showUsd} />
           {event.additionals.map((a) => (
-            <LineRow key={a.id} line={a} placeholder={t('note')} t={t}
+            <LineRow key={a.id} line={a} placeholder={t('note')} t={t} showUsd={showUsd}
               onUpdate={(patch) => expenseService.updateAdditional(a.id, patch)}
               onRemove={() => expenseService.removeAdditional(a.id)} onChanged={onChanged} />
           ))}
-          <AddLineRow placeholder={t('note')}
+          <AddLineRow placeholder={t('note')} t={t} showUsd={showUsd}
             onAdd={(payload) => expenseService.addAdditional(event.id, payload)} onAdded={onChanged} />
         </div>
       </Block>
@@ -547,20 +670,36 @@ const EventPanel = ({ event, t, onChanged }: { event: DayEvent; t: TFn; onChange
 // manual total on the tablet Summary page: a checkbox that reveals an amount
 // field. It replaces guests × price per guest only — additional services are
 // added on top either way, so ticking this never hides them.
-const ManualGuestsField = ({ event, t, onSave }: {
-  event: DayEvent; t: TFn; onSave: (value: number | null) => void;
+const ManualGuestsField = ({ event, t, onSave, onSaveUsd, showUsd }: {
+  event: DayEvent; t: TFn;
+  onSave: (value: number | null) => void;
+  onSaveUsd: (value: number | null) => void;
+  showUsd: boolean;
 }) => {
   const computed = computedGuests(event);
-  const enabled = event.manualGuestsSum != null;
-  const [text, setText] = useState(enabled ? groupDigits(String(event.manualGuestsSum)) : '');
+  // ONE switch for both currencies — "I am typing this department's guest
+  // revenue myself" is one decision — but a figure each, because each currency
+  // falls back to its own multiplication when its own override is null.
+  const enabled = event.manualGuestsSum != null || event.manualGuestsUsdCents != null;
+  const [text, setText] = useState(event.manualGuestsSum != null ? groupDigits(String(event.manualGuestsSum)) : '');
   useEffect(() => {
     setText(event.manualGuestsSum != null ? groupDigits(String(event.manualGuestsSum)) : '');
   }, [event.manualGuestsSum]);
 
   // Ticking the box seeds the override with the current computed figure, so the
   // field opens on the number being replaced rather than on a blank the ledger
-  // would read as zero.
-  const toggle = (checked: boolean) => onSave(checked ? computed : null);
+  // would read as zero. BOTH currencies are seeded, or ticking it would set the
+  // so'm figure by hand and leave the dollars still following the price — the
+  // one number nobody typed would be the one that moved.
+  const toggle = (checked: boolean) => {
+    onSave(checked ? computed.sum : null);
+    // Only when there is a dollar side to seed or to clear: writing an explicit
+    // 0 on a so'm-only ledger would make `manualGuestsUsdCents` non-null and
+    // force the dollar column on for every day anybody ever overrode.
+    if (checked ? computed.usdCents > 0 : event.manualGuestsUsdCents != null) {
+      onSaveUsd(checked ? computed.usdCents : null);
+    }
+  };
 
   return (
     <div style={{ display: 'grid', gap: 8, paddingTop: 12, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
@@ -579,9 +718,12 @@ const ManualGuestsField = ({ event, t, onSave }: {
               if (clampSum(c) !== event.manualGuestsSum) onSave(clampSum(c));
             }}
             placeholder={t('amount')} style={{ ...rowInput, width: 180, textAlign: 'right' }} />
+          {showUsd && (
+            <UsdField t={t} value={event.manualGuestsUsdCents ?? 0} onCommit={(usd) => onSaveUsd(usd)} />
+          )}
           {/* The multiplication stays visible so it is obvious what was replaced. */}
           <span style={{ fontSize: 12, color: 'rgba(226,232,240,0.45)' }}>
-            {t('guests_computed')}: {formatWholeSum(computed)}
+            {t('guests_computed')}: {formatMoney(computed)}
           </span>
         </div>
       )}
@@ -591,7 +733,7 @@ const ManualGuestsField = ({ event, t, onSave }: {
 
 const removeBtn: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: 18, lineHeight: 1, padding: 4 };
 
-const ProductRow = ({ product, t, onChanged }: { product: ProductExpense; t: TFn; onChanged: () => void }) => {
+const ProductRow = ({ product, t, onChanged, showUsd }: { product: ProductExpense; t: TFn; onChanged: () => void; showUsd: boolean }) => {
   const [name, setName] = useState(product.name);
   const [qty, setQty] = useState(String(product.quantity));
   const [unit, setUnit] = useState(product.unit);
@@ -601,7 +743,7 @@ const ProductRow = ({ product, t, onChanged }: { product: ProductExpense; t: TFn
   }, [product.name, product.quantity, product.unit, product.amountSum]);
 
   const update = useMutation({
-    mutationFn: (patch: Partial<{ name: string; quantity: number; unit: string; amountSum: number }>) =>
+    mutationFn: (patch: Partial<{ name: string; quantity: number; unit: string; amountSum: number; amountUsdCents: number }>) =>
       expenseService.updateProduct(product.id, patch),
     onSuccess: onChanged,
   });
@@ -622,21 +764,27 @@ const ProductRow = ({ product, t, onChanged }: { product: ProductExpense; t: TFn
       <input className="adm-input" inputMode="numeric" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))}
         onBlur={() => { const c = parseWholeSum(amount); if (c !== null && clampSum(c) !== product.amountSum) update.mutate({ amountSum: clampSum(c) }); }}
         placeholder={t('amount')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+      {showUsd && (
+        <UsdField t={t} value={product.amountUsdCents ?? 0}
+          onCommit={(usd) => update.mutate({ amountUsdCents: usd })} />
+      )}
       <button type="button" onClick={() => remove.mutate()} title={t('delete')} style={removeBtn}>×</button>
     </div>
   );
 };
 
-const AddProductRow = ({ eventId, t, onAdded }: { eventId: string; t: TFn; onAdded: () => void }) => {
+const AddProductRow = ({ eventId, t, onAdded, showUsd }: { eventId: string; t: TFn; onAdded: () => void; showUsd: boolean }) => {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const [unit, setUnit] = useState('kg');
   const [amount, setAmount] = useState('');
+  const [usd, setUsd] = useState('');
   const add = useMutation({
     mutationFn: () => expenseService.addProduct(eventId, {
       name: name.trim(), quantity: Number(qty) || 0, unit, amountSum: clampSum(parseWholeSum(amount) ?? 0),
+      amountUsdCents: clampUsd(parseUsdToCents(usd) ?? 0),
     }),
-    onSuccess: () => { setName(''); setQty(''); setUnit('kg'); setAmount(''); onAdded(); },
+    onSuccess: () => { setName(''); setQty(''); setUnit('kg'); setAmount(''); setUsd(''); onAdded(); },
   });
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', opacity: 0.95 }}>
@@ -646,18 +794,23 @@ const AddProductRow = ({ eventId, t, onAdded }: { eventId: string; t: TFn; onAdd
         {UNITS.map((u) => <option key={u} value={u}>{t(`unit_${u}` as Parameters<typeof translate>[0])}</option>)}
       </select>
       <input className="adm-input" inputMode="numeric" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))} placeholder={t('amount')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+      {showUsd && (
+        <input className="adm-input" inputMode="decimal" value={usd} onChange={(e) => setUsd(e.target.value)}
+          placeholder={t('amount_usd_placeholder')} aria-label={t('amount_usd')}
+          style={{ ...rowInput, width: USD_W, textAlign: 'right' }} />
+      )}
       <button type="button" className="adm-btn-ghost" onClick={() => { if (name.trim()) add.mutate(); }} disabled={!name.trim() || add.isPending} style={{ fontSize: 18, lineHeight: 1, padding: '6px 12px' }}>+</button>
     </div>
   );
 };
 
 // Shared row for salary & additional lines (both { name, amountSum }).
-type SimpleLine = { id: string; name: string; amountSum: number };
+type SimpleLine = { id: string; name: string; amountSum: number; amountUsdCents?: number };
 
-const LineRow = ({ line, placeholder, t, onUpdate, onRemove, onChanged }: {
+const LineRow = ({ line, placeholder, t, onUpdate, onRemove, onChanged, showUsd }: {
   line: SimpleLine; placeholder: string; t: TFn;
-  onUpdate: (patch: Partial<{ name: string; amountSum: number }>) => Promise<unknown>;
-  onRemove: () => Promise<unknown>; onChanged: () => void;
+  onUpdate: (patch: Partial<{ name: string; amountSum: number; amountUsdCents: number }>) => Promise<unknown>;
+  onRemove: () => Promise<unknown>; onChanged: () => void; showUsd: boolean;
 }) => {
   const [name, setName] = useState(line.name);
   const [amount, setAmount] = useState(groupDigits(String(line.amountSum)));
@@ -674,26 +827,42 @@ const LineRow = ({ line, placeholder, t, onUpdate, onRemove, onChanged }: {
       <input className="adm-input" inputMode="numeric" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))}
         onBlur={() => { const c = parseWholeSum(amount); if (c !== null && clampSum(c) !== line.amountSum) update.mutate({ amountSum: clampSum(c) }); }}
         placeholder={t('amount')} style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+      {showUsd && (
+        <UsdField t={t} value={line.amountUsdCents ?? 0}
+          onCommit={(usd) => update.mutate({ amountUsdCents: usd })} />
+      )}
       <button type="button" onClick={() => remove.mutate()} title={t('delete')} style={removeBtn}>×</button>
     </div>
   );
 };
 
-const AddLineRow = ({ placeholder, onAdd, onAdded }: {
+const AddLineRow = ({ placeholder, onAdd, onAdded, t, showUsd }: {
   placeholder: string;
-  onAdd: (payload: { name: string; amountSum: number }) => Promise<unknown>;
+  onAdd: (payload: { name: string; amountSum: number; amountUsdCents: number }) => Promise<unknown>;
   onAdded: () => void;
+  t: TFn;
+  showUsd: boolean;
 }) => {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [usd, setUsd] = useState('');
   const add = useMutation({
-    mutationFn: () => onAdd({ name: name.trim(), amountSum: clampSum(parseWholeSum(amount) ?? 0) }),
-    onSuccess: () => { setName(''); setAmount(''); onAdded(); },
+    mutationFn: () => onAdd({
+      name: name.trim(),
+      amountSum: clampSum(parseWholeSum(amount) ?? 0),
+      amountUsdCents: clampUsd(parseUsdToCents(usd) ?? 0),
+    }),
+    onSuccess: () => { setName(''); setAmount(''); setUsd(''); onAdded(); },
   });
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
       <input className="adm-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} style={{ ...rowInput, flex: 2, minWidth: 160 }} />
       <input className="adm-input" inputMode="numeric" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))} placeholder="—" style={{ ...rowInput, width: 150, textAlign: 'right' }} />
+      {showUsd && (
+        <input className="adm-input" inputMode="decimal" value={usd} onChange={(e) => setUsd(e.target.value)}
+          placeholder={t('amount_usd_placeholder')} aria-label={t('amount_usd')}
+          style={{ ...rowInput, width: USD_W, textAlign: 'right' }} />
+      )}
       <button type="button" className="adm-btn-ghost" onClick={() => { if (name.trim()) add.mutate(); }} disabled={!name.trim() || add.isPending} style={{ fontSize: 18, lineHeight: 1, padding: '6px 12px' }}>+</button>
     </div>
   );
