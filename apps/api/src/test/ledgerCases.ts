@@ -150,17 +150,22 @@ export const LEDGER_CASES: LedgerCase[] = [
     name: 'a line can be part so\'m and part dollars, and neither part reaches the other',
     event: {
       type: 'TUI', guestCount: 100, pricePerGuestSum: 90000, pricePerGuestUsdCents: 200,
+      // One dollar amount on each of the four line kinds across this fixture:
+      // products and additionals here, salaries below, services here too. A
+      // kind with no dollar amount anywhere is a term that can be dropped from
+      // the spending sum in any of the three implementations and no suite
+      // notices — a break-check found exactly that for additionals.
       products: [{ name: 'Meat', amountSum: 3000000, amountUsdCents: 15000 }],
       salaries: [{ name: 'Cooks', amountSum: 1000000 }],
-      additionals: [],
+      additionals: [{ name: 'Taxi', amountSum: 100000, amountUsdCents: 2500 }],
       services: [{ name: 'Singer', amountSum: 2000000, amountUsdCents: 30000 }],
     },
     expected: {
       guestsRevenue: 9000000, servicesRevenue: 2000000, revenue: 11000000,
-      spent: 4000000, balance: 7000000,
+      spent: 4100000, balance: 6900000,
       usd: {
         guestsRevenue: 20000, servicesRevenue: 30000, revenue: 50000,
-        spent: 15000, balance: 35000,
+        spent: 17500, balance: 32500,
       },
     },
   },
@@ -214,11 +219,13 @@ export const LEDGER_CASES: LedgerCase[] = [
     event: {
       type: 'DAY', guestCount: 50, pricePerGuestSum: 60000,
       products: [{ name: 'Spirits', amountSum: 100000, amountUsdCents: 80000 }],
-      salaries: [], additionals: [], services: [],
+      // A dollar amount on a SALARY too, for the same reason.
+      salaries: [{ name: 'Barman', amountSum: 0, amountUsdCents: 5000 }],
+      additionals: [], services: [],
     },
     expected: {
       guestsRevenue: 3000000, servicesRevenue: 0, revenue: 3000000, spent: 100000, balance: 2900000,
-      usd: { guestsRevenue: 0, servicesRevenue: 0, revenue: 0, spent: 80000, balance: -80000 },
+      usd: { guestsRevenue: 0, servicesRevenue: 0, revenue: 0, spent: 85000, balance: -85000 },
     },
   },
   {

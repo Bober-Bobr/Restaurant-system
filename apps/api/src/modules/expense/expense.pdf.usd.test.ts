@@ -98,8 +98,15 @@ describe('whether the sheet gets a dollar column', () => {
   it('prints a dash, not $0.00, on a line with no dollars', () => {
     // A zero is a figure somebody recorded. A column of them reads as money
     // that was counted and came to nothing.
-    const body = SOURCE.slice(SOURCE.indexOf('const dataRow ='), SOURCE.indexOf('const section ='));
-    expect(body).toMatch(/hasUsd\(value\) \? formatUsd\(value\.usdCents\) : '—'/);
+    //
+    // Each helper is sliced ON ITS OWN. Sliced together, `dataRow` could be
+    // broken and the assertion went on passing against `totalRow`'s identical
+    // expression underneath it — which is exactly what a break-check found.
+    const helper = (name: string, next: string) =>
+      SOURCE.slice(SOURCE.indexOf(`const ${name} =`), SOURCE.indexOf(`const ${next} =`));
+    const dash = /hasUsd\(value\) \? formatUsd\(value\.usdCents\) : '—'/;
+    expect(helper('dataRow', 'totalRow')).toMatch(dash);
+    expect(helper('totalRow', 'section')).toMatch(dash);
   });
 });
 

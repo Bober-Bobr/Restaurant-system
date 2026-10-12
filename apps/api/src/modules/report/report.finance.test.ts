@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { LEDGER_CASES, LEDGER_DAY } from '../../test/ledgerCases.js';
+import { LEDGER_CASES, LEDGER_DAY, expectedUsd } from '../../test/ledgerCases.js';
 import {
-  dayExtras, dayProfit, departmentProfit, eventRevenue, eventSpent,
-  guestsRevenue, marginPct, servicesRevenue, toTiyin, totalProfit,
+  dayExtras, dayExtrasUsd, dayProfit, departmentProfit, eventRevenue, eventRevenueUsd, eventSpent, eventSpentUsd,
+  guestsRevenue, guestsRevenueUsd, marginPct, marginPctUsd, servicesRevenue, servicesRevenueUsd,
+  toTiyin, totalProfit,
   type LedgerDay, type LedgerDepartment,
 } from './report.finance.js';
 
@@ -33,15 +34,137 @@ const GUESTS_ONLY = 'guest revenue is guests × price per guest';
 const FULL_DEPARTMENT = 'spending is products + salaries + additional expenses only';
 const AT_A_LOSS = 'a department can run at a loss';
 
+/**
+ * The fixture's department, as this module takes one.
+ *
+ * It carries the DOLLAR fields too. It did not at first, which silently dropped
+ * every dollar input on the floor — so the dollar half of this implementation
+ * read zero and agreed with any expectation of zero. A break-check is what
+ * showed that up: six deliberate breaks to the dollar arithmetic changed
+ * nothing any test could see.
+ */
 const asDepartment = (event: (typeof LEDGER_CASES)[number]['event']): LedgerDepartment => ({
   type: event.type,
   guestCount: event.guestCount,
   pricePerGuestSum: event.pricePerGuestSum,
+  pricePerGuestUsdCents: event.pricePerGuestUsdCents ?? 0,
   manualGuestsSum: event.manualGuestsSum ?? null,
+  manualGuestsUsdCents: event.manualGuestsUsdCents ?? null,
   products: event.products,
   salaries: event.salaries,
   additionals: event.additionals,
   services: event.services,
+});
+
+// ── The dollar half, against the same fixture ──────────────────────────────
+// A second currency is a second chance for this implementation to disagree with
+// the manager's screen, so it is pinned to the same shared cases. Note the unit
+// asymmetry these assertions encode: the so'm figures are multiplied into tiyin
+// on the way out and the dollar figures are ALREADY cents, so `toTiyin` must
+// never touch them.
+describe('the ledger arithmetic, in dollars', () => {
+  for (const testCase of LEDGER_CASES) {
+    it(testCase.name, () => {
+      const department = asDepartment(testCase.event);
+      const usd = expectedUsd(testCase);
+      expect(guestsRevenueUsd(department)).toBe(usd.guestsRevenue);
+      expect(servicesRevenueUsd(department)).toBe(usd.servicesRevenue);
+      expect(eventRevenueUsd(department)).toBe(usd.revenue);
+      expect(eventSpentUsd(department)).toBe(usd.spent);
+      expect(eventRevenueUsd(department) - eventSpentUsd(department)).toBe(usd.balance);
+    });
+  }
+
+  for (const testCase of LEDGER_CASES) {
+    it(`${testCase.name} — through departmentProfit`, () => {
+      const profit = departmentProfit(asDepartment(testCase.event));
+      const usd = expectedUsd(testCase);
+      // Dollars pass through unscaled...
+      expect(profit.guestsRevenueUsdCents).toBe(usd.guestsRevenue);
+      expect(profit.servicesRevenueUsdCents).toBe(usd.servicesRevenue);
+      expect(profit.revenueUsdCents).toBe(usd.revenue);
+      expect(profit.spentUsdCents).toBe(usd.spent);
+      expect(profit.balanceUsdCents).toBe(usd.balance);
+      // ...while the so'm side is multiplied into tiyin, on the same object.
+      expect(profit.revenueCents).toBe(toTiyin(testCase.expected.revenue));
+      expect(profit.balanceCents).toBe(toTiyin(testCase.expected.balance));
+    });
+  }
+
+  it('rolls a day up in both currencies, and never across them', () => {
+    const day: LedgerDay = {
+      date: LEDGER_DAY.date,
+      events: LEDGER_DAY.events.map(asDepartment),
+      extras: [{ amountSum: 10_000, amountUsdCents: 2_500 }],
+    };
+    const profit = dayProfit(day);
+    expect(profit.revenueUsdCents).toBe(LEDGER_DAY.expected.usd.revenue);
+    // The day's extras count as spending here — the one deliberate departure
+    // from the manager's own totals — in both currencies.
+    expect(profit.spentUsdCents).toBe(LEDGER_DAY.expected.usd.spent + 2_500);
+    expect(profit.extrasUsdCents).toBe(2_500);
+    expect(profit.extrasCents).toBe(toTiyin(10_000));
+    // And the so'm side is untouched by any of it.
+    expect(profit.revenueCents).toBe(toTiyin(LEDGER_DAY.expected.revenue));
+    expect(profit.spentCents).toBe(toTiyin(LEDGER_DAY.expected.spent + 10_000));
+  });
+
+  it('adds the dollar parts up across days', () => {
+    const one: LedgerDay = {
+      date: '2026-10-01',
+      events: [asDepartment(caseNamed('a line can be part so\'m and part dollars, and neither part reaches the other').event)],
+      extras: [],
+    };
+    const two: LedgerDay = {
+      date: '2026-10-02',
+      events: [asDepartment(caseNamed('a line can be wholly in dollars, and leaves the so\'m total at zero').event)],
+      extras: [{ amountSum: 0, amountUsdCents: 700 }],
+    };
+    const total = totalProfit([one, two]);
+    expect(total.productsUsdCents).toBe(15_000 + 24_000);
+    expect(total.additionalsUsdCents).toBe(2_500);
+    expect(total.servicesRevenueUsdCents).toBe(30_000);
+    expect(total.extrasUsdCents).toBe(700);
+    // Products + additionals + the day's extras, each in its own column.
+    expect(total.spentUsdCents).toBe(15_000 + 2_500 + 24_000 + 700);
+    expect(total.revenueUsdCents).toBe(20_000 + 30_000);
+    expect(total.balanceUsdCents).toBe(total.revenueUsdCents - total.spentUsdCents);
+  });
+
+  it('reads the day\'s dollar extras on their own', () => {
+    const day: LedgerDay = { date: '2026-10-03', events: [], extras: [{ amountSum: 1_000, amountUsdCents: 450 }] };
+    expect(dayExtras(day)).toBe(1_000);
+    expect(dayExtrasUsd(day)).toBe(450);
+  });
+
+  it('can be in profit in so\'m and at a loss in dollars at once', () => {
+    // The reason there are two balances. One figure cannot say this, and
+    // whichever currency it picked would misreport the other.
+    const profit = departmentProfit(asDepartment(
+      caseNamed('a department can be in profit in so\'m and at a loss in dollars at once').event,
+    ));
+    expect(profit.balanceCents).toBeGreaterThan(0);
+    expect(profit.balanceUsdCents).toBeLessThan(0);
+  });
+});
+
+describe('the dollar margin is its own ratio', () => {
+  it('is measured against the dollar revenue, not the so\'m one', () => {
+    expect(marginPctUsd({ revenueUsdCents: 50_000, balanceUsdCents: 35_000 })).toBe(70);
+    // And the so'm margin is unaffected by the dollar figures beside it.
+    expect(marginPct({ revenueCents: 1_000_000, balanceCents: 250_000 })).toBe(25);
+  });
+
+  it('is NULL on no dollar revenue, never 0%', () => {
+    // A period that took no dollars has no dollar margin; printing "0%" would
+    // say it broke even in a currency it never traded in.
+    expect(marginPctUsd({ revenueUsdCents: 0, balanceUsdCents: 0 })).toBe(null);
+    expect(marginPctUsd({ revenueUsdCents: 0, balanceUsdCents: -8_000 })).toBe(null);
+  });
+
+  it('reports a dollar loss as a negative percentage', () => {
+    expect(marginPctUsd({ revenueUsdCents: 10_000, balanceUsdCents: -5_000 })).toBe(-50);
+  });
 });
 
 describe('the ledger arithmetic, in whole so’m', () => {
