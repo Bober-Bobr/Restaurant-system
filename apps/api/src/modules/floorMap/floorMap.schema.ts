@@ -53,6 +53,35 @@ export const updateTableSchema = createTableSchema.partial().extend({
   rotation: z.number().int().min(0).max(359).optional(),
 });
 
+/**
+ * Several tables pushed together into one.
+ *
+ * The GEOMETRY is the browser's, like every other layout rule here (see
+ * utils/floorMap.ts, `mergeTables`): the map is what draws a table, so it is
+ * what knows how long a top has to be for twelve chairs. What the server owns
+ * is the part a browser must not decide — which rows may be touched, and that
+ * deleting them cannot release somebody's booking.
+ *
+ * The SHAPE is deliberately absent: a merged table is always a rectangle, so
+ * the server pins it rather than accepting a value the two sides could disagree
+ * about. `tableIds` is in the order they were picked, and the FIRST is the
+ * table that remains — it keeps its number, which is the one the staff have
+ * been saying out loud. Two at least, because a "merge" of one table is a
+ * resize wearing the wrong name.
+ */
+export const mergeTablesSchema = z.object({
+  tableIds: z.array(z.string().cuid()).min(2).max(MAX_SEATS),
+  seats: z.number().int().min(1).max(MAX_SEATS),
+  x: coord,
+  y: coord,
+  width: tableExtent.unwrap(),
+  height: tableExtent.unwrap(),
+  rotation: z.number().int().min(0).max(359).default(0),
+}).refine((v) => new Set(v.tableIds).size === v.tableIds.length, {
+  message: 'A table cannot be merged with itself',
+  path: ['tableIds'],
+});
+
 export const idSchema = z.object({ id: z.string().cuid() });
 
 /**

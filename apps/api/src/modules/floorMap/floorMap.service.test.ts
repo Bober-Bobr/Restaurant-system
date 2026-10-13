@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FloorMapService } from './floorMap.service.js';
 import type { AreaRow, FloorMapRepository, TableData, TableRow } from './floorMap.repository.js';
-import { createTableSchema, updateAreaSchema, updateTableSchema } from './floorMap.schema.js';
+import { createTableSchema, mergeTablesSchema, updateAreaSchema, updateTableSchema } from './floorMap.schema.js';
 import { layoutSchema } from './floorMap.layout.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
@@ -87,6 +87,18 @@ function fakeRepo() {
       return row;
     },
     async deleteTable(id) { tables.splice(tables.findIndex((t) => t.id === id), 1); },
+    async mergeTables(keepId, removeIds, data, protectFrom) {
+      // The booking check the real one does inside its transaction: a table a
+      // booking still holds blocks the merge, and NOTHING is written.
+      const held = removeIds.filter((id) => protectFrom && bookedTables.has(id));
+      if (held.length > 0) {
+        return { table: null, blocked: held.map((id) => tables.find((t) => t.id === id)!.label).sort() };
+      }
+      const row = tables.find((t) => t.id === keepId)!;
+      Object.assign(row, data);
+      for (const id of removeIds) tables.splice(tables.findIndex((t) => t.id === id), 1);
+      return { table: row, blocked: [] };
+    },
   };
   return { repo, areas, tables, defaults, bookedTables };
 }
@@ -481,5 +493,162 @@ describe('the wiring', () => {
     expect(perArea).toMatch(/ADD COLUMN "width" INTEGER;/);
     expect(model).toMatch(/width\s+Int\?/);
     expect(schema).not.toMatch(/^\s*mapX\s/m);
+  });
+});
+
+describe('merging tables into one', () => {
+  /** Three four-tops in a row in R1's Small Banquets hall. */
+  const row = async () => Promise.all([1, 2, 3].map((n) => service.createTable('r1', 'SMALL_BANQUET', {
+    ...TABLE, hallId: mine.id, label: String(n), seats: 4, x: 100 + n * 180, y: 200,
+  })));
+  const MERGED = { seats: 12, x: 460, y: 200, width: 540, height: 56, rotation: 0 };
+
+  it('the FIRST table stays, keeps its number, and the others go', async () => {
+    const [a, b, c] = await row();
+    const merged = await service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, b.id, c.id], ...MERGED });
+    expect(merged.id).toBe(a.id);
+    // The number staff have been saying out loud is the one that survives.
+    expect(merged.label).toBe('1');
+    expect(merged.seats).toBe(12);
+    expect(store.tables.map((t) => t.id)).toEqual([a.id]);
+  });
+
+  it('it takes the size the map worked out, and is always a RECTANGLE', async () => {
+    const [a, b] = await row();
+    // Round tables pushed together are one long table; the shape is pinned
+    // server-side so the two sides cannot hold that fact differently.
+    await service.updateTable('r1', 'SMALL_BANQUET', a.id, { shape: 'ROUND' });
+    const merged = await service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, b.id], ...MERGED, seats: 8 });
+    expect(merged.shape).toBe('RECT');
+    expect({ x: merged.x, y: merged.y, width: merged.width, height: merged.height })
+      .toEqual({ x: MERGED.x, y: MERGED.y, width: MERGED.width, height: MERGED.height });
+  });
+
+  it('a table from another section or another restaurant is 404, wherever it sits in the list', async () => {
+    const [a, b] = await row();
+    const next = await service.createTable('r1', 'BANQUET', { ...TABLE, hallId: banquet.id, label: '9' });
+    const other = await service.createTable('r2', 'SMALL_BANQUET', { ...TABLE, hallId: foreign.id, label: '9' });
+    for (const id of [next.id, other.id]) {
+      expect(await statusOf(() => service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, id], ...MERGED }))).toBe(404);
+      // And last as well as second: a list is as long as the caller likes.
+      expect(await statusOf(() => service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, b.id, id], ...MERGED }))).toBe(404);
+    }
+    // Nothing was merged by any of the refused calls.
+    expect(store.tables.filter((t) => t.hallId === mine.id)).toHaveLength(3);
+  });
+
+  it('tables in different AREAS are refused — that is a table teleporting', async () => {
+    const [a] = await row();
+    const elsewhere = await service.createArea('r1', 'SMALL_BANQUET', { name: 'Terrace', kind: 'OUTDOOR', ...LAYOUT, capacity: 40 });
+    const far = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: elsewhere.id, label: '1' });
+    expect(await statusOf(() => service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, far.id], ...MERGED }))).toBe(400);
+    expect(store.tables).toHaveLength(4);
+  });
+
+  it('a table a booking still holds cannot be merged AWAY, and is named', async () => {
+    const [a, b, c] = await row();
+    store.bookedTables.add(c.id);
+    let message = '';
+    try {
+      await service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, b.id, c.id], ...MERGED });
+    } catch (error) {
+      message = (error as Error).message;
+      expect((error as { status?: number }).status).toBe(409);
+    }
+    // Named, like a booking clash: "unavailable" alone sends somebody away
+    // from the desk to find out which table and whose evening.
+    expect(message).toContain('3');
+    // And nothing was written — not the merge, not the resize of the keeper.
+    expect(store.tables).toHaveLength(3);
+    expect(store.tables.find((t) => t.id === a.id)!.seats).toBe(4);
+  });
+
+  it('but the KEPT table may be booked — it keeps its row, so it keeps its booking', async () => {
+    const [a, b] = await row();
+    store.bookedTables.add(a.id);
+    const merged = await service.mergeTables('r1', 'SMALL_BANQUET', { tableIds: [a.id, b.id], ...MERGED, seats: 8 });
+    expect(merged.id).toBe(a.id);
+    expect(merged.seats).toBe(8);
+  });
+});
+
+describe('what the merge endpoint accepts', () => {
+  const body = { tableIds: ['cl000000000000000000000a', 'cl000000000000000000000b'], seats: 8, x: 300, y: 200, width: 400, height: 56 };
+
+  it('two tables at least — a "merge" of one is a resize wearing the wrong name', () => {
+    expect(mergeTablesSchema.safeParse({ ...body, tableIds: [body.tableIds[0]] }).success).toBe(false);
+    expect(mergeTablesSchema.safeParse(body).success).toBe(true);
+  });
+
+  it('and never the same table twice', () => {
+    // Which would delete a row and then try to keep it.
+    expect(mergeTablesSchema.safeParse({ ...body, tableIds: [body.tableIds[0], body.tableIds[0]] }).success).toBe(false);
+  });
+
+  it('no shape: the server decides that, so the two sides cannot disagree', () => {
+    const parsed = mergeTablesSchema.parse({ ...body, shape: 'ROUND' });
+    expect('shape' in parsed).toBe(false);
+  });
+
+  it('the seat count cannot exceed what the column holds', () => {
+    expect(mergeTablesSchema.safeParse({ ...body, seats: 41 }).success).toBe(false);
+    expect(mergeTablesSchema.safeParse({ ...body, seats: 40 }).success).toBe(true);
+    expect(mergeTablesSchema.safeParse({ ...body, seats: 0 }).success).toBe(false);
+  });
+
+  it('the size is a real one, and null is not a size', () => {
+    // A merged table is explicitly sized; "automatic" would throw away the
+    // span the merge was measured from.
+    expect(mergeTablesSchema.safeParse({ ...body, width: null }).success).toBe(false);
+    expect(mergeTablesSchema.safeParse({ ...body, width: 10 }).success).toBe(false);
+    expect(mergeTablesSchema.safeParse({ ...body, height: 2001 }).success).toBe(false);
+  });
+});
+
+describe('the real merge, as the repository writes it', () => {
+  // The fake above implements the booking check itself, which means breaking
+  // the REAL one changes nothing any test above can see — the same trap the
+  // report's `asDepartment` adapter fell into. There is no database here, so
+  // the repository's own half is read.
+  const API_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..');
+  const read = (rel: string) => fs.readFileSync(path.join(API_ROOT, rel), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  const repo = read('src/modules/floorMap/floorMap.repository.ts');
+  const merge = repo.slice(repo.indexOf('async mergeTables('), repo.indexOf('async mergeTables(') + 1800);
+
+  it('refuses outright when a booking from the cutoff onward holds one of them', () => {
+    // `EventFloorTable` cascades on the table, so deleting one releases every
+    // booking sitting on it — silently, which is why this is a refusal and not
+    // a warning.
+    expect(merge).toMatch(/if \(held\.length > 0\) \{[\s\S]{0,200}return \{ table: null/);
+  });
+
+  it('and the check comes BEFORE either write', () => {
+    expect(merge.indexOf('held.length > 0')).toBeLessThan(merge.indexOf('tx.floorTable.update'));
+    expect(merge.indexOf('held.length > 0')).toBeLessThan(merge.indexOf('deleteMany'));
+  });
+
+  it('it is one transaction, so a failed delete cannot leave a resized keeper', () => {
+    expect(merge).toContain('prisma.$transaction');
+    expect(merge).toContain('tx.floorTable.update');
+    expect(merge).toContain('tx.floorTable.deleteMany');
+  });
+
+  it('a cancelled booking holds nothing, and only the REMOVED tables are checked', () => {
+    expect(merge).toMatch(/floorTableId: \{ in: removeIds \}/);
+    expect(merge).toMatch(/status: \{ not: 'CANCELLED' \}/);
+    expect(merge).toMatch(/eventDate: \{ gte: protectFrom \}/);
+  });
+
+  it('the blocked tables come back by LABEL, de-duplicated', () => {
+    // The caller names them to the supervisor; an id would be useless and the
+    // same table appears once per booking that holds it.
+    expect(merge).toMatch(/new Set\(held\.map\(\(row\) => row\.floorTable\.label\)\)/);
+  });
+
+  it('and the service protects from the start of today, like a revert does', () => {
+    const service = read('src/modules/floorMap/floorMap.service.ts');
+    const fn = service.slice(service.indexOf('async mergeTables('));
+    expect(fn).toContain('startOfDay(new Date())');
   });
 });

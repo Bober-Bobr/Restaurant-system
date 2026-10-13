@@ -136,15 +136,32 @@ describe('each control belongs to one editor', () => {
     expect(page).toMatch(/\{editingZones && \(\s*<button type="button" className="fm-tab fm-tab-add"/);
   });
 
-  it('the default layout sits with the TABLE layout, which is what an evening moves', () => {
+  it('the default layout sits with "Edit map" — a default is about the ROOM', () => {
+    // It used to be the table layout's, on the reasoning that an evening moves
+    // the furniture. But the snapshot carries the drawing and the map size as
+    // well as the tables, so a default is a statement about the whole room —
+    // and since the nightly sweep stopped putting the saved drawing back,
+    // re-saving the default is how somebody who has just redrawn the zones
+    // makes them the thing a revert returns to. That is this editor.
     const panel = page.slice(page.indexOf('const areaPanel'), page.indexOf('const drawingPalette'));
     const zones = panel.indexOf('if (editingZones)');
     expect(zones).toBeGreaterThan(-1);
-    // After the zones branch returns, so it is the layout editor's.
-    expect(panel.indexOf("t('fm_save_default')")).toBeGreaterThan(zones);
-    // And the drawing's own branch does not offer it.
     const zonesBranch = panel.slice(zones, panel.indexOf("t('fm_delete_area')", zones));
-    expect(zonesBranch).not.toContain('fm_save_default');
+    expect(zonesBranch).toContain("t('fm_save_default')");
+    expect(zonesBranch).toContain("t('fm_restore_default')");
+    // And the table layout's own branch no longer offers it — two places to
+    // save one default is two answers to "where is it?".
+    const tableBranch = panel.slice(panel.indexOf("t('fm_add_table_here')"));
+    expect(tableBranch).not.toContain('fm_save_default');
+    expect(tableBranch).not.toContain('fm_restore_default');
+  });
+
+  it('MERGING tables is the layout editor\'s — it is furniture being moved', () => {
+    const panel = page.slice(page.indexOf('const areaPanel'), page.indexOf('const drawingPalette'));
+    const tableBranch = panel.slice(panel.indexOf("t('fm_add_table_here')"));
+    expect(tableBranch).toContain("t('fm_merge')");
+    // And it cannot be started on an area with nothing to merge.
+    expect(tableBranch).toMatch(/disabled=\{areaTables\.length < 2\}/);
   });
 
   it('the shape palette is up throughout the drawing editor, not only when nothing is selected', () => {
@@ -165,7 +182,7 @@ describe('each control belongs to one editor', () => {
   it('the shape panel wins over the table panel while drawing', () => {
     // There a press is never about a table, so a table left selected from the
     // other editor must not take the panel.
-    const dispatch = page.slice(page.indexOf('{booking ? bookingForm()'));
+    const dispatch = page.slice(page.indexOf('{merging ? mergeForm()'));
     expect(dispatch.indexOf('featurePanel')).toBeLessThan(dispatch.indexOf('tablePanel'));
   });
 

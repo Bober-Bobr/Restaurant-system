@@ -7,8 +7,8 @@ import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
 import {
   CHAIR_DEPTH, CHAIR_WIDTH, MAX_SEATS, MIN_SEATS, areaSize, chairsFor, clampSeats, clampTable, defaultAreaSize,
-  featureLabelAt, featuresOf, fitTableSize, freeSpot, minAreaSize, nextRotation, nextTableLabel, overlappingTables,
-  seatsIn, tableSize,
+  featureLabelAt, featuresOf, fitTableSize, freeSpot, mergeTables, minAreaSize, nextRotation, nextTableLabel,
+  overlappingTables, seatsIn, tableSize,
   type AreaKind, type FloorMap, type MapArea, type MapFeature, type MapTable, type TableShape,
 } from '../utils/floorMap';
 import {
@@ -151,6 +151,18 @@ export const FloorMapPage = () => {
    * — an index into another area's drawing points at a different shape.
    */
   const [selectedFeature, setSelectedFeature] = useState<number | null>(null);
+  /**
+   * The tables being pushed together, in the order they were tapped — or null,
+   * which means nothing is being merged.
+   *
+   * A mode within the layout editor rather than a modifier key, because this
+   * map is used on a tablet: there is no ctrl-click, and "tap each table you
+   * mean" is the gesture the kiosk's own table chooser already uses. While it
+   * is on, a press on a table TICKS it instead of selecting or dragging it —
+   * which is also why it is an array and not a Set: the first table tapped is
+   * the one whose number the merged table keeps.
+   */
+  const [merging, setMerging] = useState<string[] | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   // A phone opens zoomed in: a whole venue fitted to 390px draws table numbers
   // a few pixels high. The map scrolls inside its own frame.
@@ -263,6 +275,8 @@ export const FloorMapPage = () => {
     // An index into THIS area's drawing means something else in the next one.
     setSelectedFeature(null);
     setDrag(null);
+    // Tables are merged within one area, so the ticks mean nothing next door.
+    setMerging(null);
     // A booking is given tables in ONE area, so moving to another ends it.
     setAssigning(null);
     setPicked({});
@@ -279,17 +293,20 @@ export const FloorMapPage = () => {
   /**
    * Change what the map is for.
    *
-   * One place, because every mode change has to drop the same four things: a
-   * drag in flight (its target may not even be editable in the next mode), the
-   * table selection, the shape selection, and anything to do with a booking —
-   * an editor is not where a booking is drafted, and leaving the draft open
-   * would have the plan painted by a booking nobody can finish from here.
+   * One place, because every mode change has to drop the same things: a drag
+   * in flight (its target may not even be editable in the next mode), the
+   * table selection, the shape selection, a merge being picked out (its ticks
+   * are not even visible outside the layout editor), and anything to do with a
+   * booking — an editor is not where a booking is drafted, and leaving the
+   * draft open would have the plan painted by a booking nobody can finish
+   * from here.
    */
   const switchMode = (next: EditMode) => {
     setMode(next);
     setDrag(null);
     setSelectedId(null);
     setSelectedFeature(null);
+    setMerging(null);
     setOpenBooking(null);
     setOpenTableId(null);
     setBooking(null);
@@ -449,6 +466,49 @@ export const FloorMapPage = () => {
     if (!window.confirm(t('fm_delete_table_confirm', { label: table.label }))) return;
     setSelectedId(null);
     void commit((m) => ({ ...m, tables: m.tables.filter((x) => x.id !== table.id) }), () => floorMapService.removeTable(table.id));
+  };
+
+  /** The tables ticked for a merge, in the order they were tapped. */
+  const mergingTables = useMemo(
+    () => (merging ?? []).map((id) => areaTables.find((x) => x.id === id)).filter((x): x is MapTable => !!x),
+    [merging, areaTables],
+  );
+  /** What one table in their place would be — the whole of the geometry. */
+  const mergePreview = useMemo(() => mergeTables(mergingTables), [mergingTables]);
+
+  /**
+   * Push the ticked tables together into one.
+   *
+   * The geometry is `mergeTables`, which is also what the panel has been
+   * showing while they were picked — so what is written is the figure they were
+   * told, not a second calculation. The first table ticked is the one that
+   * stays, which the server pins as well; its row survives, so a booking
+   * already on it does too.
+   */
+  const mergeChosen = async () => {
+    if (!current || !mergePreview || !merging || merging.length < 2) return;
+    // Onto its own map, like every other table write: the merged table is
+    // longer than any of the ones it replaces and can poke off the edge.
+    const spot = clampTable(mergePreview, { ...mergePreview, seats: mergePreview.seats }, stored);
+    const ids = merging;
+    setBusy(true);
+    setFlash(null);
+    const row = await commit(null, () => floorMapService.mergeTables({
+      tableIds: ids,
+      seats: mergePreview.seats,
+      width: mergePreview.width,
+      height: mergePreview.height,
+      rotation: mergePreview.rotation,
+      ...spot,
+    }));
+    setBusy(false);
+    if (!row) return;
+    // The merged row replaces all of them at once: a refetch would redraw the
+    // whole map, and the ones that are gone must not linger on it.
+    patchCache((m) => ({ ...m, tables: [...m.tables.filter((x) => !ids.includes(x.id)), row] }));
+    setMerging(null);
+    setSelectedId(row.id);
+    setFlash(t('fm_merged', { label: row.label, seats: row.seats }));
   };
 
   const deleteArea = (area: MapArea) => {
@@ -637,6 +697,19 @@ export const FloorMapPage = () => {
     // While the drawing is being edited the tables take no pointer events at
     // all (see the CSS), so this cannot be reached from there — which is what
     // lets a press land on the zone UNDER a table.
+    //
+    // Picking tables to merge: a press TICKS the table and does nothing else.
+    // No selection and no drag, because during a merge every press on the plan
+    // is an answer to "which tables?" — and a drag that also moved one of them
+    // would rearrange the room while being asked a question about it.
+    if (merging) {
+      event.stopPropagation();
+      setMerging((prev) => {
+        const list = prev ?? [];
+        return list.includes(table.id) ? list.filter((id) => id !== table.id) : [...list, table.id];
+      });
+      return;
+    }
     setSelectedId(table.id);
     // Not editing the map: a press is about the BOOKING on that table —
     // picking it for the one being drafted, or opening the one that holds it.
@@ -914,6 +987,10 @@ export const FloorMapPage = () => {
           // sheet's does.
           !editing && fill === 'partly' ? 'is-partly' : '',
           !editing && table.id in picked ? 'is-picked' : '',
+          // Ticked for a merge. Its own class rather than `is-picked`: that
+          // one belongs to a booking, and the two never show at once anyway
+          // (one is the day view, the other the layout editor).
+          merging?.includes(table.id) ? 'is-merging' : '',
         ].filter(Boolean).join(' ')}
         onPointerDown={(e) => onTablePointerDown(e, table)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(table.id); } }}
@@ -1067,6 +1144,49 @@ export const FloorMapPage = () => {
     );
   };
 
+  /**
+   * Picking the tables to merge.
+   *
+   * It takes the panel for as long as it is on, in front of whatever table is
+   * selected: during a merge the question on the screen is "which tables?",
+   * and leaving a table's own form up beside it would offer a seat stepper
+   * for a table that is about to stop existing.
+   *
+   * The seat count is shown BEFORE the merge, not reported after it, because
+   * it is the whole reason for the feature — and the cap is said in the same
+   * place, so nobody discovers it by finding a table of 40 where they expected
+   * 50.
+   */
+  const mergeForm = () => (
+    <div className="fm-form">
+      <p className="fm-caption" style={{ margin: 0 }}>{t('fm_merge_hint')}</p>
+      <div className="fm-merge-sum">
+        <span className="fm-caption">{t('fm_merge_picked', { count: mergingTables.length })}</span>
+        {mergePreview ? (
+          <>
+            <strong>{t('fm_merge_result', { seats: mergePreview.seats })}</strong>
+            <span className="fm-caption">
+              {mergingTables.map((x) => x.label).join(' + ')}
+            </span>
+            <span className="fm-caption">{t('fm_merge_keeps', { label: mergingTables[0].label })}</span>
+            {mergePreview.dropped > 0 && (
+              <p className="fm-notice" style={{ margin: '8px 0 0' }}>
+                {t('fm_merge_capped', { max: MAX_SEATS, dropped: mergePreview.dropped })}
+              </p>
+            )}
+          </>
+        ) : (
+          <span className="fm-caption">{t('fm_merge_pick_more')}</span>
+        )}
+      </div>
+      <button type="button" className="adm-btn-primary" disabled={!mergePreview || busy}
+        onClick={() => void mergeChosen()}>
+        {t('fm_merge_do')}
+      </button>
+      <button type="button" className="adm-btn-ghost" onClick={() => setMerging(null)}>{t('cancel')}</button>
+    </div>
+  );
+
   const savedAtText = (area: MapArea) =>
     (area.defaultLayoutAt
       ? new Date(area.defaultLayoutAt).toLocaleString(
@@ -1114,6 +1234,30 @@ export const FloorMapPage = () => {
           </div>
           <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
 
+          {/* The area's DEFAULT LAYOUT lives here, in "Edit map".
+              It began in the table-layout editor, on the reasoning that an
+              evening moves the furniture — but a default is a statement about
+              the room as a whole (the snapshot carries the drawing and the map
+              size as well as the tables), and this is the editor that changes
+              the room. It is also where somebody who has just redrawn the
+              zones needs it: the nightly sweep no longer puts the saved
+              drawing back over their work, so re-saving the default is how
+              they make the new drawing the one a revert returns to. */}
+          <div className="fm-default">
+            <span className="fm-caption">{t('fm_default')}</span>
+            <p className="fm-caption" style={{ margin: '4px 0 10px' }}>
+              {savedAt ? t('fm_default_saved_at', { at: savedAt }) : t('fm_default_none_hint')}
+            </p>
+            <button type="button" className="adm-btn-ghost" disabled={busy} onClick={() => void saveDefaultLayout(area)}>
+              {savedAt ? t('fm_default_replace') : t('fm_save_default')}
+            </button>
+            <button type="button" className="adm-btn-ghost" disabled={busy || !savedAt}
+              onClick={() => void restoreDefaultLayout(area)}>
+              {t('fm_restore_default')}
+            </button>
+            {flash && <p className="fm-flash" role="status">{flash}</p>}
+          </div>
+
           <button type="button" className="adm-btn-danger" onClick={() => deleteArea(area)}>{t('fm_delete_area')}</button>
         </div>
       );
@@ -1125,26 +1269,14 @@ export const FloorMapPage = () => {
         <p className="fm-caption" style={{ margin: 0 }}>{stats}</p>
         <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
         <button type="button" className="adm-btn-primary" onClick={() => void addTable()}>{t('fm_add_table_here')}</button>
-
-        {/* The area's default layout: how this room is meant to stand, and the
-            way back to it after an evening has moved everything about. It is
-            the TABLE layout's, because that is what an evening moves — though
-            the snapshot carries the drawing and the map size too, so a revert
-            puts all three back. */}
-        <div className="fm-default">
-          <span className="fm-caption">{t('fm_default')}</span>
-          <p className="fm-caption" style={{ margin: '4px 0 10px' }}>
-            {savedAt ? t('fm_default_saved_at', { at: savedAt }) : t('fm_default_none_hint')}
-          </p>
-          <button type="button" className="adm-btn-ghost" disabled={busy} onClick={() => void saveDefaultLayout(area)}>
-            {savedAt ? t('fm_default_replace') : t('fm_save_default')}
-          </button>
-          <button type="button" className="adm-btn-ghost" disabled={busy || !savedAt}
-            onClick={() => void restoreDefaultLayout(area)}>
-            {t('fm_restore_default')}
-          </button>
-          {flash && <p className="fm-flash" role="status">{flash}</p>}
-        </div>
+        {/* Merging is furniture being pushed together, so it belongs to this
+            editor — and it starts here rather than from a selected table,
+            because it is a question about SEVERAL of them. */}
+        <button type="button" className="adm-btn-ghost" disabled={areaTables.length < 2}
+          onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
+          {t('fm_merge')}
+        </button>
+        {flash && <p className="fm-flash" role="status">{flash}</p>}
       </div>
     );
   };
@@ -1518,6 +1650,18 @@ export const FloorMapPage = () => {
               {t('fm_add_table')}
             </button>
           )}
+          {/* Merging is up here as well as in the area's panel, for the reason
+              the shape palette is always up in the drawing editor: the panel
+              belongs to whatever is SELECTED, so with a table selected — which
+              is what tapping a table does — the panel's own button is not on
+              the screen, and nothing says that deselecting would bring it
+              back. Found in a browser. */}
+          {editingTables && !merging && (
+            <button type="button" className="adm-btn-ghost" disabled={!current || areaTables.length < 2}
+              onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
+              {t('fm_merge')}
+            </button>
+          )}
           {/* Two editors, never both: each is a toggle that leaves the other
               off, and `switchMode` is the one place that drops the selections
               and any drag in flight — a table selected in the layout editor
@@ -1627,7 +1771,8 @@ export const FloorMapPage = () => {
       )}
 
       <p className="fm-caption" style={{ margin: '12px 0' }}>
-        {editingTables ? t('fm_hint_edit')
+        {merging ? t('fm_merge_hint')
+          : editingTables ? t('fm_hint_edit')
           : editingZones ? t('fm_hint_zones')
           : booking ? t('fm_new_booking_hint')
           : assigning ? t('fm_assign_hint')
@@ -1781,7 +1926,8 @@ export const FloorMapPage = () => {
 
         <aside className="adm-card fm-panel">
           <h3 className="adm-heading" style={{ marginTop: 0 }}>
-            {booking ? t('fm_new_booking')
+            {merging ? t('fm_merge')
+              : booking ? t('fm_new_booking')
               : assigning ? t('fm_assign_tables')
               : openBooking ? t('fm_booking')
               : selectedShape ? (selectedShape.label || t(`fm_kind_${selectedShape.kind}` as Parameters<typeof translate>[0]))
@@ -1794,7 +1940,10 @@ export const FloorMapPage = () => {
           {/* What the panel is about, in order of what the admin just did:
               a booking being drafted, one being given its tables, a booking
               they clicked, then the map. */}
-          {booking ? bookingForm()
+          {/* A merge being picked out comes first: every press on the plan is
+              an answer to it, so nothing else may hold the panel. */}
+          {merging ? mergeForm()
+            : booking ? bookingForm()
             : assigning ? assignForm(assigning)
             : openBooking ? bookingCard(openBooking, areaTables.find((x) => x.id === openTableId) ?? null)
             // The shape comes before the table: while the drawing is being
@@ -1964,6 +2113,23 @@ export const FloorMapPage = () => {
         .fm-table-group.is-picked .fm-top { fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent); }
         .fm-table-group.is-picked .fm-table-label,
         .fm-table-group.is-picked .fm-table-seats { fill: var(--adm-accent-ink, #04120d); }
+        /* Ticked to be merged. Filled in the accent like a picked table — the
+           two never appear together (one is the day view, the other the
+           layout editor) — and dashed as well, because this is a table about
+           to stop existing rather than one being used. */
+        .fm-table-group.is-merging .fm-top {
+          fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent);
+          stroke-width: 4; stroke-dasharray: 12 7;
+        }
+        .fm-table-group.is-merging .fm-table-label,
+        .fm-table-group.is-merging .fm-table-seats { fill: var(--adm-accent-ink, #04120d); }
+        /* What the merged table will be, while they are still being picked. */
+        .fm-merge-sum {
+          display: grid; gap: 4px; padding: 12px; border-radius: 4px;
+          border: 1px solid rgba(var(--adm-accent-rgb), 0.35);
+          background: rgba(var(--adm-accent-rgb), 0.08);
+        }
+        .fm-merge-sum strong { font-size: 18px; font-weight: 800; color: var(--adm-accent); }
 
         /* The day bar carries a date, four controls and a legend. Given one
            flat row they run together and the legend crowds the buttons, so it

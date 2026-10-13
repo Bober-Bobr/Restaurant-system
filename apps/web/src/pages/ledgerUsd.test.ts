@@ -76,9 +76,30 @@ describe('a recorded dollar amount can never be hidden', () => {
   });
 
   it('and the switch is disabled while it is, with a reason', () => {
-    expect(ledger).toMatch(/disabled=\{dayHasUsd\}/);
-    expect(ledger).toContain("t('usd_column_locked')");
+    const sw = ledger.slice(ledger.indexOf('const UsdSwitch'), ledger.indexOf('const ProductHeader'));
+    expect(sw).toMatch(/disabled=\{locked\}/);
+    expect(sw).toContain("t('usd_column_locked')");
+    // And both of the ledger's own renderings pass the day's own answer.
+    expect((ledger.match(/<UsdSwitch t=\{t\} on=\{showUsd\} locked=\{dayHasUsd\}/g) ?? []).length).toBe(2);
     expect(extras).toMatch(/disabled=\{hasUsd\(total\)\}/);
+  });
+
+  it('both prices are listed by DEFAULT — only a stored "0" puts the column away', () => {
+    // It was a column you switched on, which left a manager who works partly
+    // in dollars with no field on the one screen that has the price fields.
+    const read = ledger.slice(ledger.indexOf('export const readUsdPref'), ledger.indexOf('export const writeUsdPref'));
+    expect(read).toMatch(/getItem\(USD_PREF_KEY\) !== '0'/);
+    // A browser that refuses storage shows it, rather than hiding a field.
+    expect(read).toMatch(/catch \{[\s\S]*return true;/);
+  });
+
+  it('the switch is reachable from the open DEPARTMENT, not only the overview', () => {
+    // The price fields are inside a department; a switch only on the overview
+    // is a column nobody can turn on from where they need it.
+    // The row carrying the back button out of the open department.
+    const back = ledger.indexOf('‹ {t(EVENT_LABEL_KEY[activeEvent.type])}');
+    expect(back).toBeGreaterThan(-1);
+    expect(ledger.slice(back, back + 400)).toContain('<UsdSwitch');
   });
 
   it('the day\'s check covers revenue, spending AND the extras', () => {

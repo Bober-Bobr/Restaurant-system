@@ -227,6 +227,22 @@ export class FloorMapRepository {
     hallId: string,
     layout: { mapWidth: number | null; mapHeight: number | null; mapFeatures: unknown[]; tables: (Omit<TableData, 'hallId'> & { label: string })[] },
     protectFrom?: Date,
+    /**
+     * Whether the saved DRAWING is put back too — the zones, the pool, the
+     * stage, the standing labels.
+     *
+     * False for the nightly sweep. An evening moves the furniture, which is
+     * what a layout reset is for; the drawing is the room itself, edited
+     * deliberately in "Edit map", and putting last week's zones back over it
+     * every morning threw that work away with nothing on the screen to say so.
+     * An admin pressing "Revert to the default" means all of it, and gets all
+     * of it — that is a confirmed press, not housekeeping.
+     *
+     * The map's SIZE goes with the tables either way: the saved table
+     * positions were measured against it, so restoring one without the other
+     * can put a table off the edge of its own map.
+     */
+    drawing = true,
   ): Promise<{ area: AreaRow; tables: TableRow[]; kept: string[] }> {
     return prisma.$transaction(async (tx) => {
       const existing = await tx.floorTable.findMany({ where: { hallId }, select: { id: true, label: true } });
@@ -269,7 +285,7 @@ export class FloorMapRepository {
         data: {
           mapWidth: layout.mapWidth,
           mapHeight: layout.mapHeight,
-          mapFeatures: layout.mapFeatures as Prisma.InputJsonValue,
+          ...(drawing ? { mapFeatures: layout.mapFeatures as Prisma.InputJsonValue } : {}),
         },
         select: AREA_SELECT,
       });
@@ -292,5 +308,41 @@ export class FloorMapRepository {
 
   async deleteTable(id: string): Promise<void> {
     await prisma.floorTable.delete({ where: { id } });
+  }
+
+  /**
+   * Push several tables together into one: the kept row takes the merged size
+   * and seat count, the others go.
+   *
+   * In ONE transaction, and the booking check is INSIDE it — `EventFloorTable`
+   * cascades on the table, so deleting one silently releases every booking
+   * sitting on it. (That is the trap the nightly reset was fixed for; this is
+   * the same cascade reached by a different button.) A table a booking from
+   * `protectFrom` onward still holds therefore blocks the merge: nothing is
+   * written and its label comes back so the supervisor is told which one and
+   * can look it up.
+   */
+  async mergeTables(
+    keepId: string,
+    removeIds: string[],
+    data: Pick<TableData, 'seats' | 'shape' | 'x' | 'y' | 'rotation' | 'width' | 'height'>,
+    protectFrom: Date,
+  ): Promise<{ table: TableRow | null; blocked: string[] }> {
+    return prisma.$transaction(async (tx) => {
+      const held = await tx.eventFloorTable.findMany({
+        where: {
+          floorTableId: { in: removeIds },
+          event: { eventDate: { gte: protectFrom }, status: { not: 'CANCELLED' } },
+        },
+        select: { floorTable: { select: { label: true } } },
+      });
+      if (held.length > 0) {
+        // Nothing written: the transaction has done only reads so far.
+        return { table: null, blocked: [...new Set(held.map((row) => row.floorTable.label))].sort() };
+      }
+      const table = await tx.floorTable.update({ where: { id: keepId }, data, select: TABLE_SELECT });
+      await tx.floorTable.deleteMany({ where: { id: { in: removeIds } } });
+      return { table, blocked: [] };
+    });
   }
 }

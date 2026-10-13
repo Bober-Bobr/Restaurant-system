@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { DEFAULT_SECTION } from '../../utils/section.js';
 import { FloorMapRepository } from './floorMap.repository.js';
 import {
-  createAreaSchema, createTableSchema, daySchema, idSchema, printSchema, scheduleSchema,
+  createAreaSchema, createTableSchema, daySchema, idSchema, mergeTablesSchema, printSchema, scheduleSchema,
   updateAreaSchema, updateTableSchema,
 } from './floorMap.schema.js';
 import { dayKey } from '../../utils/floorBooking.js';
@@ -82,6 +82,12 @@ export class FloorMapController {
     const { id } = idSchema.parse(request.params);
     const payload = updateTableSchema.parse(request.body);
     response.json(await service.updateTable(...scope(request), id, payload));
+  }
+
+  /** Several tables pushed together into one; the first id is the one that stays. */
+  async mergeTables(request: Request, response: Response) {
+    const payload = mergeTablesSchema.parse(request.body);
+    response.json(await service.mergeTables(...scope(request), payload));
   }
 
   async deleteTable(request: Request, response: Response) {

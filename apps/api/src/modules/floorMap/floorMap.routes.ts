@@ -21,6 +21,9 @@ router.patch('/areas/:id', controller.updateArea.bind(controller));
 router.post('/areas/:id/default', controller.saveDefaultLayout.bind(controller));
 router.post('/areas/:id/restore', controller.restoreDefaultLayout.bind(controller));
 router.post('/tables', controller.createTable.bind(controller));
+// Before the :id routes in spirit though not in need (different method): an
+// action on several tables at once, not a field of one of them.
+router.post('/tables/merge', controller.mergeTables.bind(controller));
 router.patch('/tables/:id', controller.updateTable.bind(controller));
 router.delete('/tables/:id', controller.deleteTable.bind(controller));
 

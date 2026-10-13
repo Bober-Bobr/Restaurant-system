@@ -67,7 +67,16 @@ export async function resetLayoutsForDay(
       if (layout) {
         // Bookings from the start of today onward keep their tables — putting
         // the room back must never cancel somebody's evening.
-        const { kept } = await repo.restoreLayout(hall.id, layout, startOfDay(now));
+        //
+        // THE FURNITURE ONLY (`false`): the drawing under it — the zones, the
+        // pool, the stage, the labels — is left exactly as it was last edited.
+        // An evening moves the tables about, which is what this sweep is for;
+        // the room itself is changed deliberately in "Edit map", and a sweep
+        // that put the saved zones back every morning quietly undid that work
+        // the night after it was done. An admin pressing "Revert to the
+        // default" still gets all three, because that is a press rather than
+        // housekeeping.
+        const { kept } = await repo.restoreLayout(hall.id, layout, startOfDay(now), false);
         done.push({ hallId: hall.id, name: hall.name, kept });
       }
       await prisma.hall.update({ where: { id: hall.id }, data: { lastLayoutResetDay: today } });

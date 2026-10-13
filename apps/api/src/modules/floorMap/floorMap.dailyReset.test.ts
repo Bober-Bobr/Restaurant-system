@@ -51,7 +51,35 @@ describe('the sweep', () => {
   });
 
   it('protects bookings from the start of today onward', () => {
-    expect(sweep).toContain('repo.restoreLayout(hall.id, layout, startOfDay(now))');
+    expect(sweep).toContain('repo.restoreLayout(hall.id, layout, startOfDay(now), false)');
+  });
+
+  it('puts the FURNITURE back and leaves the drawing alone', () => {
+    // The last argument is `drawing`. An evening moves the tables about, which
+    // is what this sweep exists for; the zones, the pool and the stage are the
+    // room itself, edited deliberately in "Edit map" — and a sweep that put
+    // the saved ones back every morning threw that work away overnight with
+    // nothing on the screen to say so.
+    expect(sweep).toMatch(/restoreLayout\(hall\.id, layout, startOfDay\(now\), false\)/);
+    const repo = read('src/modules/floorMap/floorMap.repository.ts');
+    // Which means the drawing is written only when it is asked for — the
+    // argument existing is not the same as it being honoured.
+    expect(repo).toMatch(/\.\.\.\(drawing \? \{ mapFeatures: layout\.mapFeatures as Prisma\.InputJsonValue \} : \{\}\)/);
+    // And an explicit revert still restores all three: it defaults to true and
+    // the service does not pass it.
+    expect(repo).toMatch(/drawing = true,/);
+    const service = read('src/modules/floorMap/floorMap.service.ts');
+    expect(service).toContain('this.repo.restoreLayout(id, layout, startOfDay(new Date()))');
+  });
+
+  it('the map SIZE goes back with the tables, not with the drawing', () => {
+    // The saved table positions were measured against it; restoring one
+    // without the other can leave a table off the edge of its own map.
+    const repo = read('src/modules/floorMap/floorMap.repository.ts');
+    const data = repo.slice(repo.indexOf('const area = await tx.hall.update'), repo.indexOf('const tables = await tx.floorTable.findMany'));
+    expect(data).toContain('mapWidth: layout.mapWidth');
+    expect(data).toContain('mapHeight: layout.mapHeight');
+    expect(data).not.toMatch(/drawing \? \{ mapWidth/);
   });
 
   it('stamps the day even when the stored layout is unusable', () => {

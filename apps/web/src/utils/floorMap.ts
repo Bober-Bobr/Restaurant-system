@@ -507,3 +507,101 @@ export function nextTableLabel(labels: string[]): string {
 export function seatsIn(tables: MapTable[]): number {
   return tables.reduce((sum, t) => sum + clampSeats(t.seats), 0);
 }
+
+// ── Merging tables ───────────────────────────────────────────────────────────
+
+/** One table standing where several did. */
+export type Merged = {
+  /** Centre on the area's map. */
+  x: number;
+  y: number;
+  /** The sum of what was merged, capped at MAX_SEATS. */
+  seats: number;
+  /**
+   * Seats the cap would not take. Never silently dropped: the page says so,
+   * because "we pushed five tables together and the ledger says 40 covers" is
+   * a figure somebody would price an evening on.
+   */
+  dropped: number;
+  width: number;
+  height: number;
+  /** Always a rectangle — a long table is what pushing tables together makes. */
+  shape: 'RECT';
+  /** Kept when every table being merged stood at the same angle; else upright. */
+  rotation: number;
+};
+
+const rotatePoint = (x: number, y: number, deg: number) => {
+  const rad = (deg * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return { x: x * c - y * s, y: x * s + y * c };
+};
+
+/**
+ * What one table pushed together out of several looks like.
+ *
+ * **Its capacity is the SUM of theirs** — that is what merging tables is for,
+ * and it is what the staff would otherwise have to work out and type in. The
+ * size is the union of the tabletops, so the merged table stands exactly where
+ * the group did rather than appearing somewhere of its own; `fitTableSize` then
+ * grows it if that union is too small for all those chairs (four two-tops side
+ * by side are one top of eight seats, and eight chairs need the length).
+ *
+ * **The angle is kept only when they all share one.** Sangizar's diagonal row
+ * along the Bungalow is turned 60°, and a merge there that came back upright
+ * would be a table across the walkway. With mixed angles there is no single
+ * answer, so the result is upright and the union is measured upright too —
+ * which is also why this works on the tabletops rather than the footprints:
+ * chairs stand around the merged table, not inside it.
+ *
+ * Null for fewer than two tables: there is nothing to merge, and a "merge" of
+ * one table that quietly resized it would be worse than a button that refuses.
+ */
+export function mergeTables(tables: MapTable[]): Merged | null {
+  if (tables.length < 2) return null;
+  const total = tables.reduce((sum, t) => sum + clampSeats(t.seats), 0);
+  const seats = Math.min(MAX_SEATS, total);
+
+  const first = tables[0].rotation % 360;
+  const sameAngle = tables.every((t) => t.rotation % 360 === first);
+  const rotation = sameAngle ? ((first % 360) + 360) % 360 : 0;
+
+  let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
+  for (const table of tables) {
+    const top = tableSize(table.shape, table.seats, table);
+    // In the merged table's own frame, so a row all turned the same way is
+    // measured along its length rather than across the box around it.
+    const centre = sameAngle ? rotatePoint(table.x, table.y, -rotation) : { x: table.x, y: table.y };
+    let hx = top.width / 2;
+    let hy = top.height / 2;
+    if (!sameAngle) {
+      // Each top's upright box, since they do not share an axis to measure in.
+      const rad = ((table.rotation % 360) * Math.PI) / 180;
+      const c = Math.abs(Math.cos(rad));
+      const s = Math.abs(Math.sin(rad));
+      hx = c * top.width / 2 + s * top.height / 2;
+      hy = s * top.width / 2 + c * top.height / 2;
+    }
+    minX = Math.min(minX, centre.x - hx);
+    maxX = Math.max(maxX, centre.x + hx);
+    minY = Math.min(minY, centre.y - hy);
+    maxY = Math.max(maxY, centre.y + hy);
+  }
+
+  const mid = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+  const onMap = sameAngle ? rotatePoint(mid.x, mid.y, rotation) : mid;
+  const fitted = fitTableSize('RECT', seats, maxX - minX, maxY - minY);
+  return {
+    // Integers: the column is an integer one, and a drag that produced a
+    // fraction is the commonest way to lose a write to a 400.
+    x: Math.round(onMap.x),
+    y: Math.round(onMap.y),
+    seats,
+    dropped: total - seats,
+    width: fitted.width,
+    height: fitted.height,
+    shape: 'RECT',
+    rotation,
+  };
+}

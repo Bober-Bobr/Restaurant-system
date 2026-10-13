@@ -80,26 +80,31 @@ const isSomething = (m: Money) => m.sum > 0 || m.usdCents !== 0;
 /**
  * Whether the dollar column is shown.
  *
- * Most ledgers are kept entirely in so'm, and a permanently empty second field
- * on every row of four sections is clutter on an already dense page — so it is
- * a column you switch on, remembered per browser like the other per-viewer
- * conveniences here.
+ * **Both prices are listed by default**, on every page of the ledger. It began
+ * as a column you switched ON, which turned out to be the wrong way round: a
+ * manager who records some of the day in dollars wants the field wherever a
+ * price is typed, and the one switch was in the export toolbar of the
+ * department OVERVIEW — so inside an open department there was no field and
+ * nothing on the screen said there could be. The switch is still here, and now
+ * sits in both views, but it is a way to put the column AWAY.
  *
- * **Data beats the preference.** If any line already carries a dollar figure
- * the column is shown whether or not the switch is on: a stored amount that
- * cannot be seen is money the ledger is hiding, which is worse than clutter.
- * That also makes the switch safe to default off — nothing already recorded
- * can disappear behind it.
+ * Remembered per browser, like the other per-viewer conveniences here, which
+ * is why a stored '0' is the only thing that hides it — a browser that refuses
+ * storage shows the column rather than hiding a field somebody needs.
+ *
+ * **Data beats the preference either way.** If any line already carries a
+ * dollar figure the column is shown whether or not the switch is on: a stored
+ * amount that cannot be seen is money the ledger is hiding.
  */
 const USD_PREF_KEY = 'vmenu-ledger-usd';
 
 export const readUsdPref = (): boolean => {
   try {
-    return window.localStorage.getItem(USD_PREF_KEY) === '1';
+    return window.localStorage.getItem(USD_PREF_KEY) !== '0';
   } catch {
     // Private windows and blocked site data throw on access, and the ledger
-    // must still open.
-    return false;
+    // must still open — with the column, not without it.
+    return true;
   }
 };
 
@@ -301,6 +306,32 @@ const UsdField = ({ value, onCommit, t, label }: {
   return label ? <label style={{ ...fieldLabelStyle, width: USD_W }}>{label}{field}</label> : field;
 };
 
+/**
+ * The dollar column's switch.
+ *
+ * One component, shown in BOTH views — the department overview and an open
+ * department — because the column covers the whole day and the place a price is
+ * typed is inside a department. Rendered only there at first, which left the
+ * fields unreachable from the screen that has the price fields on it.
+ *
+ * `locked` is "this day already holds a dollar figure": the column is then on
+ * and the switch says why it cannot be turned off.
+ */
+const UsdSwitch = ({ t, on, locked, onChange }: {
+  t: TFn; on: boolean; locked: boolean; onChange: (next: boolean) => void;
+}) => (
+  <label style={{
+    display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto',
+    cursor: locked ? 'default' : 'pointer', fontSize: 13, color: 'rgba(226,232,240,0.75)',
+  }}
+    title={locked ? t('usd_column_locked') : undefined}>
+    <input type="checkbox" checked={on} disabled={locked}
+      onChange={(e) => onChange(e.target.checked)}
+      style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: locked ? 'default' : 'pointer' }} />
+    {t('usd_column')}
+  </label>
+);
+
 const ProductHeader = ({ t, showUsd }: { t: TFn; showUsd: boolean }) => (
   <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '2px 2px 0', flexWrap: 'wrap' }}>
     <span style={{ ...colHeader, flex: 2, minWidth: 140 }}>{t('product_name')}</span>
@@ -429,17 +460,11 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
                   {t('clear_selection')}
                 </button>
               )}
-              {/* Shown here rather than per section: it is one column across
-                  the whole day, and a switch per block would be four switches
-                  that can disagree. Disabled while the day already holds a
-                  dollar figure, because turning it off would hide it. */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', cursor: dayHasUsd ? 'default' : 'pointer', fontSize: 13, color: 'rgba(226,232,240,0.75)' }}
-                title={dayHasUsd ? t('usd_column_locked') : undefined}>
-                <input type="checkbox" checked={showUsd} disabled={dayHasUsd}
-                  onChange={(e) => toggleUsd(e.target.checked)}
-                  style={{ width: 18, height: 18, accentColor: 'var(--adm-accent)', cursor: dayHasUsd ? 'default' : 'pointer' }} />
-                {t('usd_column')}
-              </label>
+              {/* One switch for the whole day rather than one per section: a
+                  switch per block would be four switches that can disagree.
+                  Disabled while the day already holds a dollar figure, because
+                  turning it off would hide it. */}
+              <UsdSwitch t={t} on={showUsd} locked={dayHasUsd} onChange={toggleUsd} />
             </div>
 
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))' }}>
@@ -483,10 +508,15 @@ const DayCard = ({ day, t }: { day: ExpenseDay; t: TFn }) => {
         ) : (
           /* Selected department's expense panel */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <button type="button" onClick={() => setActiveEventId(null)}
-              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-accent)', fontSize: 15, fontWeight: 700, padding: 0 }}>
-              ‹ {t(EVENT_LABEL_KEY[activeEvent.type])}
-            </button>
+            {/* The switch rides along into the department, because this is the
+                screen with the price fields on it. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => setActiveEventId(null)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-accent)', fontSize: 15, fontWeight: 700, padding: 0 }}>
+                ‹ {t(EVENT_LABEL_KEY[activeEvent.type])}
+              </button>
+              <UsdSwitch t={t} on={showUsd} locked={dayHasUsd} onChange={toggleUsd} />
+            </div>
             <EventPanel event={activeEvent} t={t} onChanged={invalidate} showUsd={showUsd} />
           </div>
         )}

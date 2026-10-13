@@ -4,6 +4,24 @@ import { Locale, defaultLocale } from '../utils/translate';
 import type { Event, EventMenuConfig } from '../types/domain';
 import { TABLET_DRAFT_KEY } from './tabletDraft';
 import type { KioskSession } from '../utils/kioskSession';
+import { useAdminStore } from './admin.store';
+
+/**
+ * The language the kiosk OPENS in: the one the admin panel is set to.
+ *
+ * The kiosk used to start at `defaultLocale` — Uzbek — however the staff had
+ * set their own app, so a Russian-speaking restaurant's tablet greeted every
+ * guest in a language nobody there had chosen. It is the same browser and the
+ * same people, so the admin's choice is the only setting that can speak for
+ * them. Read through a function rather than copied into a constant, so the
+ * three places that need it (the store's initial value, `reset`, and the draft
+ * loaded from the Events page) cannot drift — and so a language changed in the
+ * admin panel is picked up by the next booking rather than only by a reload.
+ *
+ * It is a STARTING point, not a lock: the guest standing there still switches
+ * language from the kiosk's own header, and that choice lasts their visit.
+ */
+export const adminLocale = (): Locale => useAdminStore.getState().locale ?? defaultLocale;
 
 // Draft handed to the tablet when the admin Events page opens the menu flow for
 // an event (new or existing). `config` restores the exact prior selections.
@@ -172,7 +190,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   childSecondCourseIds: [],
   childThirdCourseIds: [],
   childReplacements: {},
-  locale: defaultLocale,
+  locale: adminLocale(),
   setQuantity: (menuItemId, quantity) => {
     set((state) => ({
       selectedItems: {
@@ -441,7 +459,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       childSecondCourseIds: [],
       childThirdCourseIds: [],
       childReplacements: {},
-      locale: defaultLocale
+      locale: adminLocale()
     });
   }
 }), {

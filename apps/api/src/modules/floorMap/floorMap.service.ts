@@ -184,4 +184,61 @@ export class FloorMapService {
     await this.tableInScope(restaurantId, section, id);
     await this.repo.deleteTable(id);
   }
+
+  /**
+   * Merge several tables into one — the staff pushing two four-tops together
+   * for a party of eight, and saying so on the map.
+   *
+   * The merged table's size and seat count come from the browser, which is
+   * where the layout geometry lives (`mergeTables` in utils/floorMap.ts: the
+   * capacity is the SUM of the merged tables'). Three things cannot be left to
+   * it, and they are all this does:
+   *
+   *   · **every id is re-checked against restaurant AND section**, like every
+   *     other path here, and a merge names as many ids as the caller likes;
+   *   · **they must all be in ONE area.** A merge across rooms is not a
+   *     rearrangement, it is a table teleporting — and it would leave the other
+   *     room with tables silently deleted from a map nobody was looking at;
+   *   · **the FIRST id is the table that stays.** It keeps its row and its
+   *     number, so the bookings already on it are untouched; the others are
+   *     deleted, and the repository refuses if a booking from today onward
+   *     still holds one of them.
+   */
+  async mergeTables(
+    restaurantId: string,
+    section: Section,
+    payload: {
+      tableIds: string[]; seats: number; x: number; y: number;
+      width: number; height: number; rotation: number;
+    },
+  ): Promise<TableRow> {
+    const [keepId, ...removeIds] = payload.tableIds;
+    const rows = await Promise.all(payload.tableIds.map((id) => this.tableInScope(restaurantId, section, id)));
+    const hallId = rows[0].hallId;
+    if (rows.some((row) => row.hallId !== hallId)) {
+      throw createHttpError(400, 'All the tables being merged must be in the same area');
+    }
+    const { table, blocked } = await this.repo.mergeTables(
+      keepId,
+      removeIds,
+      {
+        seats: payload.seats,
+        // Pinned here rather than taken from the body: a merged table is a
+        // rectangle, and two sides each holding that fact can disagree.
+        shape: 'RECT',
+        x: payload.x,
+        y: payload.y,
+        rotation: payload.rotation,
+        width: payload.width,
+        height: payload.height,
+      },
+      startOfDay(new Date()),
+    );
+    if (!table) {
+      // Named, like a booking clash on the map: "unavailable" alone sends
+      // somebody away from the desk to find out which table and whose evening.
+      throw createHttpError(409, `These tables are booked and cannot be merged away: ${blocked.join(', ')}`);
+    }
+    return table;
+  }
 }

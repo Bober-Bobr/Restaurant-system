@@ -2108,6 +2108,8 @@ export const TabletMenuPage = () => {
           // draft, the same gesture the page's own "← events" makes.
           onBack={() => { reset(); navigate('/'); }}
           t={t}
+          locale={locale}
+          setLocale={setLocale}
         />
       )}
 

@@ -3652,3 +3652,82 @@ is untouched and reads exactly as it did.
     the by-department table. **No chart changes** — two currencies cannot share
     an axis.
 14. Print all three languages and confirm the new labels are translated.
+
+## §73 — Both prices in the ledger, the kiosk's language, merging tables, and where the default layout lives
+
+Five small things, in two places. **No migration.**
+
+### The expense ledger lists both prices by default
+
+§72 made the dollar column a switch that started OFF, and the one switch was in
+the export toolbar of the department **overview** — so inside an open
+department, which is the screen with the price fields on it, there was no dollar
+field and nothing saying there could be. It now starts ON and the switch is in
+both views; it is a way to put the column away rather than a way to find it.
+
+1. **In a browser that has never seen this page** (or clear its site data):
+    `rmanager.v-menu.uz` → Expense ledger. A dollar field sits beside every
+    amount straight away, and an "Amount ($)" header over every block.
+2. Open a department: the **"Dollar amounts"** switch is up there too, beside
+    the back link. Untick it — every dollar field goes, on this page and on
+    Additional expenses, and it stays that way after a reload.
+3. Tick it again, type a dollar figure, leave the department: the switch is
+    **disabled** with its tooltip, exactly as in §72. A recorded amount still
+    cannot be hidden.
+4. A ledger kept entirely in so'm still shows **no `$0.00` anywhere** — the
+    fields are empty, the totals print one currency.
+
+### The Small Banquets kiosk opens in the admin panel's language
+
+5. Set the supervisor's app to **Russian** (`supervisor.v-menu.uz/<slug>`), then
+    open the tablet. It must open in Russian — it used to open in Uzbek however
+    the staff had set their own app. Try Uzbek and English too.
+6. Switch the language **inside** the kiosk: that choice must stand for the rest
+    of the visit, including across the menu and the summary and a reload.
+7. Confirm a booking: the screen after it must still be in the language the
+    guest was using, not back in the admin's.
+8. **The "Which evening is this?" screen has language buttons** (top right,
+    opposite Back). Press each: the question, both cards and the Back button all
+    change language. This is the first screen a guest sees and had none.
+
+### Merging tables on the floor map
+
+9. `supervisor.v-menu.uz/<slug>/` → **"Change table layout"** → **"Merge
+    tables"** (in the toolbar beside "Add table", and in the area's panel).
+10. Tap three tables. Each is outlined and dashed as it is ticked, and the panel
+    says **"One table of N seats"** with N the **sum** of their seats, the
+    numbers being merged, and which number the merged table will keep (the
+    first one tapped). Tap one again to untick it.
+11. **While picking, a drag must move nothing.** Press a table and drag: it must
+    not budge, and nothing must be saved.
+12. Press "Merge into one table". One table stands where the group did, seating
+    their total, selected — and its seat count, size and shape can be changed
+    from the panel like any other table's. The area's "N tables · N seats" count
+    follows.
+13. **A diagonal row keeps its angle.** Merge two or three tables that are all
+    turned the same way (Sangizar's row along the Bungalow): the merged table
+    must lie along the row, not across it. Tables at different angles come back
+    upright, which is correct.
+14. **A booked table cannot be merged away.** On a day with a booking, note
+    which tables it holds, then in the layout editor try to merge one of them
+    into another: it is refused and **the refusal names the table**. Merging a
+    booked table as the FIRST one picked is allowed — it keeps its row, so it
+    keeps its booking; check the booking is still on the map afterwards.
+15. Merge enough tables to pass **40 seats**: the panel says so before the merge
+    and the merged table gets 40. Nothing is lost silently.
+16. Leaving the editor, or switching area, drops the ticks.
+
+### The default layout moved into "Edit map", and the nightly reset leaves the drawing alone
+
+17. **"Edit map"** now carries "Save this layout as the default" / "Revert to the
+    default"; **"Change table layout"** no longer does. Both still work from
+    their new home, and a revert still asks first and names how many tables are
+    standing there now.
+18. **The sweep no longer undoes map edits.** With a default saved, redraw
+    something in "Edit map" (add a zone, rename one, recolour one) and leave it.
+    After the next UTC midnight — or by restarting the API and waiting a minute,
+    which runs the sweep — the **tables** are back to the default and **the new
+    zone is still there**. That is the change: it used to be wiped overnight.
+19. An explicit **"Revert to the default"** still puts all three back — tables,
+    map size and drawing — because that is a deliberate press.
+20. Check the sweep's log still says which tables it kept for a booking.

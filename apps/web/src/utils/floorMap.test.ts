@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   AREA_PADDING, CHAIR_DEPTH, CHAIR_GAP, CHAIR_PITCH, CHAIR_WIDTH, DEFAULT_AREA, MAX_SEATS, MAX_TABLE, MIN_AREA, MIN_TABLE,
   areaSize, chairsFor, clampTable, featureLabelAt, featuresOf, fitTableSize, freeSpot, hitsBlockingFeature, minAreaSize,
-  nextRotation, nextTableLabel, overlappingTables, rectSideCounts, seatCapacity, tableHalfExtents, tableSize,
+  mergeTables, nextRotation, nextTableLabel, overlappingTables, rectSideCounts, seatCapacity, tableHalfExtents,
+  tableSize,
   type MapArea, type MapTable,
 } from './floorMap';
 
@@ -310,5 +311,113 @@ describe('tables inside an area', () => {
     expect(nextTableLabel(['1', '2', '4'])).toBe('3');
     expect(nextTableLabel(['1', '2', 'VIP'])).toBe('3');
     expect(nextTableLabel([' 1 ', '2'])).toBe('3');
+  });
+});
+
+describe('merging tables into one', () => {
+  it('the merged table seats the SUM of what was merged', () => {
+    const merged = mergeTables([table({ id: 'a', seats: 4 }), table({ id: 'b', seats: 6, x: 300 })]);
+    expect(merged?.seats).toBe(10);
+    expect(merged?.dropped).toBe(0);
+  });
+
+  it('and says how many seats the cap would not take, rather than losing them', () => {
+    // Four tens is 40, the cap; a fifth table's seats cannot be stored, and a
+    // merged table silently reporting 40 is a figure an evening gets priced on.
+    const row = [0, 1, 2, 3, 4].map((i) => table({ id: `t${i}`, seats: 10, x: 200 + i * 400 }));
+    const merged = mergeTables(row);
+    expect(merged?.seats).toBe(MAX_SEATS);
+    expect(merged?.dropped).toBe(50 - MAX_SEATS);
+  });
+
+  it('nothing to merge: fewer than two tables is null, never a quiet resize', () => {
+    expect(mergeTables([])).toBeNull();
+    expect(mergeTables([table()])).toBeNull();
+  });
+
+  it('it stands where the group did, covering all of their tops', () => {
+    const a = table({ id: 'a', seats: 4, x: 200, y: 300 });
+    const b = table({ id: 'b', seats: 4, x: 400, y: 300 });
+    const merged = mergeTables([a, b])!;
+    expect(merged.x).toBe(300);
+    expect(merged.y).toBe(300);
+    const topA = tableSize(a.shape, a.seats, a);
+    const topB = tableSize(b.shape, b.seats, b);
+    // At least as wide as the span of the two tops, and no taller than needed.
+    expect(merged.width).toBeGreaterThanOrEqual((b.x + topB.width / 2) - (a.x - topA.width / 2));
+    expect(merged.height).toBeGreaterThanOrEqual(topA.height);
+  });
+
+  it('it is always a rectangle — that is what pushing tables together makes', () => {
+    const merged = mergeTables([
+      table({ id: 'a', shape: 'ROUND', seats: 6 }),
+      table({ id: 'b', shape: 'ROUND', seats: 6, x: 300 }),
+    ]);
+    expect(merged?.shape).toBe('RECT');
+  });
+
+  it('it is big enough for all those chairs, even when the tops were not', () => {
+    // Two TENS standing on top of each other — which the map already flags as
+    // overlapping, and is exactly what somebody merges. Their union is one
+    // ten-top's outline, which seats nowhere near twenty, so the merged table
+    // has to grow: without that it would carry a seat count its own geometry
+    // cannot draw.
+    const stacked = [table({ id: 'a', seats: 10 }), table({ id: 'b', seats: 10 })];
+    const union = tableSize('RECT', 10);
+    expect(seatCapacity('RECT', union.width, union.height)).toBeLessThan(20);
+    const merged = mergeTables(stacked)!;
+    expect(merged.seats).toBe(20);
+    expect(seatCapacity('RECT', merged.width, merged.height)).toBeGreaterThanOrEqual(20);
+    expect(chairsFor('RECT', merged.seats, merged)).toHaveLength(merged.seats);
+
+    // And a row that is long enough already is left the length it is.
+    const row = mergeTables([table({ id: 'a', y: 100 }), table({ id: 'b', y: 180 })])!;
+    expect(seatCapacity('RECT', row.width, row.height)).toBeGreaterThanOrEqual(row.seats);
+    expect(chairsFor('RECT', row.seats, row)).toHaveLength(row.seats);
+  });
+
+  it('a row all turned the same way keeps its angle, and is measured along itself', () => {
+    // Sangizar's diagonal row: a merge that came back upright would be a table
+    // lying across the walkway.
+    const row = [0, 1, 2].map((i) => table({
+      id: `d${i}`, seats: 4, rotation: 60,
+      x: Math.round(300 + i * 190 * Math.cos(Math.PI / 3)),
+      y: Math.round(300 + i * 190 * Math.sin(Math.PI / 3)),
+    }));
+    const merged = mergeTables(row)!;
+    expect(merged.rotation).toBe(60);
+    // Along the row, not across it: the length is the span of three tables.
+    expect(merged.width).toBeGreaterThan(merged.height * 2);
+    // Its centre is the middle table's, because the row is evenly spaced.
+    expect(Math.hypot(merged.x - row[1].x, merged.y - row[1].y)).toBeLessThan(3);
+  });
+
+  it('mixed angles come back upright, measured upright', () => {
+    const merged = mergeTables([
+      table({ id: 'a', rotation: 0, x: 300, y: 300 }),
+      table({ id: 'b', rotation: 90, x: 500, y: 300 }),
+    ])!;
+    expect(merged.rotation).toBe(0);
+    expect(merged.x).toBeGreaterThan(300);
+    expect(merged.x).toBeLessThan(500);
+  });
+
+  it('every number it produces is a whole one the column can hold', () => {
+    const merged = mergeTables([
+      table({ id: 'a', seats: 5, rotation: 45, x: 211, y: 307 }),
+      table({ id: 'b', seats: 7, rotation: 45, x: 404, y: 489 }),
+    ])!;
+    for (const v of [merged.x, merged.y, merged.width, merged.height, merged.seats, merged.rotation]) {
+      expect(Number.isInteger(v), String(v)).toBe(true);
+    }
+    expect(merged.width).toBeLessThanOrEqual(MAX_TABLE);
+    expect(merged.height).toBeLessThanOrEqual(MAX_TABLE);
+    expect(merged.width).toBeGreaterThanOrEqual(MIN_TABLE);
+  });
+
+  it('a hand-resized table is merged by the size it was GIVEN', () => {
+    const wide = table({ id: 'a', seats: 4, width: 400, height: 60, x: 400, y: 300 });
+    const merged = mergeTables([wide, table({ id: 'b', seats: 4, x: 900, y: 300 })])!;
+    expect(merged.width).toBeGreaterThanOrEqual(400);
   });
 });

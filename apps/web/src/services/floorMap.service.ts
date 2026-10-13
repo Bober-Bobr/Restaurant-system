@@ -93,4 +93,21 @@ export const floorMapService = {
   async removeTable(id: string) {
     await httpClient.delete(`/floor-map/tables/${id}`);
   },
+  /**
+   * Push several tables together into one.
+   *
+   * The geometry is worked out here, by `mergeTables` in utils/floorMap.ts —
+   * the map is what draws a table, so it is what knows how long a top has to
+   * be for twelve chairs. `tableIds` is in the order they were picked and the
+   * FIRST one is the table that remains, keeping its number; the server
+   * refuses the merge if a booking from today onward still holds one of the
+   * others, because deleting a table releases every booking on it.
+   */
+  async mergeTables(payload: {
+    tableIds: string[]; seats: number; x: number; y: number;
+    width: number; height: number; rotation: number;
+  }) {
+    const { data } = await httpClient.post<MapTable>('/floor-map/tables/merge', payload);
+    return data;
+  },
 };

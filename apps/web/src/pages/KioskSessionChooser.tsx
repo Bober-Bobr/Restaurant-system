@@ -1,5 +1,5 @@
 import type { KioskSession } from '../utils/kioskSession';
-import type { translate } from '../utils/translate';
+import { locales, type Locale, type translate } from '../utils/translate';
 
 /**
  * "Which evening is this?" — the first thing the Small Banquets kiosk asks.
@@ -25,6 +25,18 @@ type Props = {
    */
   onBack: () => void;
   t: (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
+  /**
+   * The kiosk's language, switchable from here.
+   *
+   * This screen is the FIRST thing a guest sees, and until now the only
+   * language switchers were on the welcome overlay behind it and in the menu
+   * page's header beyond it — so the one screen asking a question in words had
+   * no way to ask it in the reader's own. The kiosk opens in the admin panel's
+   * language (see `adminLocale` in store/tablet.store.ts); this is where the
+   * guest disagrees with it.
+   */
+  locale: Locale;
+  setLocale: (next: Locale) => void;
 };
 
 const CARD: Record<KioskSession, { title: Parameters<typeof translate>[0]; body: Parameters<typeof translate>[0]; icon: string }> = {
@@ -42,7 +54,7 @@ const CARD: Record<KioskSession, { title: Parameters<typeof translate>[0]; body:
   },
 };
 
-export const KioskSessionChooser = ({ sessions, onPick, onBack, t }: Props) => (
+export const KioskSessionChooser = ({ sessions, onPick, onBack, t, locale, setLocale }: Props) => (
   <div
     role="dialog"
     aria-modal="true"
@@ -58,10 +70,26 @@ export const KioskSessionChooser = ({ sessions, onPick, onBack, t }: Props) => (
     }}
   >
     <div className="w-full" style={{ maxWidth: 860 }}>
-      {/* Top-left, like every other kiosk overlay's Back. */}
-      <button type="button" onClick={onBack} className="kiosk-session-back">
-        ‹ {t('back')}
-      </button>
+      {/* Back top-left, like every other kiosk overlay's; the language pills
+          opposite it, where the menu page's header also keeps them. */}
+      <div className="kiosk-session-top">
+        <button type="button" onClick={onBack} className="kiosk-session-back">
+          ‹ {t('back')}
+        </button>
+        <div className="kiosk-session-langs">
+          {locales.map((loc) => (
+            <button
+              key={loc}
+              type="button"
+              aria-pressed={locale === loc}
+              className={`kiosk-session-lang${locale === loc ? ' is-on' : ''}`}
+              onClick={() => setLocale(loc)}
+            >
+              {loc}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="text-center" style={{ marginBottom: 'clamp(20px, 4vh, 38px)' }}>
         <p className="rg-label" style={{ marginBottom: 10 }}>{t('kiosk_session_eyebrow')}</p>
@@ -122,13 +150,32 @@ export const KioskSessionChooser = ({ sessions, onPick, onBack, t }: Props) => (
         grid's own class — `[role=dialog] .grid` would reach every other dialog
         the kiosk puts on screen. */}
     <style>{`
+      .kiosk-session-top {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        margin-bottom: clamp(14px, 3vh, 26px);
+      }
       .kiosk-session-back {
         display: inline-flex; align-items: center; gap: 6px;
-        margin-bottom: clamp(14px, 3vh, 26px);
         padding: 9px 16px; border-radius: 8px; cursor: pointer;
         font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
         color: var(--rg-accent); background: rgba(var(--rg-accent-rgb), 0.12);
         border: 1px solid rgba(var(--rg-accent-rgb), 0.4);
+      }
+      .kiosk-session-langs { display: flex; gap: 6px; }
+      /* A tablet target, not a desktop one: these are pressed with a finger.
+         Same pills as the menu page's header, so the kiosk has one way of
+         offering a language rather than two that look different. */
+      .kiosk-session-lang {
+        min-width: 48px; min-height: 44px; padding: 9px 14px;
+        border-radius: 8px; cursor: pointer;
+        font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.7);
+      }
+      .kiosk-session-lang.is-on {
+        border-color: rgba(var(--rg-accent-rgb), 0.6);
+        background: rgba(var(--rg-accent-rgb), 0.18);
+        color: var(--rg-accent); font-weight: 700;
       }
       @media (max-width: 640px) {
         .kiosk-session-grid { grid-template-columns: minmax(0, 1fr) !important; }
