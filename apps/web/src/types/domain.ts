@@ -50,6 +50,27 @@ export type EventMenuConfig = {
   // taken before the two were told apart). `menuConfig` is a free-form JSON
   // column, so recording it needed no migration.
   sessionKind?: 'banquet' | 'dining';
+  /**
+   * The food-service order placed for this booking, as a SNAPSHOT.
+   *
+   * Written when the supervisor composes the order from the floor map, and
+   * what the Events page reads. The `Order` row is the operational record the
+   * waiter works from; this is the booking's own copy of what was agreed, and
+   * it is here rather than fetched because the Events page lists hundreds of
+   * bookings and a request per card is not a page.
+   *
+   * The two cannot drift: a small-banquet order's dishes cannot be amended
+   * from the floor at all (see utils/workArea.ts — `editItems` is false there,
+   * and the server refuses it, not just the screen).
+   */
+  diningOrder?: {
+    orderId: string;
+    placedAt: string;
+    /** Snapshotted like OrderItem, for the same reason: this is a record. */
+    lines: { menuItemId: string | null; name: string; quantity: number; unitPriceCents: number }[];
+    portions: number;
+    totalCents: number;
+  };
 };
 
 export type Event = {

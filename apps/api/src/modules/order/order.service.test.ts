@@ -7,6 +7,11 @@ const prismaMock = vi.hoisted(() => ({
   restaurant: { findUnique: vi.fn() },
   menuItem: { findMany: vi.fn() },
   order: { create: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), findMany: vi.fn(), count: vi.fn() },
+  // The floor somebody is standing on is read fresh on every floor call — see
+  // `areaOf`. General dining unless a test says otherwise, which is also the
+  // column's own default.
+  adminUser: { findUnique: vi.fn() },
+  event: { findFirst: vi.fn() },
   orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
   $transaction: vi.fn(),
 }));
@@ -31,6 +36,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   service = new OrderService();
   prismaMock.restaurant.findUnique.mockResolvedValue(OPEN_RESTAURANT);
+  prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'DINING' });
   // Answer like the database would: only the ids that were asked for.
   prismaMock.menuItem.findMany.mockImplementation(async ({ where }: never) => {
     const wanted: string[] = (where as { id: { in: string[] } }).id.in;
@@ -371,14 +377,14 @@ describe('the waiter\'s working set', () => {
     prismaMock.order.count.mockResolvedValue(2);
     await service.alertCount('w1');
     expect(prismaMock.order.count.mock.calls[0][0].where).toEqual({
-      waiterId: 'w1', status: ORDER_STATUS.open, callPendingAt: { not: null },
+      waiterId: 'w1', workArea: 'DINING', status: ORDER_STATUS.open, callPendingAt: { not: null },
     });
   });
 
-  it('lists only this waiter\'s orders', async () => {
+  it('lists only this waiter\'s orders, on the floor they are working', async () => {
     prismaMock.order.findMany.mockResolvedValue([]);
     await service.listMine('w1');
-    expect(prismaMock.order.findMany.mock.calls[0][0].where).toEqual({ waiterId: 'w1' });
+    expect(prismaMock.order.findMany.mock.calls[0][0].where).toEqual({ waiterId: 'w1', workArea: 'DINING' });
   });
 
   it('puts the tables that are calling first', async () => {
@@ -402,5 +408,264 @@ describe('an order is the catering system\'s, whatever the other systems do', ()
   it('cannot order a dish the food admin switched off', async () => {
     await service.placeOrder(RESTAURANT, null, [{ menuItemId: 'm1', quantity: 1 }]);
     expect(prismaMock.menuItem.findMany.mock.calls[0][0].where).toMatchObject({ disabledCatering: false });
+  });
+});
+
+// ── The Small Banquets floor ───────────────────────────────────────────────
+// A party's food order: placed by staff against a booking, priced at the
+// SECTION'S price, taken off a list rather than by a code, and hidden until
+// the evening is close. See utils/workArea.ts for the rule behind all of it.
+
+const PARTY_MENU = [
+  { id: 'm1', name: 'Lagman', priceCentsSmallBanquet: 3000000, isOutOfStock: false },
+  { id: 'm2', name: 'Plov', priceCentsSmallBanquet: 4000000, isOutOfStock: false },
+];
+
+const BOOKING = {
+  id: 'ev-cuid', eventNumber: 42,
+  floorTables: [{ floorTable: { label: '7' } }, { floorTable: { label: '10' } }],
+};
+
+/** An order row as the floor list gets it, with its party's time. */
+const partyOrder = (over: Record<string, unknown> = {}) => ({
+  id: 'o-party', workArea: 'SMALL_BANQUET', status: 'PENDING',
+  event: { eventDate: new Date('2026-10-13T19:00:00.000Z') },
+  ...over,
+});
+
+describe('a party\'s food order', () => {
+  beforeEach(() => {
+    prismaMock.event.findFirst.mockResolvedValue(BOOKING);
+    prismaMock.menuItem.findMany.mockImplementation(async ({ where }: never) => {
+      const wanted: string[] = (where as { id: { in: string[] } }).id.in;
+      return PARTY_MENU.filter((item) => wanted.includes(item.id));
+    });
+  });
+
+  it('is priced at the SMALL BANQUETS price, never the catering one', async () => {
+    // Three systems sell from one dish table at three prices; charging a party
+    // the general-dining price is charging the wrong rate for the room.
+    await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 40 }], null);
+    const select = prismaMock.menuItem.findMany.mock.calls[0][0].select;
+    expect(select).toMatchObject({ priceCentsSmallBanquet: true });
+    expect(select).not.toHaveProperty('priceCentsCatering');
+    expect(select).not.toHaveProperty('priceCents');
+    expect(JSON.stringify(createdOrder())).toContain('3000000');
+  });
+
+  it('and refuses a dish the SECTION has switched off', async () => {
+    await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 1 }], null);
+    expect(prismaMock.menuItem.findMany.mock.calls[0][0].where).toMatchObject({ disabledSmallBanquet: false });
+  });
+
+  it('belongs to the booking, and to the Small Banquets floor', async () => {
+    await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 2 }], ' two tables ');
+    const data = createdOrder();
+    expect(data.eventId).toBe('ev-cuid');
+    expect(data.workArea).toBe('SMALL_BANQUET');
+    expect(data.status).toBe(ORDER_STATUS.pending);
+    expect(data.comment).toBe('two tables');
+  });
+
+  it('takes its table number from the tables the booking already holds', async () => {
+    // Nobody types one: the handoff a code exists for happened on the map.
+    await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 2 }], null);
+    expect(createdOrder().tableNumber).toBe('7, 10');
+  });
+
+  it('a booking in another section or restaurant is 404', async () => {
+    prismaMock.event.findFirst.mockResolvedValue(null);
+    expect(await statusOf(() => service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 1 }], null))).toBe(404);
+    // Scoped on all three, so a number alone reaches nothing.
+    expect(prismaMock.event.findFirst.mock.calls[0][0].where).toEqual({
+      restaurantId: RESTAURANT, eventNumber: 42, section: 'SMALL_BANQUET',
+    });
+  });
+
+  it('an empty order is refused rather than written', async () => {
+    expect(await statusOf(() => service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 0 }], null))).toBe(400);
+    expect(prismaMock.order.create).not.toHaveBeenCalled();
+  });
+
+  it('a dish that is off the menu now is refused, not silently dropped', async () => {
+    expect(await statusOf(() => service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'ghost', quantity: 1 }], null))).toBe(409);
+  });
+});
+
+describe('the floor a waiter is working decides what they see', () => {
+  it('the list is filtered by the work area, read fresh from the account', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'SMALL_BANQUET' });
+    prismaMock.order.findMany.mockResolvedValue([]);
+    await service.listMine('w1', { status: 'OPEN' });
+    expect(prismaMock.order.findMany.mock.calls[0][0].where).toEqual({
+      waiterId: 'w1', workArea: 'SMALL_BANQUET', status: 'OPEN',
+    });
+    // Fresh, not from the token: a manager moving somebody between floors must
+    // not take fifteen minutes to land.
+    expect(prismaMock.adminUser.findUnique).toHaveBeenCalledWith({ where: { id: 'w1' }, select: { workArea: true } });
+  });
+
+  it('on the party floor, what is not due yet is held back and COUNTED', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'SMALL_BANQUET' });
+    const now = new Date('2026-10-13T12:00:00.000Z');
+    prismaMock.order.findMany.mockResolvedValue([
+      partyOrder({ id: 'soon', event: { eventDate: new Date('2026-10-13T13:00:00.000Z') } }),
+      partyOrder({ id: 'tonight', event: { eventDate: new Date('2026-10-13T19:00:00.000Z') } }),
+      partyOrder({ id: 'tomorrow', event: { eventDate: new Date('2026-10-14T19:00:00.000Z') } }),
+    ]);
+    const { orders, later } = await service.listMine('w1', { now });
+    expect(orders.map((o: { id: string }) => o.id)).toEqual(['soon']);
+    expect(later).toBe(2);
+  });
+
+  it('and nothing is held back on the dining floor', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'DINING' });
+    prismaMock.order.findMany.mockResolvedValue([
+      partyOrder({ id: 'a', workArea: 'DINING', event: null }),
+      partyOrder({ id: 'b', workArea: 'DINING', event: null }),
+    ]);
+    const { orders, later } = await service.listMine('w1', {});
+    expect(orders).toHaveLength(2);
+    expect(later).toBe(0);
+  });
+
+  it('"waiting to be taken" exists only where orders ARE taken off a list', async () => {
+    // General dining's unclaimed orders belong to the guest holding the code;
+    // listing them for anyone to take would undo that handoff.
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'DINING' });
+    expect(await service.pendingForArea('w1', RESTAURANT)).toEqual({ orders: [], later: 0 });
+    expect(prismaMock.order.findMany).not.toHaveBeenCalled();
+  });
+
+  it('taking one off the list needs no code and no table number', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'SMALL_BANQUET' });
+    prismaMock.order.findFirst.mockResolvedValue({ id: 'o-party' });
+    prismaMock.order.update.mockResolvedValue({ id: 'o-party', status: 'OPEN' });
+    await service.takeFromList('w1', RESTAURANT, 'o-party');
+    // Re-read inside the transaction and scoped on the floor, so this cannot
+    // reach into the dining stream.
+    expect(prismaMock.order.findFirst.mock.calls[0][0].where).toEqual({
+      id: 'o-party', restaurantId: RESTAURANT, workArea: 'SMALL_BANQUET', status: ORDER_STATUS.pending,
+    });
+    expect(prismaMock.order.update.mock.calls[0][0].data).toMatchObject({ waiterId: 'w1', status: ORDER_STATUS.open });
+    expect(prismaMock.order.update.mock.calls[0][0].data).not.toHaveProperty('tableNumber');
+  });
+
+  it('two waiters pressing the same row: the second is told, not given it', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'SMALL_BANQUET' });
+    prismaMock.order.findFirst.mockResolvedValue(null);
+    expect(await statusOf(() => service.takeFromList('w1', RESTAURANT, 'o-party'))).toBe(409);
+  });
+
+  it('a dining waiter cannot take an order off a list at all', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'DINING' });
+    // Refused BEFORE any read, and with its own reason. Asserting only the
+    // status passed against the guard being deleted: the transaction's own
+    // "already taken" check answers 409 as well, so the test went on passing
+    // while a dining waiter could in fact claim one by id — a break-check
+    // found that.
+    let message = '';
+    try {
+      await service.takeFromList('w1', RESTAURANT, 'o-party');
+    } catch (error) {
+      message = (error as Error).message;
+      expect((error as { status?: number }).status).toBe(409);
+    }
+    expect(message).toContain('code');
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(prismaMock.order.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('the alert count is zero on the party floor — there is no device to call from', async () => {
+    prismaMock.adminUser.findUnique.mockResolvedValue({ workArea: 'SMALL_BANQUET' });
+    expect(await service.alertCount('w1')).toBe(0);
+    // Answered rather than refused: a page that polls it anyway gets the
+    // honest number instead of an error every five seconds.
+    expect(prismaMock.order.count).not.toHaveBeenCalled();
+  });
+});
+
+describe('what a party\'s order does NOT have', () => {
+  // "The client does not create or interact with the order", enforced on the
+  // way in rather than only hidden on the screen.
+  it('no "call waiter" — there is no guest device in it', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o-party', guestToken: 'tok', workArea: 'SMALL_BANQUET', status: ORDER_STATUS.open,
+    });
+    expect(await statusOf(() => service.callWaiter('tok'))).toBe(409);
+    expect(prismaMock.order.update).not.toHaveBeenCalled();
+  });
+
+  it('no acknowledging a call that cannot exist', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o-party', waiterId: 'w1', workArea: 'SMALL_BANQUET', status: ORDER_STATUS.open,
+    });
+    expect(await statusOf(() => service.acknowledgeCall('w1', 'o-party'))).toBe(409);
+  });
+
+  it('no changing the DISHES — they were agreed with the host', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o-party', waiterId: 'w1', workArea: 'SMALL_BANQUET', status: ORDER_STATUS.open,
+    });
+    expect(await statusOf(() => service.updateOrder('w1', 'o-party', { items: [{ menuItemId: 'm1', quantity: 1 }] }))).toBe(409);
+    expect(prismaMock.orderItem.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('but a note for the kitchen is still a note', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o-party', waiterId: 'w1', workArea: 'SMALL_BANQUET', status: ORDER_STATUS.open,
+    });
+    prismaMock.order.update.mockResolvedValue({ id: 'o-party' });
+    await service.updateOrder('w1', 'o-party', { comment: 'allergy on table 7' });
+    expect(prismaMock.order.update.mock.calls[0][0].data).toMatchObject({ comment: 'allergy on table 7' });
+  });
+
+  it('and a DINING order keeps all three', async () => {
+    // The same code, the other way round: these refusals are the order's
+    // floor, not the caller's.
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o1', guestToken: 'tok', waiterId: 'w1', workArea: 'DINING',
+      status: ORDER_STATUS.open, callPendingAt: null,
+    });
+    prismaMock.order.update.mockResolvedValue({ id: 'o1' });
+    await service.callWaiter('tok');
+    await service.acknowledgeCall('w1', 'o1');
+    expect(prismaMock.order.update).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('one resolver, three callers', () => {
+  // Placing a guest's order, placing a party's and amending an open one all
+  // resolve ids into priced, snapshotted lines. Written three times, one of
+  // them would eventually be given another product's price column.
+  it('a dish the kitchen has run out of refuses a NEW order', async () => {
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: 'm1', name: 'Lagman', priceCentsCatering: 100, isOutOfStock: true },
+    ]);
+    expect(await statusOf(() => service.placeOrder(RESTAURANT, null, [{ menuItemId: 'm1', quantity: 1 }]))).toBe(409);
+  });
+
+  it('but not an AMENDMENT, which is what that path has always done', async () => {
+    // The order may already hold a line that went out of stock after it was
+    // taken; refusing would leave the waiter unable to edit it at all.
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o1', restaurantId: RESTAURANT, waiterId: 'w1', workArea: 'DINING', status: ORDER_STATUS.open,
+    });
+    prismaMock.menuItem.findMany.mockResolvedValue([
+      { id: 'm1', name: 'Lagman', priceCentsCatering: 100, isOutOfStock: true },
+    ]);
+    prismaMock.order.update.mockResolvedValue({ id: 'o1' });
+    await service.updateOrder('w1', 'o1', { items: [{ menuItemId: 'm1', quantity: 1 }] });
+    expect(prismaMock.orderItem.createMany).toHaveBeenCalled();
+  });
+
+  it('an amendment is re-priced from the live menu, never from the request', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({
+      id: 'o1', restaurantId: RESTAURANT, waiterId: 'w1', workArea: 'DINING', status: ORDER_STATUS.open,
+    });
+    prismaMock.order.update.mockResolvedValue({ id: 'o1' });
+    await service.updateOrder('w1', 'o1', { items: [{ menuItemId: 'm1', quantity: 3 }] });
+    const written = prismaMock.orderItem.createMany.mock.calls.at(-1)![0].data;
+    expect(written[0]).toMatchObject({ nameSnapshot: 'Lagman', unitPriceCents: 4500000, quantity: 3 });
   });
 });

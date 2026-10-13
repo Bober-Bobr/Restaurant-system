@@ -13,6 +13,20 @@ export const placeOrderSchema = z.object({
   items: z.array(orderLineSchema).min(1).max(60),
 });
 
+/**
+ * A booking's food order, placed by staff from the floor map.
+ *
+ * Ids and quantities only, exactly like the guest's own order — the service
+ * resolves the names and the SMALL BANQUETS price. `eventNumber` rather than a
+ * cuid because that is the id this API exposes for a booking everywhere else
+ * (and the number staff say out loud).
+ */
+export const bookingOrderSchema = z.object({
+  eventNumber: z.number().int().positive(),
+  comment: z.string().max(500).optional().nullable(),
+  items: z.array(orderLineSchema).min(1).max(60),
+});
+
 export const guestTokenSchema = z.object({
   guestToken: z.string().min(10).max(200),
 });

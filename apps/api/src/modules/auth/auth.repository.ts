@@ -9,7 +9,7 @@ export class AuthRepository {
 
   async listAll() {
     return prisma.adminUser.findMany({
-      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
   }
@@ -31,7 +31,7 @@ export class AuthRepository {
           { role: { in: [AdminRole.PERFORMER, AdminRole.HOST] } },
         ],
       },
-      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
   }
@@ -51,7 +51,7 @@ export class AuthRepository {
           { role: { in: [AdminRole.PERFORMER, AdminRole.HOST] } },
         ],
       },
-      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true },
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true },
       orderBy: { createdAt: 'asc' }
     });
   }
@@ -137,7 +137,19 @@ export class AuthRepository {
     return prisma.adminUser.update({
       where: { id: userId },
       data: { restaurantId },
-      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true }
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true }
+    });
+  }
+
+  /**
+   * Which floor this member of staff is on. See utils/workArea.ts — who may set
+   * it (and for whom) is the service's decision, not this one's.
+   */
+  async updateWorkArea(userId: string, workArea: string) {
+    return prisma.adminUser.update({
+      where: { id: userId },
+      data: { workArea },
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true }
     });
   }
 
@@ -145,7 +157,7 @@ export class AuthRepository {
     return prisma.adminUser.update({
       where: { id: userId },
       data,
-      select: { id: true, username: true, role: true, restaurantId: true, createdAt: true }
+      select: { id: true, username: true, role: true, restaurantId: true, workArea: true, createdAt: true }
     });
   }
 

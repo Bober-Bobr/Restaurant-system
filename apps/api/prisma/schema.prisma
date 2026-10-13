@@ -148,6 +148,9 @@ model Event {
   // stands no other booking can take a table there that day.
   wholeHall       Boolean           @default(false)
   invitation      Invitation?
+  // The food-service orders placed for this booking — a Small Banquets party
+  // whose host chose dishes rather than a table package.
+  orders          Order[]           @relation("EventOrders")
   hall            Hall?             @relation(fields: [hallId], references: [id], onDelete: SetNull)
   tableCategory   TableCategory?    @relation(fields: [tableCategoryId], references: [id], onDelete: SetNull)
   restaurant      Restaurant?       @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
@@ -232,6 +235,11 @@ model AdminUser {
   refreshTokenHash String?
   role             AdminRole    @default(OWNER)
   restaurantId     String?
+  // Which FLOOR this person is working: "DINING" (general dining) or
+  // "SMALL_BANQUET". Only the two food-service roles have one — see
+  // utils/workArea.ts, which is also why it is a plain String: a third area
+  // needs no migration, exactly like `Event.section`.
+  workArea         String       @default("DINING")
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   ownedRestaurants Restaurant[] @relation("OwnedRestaurants")
@@ -1460,6 +1468,15 @@ model NfcPlaque {
 model Order {
   id            String    @id @default(cuid())
   restaurantId  String
+  // Which floor's stream this order belongs to — "DINING" or "SMALL_BANQUET".
+  // A waiter sees only their own work area's orders (utils/workArea.ts).
+  workArea      String    @default("DINING")
+  // The booking this order feeds, for a small banquet. Null for general
+  // dining, where the order IS the visit and there is no booking behind it.
+  // The party's time is read through this relation rather than copied onto the
+  // order: moving a booking must not leave its food being served at the old
+  // hour.
+  eventId       String?
   code          String
   // PENDING (placed, awaiting a waiter) | OPEN (claimed) | CLOSED | CANCELLED.
   // A plain String like PerformerBooking.status — new states need no migration.
@@ -1482,9 +1499,15 @@ model Order {
 
   restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   waiter     AdminUser?  @relation("WaiterOrders", fields: [waiterId], references: [id], onDelete: SetNull)
+  // Cascade: the order is part of that booking's record, and a booking deleted
+  // from the Events page must not leave food on a waiter's screen for a party
+  // that is not coming.
+  event      Event?      @relation("EventOrders", fields: [eventId], references: [id], onDelete: Cascade)
   items      OrderItem[]
 
   @@index([restaurantId, status])
+  @@index([eventId])
+  @@index([restaurantId, workArea, status])
   @@index([waiterId, status])
   @@index([waiterId, closedAt])
   @@index([restaurantId, createdAt])

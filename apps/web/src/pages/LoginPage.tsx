@@ -30,8 +30,8 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const t = (key: Parameters<typeof translate>[0]) => translate(key, locale);
 
-  const redirectAfterLogin = (data: { accessToken: string; refreshToken: string; username: string; expiresIn: number; role: import('../store/auth.store').AdminRole; restaurantId: string | null; restaurantName?: string | null }) => {
-    setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName);
+  const redirectAfterLogin = (data: { accessToken: string; refreshToken: string; username: string; expiresIn: number; role: import('../store/auth.store').AdminRole; restaurantId: string | null; restaurantName?: string | null; workArea?: import('../utils/workArea').WorkArea }) => {
+    setAuth(data.accessToken, data.refreshToken, data.username, data.expiresIn, data.role, data.restaurantId, data.restaurantName, data.workArea);
     if (isRootDomain() && data.role === 'CHIEF_ADMIN') {
       window.location.href = buildSubdomainUrl('admin', {
         _at: data.accessToken, _rt: data.refreshToken, _u: data.username, _r: data.role,

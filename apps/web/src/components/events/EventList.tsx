@@ -2,6 +2,7 @@ import type { Event } from '../../types/domain';
 import { Button } from '../ui/button';
 import { useAdminStore } from '../../store/admin.store';
 import { translate } from '../../utils/translate';
+import { diningOrderOf, diningPortions } from '../../utils/eventMenuKind';
 
 type EventListProps = {
   events: Event[];
@@ -93,6 +94,8 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedul
               new Date(event.originalEventDate).getTime() !== new Date(event.eventDate).getTime();
             const original = rescheduled ? formatDateTime(event.originalEventDate!) : null;
             const dishTypes  = event.selections?.length ?? 0;
+            /** The food-service order recorded on this booking, if it is one. */
+            const dining = diningOrderOf(event);
             const totalPcs   = event.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
 
             return (
@@ -141,7 +144,32 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedul
                 </td>
 
                 <td style={{ whiteSpace: 'nowrap' }}>
-                  {dishTypes > 0 ? (
+                  {dining ? (
+                    /* A FOOD-SERVICE evening: the party chose dishes and
+                       portions rather than a table package, and this is the
+                       booking's own copy of what was agreed (see
+                       utils/eventMenuKind.ts). Shown in full rather than as a
+                       count: "what did they order" is the question this column
+                       is read for, and a count sends somebody to another
+                       screen to answer it. */
+                    <>
+                      <p style={{ margin: 0, color: 'var(--adm-accent)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        {t('menu_kind_dining')}
+                      </p>
+                      <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>
+                        {dining.lines.length === 1 ? t('dish_count_one') : t('dishes_count', { count: dining.lines.length })}
+                        {' · '}
+                        {t('fe_portions')}: {diningPortions(event)}
+                      </p>
+                      <div style={{ margin: '4px 0 0', display: 'grid', gap: 2, whiteSpace: 'normal', maxWidth: 220 }}>
+                        {dining.lines.map((line, i) => (
+                          <p key={`${line.menuItemId ?? line.name}-${i}`} style={{ margin: 0, fontSize: 11, color: 'rgba(226,232,240,0.6)' }}>
+                            {line.quantity}× {line.name}
+                          </p>
+                        ))}
+                      </div>
+                    </>
+                  ) : dishTypes > 0 ? (
                     <>
                       <p style={{ margin: 0, color: '#e2e8f0' }}>
                         {dishTypes === 1 ? t('dish_count_one') : t('dishes_count', { count: dishTypes })}

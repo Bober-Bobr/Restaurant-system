@@ -68,6 +68,8 @@ describe('banquet palette (index.css)', () => {
   // same ~40 pages as the banquet admin app and gets its own identity the same
   // way food service does: by redeclaring every token.
   const smallBanquet = css.indexOf('.svr-theme {');
+  // The Small Banquets FLOOR — a waiter's dark-green mode, the fourth scope.
+  const floor = css.indexOf('.sb-floor {');
 
   it('accent is legible on the page background', () => {
     expect(contrast(token(css, 'adm-accent', brand), token(css, 'adm-bg', brand))).toBeGreaterThanOrEqual(AA);
@@ -101,7 +103,7 @@ describe('banquet palette (index.css)', () => {
     const base = declared(css.indexOf(':root {', css.indexOf('Banquet brand palette')));
     // The blue aurora blob; .cadm-theme hides both blobs outright.
     const exempt = new Set(['adm-cool']);
-    for (const [name, at] of [['.cadm-theme', catering], ['.svr-theme', smallBanquet]] as const) {
+    for (const [name, at] of [['.cadm-theme', catering], ['.svr-theme', smallBanquet], ['.sb-floor', floor]] as const) {
       const missing = [...base].filter((tk) => !declared(at).has(tk) && !exempt.has(tk));
       expect(missing, `${name} does not redeclare: ${missing.join(', ')}`).toEqual([]);
     }
@@ -124,6 +126,30 @@ describe('banquet palette (index.css)', () => {
     // thing telling a supervisor which book they are editing would be the URL.
     expect(token(css, 'adm-accent', smallBanquet)).not.toBe(token(css, 'adm-accent', brand));
     expect(token(css, 'adm-bg', smallBanquet)).not.toBe(token(css, 'adm-bg', brand));
+  });
+
+  it('the Small Banquets floor is legible in its own right', () => {
+    // A phone held at arm's length in a dining room, so it is held to the same
+    // body-text bar as every other scope rather than a large-text one.
+    expect(contrast(token(css, 'adm-accent', floor), token(css, 'adm-bg', floor))).toBeGreaterThanOrEqual(AA);
+    expect(contrast(token(css, 'adm-text', floor), token(css, 'adm-bg', floor))).toBeGreaterThanOrEqual(AA);
+    for (const stop of ['adm-accent-deep', 'adm-accent', 'adm-accent-soft']) {
+      expect(contrast(token(css, 'adm-accent-ink', floor), token(css, stop, floor)), stop)
+        .toBeGreaterThanOrEqual(AA);
+    }
+    expect(rgb(token(css, 'adm-accent-rgb', floor))).toEqual(rgb(token(css, 'adm-accent', floor)));
+  });
+
+  it('and cannot be mistaken for the dining floor it replaces', () => {
+    // The same two roles work both floors from the same phone. A waiter who
+    // cannot tell which stream they are looking at will acknowledge a call
+    // that cannot exist, or go looking for a guest who is not there — so the
+    // two must differ in the GROUND, not only in an accent somewhere.
+    expect(token(css, 'adm-bg', floor)).not.toBe(token(css, 'adm-bg', catering));
+    expect(token(css, 'adm-accent', floor)).not.toBe(token(css, 'adm-accent', catering));
+    // And from the section's own admin theme, which is a different person on a
+    // different screen doing a different job.
+    expect(token(css, 'adm-bg', floor)).not.toBe(token(css, 'adm-bg', smallBanquet));
   });
 
   it('food-service surfaces stay monochrome', () => {

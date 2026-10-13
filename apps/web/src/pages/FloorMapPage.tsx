@@ -24,6 +24,9 @@ import {
   type MapBooking,
 } from '../utils/floorBooking';
 import { eventService } from '../services/event.service';
+import { orderService } from '../services/order.service';
+import { useTabletStore } from '../store/tablet.store';
+import { SmallBanquetOrderSheet, type OrderDraft } from './SmallBanquetOrderSheet';
 import { eventsPath } from '../utils/eventsPath';
 import { useAuthStore } from '../store/auth.store';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +75,17 @@ const DRAG_THRESHOLD = 4;
  * at once, which is a map where one gesture does two things.
  */
 type EditMode = 'view' | 'tables' | 'zones';
+
+/**
+ * Which kind of evening a booking made on the map is — and `null`, which is a
+ * real answer rather than a missing one.
+ *
+ * The same two words the kiosk's session chooser uses (`KioskSession`), because
+ * they are the same two things: a banquet priced by a table package, or a
+ * party eating a la carte. Null is "not decided yet", which the Events page
+ * shows as "Menu not selected" — see `menuKindOf` in utils/eventMenuKind.ts.
+ */
+type MenuKind = 'banquet' | 'dining' | null;
 
 type Drag =
   | { type: 'move'; id: string; dx: number; dy: number; x: number; y: number; moved: boolean }
@@ -207,7 +221,28 @@ export const FloorMapPage = () => {
    */
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [booking, setBooking] = useState<{ name: string; phone: string; time: string } | null>(null);
+  /**
+   * The booking being drafted from the map, and WHICH KIND OF EVENING it is.
+   *
+   * `menuKind` is null by default and may stay null: choosing is optional, and
+   * a booking saved without it is recorded as "menu not selected" rather than
+   * quietly filed as a banquet. That matters because the two kinds are priced
+   * in completely different ways, and guessing would put a table package on a
+   * party that is eating a la carte.
+   */
+  const [booking, setBooking] = useState<{ name: string; phone: string; time: string; menuKind: MenuKind } | null>(null);
+  /**
+   * The booking whose food order is being composed, once it exists.
+   *
+   * The event is CREATED FIRST and the order is built against it, rather than
+   * both being assembled and sent together: an order has to belong to a
+   * booking (that is its `eventId`), and a party with food but no booking is
+   * not a thing this product can hold. It also means a supervisor who abandons
+   * the dish basket still has the evening in the book — which is the whole
+   * reason the menu is optional.
+   */
+  const [ordering, setOrdering] = useState<{ eventNumber: number; customerName: string; when: string; guestCount: number } | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
   /**
    * The existing booking whose tables are being filled in.
    *
@@ -599,25 +634,128 @@ export const FloorMapPage = () => {
   const saveBooking = async () => {
     if (!booking || !current) return;
     const wholeArea = pickedList.length === 0;
+    const kind = booking.menuKind;
+    const guests = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    const time = booking.time || '19:00';
     setBusyBooking(true);
     setFlash(null);
     try {
       const created = await eventService.create({
         customerName: booking.name.trim(),
         customerPhone: booking.phone.trim() || undefined,
-        eventDate: new Date(`${day}T${booking.time || '19:00'}`).toISOString(),
-        guestCount: pickedList.reduce((sum, s) => sum + s.guestCount, 0),
-        status: 'CONFIRMED',
+        eventDate: new Date(`${day}T${time}`).toISOString(),
+        guestCount: guests,
+        // "Menu not selected" is an EVENT STATUS this product already has, and
+        // is the Events page's own default for a booking nobody has chosen a
+        // menu for — so a map booking with no kind lands in exactly the state
+        // the rest of the app already understands, rather than in a second
+        // notion of the same thing. It still holds its tables: only a
+        // CANCELLED booking holds nothing (utils/floorBooking.ts).
+        status: kind ? 'CONFIRMED' : 'MENU_NOT_SELECTED',
         hallId: current.id,
         floorTables: pickedList,
         wholeHall: wholeArea,
+        // The kind is recorded on the BOOKING at the moment it is taken, even
+        // though the menu itself is chosen next: a party whose supervisor
+        // walked away from the dish basket is still a food-service evening,
+        // and an evening with no kind at all reads as "not decided" rather
+        // than defaulting to a banquet nobody priced.
+        ...(kind ? { menuConfig: { sessionKind: kind } as never } : {}),
       });
       setBooking(null);
       setPicked({});
       await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
-      setFlash(t('fm_booking_saved', { number: String(created.id) }));
+      setFlash(kind
+        ? t('fm_booking_saved', { number: String(created.id) })
+        // Said plainly, because nothing else on the screen would: the booking
+        // is in the book and its menu is still outstanding.
+        : `${t('fm_booking_saved', { number: String(created.id) })} ${t('status_menu_not_selected')}`);
+
+      if (kind === 'banquet') {
+        // The banquet chooser is the kiosk's, and it is the SAME flow the
+        // Events page hands over to — halls, table packages, courses. Handing
+        // it a draft that names the event means the menu is saved back onto
+        // this booking rather than creating a second one.
+        useTabletStore.getState().loadEventDraft({
+          editingEventId: created.id,
+          hallId: current.id,
+          tableCategoryId: '',
+          guestCount: guests,
+          customerName: booking.name.trim(),
+          customerPhone: booking.phone.trim(),
+          secondCustomerName: '',
+          secondCustomerPhone: '',
+          eventDate: day,
+          eventTime: time,
+          config: null,
+        });
+        navigate('/tablet?prefill=1');
+        return;
+      }
+      if (kind === 'dining') {
+        setOrderError(null);
+        setOrdering({
+          eventNumber: created.id,
+          customerName: booking.name.trim(),
+          when: `${day} ${time}`,
+          guestCount: guests,
+        });
+      }
     } catch (error) {
       setNotice(t('fm_booking_failed', { message: errorText(error) }));
+    } finally {
+      setBusyBooking(false);
+    }
+  };
+
+  /**
+   * Place the party's food order, and record it on the booking.
+   *
+   * TWO writes, in this order and not the other way round: the order is what
+   * the kitchen and the waiter work from, so it is created first and the
+   * booking's own copy of the menu follows. If the second one fails the party
+   * still gets fed — the Events page would be missing the summary, which is a
+   * reporting gap rather than a missing meal. The reverse would be a booking
+   * that claims food nobody was ever asked to cook.
+   */
+  const placeOrder = async (draft: OrderDraft) => {
+    if (!ordering) return;
+    const items = Object.entries(draft.lines)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+    if (items.length === 0) return;
+    setBusyBooking(true);
+    setOrderError(null);
+    try {
+      const order = await orderService.placeForBooking({
+        eventNumber: ordering.eventNumber,
+        comment: draft.comment.trim() || null,
+        items,
+      });
+      const lines = order.items.map((line) => ({
+        menuItemId: line.menuItemId,
+        name: line.nameSnapshot,
+        quantity: line.quantity,
+        unitPriceCents: line.unitPriceCents,
+      }));
+      const portions = lines.reduce((sum, line) => sum + line.quantity, 0);
+      await eventService.update(ordering.eventNumber, {
+        menuConfig: {
+          sessionKind: 'dining',
+          diningOrder: {
+            orderId: order.id,
+            placedAt: order.createdAt,
+            lines,
+            portions,
+            totalCents: lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0),
+          },
+        } as never,
+      });
+      setOrdering(null);
+      setFlash(t('sbo_sent', { number: String(ordering.eventNumber), portions }));
+      await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
+    } catch (error) {
+      setOrderError(t('sbo_failed', { message: errorText(error) }));
     } finally {
       setBusyBooking(false);
     }
@@ -1623,6 +1761,32 @@ export const FloorMapPage = () => {
             onChange={(e) => setBooking({ ...booking!, time: e.target.value })} />
         </label>
         {tableSteppers(null)}
+
+        {/* WHICH KIND OF EVENING. Optional, and the three options are shown
+            together rather than as a tick-box plus a hidden branch: "banquet"
+            and "food service" are priced in entirely different ways, so the
+            choice is a fork in the booking and reads as one. "Decide later"
+            is a real option with its own line, because leaving a question
+            unanswered by pressing nothing is how people answer it by
+            accident. */}
+        <div className="fm-kind">
+          <span className="fm-caption">{t('menu_kind_question')}</span>
+          {([
+            ['banquet', 'menu_kind_banquet', 'menu_kind_banquet_hint'],
+            ['dining', 'menu_kind_dining', 'menu_kind_dining_hint'],
+            [null, 'menu_kind_skip', 'menu_kind_skip_hint'],
+          ] as const).map(([kind, label, hint]) => (
+            <button key={label} type="button"
+              className={`fm-kind-option${booking!.menuKind === kind ? ' is-on' : ''}`}
+              aria-pressed={booking!.menuKind === kind}
+              onClick={() => setBooking({ ...booking!, menuKind: kind })}>
+              <strong>{t(label)}</strong>
+              <span className="fm-caption">{t(hint)}</span>
+            </button>
+          ))}
+          <p className="fm-caption" style={{ margin: 0 }}>{t('menu_kind_optional')}</p>
+        </div>
+
         <button type="button" className="adm-btn-primary"
           disabled={busyBooking || !booking!.name.trim() || (wholeArea && !canTakeWholeArea)}
           onClick={() => void saveBooking()}>
@@ -1730,7 +1894,7 @@ export const FloorMapPage = () => {
           </button>
           <button type="button" className="adm-btn-primary" disabled={!current}
             onClick={() => {
-              setBooking(booking ? null : { name: '', phone: '', time: '19:00' });
+              setBooking(booking ? null : { name: '', phone: '', time: '19:00', menuKind: null });
               setPicked({});
               setOpenBooking(null);
               setOpenTableId(null);
@@ -1956,7 +2120,36 @@ export const FloorMapPage = () => {
         </aside>
       </div>
 
+      {/* The dish basket, once the booking exists. A full-screen overlay
+          rather than a panel: it is the whole job for as long as it is open,
+          and the map underneath has nothing to contribute to it. */}
+      {ordering && (
+        <SmallBanquetOrderSheet
+          booking={ordering}
+          t={t}
+          locale={locale}
+          busy={busyBooking}
+          error={orderError}
+          // Leaving it does NOT undo the booking: the evening is in the book
+          // and its menu is outstanding, which is exactly the state "decide
+          // later" produces and the Events page already shows.
+          onCancel={() => { setOrdering(null); setOrderError(null); }}
+          onPlace={(draft) => void placeOrder(draft)}
+        />
+      )}
+
       <style>{`
+        .fm-kind { display: grid; gap: 8px; }
+        .fm-kind-option {
+          display: grid; gap: 2px; text-align: left; cursor: pointer;
+          padding: 10px 12px; border-radius: 4px;
+          border: 1px solid var(--adm-line); background: rgba(var(--adm-text-rgb), 0.03);
+          color: inherit;
+        }
+        .fm-kind-option.is-on {
+          border-color: var(--adm-accent); background: rgba(var(--adm-accent-rgb), 0.12);
+        }
+        .fm-kind-option strong { font-size: 14px; }
         .fm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
         .fm-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
         .fm-caption { font-size: 13px; color: rgba(var(--adm-text-rgb), 0.6); }

@@ -1489,3 +1489,66 @@
    stopped leaves it part-coloured, and `background-size` must stay put or the
    gradient is resized under the text. */
 .svr-kiosk .rg-shine { animation: none; background-position: 0% 50%; }
+
+/* ── The Small Banquets FLOOR ────────────────────────────────────────────────
+   A waiter's screen while they are working the section's parties rather than
+   general dining. A fourth token scope, declared the way the other three are:
+   it REDECLARES every `--adm-*` token rather than avoiding them, so the shared
+   primitives carry it to the whole workspace and nothing has to remember to
+   ask.
+
+   Why a scope at all: the same two roles work both floors, and the food-service
+   surfaces are deliberately monochrome (`.cadm-theme`). A waiter who cannot
+   tell at a glance which stream they are looking at will acknowledge a call
+   that does not exist or go looking for a guest who is not there, so the two
+   modes must not be able to be confused — the same argument the Small Banquets
+   kiosk's own palette rests on.
+
+   Dark green, and its OWN dark green: deeper and cooler than `.svr-theme`'s
+   forest, because this is a phone held at arm's length in a room rather than a
+   desk screen, and because the two are seen by different people on different
+   devices. Both are held to AA on their own ground by palette.test.ts. */
+.sb-floor {
+  --adm-accent: #5ee6a0;           /* spring green */
+  --adm-accent-rgb: 94, 230, 160;
+  --adm-accent-soft: #8af0bd;      /* hover / highlight */
+  /* Measured, not chosen: the ink above has to survive BOTH ends of the
+     primary button's gradient, and a darker foot than this fails it (3.5:1).
+     palette.test.ts is what holds it. */
+  --adm-accent-deep: #1a9460;      /* gradient foot */
+  --adm-accent-ink: #04140c;       /* text ON the accent */
+
+  --adm-bg: #04130c;               /* bottle green, near black */
+  --adm-bg-rgb: 4, 19, 12;
+  --adm-surface: rgba(12, 35, 23, 0.66);
+  --adm-surface-rgb: 12, 35, 23;
+  --adm-surface-solid: #0c2317;
+  --adm-line: rgba(168, 240, 200, 0.12);
+
+  --adm-text: #d9efe4;
+  --adm-text-rgb: 217, 239, 228;
+  --adm-title: #effdf5;
+
+  --adm-cool: 20, 110, 80;         /* the secondary blob, unused here */
+}
+
+/* The ground: the same flat weave the section's admin pages use, no drifting
+   blobs. `overflow-x: clip` is inherited from `.adm-bg` and must stay clip —
+   see stickyAncestors.test.ts. */
+.sb-floor.adm-bg {
+  background:
+    repeating-linear-gradient(45deg, rgba(var(--adm-accent-rgb), 0.02) 0 1px, transparent 1px 10px),
+    radial-gradient(1100px 480px at 50% -10%, rgba(var(--adm-accent-rgb), 0.08), transparent 70%),
+    var(--adm-bg);
+}
+.sb-floor.adm-bg::before,
+.sb-floor.adm-bg::after { display: none; }
+
+/* The header and the chrome the floor pages paint themselves, as tokens rather
+   than literals: the dining mode keeps the monochrome values as the fallback,
+   so one set of markup serves both and neither can drift from the other. */
+.sb-floor {
+  --sbf-header: rgba(4, 19, 12, 0.94);
+  --sbf-tab-on: var(--adm-accent);
+  --sbf-tab-ink: var(--adm-accent-ink);
+}

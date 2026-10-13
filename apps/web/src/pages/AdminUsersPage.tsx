@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Fragment, useState } from 'react';
 import type { AdminUser } from '../services/auth.service';
 import { authService } from '../services/auth.service';
+import { WORK_AREAS, canSetWorkArea, workAreaOf, type WorkArea } from '../utils/workArea';
 import { restaurantService } from '../services/restaurant.service';
 import type { AdminRole } from '../store/auth.store';
 import { useAuthStore } from '../store/auth.store';
@@ -122,6 +123,14 @@ export const AdminUsersPage = () => {
 
   const updateRoleMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: AdminRole }) => authService.updateUserRole(id, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+  });
+
+  // Moving somebody between floors — see utils/workArea.ts. The server decides
+  // whether this caller may; the control is only drawn where it would be
+  // allowed, which is the same shared rule.
+  const updateWorkAreaMutation = useMutation({
+    mutationFn: ({ id, workArea }: { id: string; workArea: WorkArea }) => authService.setWorkArea(id, workArea),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] })
   });
 
@@ -258,6 +267,27 @@ export const AdminUsersPage = () => {
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                      {/* Which FLOOR this member of staff is working. Part of
+                          running the rota rather than a privilege of its own,
+                          so it sits with the other row controls — and it is
+                          offered only where the shared rule allows it
+                          (utils/workArea.ts), which is the same rule the
+                          server applies. */}
+                      {currentRole && canSetWorkArea(currentRole, user.role, isSelf) && (
+                        <select
+                          value={workAreaOf(user.workArea)}
+                          aria-label={t('wa_switch')}
+                          onChange={(e) => updateWorkAreaMutation.mutate({ id: user.id, workArea: e.target.value as WorkArea })}
+                          disabled={updateWorkAreaMutation.isPending}
+                          style={{ padding: '4px 8px', border: '1px solid rgba(var(--adm-accent-rgb),0.35)', borderRadius: 4, fontSize: 12, background: 'rgba(var(--adm-bg-rgb),0.78)', color: '#e2e8f0' }}
+                        >
+                          {WORK_AREAS.map((option) => (
+                            <option key={option} value={option}>
+                              {option === 'DINING' ? t('wa_dining') : t('wa_small_banquet')}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {currentRole === 'OWNER' && user.role !== 'OWNER' && (
                         <select
                           value={user.role}

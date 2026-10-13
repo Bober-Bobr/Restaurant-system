@@ -18,9 +18,24 @@ const floorRoles = requireRole(
   AdminRole.CHIEF_ADMIN,
 );
 
+// The Small Banquets section places a booking's order from the floor map, so
+// the SUPERVISOR reaches this one route and nothing else here. Not folded into
+// `floorRoles`: a supervisor does not work the floor and must not appear in a
+// waiter's lists or statistics.
+const bookingRoles = requireRole(
+  AdminRole.SUPERVISOR,
+  AdminRole.CHIEF_ADMIN,
+);
+
 const router = Router();
 
 router.get('/mine', floorRoles, orderController.listMine.bind(orderController));
+// Unclaimed orders on my floor, and taking one. Small Banquets only — general
+// dining's unclaimed orders are claimed by the code the guest is holding, and
+// listing them for anyone to take would undo that handoff.
+router.get('/pending', floorRoles, orderController.pending.bind(orderController));
+router.post('/:id/take', floorRoles, orderController.take.bind(orderController));
+router.post('/booking', bookingRoles, orderController.placeForBooking.bind(orderController));
 router.get('/alerts/count', floorRoles, orderController.alertCount.bind(orderController));
 router.post('/claim', floorRoles, orderController.claim.bind(orderController));
 

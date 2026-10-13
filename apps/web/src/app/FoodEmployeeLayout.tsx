@@ -9,6 +9,23 @@ import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
 import { locales, translate, type Locale, type TranslationKey } from '../utils/translate';
 import { buildAbsoluteUrl } from '../utils/subdomain';
+import { useWorkArea } from '../utils/useWorkArea';
+import { WORK_AREAS, type WorkArea } from '../utils/workArea';
+
+/** The label for each floor, and the class its look is scoped on. */
+const AREA_LABEL: Record<WorkArea, TranslationKey> = {
+  DINING: 'wa_dining',
+  SMALL_BANQUET: 'wa_small_banquet',
+};
+
+/**
+ * The Small Banquets floor's dark-green scope — see `.sb-floor` in index.css.
+ *
+ * The dining floor keeps `.cadm-theme`, the monochrome food-service look. They
+ * are mutually exclusive on purpose: a waiter who cannot tell which stream
+ * they are looking at will acknowledge a call that cannot exist.
+ */
+export const SB_FLOOR_CLASS = 'sb-floor';
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
@@ -24,12 +41,17 @@ export const FoodEmployeeLayout = () => {
   const { locale, setLocale } = useAdminStore();
   const t = (key: TranslationKey) => translate(key, locale);
   const location = useLocation();
+  // Which floor this person is working, from the server — see useWorkArea.
+  const { area, surface, canSwitch, switchTo, switching } = useWorkArea();
 
   // The one number they must not miss: guests waiting on them right now.
+  // Only on the floor that has guest calls at all. In Small Banquets the host
+  // ordered through the supervisor and there is no guest device to call from,
+  // so this would be a number that is always zero, polled every five seconds.
   const alerts = useLiveQuery<number>('waiterAlerts', {
     queryKey: ['wt-alerts'],
     queryFn: () => orderService.alertCount(),
-    enabled: !!accessToken,
+    enabled: !!accessToken && surface.waiterCalls,
   });
   const calling = alerts.data ?? 0;
 
@@ -60,10 +82,10 @@ export const FoodEmployeeLayout = () => {
   ];
 
   return (
-    <div className="adm-bg cadm-theme" style={{ minHeight: '100vh' }}>
+    <div className={`adm-bg ${area === 'SMALL_BANQUET' ? SB_FLOOR_CLASS : 'cadm-theme'}`} style={{ minHeight: '100vh' }}>
       <header style={{
         position: 'sticky', top: 0, zIndex: 30,
-        background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(14px)',
+        background: 'var(--sbf-header, rgba(10,10,10,0.92))', backdropFilter: 'blur(14px)',
         borderBottom: '1px solid rgba(255,255,255,0.12)',
       }}>
         <div style={{
@@ -92,7 +114,30 @@ export const FoodEmployeeLayout = () => {
             </div>
           </div>
 
-          <nav style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
+          {/* WHICH FLOOR. First in the row after the venue, because it decides
+              what every other thing on the screen means — and it carries the
+              current one as a pressed state rather than only offering the
+              other, so a glance answers "where am I?" as well as "where can I
+              go?". Hidden for roles that work no floor. */}
+          {canSwitch && (
+            <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }} role="group" aria-label={t('wa_switch')}>
+              {WORK_AREAS.map((option) => (
+                <button key={option} type="button" aria-pressed={area === option} disabled={switching}
+                  onClick={() => { if (area !== option) switchTo(option); }}
+                  style={{
+                    padding: '7px 11px', borderRadius: 8, cursor: area === option ? 'default' : 'pointer',
+                    fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                    border: '1px solid rgba(255,255,255,0.14)',
+                    background: area === option ? 'var(--sbf-tab-on, #fff)' : 'transparent',
+                    color: area === option ? 'var(--sbf-tab-ink, #000)' : 'rgba(255,255,255,0.65)',
+                  }}>
+                  {t(AREA_LABEL[option])}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <nav style={{ display: 'flex', gap: 4, marginLeft: canSwitch ? undefined : 'auto' }}>
             {nav.map(({ to, label, badge }) => {
               const active = location.pathname.startsWith(to);
               return (

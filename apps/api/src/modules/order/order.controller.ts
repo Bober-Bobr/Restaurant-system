@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { orderService } from './order.service.js';
 import {
-  claimOrderSchema, guestTokenSchema, listOrdersSchema,
+  bookingOrderSchema, claimOrderSchema, guestTokenSchema, listOrdersSchema,
   orderIdSchema, placeOrderSchema, statsQuerySchema, updateOrderSchema,
 } from './order.schema.js';
 import {
@@ -61,7 +61,35 @@ export class OrderController {
 
   async listMine(request: Request, response: Response) {
     const { status } = listOrdersSchema.parse(request.query);
-    response.json(await orderService.listMine(request.admin!.id, status));
+    response.json(await orderService.listMine(request.admin!.id, { status }));
+  }
+
+  /** Unclaimed orders waiting on this floor — Small Banquets only. */
+  async pending(request: Request, response: Response) {
+    response.json(await orderService.pendingForArea(request.admin!.id, request.restaurantId!));
+  }
+
+  /** Take one off that list. No code and no table: neither exists to type. */
+  async take(request: Request, response: Response) {
+    const { id } = orderIdSchema.parse(request.params);
+    response.json(await orderService.takeFromList(request.admin!.id, request.restaurantId!, id));
+  }
+
+  /**
+   * A booking's food order, placed by the supervisor from the floor map.
+   * `section` comes from `requireRestaurant`, so a supervisor can only order
+   * against their own section's bookings.
+   */
+  async placeForBooking(request: Request, response: Response) {
+    const payload = bookingOrderSchema.parse(request.body);
+    const order = await orderService.placeForBooking(
+      request.restaurantId!,
+      request.section ?? 'BANQUET',
+      payload.eventNumber,
+      payload.items,
+      payload.comment ?? null,
+    );
+    response.status(201).json(order);
   }
 
   async alertCount(request: Request, response: Response) {

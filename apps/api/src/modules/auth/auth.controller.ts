@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
 import { loginSchema, refreshTokenSchema, registerSchema, updateCredentialsSchema, updateRestaurantSchema, updateRoleSchema } from './auth.schema.js';
 import { AuthService } from './auth.service.js';
+import { WORK_AREAS } from '../../utils/workArea.js';
 
 type JwtPayload = {
   sub: string;
@@ -20,6 +22,9 @@ function deviceInfo(request: Request) {
   const ipAddress = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim() || request.ip || null;
   return { userAgent, ipAddress };
 }
+
+/** Which floor, and nothing else: the account is in the path. */
+const workAreaSchema = z.object({ workArea: z.enum(WORK_AREAS) });
 
 export class AuthController {
   async register(request: Request, response: Response) {
@@ -97,8 +102,23 @@ export class AuthController {
     response.json({
       id: admin.id,
       username: admin.username,
-      role: admin.role
+      role: admin.role,
+      // The floor they are on, read fresh — a manager may have moved them
+      // since this access token was issued.
+      workArea: await authService.workAreaOf(admin.id),
     });
+  }
+
+  /**
+   * Move somebody between floors. One handler for both cases, because they are
+   * the same act with the same rule: `:id` is the account, which may be the
+   * caller's own, and `canSetWorkArea` is what decides.
+   */
+  async updateWorkArea(request: Request, response: Response) {
+    const admin = request.admin!;
+    const targetId = String(request.params.id) === 'me' ? admin.id : String(request.params.id);
+    const { workArea } = workAreaSchema.parse(request.body);
+    response.json(await authService.setWorkArea({ id: admin.id, role: admin.role }, targetId, workArea));
   }
 
   async listUsers(request: Request, response: Response) {

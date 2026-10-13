@@ -3731,3 +3731,75 @@ both views; it is a way to put the column away rather than a way to find it.
 19. An explicit **"Revert to the default"** still puts all three back — tables,
     map size and drawing — because that is a deliberate press.
 20. Check the sweep's log still says which tables it kept for a booking.
+
+## §74 — A booking's menu on the map, and two floors for one waiter (**MIGRATION**)
+
+A Small Banquets booking taken on the floor map now asks what kind of evening
+it is: a **banquet** (the usual table-package chooser) or **food service**
+(dishes and portions, which become an ordinary floor order). The choice is
+optional. Separately, the two food-service roles can switch which **work area**
+they are serving — general dining or small banquets — which changes the look of
+their screens and which orders reach them.
+
+**Migration: `20261013100000_work_area_orders`.** `AdminUser.workArea` and
+`Order.workArea`, both defaulting to `'DINING'` (what every account and every
+existing order already is, so nothing is re-filed), plus `Order.eventId` with
+an `ON DELETE CASCADE` to the booking and two indexes.
+
+### The map asks what kind of evening it is
+
+1. **Deploy, then `supervisor.v-menu.uz/<slug>/`** → "New booking". Fill in the
+    name and time. Below the table steppers there are now three options:
+    **Banquet**, **Food service**, **Decide later**, with a line saying the
+    choice is optional.
+2. **Decide later** (or leave all three untouched): the booking is created with
+    the status **"Menu not selected"** — check it on the Events page, in the
+    status column, and confirm the booking still holds its tables on the map.
+3. **Banquet**: the kiosk opens on the table-package chooser, exactly as
+    "Change menu" does from the Events page. Pick a package and some courses,
+    confirm, and check on the Events page that the menu landed on **that**
+    booking — not on a second one with the next number.
+4. **Food service**: a dark-green dish basket opens for the booking just made.
+    - the dish list is the **Small Banquets** menu at the **Small Banquets**
+      price (compare one dish against `/admin/menu` in this app, not the
+      catering one);
+    - type `40` into a dish's portions field as well as using − / +;
+    - the basket and the total are above the menu and follow every change;
+    - add a note for the kitchen;
+    - **Cancel**: the booking survives with no menu (the state in step 2). This
+      must not delete anything.
+    - **Place the order**: a confirmation names the booking and the portions.
+5. **The Events page** now shows that booking's menu as **Food service** with
+    every line (`40× Plov`) and the portion total. A banquet booking's menu
+    column reads exactly as it did.
+6. Delete a food-service booking from the Events page and confirm its order
+    disappears from the floor (the cascade) rather than lingering.
+
+### The waiter's two floors
+
+7. **`food-admin.v-menu.uz/<slug>`** as a Food Employee. The header carries a
+    **work-area switch** showing both floors with the current one pressed.
+8. **Food service (the default)**: everything is exactly as it was — the
+    monochrome look, "take an order by code", the call-waiter banner and
+    acknowledge, "edit items", the alert badge on the Orders tab. **This is the
+    check that matters most**, because that floor is in use today.
+9. **Switch to Small banquets**: the whole workspace turns dark green, the code
+    form goes, and a **"Waiting to be taken"** list appears with the party
+    orders from step 4. A card carries the party's time, their name, the booking
+    number, the room, the tables, the portions and the dishes — **no code, no
+    call banner, no "edit items"**.
+10. Press **Take**: the order moves to the active list with a Close button and
+    nothing else.
+11. **The two-hour rule.** Place an order for a booking **tomorrow**: it must
+    NOT be at the top of the list, and the line under the list must say one
+    more is waiting with when it will appear. Move that booking to within two
+    hours (Events page) and confirm it appears.
+12. Switch back to Food service: the party orders are gone and the dining ones
+    are back. Neither floor ever shows the other's orders.
+13. **The alert badge** is absent on the small-banquets floor — there is no
+    guest device to call from.
+14. **A manager can move somebody.** As the Food Admin, `/admin/users`: a Food
+    Employee's row has a work-area picker. Change it and confirm the waiter's
+    own screen follows **within a minute, without signing out**. A banquet
+    ADMIN must see no such picker at all.
+15. Check all three languages on the switch, the basket and the party cards.

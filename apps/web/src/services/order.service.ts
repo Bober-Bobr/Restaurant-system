@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { httpClient } from './http';
+import type { WorkArea } from '../utils/workArea';
 
 const apiRoot = (): string =>
   (import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api').replace(/\/$/, '');
@@ -41,7 +42,35 @@ export type WaiterOrder = {
     quantity: number;
   }[];
   waiter: { id: string; username: string } | null;
+  /** Which floor's stream this order belongs to (utils/workArea.ts). */
+  workArea?: WorkArea;
+  /**
+   * The booking this order feeds, for a small banquet. Null for general
+   * dining, where the order IS the visit. Its date is what decides whether the
+   * order is due yet — read through the relation, never copied, so moving a
+   * booking moves its food with it.
+   */
+  event?: {
+    id: string;
+    eventNumber: number;
+    eventDate: string;
+    customerName: string;
+    customerPhone: string | null;
+    guestCount: number;
+    hallId: string | null;
+    hall: { name: string } | null;
+    floorTables: { guestCount: number; floorTable: { label: string } }[];
+  } | null;
 };
+
+/**
+ * A floor list, and what it is holding back.
+ *
+ * `later` is how many orders this list is NOT showing because their party is
+ * still hours away (Small Banquets only — see `DUE_LEAD_MINUTES`). A list that
+ * said nothing about what it was hiding would be a list nobody could trust.
+ */
+export type FloorList = { orders: WaiterOrder[]; later: number };
 
 export type OrderLineInput = { menuItemId: string; quantity: number };
 
@@ -65,8 +94,30 @@ export const publicOrderService = {
 // Waiter calls go through httpClient so they carry the access token and get the
 // auto-refresh-on-401 behaviour.
 export const orderService = {
-  async listMine(status?: OrderStatus): Promise<WaiterOrder[]> {
+  async listMine(status?: OrderStatus): Promise<FloorList> {
     const { data } = await httpClient.get('/orders/mine', { params: status ? { status } : undefined });
+    return data;
+  },
+  /**
+   * Orders waiting to be taken on this floor — Small Banquets only. General
+   * dining's unclaimed orders are claimed by the code the guest is holding,
+   * and listing them for anyone to take would undo that handoff.
+   */
+  async pending(): Promise<FloorList> {
+    const { data } = await httpClient.get('/orders/pending');
+    return data;
+  },
+  /** Take one off that list. No code and no table number: neither exists. */
+  async take(id: string): Promise<WaiterOrder> {
+    const { data } = await httpClient.post(`/orders/${id}/take`);
+    return data;
+  },
+  /**
+   * Place a booking's food order, from the floor map. Ids and quantities only
+   * — the server prices it at the Small Banquets price and snapshots the names.
+   */
+  async placeForBooking(payload: { eventNumber: number; comment?: string | null; items: OrderLineInput[] }): Promise<WaiterOrder> {
+    const { data } = await httpClient.post('/orders/booking', payload);
     return data;
   },
   async alertCount(): Promise<number> {

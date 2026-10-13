@@ -1,6 +1,7 @@
 import { AdminRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import createHttpError from 'http-errors';
+import { canSetWorkArea, hasWorkArea, isWorkArea, workAreaOf, type WorkArea } from '../../utils/workArea.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthRepository } from './auth.repository.js';
@@ -17,6 +18,8 @@ export type AuthResponse = {
   role: AdminRole;
   restaurantId: string | null;
   restaurantName: string | null;
+  /** Which floor this person is working — see utils/workArea.ts. */
+  workArea: WorkArea;
 };
 
 export type DeviceInfo = { userAgent?: string | null; ipAddress?: string | null };
@@ -91,6 +94,15 @@ export function canManageSmallBanquetStaff(role: AdminRole): boolean {
   return SMALL_BANQUET_STAFF_MANAGERS.includes(role);
 }
 
+/**
+ * Set somebody's work area — their own, or a member of staff's.
+ *
+ * The rule itself is `canSetWorkArea` in utils/workArea.ts, shared with the web
+ * so the control and the endpoint cannot disagree about who may press it. Two
+ * refusals, and they are different facts: a role that has no floor at all
+ * (400 — there is nothing to set), and somebody else's floor you may not touch
+ * (403).
+ */
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
@@ -441,6 +453,42 @@ export class AuthService {
     return this.authRepository.updateRestaurant(targetId, restaurantId);
   }
 
+  /**
+   * Move somebody between floors — their own, or a member of staff's.
+   *
+   * Three refusals, and they are three different facts:
+   *   · an unknown user is 404;
+   *   · a role with no floor at all is 400 — there is nothing to set, and
+   *     silently storing one would leave a column nobody reads claiming a
+   *     banquet admin works the dining room;
+   *   · somebody else's floor, without the standing to set it, is 403.
+   *
+   * The rule is `canSetWorkArea` (utils/workArea.ts), shared with the web, so
+   * the switch and the endpoint cannot disagree about who may press it.
+   */
+  /** The floor somebody is on, read fresh. Used by `/auth/me`. */
+  async workAreaOf(userId: string): Promise<WorkArea> {
+    const user = await this.authRepository.findById(userId);
+    return workAreaOf(user?.workArea);
+  }
+
+  async setWorkArea(
+    caller: { id: string; role: AdminRole },
+    targetId: string,
+    workArea: string,
+  ) {
+    if (!isWorkArea(workArea)) throw createHttpError(400, 'Unknown work area');
+    const target = await this.authRepository.findById(targetId);
+    if (!target) throw createHttpError(404, 'User not found');
+    if (!hasWorkArea(target.role)) {
+      throw createHttpError(400, 'This role does not work a service floor.');
+    }
+    if (!canSetWorkArea(caller.role, target.role, caller.id === targetId)) {
+      throw createHttpError(403, 'You may not change this user\'s work area.');
+    }
+    return this.authRepository.updateWorkArea(targetId, workArea);
+  }
+
   private async issueTokenPair(
     userId: string,
     username: string,
@@ -481,7 +529,19 @@ export class AuthService {
     const restaurant = restaurantId
       ? await this.authRepository.findRestaurantById(restaurantId)
       : null;
+    // Read here rather than threaded through every caller: it is one read by
+    // primary key on a path that already does two, and reading it at the one
+    // place that builds the reply is what stops a login and a refresh
+    // disagreeing about which floor somebody is on.
+    const { workArea } = (await this.authRepository.findById(userId)) ?? { workArea: undefined };
 
-    return { accessToken, refreshToken, expiresIn, username, role, restaurantId, restaurantName: restaurant?.name ?? null };
+    return {
+      accessToken, refreshToken, expiresIn, username, role, restaurantId,
+      restaurantName: restaurant?.name ?? null,
+      // The floor this person is on, so the first paint after signing in is
+      // already the right one — the web would otherwise show general dining
+      // for a moment to a waiter working small banquets.
+      workArea: workAreaOf(workArea),
+    };
   }
 }
