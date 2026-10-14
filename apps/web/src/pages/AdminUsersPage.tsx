@@ -273,7 +273,7 @@ export const AdminUsersPage = () => {
                           offered only where the shared rule allows it
                           (utils/workArea.ts), which is the same rule the
                           server applies. */}
-                      {currentRole && canSetWorkArea(currentRole, user.role, isSelf) && (
+                      {currentRole && canSetWorkArea(currentRole, user.role) && (
                         <select
                           value={workAreaOf(user.workArea)}
                           aria-label={t('wa_switch')}

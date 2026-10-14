@@ -496,6 +496,7 @@ const resources = {
     fm_default_restored: 'Reverted to the default layout — {count} tables.',
     // ── Which floor a member of staff is working (utils/workArea.ts) ──
     wa_switch: 'Work area',
+    wa_assigned: 'Your work area is set by your manager.',
     wa_dining: 'Food service',
     wa_small_banquet: 'Small banquets',
     fe_waiting: 'Waiting to be taken',
@@ -526,6 +527,7 @@ const resources = {
     sbo_sent: 'Order placed for #{number} — {portions} portions.',
     sbo_failed: 'The order could not be placed: {message}',
     sbo_guests: 'Guests',
+    fm_picked_tables: 'Picked: {count} ({labels}). Press a table again to let it go.',
     fm_merge: 'Merge tables',
     fm_merge_hint: 'Tap the tables to push together. The merged table takes their places and seats the sum of their seats.',
     fm_merge_picked: '{count} tables picked',
@@ -1935,6 +1937,7 @@ const resources = {
     fm_default_restored: 'Схема по умолчанию восстановлена — столов: {count}.',
     // ── Рабочая зона сотрудника (utils/workArea.ts) ──
     wa_switch: 'Рабочая зона',
+    wa_assigned: 'Рабочую зону назначает руководитель.',
     wa_dining: 'Общепит',
     wa_small_banquet: 'Малые банкеты',
     fe_waiting: 'Ожидают принятия',
@@ -1965,6 +1968,7 @@ const resources = {
     sbo_sent: 'Заказ оформлен для №{number} — порций: {portions}.',
     sbo_failed: 'Не удалось оформить заказ: {message}',
     sbo_guests: 'Гостей',
+    fm_picked_tables: 'Выбрано: {count} ({labels}). Нажмите на стол снова, чтобы снять выбор.',
     fm_merge: 'Объединить столы',
     fm_merge_hint: 'Отметьте столы, которые нужно сдвинуть вместе. Объединённый стол займёт их место, а его вместимость — сумма их мест.',
     fm_merge_picked: 'Отмечено столов: {count}',
@@ -3372,6 +3376,7 @@ const resources = {
     fm_default_restored: 'Standart joylashuv tiklandi — stollar: {count}.',
     // ── Xodimning ish hududi (utils/workArea.ts) ──
     wa_switch: 'Ish hududi',
+    wa_assigned: 'Ish hududini rahbar belgilaydi.',
     wa_dining: 'Umumiy ovqatlanish',
     wa_small_banquet: 'Kichik banketlar',
     fe_waiting: 'Qabul qilishni kutayotganlar',
@@ -3402,6 +3407,7 @@ const resources = {
     sbo_sent: '№{number} uchun buyurtma berildi — porsiya: {portions}.',
     sbo_failed: 'Buyurtma berilmadi: {message}',
     sbo_guests: 'Mehmonlar',
+    fm_picked_tables: 'Tanlangan: {count} ({labels}). Bekor qilish uchun stolni yana bosing.',
     fm_merge: 'Stollarni birlashtirish',
     fm_merge_hint: 'Birga suriladigan stollarni belgilang. Birlashgan stol ularning joyini oladi, orindiqlari esa yigindisi boladi.',
     fm_merge_picked: 'Belgilangan stollar: {count}',

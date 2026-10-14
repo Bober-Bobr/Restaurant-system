@@ -255,6 +255,16 @@ export const FloorMapPage = () => {
   const [busyBooking, setBusyBooking] = useState(false);
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.role);
+  /**
+   * The restaurant the kiosk is opened FOR.
+   *
+   * The banquet chooser is a kiosk page, and the kiosk loads its menu, halls
+   * and packages from `?restaurantId=` — with none it renders its chrome and no
+   * data at all, which is what "no restaurant data loads when selecting a
+   * banquet" was. The Events page's own hand-over has always passed it; this
+   * one did not.
+   */
+  const restaurantId = useAuthStore((s) => s.restaurantId) ?? '';
   const svgRef = useRef<SVGSVGElement>(null);
 
   const stored = current ? areaSize(current, areaTables) : { width: 0, height: 0 };
@@ -689,7 +699,7 @@ export const FloorMapPage = () => {
           eventTime: time,
           config: null,
         });
-        navigate('/tablet?prefill=1');
+        navigate(`/tablet?restaurantId=${encodeURIComponent(restaurantId)}&prefill=1`);
         return;
       }
       if (kind === 'dining') {
@@ -1755,6 +1765,23 @@ export const FloorMapPage = () => {
           <input className="adm-input" type="tel" value={booking!.phone}
             onChange={(e) => setBooking({ ...booking!, phone: e.target.value })} />
         </label>
+        {/* The DAY, here with the rest of the booking's details rather than
+            only up beside the tabs.
+            It is the SAME value the map is drawn for — not a second date that
+            could disagree with the plan underneath it — so changing it here
+            moves the map, and what is free changes with it. Which is also why
+            it drops the tables picked so far: they were picked from another
+            day's plan, where a table that is free today may be taken. */}
+        <label>
+          <span>{t('fm_day')}</span>
+          <input className="adm-input" type="date" value={day}
+            onChange={(e) => {
+              setDay(e.target.value || dayKey(new Date()));
+              setPicked({});
+              setOpenBooking(null);
+              setOpenTableId(null);
+            }} />
+        </label>
         <label>
           <span>{t('event_time')}</span>
           <input className="adm-input" type="time" value={booking!.time}
@@ -1809,6 +1836,25 @@ export const FloorMapPage = () => {
           <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_subtitle')}</p>
         </div>
         <div className="fm-toolbar">
+          {/* Taking a booking is what this page is FOR, so it sits with the two
+              editors rather than among the day's utilities, and it is the one
+              highlighted control up here. It was in the day bar beside "Print
+              map", which read as another thing you might do to the day. */}
+          {!editing && (
+            <button type="button"
+              className={booking ? 'adm-btn-ghost' : 'adm-btn-primary fm-book-btn'}
+              disabled={!current}
+              title={booking ? undefined : t('fm_new_booking_hint')}
+              onClick={() => {
+                setBooking(booking ? null : { name: '', phone: '', time: '19:00', menuKind: null });
+                setPicked({});
+                setOpenBooking(null);
+                setOpenTableId(null);
+                setAssigning(null);
+              }}>
+              {booking ? t('cancel') : `+ ${t('fm_new_booking')}`}
+            </button>
+          )}
           {editingTables && (
             <button type="button" className="adm-btn-ghost" disabled={!current} onClick={() => void addTable()}>
               {t('fm_add_table')}
@@ -1892,16 +1938,6 @@ export const FloorMapPage = () => {
             onClick={() => current && void printArea(current)}>
             {t('fm_print_map')}
           </button>
-          <button type="button" className="adm-btn-primary" disabled={!current}
-            onClick={() => {
-              setBooking(booking ? null : { name: '', phone: '', time: '19:00', menuKind: null });
-              setPicked({});
-              setOpenBooking(null);
-              setOpenTableId(null);
-              setAssigning(null);
-            }}>
-            {booking ? t('cancel') : t('fm_new_booking')}
-          </button>
           <span className="fm-legend">
             <span><i className="fm-swatch" style={{ background: 'var(--fm-free)' }} />{t('fm_free')}</span>
             <span><i className="fm-swatch" style={{ background: 'var(--fm-partly)' }} />{t('fm_partly')}</span>
@@ -1934,14 +1970,34 @@ export const FloorMapPage = () => {
         </section>
       )}
 
-      <p className="fm-caption" style={{ margin: '12px 0' }}>
-        {merging ? t('fm_merge_hint')
-          : editingTables ? t('fm_hint_edit')
-          : editingZones ? t('fm_hint_zones')
-          : booking ? t('fm_new_booking_hint')
-          : assigning ? t('fm_assign_hint')
-          : t('fm_hint_view')}
-      </p>
+      {/* While a booking is being drafted the instruction is a CALLOUT, not a
+          line of grey caption: the next thing that has to happen is a press on
+          the plan, and nothing else on the screen asks for it. It also carries
+          the count, so "I have picked three" is answerable without counting
+          the steppers in the panel. */}
+      {booking ? (
+        <div className="fm-callout" role="status">
+          <strong>{t('fm_new_booking_hint')}</strong>
+          <span>
+            {pickedList.length === 0
+              ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
+              : t('fm_picked_tables', {
+                count: pickedList.length,
+                labels: pickedList
+                  .map((s) => areaTables.find((x) => x.id === s.floorTableId)?.label)
+                  .filter(Boolean).join(', '),
+              })}
+          </span>
+        </div>
+      ) : (
+        <p className="fm-caption" style={{ margin: '12px 0' }}>
+          {merging ? t('fm_merge_hint')
+            : editingTables ? t('fm_hint_edit')
+            : editingZones ? t('fm_hint_zones')
+            : assigning ? t('fm_assign_hint')
+            : t('fm_hint_view')}
+        </p>
+      )}
       {flash && <p className="fm-flash" role="status" style={{ margin: '0 0 10px' }}>{flash}</p>}
       {notice && <p className="fm-notice" role="alert">{notice}</p>}
 
@@ -2031,7 +2087,7 @@ export const FloorMapPage = () => {
               <svg
                 ref={svgRef}
                 key={current.id}
-                className={`fm-svg${editing ? ' is-editing' : ''}${editingZones ? ' is-drawing' : ''}${current.kind === 'OUTDOOR' ? ' is-outdoor' : ''}`}
+                className={`fm-svg${editing ? ' is-editing' : ''}${editingZones ? ' is-drawing' : ''}${current.kind === 'OUTDOOR' ? ' is-outdoor' : ''}${booking || assigning ? ' is-booking' : ''}`}
                 viewBox={`0 0 ${size.width} ${size.height}`}
                 style={{ width: `${zoom * 100}%` }}
                 onPointerMove={onPointerMove}
@@ -2314,6 +2370,43 @@ export const FloorMapPage = () => {
           fill: rgba(var(--adm-accent-rgb), 0.85); stroke: var(--adm-accent);
           stroke-width: 4; stroke-dasharray: 12 7;
         }
+        /* Taking a booking: the one highlighted control in the toolbar, and
+           it keeps a hairline ring so it reads as the primary act even beside
+           two other primary-looking buttons. */
+        .fm-book-btn { box-shadow: 0 0 0 1px rgba(var(--adm-accent-rgb), 0.55), 0 6px 18px rgba(var(--adm-accent-rgb), 0.18); }
+
+        /* The instruction, while a booking is being drafted. */
+        .fm-callout {
+          display: grid; gap: 4px; margin: 12px 0; padding: 11px 14px; border-radius: 6px;
+          border: 1px solid rgba(var(--adm-accent-rgb), 0.45);
+          background: rgba(var(--adm-accent-rgb), 0.1);
+          font-size: 13px;
+        }
+        .fm-callout strong { font-size: 13.5px; color: var(--adm-accent); }
+        .fm-callout span { color: rgba(var(--adm-text-rgb), 0.75); }
+
+        /* THE PLAN BECKONS. A free table is what the admin is being asked to
+           press, so while a booking is being drafted every bookable table
+           carries a dashed accent ring that breathes. Only the free ones: a
+           taken table cannot be picked, and inviting a press on one would be
+           an invitation to a 409.
+
+           Scoped to .is-booking so nothing about the plan changes at any other
+           time, and switched off under reduced motion like every other
+           animation here — the ring itself stays, which is the part that
+           carries the meaning. */
+        .fm-svg.is-booking .fm-table-group:not(.is-taken):not(.is-partly):not(.is-picked) .fm-top {
+          stroke: var(--adm-accent); stroke-dasharray: 9 6;
+          animation: fm-beckon 2.2s ease-in-out infinite;
+        }
+        @keyframes fm-beckon {
+          0%, 100% { stroke-opacity: 0.45; }
+          50% { stroke-opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .fm-svg.is-booking .fm-table-group .fm-top { animation: none; stroke-opacity: 0.9; }
+        }
+
         .fm-table-group.is-merging .fm-table-label,
         .fm-table-group.is-merging .fm-table-seats { fill: var(--adm-accent-ink, #04120d); }
         /* What the merged table will be, while they are still being picked. */

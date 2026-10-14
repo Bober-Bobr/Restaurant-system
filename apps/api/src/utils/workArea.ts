@@ -57,22 +57,31 @@ export const FLOOR_ROLES = ['CATERING_EMPLOYEE', 'CATERING_ADMIN'] as const;
 export const hasWorkArea = (role: string): boolean => (FLOOR_ROLES as readonly string[]).includes(role);
 
 /**
- * Who may set SOMEBODY ELSE'S work area.
+ * Who may set a work area — anybody's, INCLUDING THEIR OWN.
  *
- * The same people who may create the account in the first place — the platform
+ * The same people who may create the account in the first place: the platform
  * Chief Admin, the restaurant's Owner and the restaurant's Food Admin (see
- * `canManageFoodEmployees`) — because moving a waiter between floors is part of
- * running the rota, not a privilege of its own. A banquet ADMIN manages neither
- * role and is not here.
+ * `canManageFoodEmployees`). Moving somebody between floors is part of running
+ * the rota. A banquet ADMIN manages neither role and is not here.
  *
- * Everyone with a work area may always set their OWN; that is the switch in the
- * header, and it is what makes the mode usable at all.
+ * **A waiter may NOT set their own**, which is the rule that changed: the floor
+ * is an ASSIGNMENT, not a preference. Two reasons, and the second is the one
+ * that matters. A waiter who can move themselves can take a party's order out
+ * of the queue the supervisor is expecting somebody else to serve; and the two
+ * streams exist precisely so that one person is answerable for one of them, so
+ * letting that be re-chosen at will is letting the separation be undone from
+ * the floor. They are still TOLD which floor they are on — the header carries
+ * it as a badge — because serving the wrong stream by accident is the failure
+ * this is all guarding against.
+ *
+ * Note there is no `isSelf` argument any more. There was, and it meant "you may
+ * always move yourself"; keeping it would leave the question in the signature
+ * and the answer in neither call site.
  */
 const WORK_AREA_MANAGERS: readonly string[] = ['CHIEF_ADMIN', 'OWNER', 'CATERING_ADMIN'];
 
-export function canSetWorkArea(actorRole: string, targetRole: string, isSelf: boolean): boolean {
+export function canSetWorkArea(actorRole: string, targetRole: string): boolean {
   if (!hasWorkArea(targetRole)) return false;
-  if (isSelf) return hasWorkArea(actorRole);
   return WORK_AREA_MANAGERS.includes(actorRole);
 }
 

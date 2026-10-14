@@ -42,12 +42,8 @@ describe('the two copies agree', () => {
   it('about who may set whose', () => {
     for (const actor of ROLES) {
       for (const target of ROLES) {
-        for (const isSelf of [true, false]) {
-          expect(
-            web.canSetWorkArea(actor, target, isSelf),
-            `${actor} → ${target}${isSelf ? ' (self)' : ''}`,
-          ).toBe(api.canSetWorkArea(actor, target, isSelf));
-        }
+        expect(web.canSetWorkArea(actor, target), `${actor} → ${target}`)
+          .toBe(api.canSetWorkArea(actor, target));
       }
     }
   });
@@ -81,22 +77,32 @@ describe('the rules themselves', () => {
     // set, and storing one would leave a column claiming a banquet admin works
     // the dining room.
     for (const actor of ['CHIEF_ADMIN', 'OWNER', 'CATERING_ADMIN']) {
-      expect(api.canSetWorkArea(actor, 'ADMIN', false)).toBe(false);
-      expect(api.canSetWorkArea(actor, 'SUPERVISOR', false)).toBe(false);
-      expect(api.canSetWorkArea(actor, 'CATERING_EMPLOYEE', false)).toBe(true);
+      expect(api.canSetWorkArea(actor, 'ADMIN')).toBe(false);
+      expect(api.canSetWorkArea(actor, 'SUPERVISOR')).toBe(false);
+      expect(api.canSetWorkArea(actor, 'CATERING_EMPLOYEE')).toBe(true);
     }
   });
 
-  it('a waiter may set their OWN and nobody else\'s', () => {
-    expect(api.canSetWorkArea('CATERING_EMPLOYEE', 'CATERING_EMPLOYEE', true)).toBe(true);
-    expect(api.canSetWorkArea('CATERING_EMPLOYEE', 'CATERING_EMPLOYEE', false)).toBe(false);
+  it('a WAITER may not set their own floor — it is an assignment', () => {
+    // The two streams exist so that one person is answerable for one of them;
+    // a waiter who could re-choose could take a party's order out of a queue
+    // somebody else is expected to serve. They are still told which floor they
+    // are on, which is the part that matters for not serving the wrong one.
+    expect(api.canSetWorkArea('CATERING_EMPLOYEE', 'CATERING_EMPLOYEE')).toBe(false);
+    expect(web.canSetWorkArea('CATERING_EMPLOYEE', 'CATERING_EMPLOYEE')).toBe(false);
+    // Their manager can.
+    expect(api.canSetWorkArea('CATERING_ADMIN', 'CATERING_EMPLOYEE')).toBe(true);
+  });
+
+  it('a Food Admin may move themselves, because they are the manager', () => {
+    expect(api.canSetWorkArea('CATERING_ADMIN', 'CATERING_ADMIN')).toBe(true);
   });
 
   it('a banquet ADMIN may set nobody\'s, including their own', () => {
     // They neither create nor see food employees (canManageFoodEmployees), and
     // this is the same boundary.
-    expect(api.canSetWorkArea('ADMIN', 'CATERING_EMPLOYEE', false)).toBe(false);
-    expect(api.canSetWorkArea('ADMIN', 'ADMIN', true)).toBe(false);
+    expect(api.canSetWorkArea('ADMIN', 'CATERING_EMPLOYEE')).toBe(false);
+    expect(api.canSetWorkArea('ADMIN', 'ADMIN')).toBe(false);
   });
 
   it('the two floors differ in every one of the five consequences', () => {

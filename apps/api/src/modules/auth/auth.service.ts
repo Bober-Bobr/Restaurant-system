@@ -483,8 +483,11 @@ export class AuthService {
     if (!hasWorkArea(target.role)) {
       throw createHttpError(400, 'This role does not work a service floor.');
     }
-    if (!canSetWorkArea(caller.role, target.role, caller.id === targetId)) {
-      throw createHttpError(403, 'You may not change this user\'s work area.');
+    // Including their own: the floor is an assignment, not a preference, so a
+    // waiter asking to move themselves is refused here as well as given no
+    // control on the screen.
+    if (!canSetWorkArea(caller.role, target.role)) {
+      throw createHttpError(403, 'Only a manager can change which floor somebody works.');
     }
     return this.authRepository.updateWorkArea(targetId, workArea);
   }

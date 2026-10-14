@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
-import { DEFAULT_WORK_AREA, hasWorkArea, workAreaOf, workAreaSurface, type WorkArea } from './workArea';
+import { DEFAULT_WORK_AREA, canSetWorkArea, hasWorkArea, workAreaOf, workAreaSurface, type WorkArea } from './workArea';
 
 /**
  * Which floor this member of staff is on, and the switch that moves them.
@@ -61,8 +61,17 @@ export function useWorkArea() {
   return {
     area,
     surface: workAreaSurface(area),
-    /** Whether this role has a floor at all — the switch is hidden otherwise. */
-    canSwitch: !!role && hasWorkArea(role),
+    /**
+     * Whether this person may move THEMSELVES between floors.
+     *
+     * A waiter may not: the floor is an assignment their manager makes, and a
+     * waiter who could re-choose it could take a party's order out of a queue
+     * somebody else is answerable for. The same shared rule the server
+     * applies, so the control exists exactly where the request would succeed.
+     */
+    canSwitch: !!role && canSetWorkArea(role, role),
+    /** Whether this role works a floor at all — what the badge is shown for. */
+    onAFloor: !!role && hasWorkArea(role),
     switchTo: (next: WorkArea) => switchTo.mutate(next),
     switching: switchTo.isPending,
   };

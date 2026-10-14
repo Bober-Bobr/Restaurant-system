@@ -93,8 +93,9 @@ describe('the mode is visible, and switchable', () => {
   it('the header reads its own colours as TOKENS with the dining values as fallback', () => {
     // One set of markup for both floors; a second copy would be a second thing
     // to keep in step.
-    expect(layout).toContain("'var(--sbf-header, rgba(10,10,10,0.92))'");
-    expect(layout).toContain("'var(--sbf-tab-on, #fff)'");
+    expect(layout).toContain('var(--sbf-header, rgba(10, 10, 10, 0.92))');
+    expect(layout).toContain('var(--sbf-tab-on, #fff)');
+    expect(layout).toContain('var(--sbf-tab-ink, #000)');
   });
 
   it('the switch shows the CURRENT floor as well as the other one', () => {
@@ -103,9 +104,53 @@ describe('the mode is visible, and switchable', () => {
     expect(layout).toMatch(/WORK_AREAS\.map\(\(option\) => \(/);
   });
 
-  it('and is hidden for a role that works no floor', () => {
-    expect(layout).toMatch(/\{canSwitch && \(/);
+  it('a WAITER is told their floor and cannot change it', () => {
+    // The floor is an assignment, not a preference — but the badge is never
+    // absent, because serving the wrong stream by accident is the failure all
+    // of this guards against.
+    expect(layout).toMatch(/\{onAFloor && \(canSwitch \?/);
+    expect(layout).toContain('fef-area-badge');
+    expect(layout).toContain("title={t('wa_assigned')}");
+    // And it is a SPAN, not a disabled button: a greyed-out control invites a
+    // press and then refuses it.
+    //
+    // Asserted on the opening TAG, because the element name sits to the LEFT
+    // of the class name — slicing from the class and looking for `<button`
+    // searches the wrong side of it and passes against exactly that change. A
+    // break-check found this one, the same way it found the owner-nav test's
+    // `openingTag` hole.
+    expect(layout).toMatch(/<span className="fef-area-badge"/);
+    expect(layout).not.toMatch(/<button[^>]*className="fef-area-badge"/);
+    expect(layout).not.toMatch(/className="fef-area-badge"[^>]*disabled/);
+  });
+
+  it('and nothing about a floor is shown to a role that works none', () => {
+    expect(layout).toMatch(/\{onAFloor && \(/);
     expect(hook).toMatch(/enabled: !!role && hasWorkArea\(role\)/);
+    expect(hook).toMatch(/canSwitch: !!role && canSetWorkArea\(role, role\)/);
+  });
+
+  it('every control in the header is big enough for a thumb', () => {
+    // It was one flex row with 3px gaps carrying nine controls, several under
+    // 44px: on a phone — the only device this page runs on — they ran into
+    // each other and a thumb hit the wrong one.
+    const raw = readFileSync(join(WEB, 'app/FoodEmployeeLayout.tsx'), 'utf8');
+    expect(raw).toMatch(/\.fef-area-btn, \.fef-lang, \.fef-out, \.fef-area-badge \{[^}]*min-height: 44px/);
+    expect(raw).toMatch(/\.fef-tab \{[\s\S]{0,120}min-height: 46px/);
+    expect(raw).toMatch(/\.fef-lang \{[^}]*min-width: 44px/);
+  });
+
+  it('and the header has a PHONE layout', () => {
+    const raw = readFileSync(join(WEB, 'app/FoodEmployeeLayout.tsx'), 'utf8');
+    // Two steps, because two floor buttons plus three languages plus sign-out
+    // cannot share a line at 360px.
+    expect(raw).toContain('@media (max-width: 560px)');
+    expect(raw).toContain('@media (max-width: 400px)');
+    // The tabs are a full-width grid rather than a squeezed row.
+    expect(raw).toMatch(/\.fef-nav \{[^}]*grid-template-columns: 1fr 1fr/);
+    // A long venue name must ellipsise rather than push the controls out of a
+    // container that CLIPS horizontally.
+    expect(raw).toMatch(/\.fef-who \{[^}]*min-width: 0/);
   });
 
   it('the alert count is not polled where there are no calls', () => {
@@ -137,14 +182,14 @@ describe('where the floor is read from', () => {
 
 describe('a manager can move somebody between floors', () => {
   it('from the user list, and only where the shared rule allows it', () => {
-    expect(users).toContain('canSetWorkArea(currentRole, user.role, isSelf)');
+    expect(users).toContain('canSetWorkArea(currentRole, user.role)');
     expect(users).toContain('authService.setWorkArea(id, workArea)');
   });
 
   it('and the server applies that same rule rather than trusting the screen', () => {
     const service = strip(readFileSync(join(WEB, '../../api/src/modules/auth/auth.service.ts'), 'utf8'));
     const fn = service.slice(service.indexOf('async setWorkArea('));
-    expect(fn).toContain('canSetWorkArea(caller.role, target.role, caller.id === targetId)');
+    expect(fn).toContain('canSetWorkArea(caller.role, target.role)');
     // Three refusals, three different facts.
     expect(fn).toMatch(/createHttpError\(400, 'Unknown work area'\)/);
     expect(fn).toMatch(/createHttpError\(404, 'User not found'\)/);

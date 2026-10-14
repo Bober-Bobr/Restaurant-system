@@ -3803,3 +3803,40 @@ an `ON DELETE CASCADE` to the booking and two indexes.
     own screen follows **within a minute, without signing out**. A banquet
     ADMIN must see no such picker at all.
 15. Check all three languages on the switch, the basket and the party cards.
+
+## §75 — The map's booking act, and the floor as an assignment
+
+Corrections to §74. **No migration.**
+
+1. **`supervisor.v-menu.uz/<slug>/`** — **"New booking"** is now up with
+    "Change table layout" and "Edit map", highlighted, and gone from the day
+    bar. It disappears in either editor.
+2. Press it. The instruction is a **callout** above the plan, not a grey line;
+    **every free table on the plan carries a breathing accent ring**; a taken or
+    part-filled one does not. Pick two — the callout names them and counts them.
+    Hover the button before pressing: the same sentence is a tooltip.
+3. The form now carries the **date**, above the time, defaulting to the day on
+    screen. Change it: the **map moves to that day**, the occupancy redraws, and
+    **the tables picked so far are dropped** (they were picked from another
+    day's plan). Change the day bar's date instead — the form's follows.
+4. **Pick "Banquet" and create.** The kiosk must open with the restaurant's
+    halls, packages and dishes loaded — this was the bug: it opened empty.
+    Finish a menu and confirm it lands on that booking (same number) on the
+    Events page.
+5. Re-check "Food service" and "Decide later" still behave as §74 describes.
+6. **`food-admin.v-menu.uz/<slug>` as a Food Employee**: there is **no
+    work-area switch** any more — their floor is shown as a **badge** with a
+    dot, with a tooltip saying their manager sets it. Confirm it still says the
+    right floor, and that it is never missing.
+7. As the **Food Admin**, `/admin/users`: the per-waiter picker still moves
+    them, and the waiter's own screen follows within a minute. A Food Admin may
+    still switch **their own** (they are the manager).
+8. **The two streams still do not overlap**: a party's order never appears on
+    the dining floor and the reverse.
+9. **But the statistics do span both.** Close an order on one floor, have the
+    manager move the waiter to the other, and check `/stats` still shows that
+    closed order in the waiter's own figures and in the restaurant's.
+10. **The header on a phone** (390px and 360px): nothing overlaps, every button
+    is comfortably thumb-sized, the two tabs are a full-width pair, and a long
+    restaurant name ellipsises instead of pushing anything off the screen.
+    Check it in both floors' colours and in all three languages.

@@ -11,6 +11,14 @@ import { prisma } from '../../db/prisma.js';
 // UTC — bucketing by UTC would scatter a single busy night across two squares of
 // the activity calendar and quietly understate the late shift. The client sends
 // its offset; the server clamps it to a real-world range and does the shifting.
+//
+// WORK AREA. Nothing here filters on it, and that is deliberate — the one place
+// in the order module that does not (utils/workArea.ts). The live lists are
+// separated because serving the wrong stream is a mistake somebody makes with
+// their hands; a CLOSED order is the record of work already done, and a waiter
+// who was moved between floors last week must not find half their own history
+// missing. So the statistics span both floors, and a figure here can include an
+// order closed in a mode nobody is currently in.
 
 export type Granularity = 'day' | 'week' | 'month' | 'year';
 

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { clampOffset, parseGranularity, resolveRange } from './order.stats.js';
 
@@ -83,5 +85,34 @@ describe('granularity', () => {
     for (const junk of ['hour', 'century', '; DROP TABLE "Order"', undefined, null, 7, {}]) {
       expect(parseGranularity(junk)).toBe('day');
     }
+  });
+});
+
+describe('statistics span BOTH floors', () => {
+  // The live lists are separated by work area because serving the wrong stream
+  // is a mistake somebody makes with their hands. A closed order is the record
+  // of work already done, so a waiter moved between floors last week must not
+  // find half their own history missing — see utils/workArea.ts.
+  const src = readFileSync(join(__dirname, 'order.stats.ts'), 'utf8');
+
+  it('no query here filters on the work area', () => {
+    // Comments stripped: the decision is DOCUMENTED in this file, so a bare
+    // search for the word would find the explanation and pass either way.
+    const code = src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+    expect(code).not.toContain('workArea');
+  });
+
+  it('and they read CLOSED orders only, which is what makes that safe', () => {
+    // Spanning both floors is safe precisely because nothing LIVE is in here:
+    // a closed order is a record, and the live lists are what must never
+    // cross. Every reader in this file, raw SQL and Prisma alike.
+    expect((src.match(/status = 'CLOSED'/g) ?? []).length).toBe(2);
+    expect((src.match(/status: 'CLOSED'/g) ?? []).length).toBe(2);
+    // Nothing reads another status, by any spelling.
+    for (const live of ['PENDING', 'OPEN']) expect(src, live).not.toContain(live);
+  });
+
+  it('the decision is written down where somebody would come to add the filter', () => {
+    expect(src).toContain('WORK AREA. Nothing here filters on it');
   });
 });

@@ -102,7 +102,11 @@ describe('the map asks, and the answer is optional', () => {
     // the kiosk would create a second booking on confirm.
     expect(map).toContain('loadEventDraft({');
     expect(map).toMatch(/editingEventId: created\.id/);
-    expect(map).toMatch(/navigate\('\/tablet\?prefill=1'\)/);
+    // WITH THE RESTAURANT. The kiosk loads its menu, halls and packages from
+    // `?restaurantId=`; without it the page rendered its chrome and no data at
+    // all, which is what "no restaurant data loads when selecting a banquet"
+    // was. The Events page's own hand-over has always passed it.
+    expect(map).toMatch(/navigate\(`\/tablet\?restaurantId=\$\{encodeURIComponent\(restaurantId\)\}&prefill=1`\)/);
   });
 
   it('"food service" opens the dish basket for the booking just created', () => {
@@ -197,5 +201,67 @@ describe('the Events page shows the type AND the menu', () => {
     // Which is why the map writes that status rather than inventing a second
     // notion of the same fact.
     expect(list).toContain("MENU_NOT_SELECTED: 'status_menu_not_selected'");
+  });
+});
+
+describe('taking a booking is what the page is for', () => {
+  const raw = readFileSync(join(WEB, 'pages/FloorMapPage.tsx'), 'utf8');
+
+  it('the button sits with the two editors, and is the highlighted one', () => {
+    // It was in the day bar beside "Print map", which read as another thing
+    // you might do to the day rather than the point of the page.
+    const toolbar = map.slice(map.indexOf('<div className="fm-toolbar">'), map.indexOf('</div>', map.indexOf('fm_edit\')}')));
+    expect(toolbar).toContain("t('fm_new_booking')");
+    expect(toolbar).toContain('fm-book-btn');
+    // And before both editors in the row.
+    expect(toolbar.indexOf("t('fm_new_booking')")).toBeLessThan(toolbar.indexOf("t('fm_edit_tables')"));
+    // Not in the day bar any more.
+    const daybar = map.slice(map.indexOf('className="fm-daybar"'), map.indexOf('fm-legend'));
+    expect(daybar).not.toContain('fm_new_booking');
+  });
+
+  it('it only exists on the day view — an editor is not where a booking is taken', () => {
+    expect(map).toMatch(/\{!editing && \(\s*<button type="button"\s*className=\{booking \?/);
+  });
+
+  it('pressing it asks for tables, in a callout rather than grey caption', () => {
+    // The next thing that has to happen is a press on the plan, and nothing
+    // else on the screen asked for it.
+    expect(map).toMatch(/\{booking \? \(\s*<div className="fm-callout" role="status">/);
+    expect(map).toContain("<strong>{t('fm_new_booking_hint')}</strong>");
+    // With the running count, so "I have picked three" needs no counting.
+    expect(map).toContain("t('fm_picked_tables', {");
+    // And the button itself carries the same sentence as a tooltip.
+    expect(map).toMatch(/title=\{booking \? undefined : t\('fm_new_booking_hint'\)\}/);
+  });
+
+  it('and the PLAN beckons — the free tables, never the taken ones', () => {
+    // Inviting a press on a taken table is inviting a 409.
+    expect(map).toMatch(/\$\{booking \|\| assigning \? ' is-booking' : ''\}/);
+    expect(raw).toMatch(/\.fm-svg\.is-booking \.fm-table-group:not\(\.is-taken\):not\(\.is-partly\):not\(\.is-picked\) \.fm-top/);
+    expect(raw).toContain('@keyframes fm-beckon');
+    // Switched off under reduced motion, with the ring left in place — that is
+    // the half that carries the meaning.
+    const reduced = raw.slice(raw.indexOf('@media (prefers-reduced-motion: reduce) {\n          .fm-svg.is-booking'));
+    expect(reduced.slice(0, 160)).toContain('animation: none');
+    expect(reduced.slice(0, 160)).toContain('stroke-opacity');
+  });
+
+  it('the DAY is a field on the booking form, and it is the map\'s own day', () => {
+    // Not a second date that could disagree with the plan underneath it.
+    const form = map.slice(map.indexOf('const bookingForm = ()'), map.indexOf('{tableSteppers(null)}', map.indexOf('const bookingForm = ()')));
+    expect(form).toMatch(/type="date" value=\{day\}/);
+    expect(form).toContain("t('fm_day')");
+    // Above the time, and both before the table steppers.
+    expect(form.indexOf("t('fm_day')")).toBeLessThan(form.indexOf("t('event_time')"));
+  });
+
+  it('and changing it drops the tables picked from the other day\'s plan', () => {
+    // A table that is free today may be taken tomorrow; keeping the picks
+    // would offer a booking the server then refuses.
+    const form = map.slice(map.indexOf('const bookingForm = ()'));
+    const onChange = form.slice(form.indexOf('type="date" value={day}'), form.indexOf("t('event_time')"));
+    expect(onChange).toContain('setDay(');
+    expect(onChange).toContain('setPicked({})');
   });
 });
