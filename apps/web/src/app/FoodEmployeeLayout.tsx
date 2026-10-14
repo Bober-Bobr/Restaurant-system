@@ -41,7 +41,20 @@ export const FoodEmployeeLayout = () => {
   const restaurantId = useAuthStore((s) => s.restaurantId);
   const logout = useAuthStore((s) => s.logout);
   const { locale, setLocale } = useAdminStore();
-  const t = (key: TranslationKey) => translate(key, locale);
+  /**
+   * The params MUST be forwarded.
+   *
+   * This read `(key) => translate(key, locale)` — enough for the header, which
+   * has no placeholder in it, and wrong the moment anything it hands `t` to
+   * does. The call banner printed "Table {table} is calling the waiter!" and
+   * "waiting {minutes} min" literally while the order card beside it, which
+   * builds its own `t`, substituted correctly.
+   *
+   * TypeScript cannot catch it: a one-argument function is assignable to a
+   * two-argument type, so the banner's prop accepted it happily. Found in a
+   * browser by reading the rendered text.
+   */
+  const t = (key: TranslationKey, params?: Record<string, string | number>) => translate(key, locale, params);
   const location = useLocation();
   // Which floor this person is working, from the server — see useWorkArea.
   const { area, surface, canSwitch, onAFloor, switchTo, switching } = useWorkArea();

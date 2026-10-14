@@ -177,8 +177,13 @@ describe('the dish basket', () => {
   });
 
   it('the steppers are big enough for a finger', () => {
+    // The HEIGHT is what a thumb needs. The WIDTH had to become flexible —
+    // two fixed buttons and a fixed field made the card's content wider than
+    // the card, so everything in it hung out to the right (see
+    // floorMapBooking.test.ts). The 44px column is on the grid instead.
     const raw = readFileSync(join(WEB, 'pages/SmallBanquetOrderSheet.tsx'), 'utf8');
-    expect(raw).toMatch(/\.sbo-stepper button \{ min-width: 44px; min-height: 44px; \}/);
+    expect(raw).toMatch(/\.sbo-stepper button \{[^}]*min-height: 44px/);
+    expect(raw).toMatch(/\.sbo-stepper \{[^}]*grid-template-columns: 44px minmax\(0, 1fr\) 44px/);
   });
 });
 

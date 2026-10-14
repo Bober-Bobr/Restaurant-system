@@ -3887,3 +3887,25 @@ Corrections to §74/§75 plus one new thing. **No migration.**
     again**.
 13. On the **Small Banquets floor** there is no banner and no sound — there is
     no guest device to call from.
+
+## §77 — Two display bugs in §76
+
+**No migration.** Both were found in a browser, which is where they had to be.
+
+1. **The dish basket's cards** (`supervisor.v-menu.uz/<slug>/` → New booking →
+    Food service): nothing in a card may hang outside its frame. Check at
+    1280px (three or four across), 768px and 390px (two across): the dish name,
+    the price, the − / + stepper and the line total all sit inside the card's
+    border, and no card overlaps the next. A very long dish name must clamp to
+    two lines rather than widening its card.
+2. The stepper's buttons are still comfortably tappable (44px tall, 40 on a
+    phone) and the number field still shows two digits.
+3. **The call banner** (`food-admin.v-menu.uz/<slug>`, dining floor, a guest
+    pressing "call waiter"): it must read **"Table 12 is calling the waiter!"**
+    and **"waiting 7 min"** — the real table number and the real figure, not
+    `{table}` and `{minutes}`, which is what it printed before.
+4. Leave it on screen for a minute: the figure must **advance** (it is
+    recomputed every 30 s; the data itself does not change, so nothing else
+    would move it).
+5. Check 3 and 4 in all three languages — the bug was in the layout's
+    translation helper, so every string it passes through was affected.

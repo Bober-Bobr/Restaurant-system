@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { callingOrders, newCalls, prune, tableLabel, waitedMinutes } from '../utils/waiterCalls';
 
@@ -170,8 +170,10 @@ describe('the dish basket shows the food', () => {
 
   it('the grid is a grid, and fits a phone', () => {
     const raw = readFileSync(join(WEB, 'pages/SmallBanquetOrderSheet.tsx'), 'utf8');
-    expect(raw).toMatch(/\.sbo-grid \{[^}]*repeat\(auto-fill, minmax\(150px, 1fr\)\)/);
-    expect(raw).toMatch(/@media \(max-width: 560px\)[\s\S]{0,700}minmax\(132px, 1fr\)/);
+    // 168px is the floor a card needs for its stepper's two 44px buttons and
+    // a readable field; 138 on a phone, where they come down to 40.
+    expect(raw).toMatch(/\.sbo-grid \{[^}]*repeat\(auto-fill, minmax\(168px, 1fr\)\)/);
+    expect(raw).toMatch(/@media \(max-width: 560px\)[\s\S]{0,900}minmax\(138px, 1fr\)/);
   });
 });
 
@@ -259,5 +261,68 @@ describe('"Table 7 is calling the waiter!"', () => {
     expect((sound.match(/catch/g) ?? []).length).toBeGreaterThanOrEqual(3);
     // And it buzzes: the part that works with the volume down.
     expect(sound).toContain('navigator.vibrate?.(');
+  });
+});
+
+describe('the two things a browser had to find', () => {
+  const raw = (rel: string) => readFileSync(join(WEB, rel), 'utf8');
+
+  it('a layout that hands `t` to a child FORWARDS the params', () => {
+    // The banner printed "Table {table} is calling the waiter!" and "waiting
+    // {minutes} min" literally, because the layout's helper was
+    // `(key) => translate(key, locale)` — enough for a header with no
+    // placeholder in it. TypeScript cannot catch it: a one-argument function
+    // is assignable to a two-argument type, so the prop accepted it happily.
+    //
+    // Asserted for EVERY layout that passes `t` down, not just the one that
+    // was wrong.
+    const layouts = readdirSync(join(WEB, 'app')).filter((f) => f.endsWith('Layout.tsx'));
+    const handers = layouts.filter((f) => raw(join('app', f)).includes('t={t}'));
+    expect(handers.length).toBeGreaterThan(0);
+    for (const file of handers) {
+      const code = raw(join('app', file));
+      expect(code, file).toMatch(/const t = \(key: TranslationKey, params\?: Record<string, string \| number>\) =>\s*translate\(key, locale, params\)/);
+    }
+  });
+
+  it('and the waiting figure ticks, because the data does not', () => {
+    // The poll returns the same call every six seconds and React Query keeps
+    // the identity of deep-equal data, so nothing re-renders — the figure
+    // would sit at whatever it was when the call arrived.
+    const banner = raw('components/WaiterCallBanner.tsx');
+    expect(banner).toMatch(/setInterval\(\(\) => tick\(\(n\) => n \+ 1\), 30_000\)/);
+    expect(banner).toContain('clearInterval(timer)');
+  });
+
+  it('a dish card cannot be wider than the track it is given', () => {
+    // Measured before the fix: a 158px card with 184px of content, so names,
+    // prices and steppers hung 27px past the frame and over the next card —
+    // "the dish cards and the text within them shift to the right". A grid
+    // item cannot shrink below its min-content, so the min-content is what had
+    // to give.
+    const sheetRaw = raw('pages/SmallBanquetOrderSheet.tsx');
+    // The stepper is the thing that could not shrink: two fixed buttons plus a
+    // fixed field. Now a grid with a flexible middle.
+    expect(sheetRaw).toMatch(/\.sbo-stepper \{[^}]*grid-template-columns: 44px minmax\(0, 1fr\) 44px/);
+    expect(sheetRaw).toMatch(/\.sbo-stepper input \{[^}]*min-width: 0/);
+    expect(sheetRaw).toMatch(/\.sbo-stepper button \{[^}]*min-width: 0/);
+    // And both boxes above it have to allow it.
+    expect(sheetRaw).toMatch(/\.sbo-card \{[\s\S]{0,400}min-width: 0;/);
+    expect(sheetRaw).toMatch(/\.sbo-card-body \{[^}]*min-width: 0/);
+    // A long dish name must not be what decides the card's width either.
+    expect(sheetRaw).toMatch(/\.sbo-card-name \{[\s\S]{0,420}overflow-wrap: anywhere/);
+  });
+
+  it('the basket\'s stepper keeps a width, where its column cannot give it one', () => {
+    // There the stepper sits in an `auto` column, which sizes to min-content
+    // — with a flexible middle that would squash the field to nothing.
+    expect(raw('pages/SmallBanquetOrderSheet.tsx')).toMatch(/\.sbo-line \.sbo-stepper \{ width: 148px; \}/);
+  });
+
+  it('the touch targets survived the fix', () => {
+    const sheetRaw = raw('pages/SmallBanquetOrderSheet.tsx');
+    // The HEIGHT is what a thumb needs; the width is what had to flex.
+    expect(sheetRaw).toMatch(/\.sbo-stepper button \{[^}]*min-height: 44px/);
+    expect(sheetRaw).toMatch(/\.sbo-stepper input \{[^}]*height: 44px/);
   });
 });

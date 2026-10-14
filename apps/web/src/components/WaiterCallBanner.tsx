@@ -33,6 +33,22 @@ export const WaiterCallBanner = ({ orders, t }: {
   /** Calls the waiter has waved away on this screen. */
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
+  /**
+   * A clock, because the data does not tick.
+   *
+   * "Waiting 7 min" is computed at render, and the orders poll returns the
+   * SAME call every six seconds — React Query's structural sharing keeps the
+   * identity of deep-equal data, so nothing re-renders and the figure would
+   * sit at whatever it was when the call arrived. Half a minute is fine for a
+   * figure in whole minutes, and it is one `setState` on a timer rather than
+   * one a second.
+   */
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((n) => n + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     // Forget anything no longer calling FIRST, or a table that called, was
     // served and called again would never sound a second time.

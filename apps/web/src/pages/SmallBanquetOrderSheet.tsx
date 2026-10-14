@@ -324,9 +324,12 @@ export const SmallBanquetOrderSheet = ({
         /* THE DISHES, as cards with their photographs.
            auto-fill with a floor of 150px: a tablet gets four across, a
            phone two, and nothing has to know which. */
-        .sbo-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+        .sbo-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
         .sbo-card {
           display: grid; gap: 0; border-radius: 10px; overflow: hidden;
+          /* Both of these, or the card is sized by its widest child and
+             overflows the track it was given. */
+          min-width: 0;
           border: 1px solid var(--adm-line);
           background: rgba(var(--adm-surface-rgb), 0.55);
           transition: border-color 0.15s, box-shadow 0.15s;
@@ -360,8 +363,14 @@ export const SmallBanquetOrderSheet = ({
           background: var(--adm-accent); color: var(--adm-accent-ink);
           font-size: 13px; font-weight: 800;
         }
-        .sbo-card-body { display: grid; gap: 4px; padding: 9px 10px 10px; }
-        .sbo-card-name { margin: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+        .sbo-card-body { display: grid; gap: 4px; padding: 9px 10px 10px; min-width: 0; }
+        .sbo-card-name {
+          margin: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3;
+          /* Two lines, then clipped: a long dish name must not be what decides
+             how wide the card is. The full name is the title attribute. */
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+          overflow: hidden; min-width: 0; overflow-wrap: anywhere;
+        }
         /* Two lines of description and no more: the card's height is what keeps
            the grid readable, and a paragraph here pushes the stepper about. */
         .sbo-card-desc {
@@ -390,10 +399,32 @@ export const SmallBanquetOrderSheet = ({
         }
         .sbo-line-name { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sbo-line-sum { text-align: right; font-variant-numeric: tabular-nums; }
-        .sbo-stepper { display: flex; align-items: center; gap: 6px; }
-        /* ≥44px targets: this is pressed on a tablet, repeatedly. */
-        .sbo-stepper button { min-width: 44px; min-height: 44px; }
-        .sbo-stepper input { width: 64px; height: 44px; text-align: center; font-weight: 800; }
+        /* THE STEPPER MUST BE ABLE TO SHRINK.
+           It was a flex row of two 44px buttons and a fixed 64px field — 164px
+           that could not get narrower, inside a card track of 158px. A grid
+           item cannot shrink below its min-content, so every card's CONTENT
+           came out 26px wider than the card's own box and the names, prices
+           and steppers hung out past the frame and over the next card. That is
+           the whole of "the dish cards and the text within them shift to the
+           right". Measured: card 158px, content 184px, 27px of spill on every
+           one of them.
+
+           So it is a three-column grid — button, FLEXIBLE field, button —
+           which fits any width down to about 110px while the buttons keep
+           their touch size. */
+        .sbo-stepper {
+          display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px;
+          gap: 6px; align-items: center; width: 100%; min-width: 0;
+        }
+        .sbo-stepper button { min-width: 0; min-height: 44px; padding: 0; }
+        .sbo-stepper input {
+          width: auto; min-width: 0; height: 44px; padding: 0 2px;
+          text-align: center; font-weight: 800;
+        }
+        /* In the basket a row is name · price · stepper · total, so the
+           stepper sits in an an auto column — which would size to the grid's
+           min-content and squash the field to nothing. It gets a width there. */
+        .sbo-line .sbo-stepper { width: 148px; }
         .sbo-field { display: grid; gap: 6px; }
         .sbo-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
         .sbo-error {
@@ -407,8 +438,12 @@ export const SmallBanquetOrderSheet = ({
           .sbo-stepper { grid-column: 1 / -1; justify-content: flex-end; }
           /* Two dishes across at 390px, which keeps the photograph big enough
              to be worth showing. */
-          .sbo-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+          /* Two across at 390px, which is ~155px each. The stepper's buttons
+             come down to 40px there so the number still has room — the height,
+             which is what a thumb actually needs, is unchanged. */
+          .sbo-grid { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 8px; }
           .sbo-card-desc { display: none; }
+          .sbo-stepper { grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 4px; }
         }
       `}</style>
     </div>
