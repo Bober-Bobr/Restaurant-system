@@ -315,6 +315,23 @@ export const FloorMapPage = () => {
     [picked],
   );
 
+  /**
+   * Whether tables can be ARRANGED right now — moved, resized, re-seated.
+   *
+   * The layout editor, and also while a booking is being drafted: taking a
+   * booking is exactly when somebody discovers that the party needs the two
+   * tables pushed a foot apart, and sending them out of the booking into the
+   * other editor to do it would lose the draft. So the layout editor's powers
+   * are available here too, and a table is added to the booking by selecting
+   * it and pressing the highlighted Reserve button — not by the press itself,
+   * which now has a second job.
+   *
+   * Deliberately NOT folded into `editing`: that flag is what keeps the day's
+   * bookings off the plan, and during a booking what is taken is the single
+   * most important thing on the screen.
+   */
+  const arranging = editingTables || !!booking || !!assigning;
+
   const switchArea = (id: string) => {
     setSelectedId(null);
     // An index into THIS area's drawing means something else in the next one.
@@ -513,6 +530,29 @@ export const FloorMapPage = () => {
     void commit((m) => ({ ...m, tables: m.tables.filter((x) => x.id !== table.id) }), () => floorMapService.removeTable(table.id));
   };
 
+  /**
+   * Put the selected table on the booking being drafted, or take it off.
+   *
+   * The whole of what the press used to do, moved behind a button — which is
+   * what makes the press free to mean "select" and the drag free to mean
+   * "move". It seats the table FULL, or up to what is left of a head count the
+   * booking is already priced on (`assigning`), because the server refuses an
+   * over-seated booking and the map should stop short of one rather than fail
+   * on save.
+   */
+  const toggleReserved = (table: MapTable) => {
+    setPicked((prev) => {
+      const next = { ...prev };
+      if (table.id in next) { delete next[table.id]; return next; }
+      const left = assigning
+        ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), assigning.guestCount)
+        : null;
+      if (left === 0) return next;
+      next[table.id] = left === null ? table.seats : Math.min(table.seats, left);
+      return next;
+    });
+  };
+
   /** The tables ticked for a merge, in the order they were tapped. */
   const mergingTables = useMemo(
     () => (merging ?? []).map((id) => areaTables.find((x) => x.id === id)).filter((x): x is MapTable => !!x),
@@ -698,6 +738,12 @@ export const FloorMapPage = () => {
           eventDate: day,
           eventTime: time,
           config: null,
+          // The question has been answered on this screen — the kiosk must not
+          // ask the guest "Banquet or General Dining?" one press later.
+          sessionKind: 'banquet',
+          // And the tables are already reserved: the kiosk shows no plan and
+          // sends no `floorTables`, so confirming a menu cannot release them.
+          floorLocked: true,
         });
         navigate(`/tablet?restaurantId=${encodeURIComponent(restaurantId)}&prefill=1`);
         return;
@@ -836,7 +882,11 @@ export const FloorMapPage = () => {
 
   const beginDrag = (event: ReactPointerEvent<Element>, next: Drag) => {
     event.stopPropagation();
-    if (!editing) return;
+    // `arranging` rather than `editing`, so a table can be nudged while a
+    // booking is being taken. The drawing's own drags are still the drawing
+    // editor's — they begin on the feature layer, which takes no pointer
+    // events outside it.
+    if (!editing && !arranging) return;
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
     setDrag(next);
   };
@@ -859,30 +909,16 @@ export const FloorMapPage = () => {
       return;
     }
     setSelectedId(table.id);
-    // Not editing the map: a press is about the BOOKING on that table —
-    // picking it for the one being drafted, or opening the one that holds it.
-    if (!editing) {
-      const holder = holders.get(table.id);
-      if (booking || assigning) {
-        if (!holder) {
-          setPicked((prev) => {
-            const next = { ...prev };
-            if (table.id in next) { delete next[table.id]; return next; }
-            // Seats it full, or up to what is left of the head count the
-            // booking was made for — the server refuses an over-seated booking,
-            // so the map stops short of one rather than failing on save.
-            const left = assigning
-              ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), assigning.guestCount)
-              : null;
-            if (left === 0) return next;
-            next[table.id] = left === null ? table.seats : Math.min(table.seats, left);
-            return next;
-          });
-        }
-      } else {
-        setOpenBooking(holder ?? null);
-        setOpenTableId(table.id);
-      }
+    // The plain day view: a press is about the BOOKING on that table.
+    //
+    // While one is being DRAFTED the press only selects — the table's own
+    // panel then offers everything the layout editor offers plus a
+    // highlighted Reserve. It used to add the table there and then, which
+    // meant the press could not also mean "show me this table" or "move it",
+    // and those are what the layout editor is for.
+    if (!editing && !booking && !assigning) {
+      setOpenBooking(holders.get(table.id) ?? null);
+      setOpenTableId(table.id);
     }
     const p = toMap(event);
     beginDrag(event, { type: 'move', id: table.id, dx: p.x - table.x, dy: p.y - table.y, x: table.x, y: table.y, moved: false });
@@ -1120,7 +1156,7 @@ export const FloorMapPage = () => {
           'fm-table-group',
           selected ? 'is-selected' : '',
           overlapping.has(table.id) ? 'is-overlapping' : '',
-          editingTables ? 'is-editable' : '',
+          arranging ? 'is-editable' : '',
           // Inert while the DRAWING is edited, so a press reaches the zone
           // under the table — "tables sit on top of zones" has to be true of
           // the pointer as well as of the paint.
@@ -1162,7 +1198,7 @@ export const FloorMapPage = () => {
           {table.shape === 'ROUND'
             ? <circle className="fm-top" r={width / 2} />
             : <rect className="fm-top" x={-width / 2} y={-height / 2} width={width} height={height} rx={Math.min(8, width / 6)} />}
-          {editingTables && selected && (
+          {arranging && selected && (
             // The resize handle, on the table's own corner so it turns with it.
             <g className="fm-table-handle" onPointerDown={(e) => onTableHandlePointerDown(e, table)}>
               <circle cx={width / 2} cy={height / 2} r={18 * unit} className="fm-hit" />
@@ -1199,7 +1235,7 @@ export const FloorMapPage = () => {
     const dims = tableSize(table.shape, table.seats, table);
     const resized = table.width != null && table.height != null;
     const sizeText = `${Math.round(dims.width)} × ${Math.round(dims.height)}`;
-    if (!editingTables) {
+    if (!arranging) {
       return (
         <>
           {clash}
@@ -1334,6 +1370,51 @@ export const FloorMapPage = () => {
       <button type="button" className="adm-btn-ghost" onClick={() => setMerging(null)}>{t('cancel')}</button>
     </div>
   );
+
+  /**
+   * A selected table, while a booking is being drafted.
+   *
+   * The highlighted Reserve comes FIRST, because it is the one thing this
+   * screen is asking for; then why it cannot be pressed, if it cannot; then
+   * the table's own panel, which here is the layout editor's full form. The
+   * way back to the booking's own fields is last, since it is the step after
+   * this one rather than a way out.
+   */
+  const bookingTablePanel = (table: MapTable) => {
+    const holder = holders.get(table.id);
+    const reserved = table.id in picked;
+    const left = assigning
+      ? seatsRemaining(pickedList.filter((s) => s.floorTableId !== table.id), assigning.guestCount)
+      : null;
+    const full = !reserved && left === 0;
+    return (
+      <div className="fm-form">
+        <button type="button" className={reserved ? 'adm-btn-ghost' : 'adm-btn-primary fm-book-btn'}
+          disabled={!!holder || full}
+          onClick={() => toggleReserved(table)}>
+          {reserved ? t('fm_release_table', { label: table.label }) : t('fm_reserve_table', { label: table.label })}
+        </button>
+        {/* Why not, rather than a dead button: a taken table and a full head
+            count are two different reasons and both are fixable. */}
+        {holder && (
+          <p className="fm-notice" style={{ margin: 0 }}>
+            {t('fm_table_taken_by', { label: table.label, number: holder.eventNumber, name: holder.customerName })}
+          </p>
+        )}
+        {full && <p className="fm-notice" style={{ margin: 0 }}>{t('fm_seats_left_none')}</p>}
+        {reserved && tableSteppers(assigning ? assigning.guestCount : null).filter(Boolean).length > 0 && (
+          <div className="fm-default">
+            <span className="fm-caption">{t('guest_count')}</span>
+            {tableSteppers(assigning ? assigning.guestCount : null)}
+          </div>
+        )}
+        {tablePanel(table)}
+        <button type="button" className="adm-btn-ghost" onClick={() => setSelectedId(null)}>
+          ‹ {t('fm_back_to_booking')}
+        </button>
+      </div>
+    );
+  };
 
   const savedAtText = (area: MapArea) =>
     (area.defaultLayoutAt
@@ -1855,7 +1936,15 @@ export const FloorMapPage = () => {
               {booking ? t('cancel') : `+ ${t('fm_new_booking')}`}
             </button>
           )}
-          {editingTables && (
+          {/* A rule between the ACT and the tools. Taking a booking and
+              rearranging the furniture are different kinds of thing, and in one
+              flat row of four buttons the highlighted one read as merely the
+              first of them. The separator is hidden when it would be the first
+              or last thing in the row — a stray vertical tick against the edge
+              — which `:first-child`/`:last-child` cannot express here because
+              the row's contents change with the mode. */}
+          {!editing && current && <span aria-hidden="true" className="fm-toolbar-sep" />}
+          {arranging && (
             <button type="button" className="adm-btn-ghost" disabled={!current} onClick={() => void addTable()}>
               {t('fm_add_table')}
             </button>
@@ -2147,6 +2236,7 @@ export const FloorMapPage = () => {
         <aside className="adm-card fm-panel">
           <h3 className="adm-heading" style={{ marginTop: 0 }}>
             {merging ? t('fm_merge')
+              : (booking || assigning) && selectedTable ? t('fm_table', { label: selectedTable.label })
               : booking ? t('fm_new_booking')
               : assigning ? t('fm_assign_tables')
               : openBooking ? t('fm_booking')
@@ -2163,6 +2253,11 @@ export const FloorMapPage = () => {
           {/* A merge being picked out comes first: every press on the plan is
               an answer to it, so nothing else may hold the panel. */}
           {merging ? mergeForm()
+            // While a booking is being drafted, a SELECTED table takes the
+            // panel: that is where Reserve lives, and where the table's own
+            // layout controls are. With nothing selected the panel is the
+            // booking's own fields.
+            : (booking || assigning) && selectedTable ? bookingTablePanel(selectedTable)
             : booking ? bookingForm()
             : assigning ? assignForm(assigning)
             : openBooking ? bookingCard(openBooking, areaTables.find((x) => x.id === openTableId) ?? null)
@@ -2207,7 +2302,15 @@ export const FloorMapPage = () => {
         }
         .fm-kind-option strong { font-size: 14px; }
         .fm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-        .fm-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+        .fm-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+        .fm-toolbar-sep {
+          width: 1px; align-self: stretch; margin: 2px 4px;
+          background: linear-gradient(180deg, transparent, var(--adm-line) 20%, var(--adm-line) 80%, transparent);
+          flex: 0 0 1px;
+        }
+        /* On a phone the toolbar's buttons each take a full row, so a vertical
+           rule between them would be a 1px tick in the middle of nowhere. */
+        @media (max-width: 640px) { .fm-toolbar-sep { display: none; } }
         .fm-caption { font-size: 13px; color: rgba(var(--adm-text-rgb), 0.6); }
         .fm-notice {
           margin: 0 0 14px; padding: 10px 14px; border-radius: 4px; font-size: 13px;

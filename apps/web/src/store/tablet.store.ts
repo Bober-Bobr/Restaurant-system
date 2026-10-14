@@ -39,6 +39,28 @@ export type EventDraft = {
   depositCents?: number;
   childrenCount?: number;
   config?: EventMenuConfig | null;
+  /**
+   * Which evening this is, when the HANDER-OVER already knows.
+   *
+   * The floor map asks before it creates the booking, so the kiosk must not
+   * ask again — a guest being shown "Banquet or General Dining?" one press
+   * after the supervisor answered it is the kiosk contradicting the screen it
+   * was opened from. Absent (the Events page's hand-over) it stays null, which
+   * is "not asked yet", and the chooser appears as before.
+   */
+  sessionKind?: KioskSession | null;
+  /**
+   * The tables are already held, and the kiosk neither picks them nor sends
+   * them.
+   *
+   * A booking made on the map reserved its tables BEFORE any menu existed, so
+   * the plan on the summary would be asking a question that has been answered
+   * — and, worse, the summary sends `floorTables` on an update, so an empty
+   * selection would RELEASE the tables the party is sitting at. Omitting them
+   * leaves them alone, which is what the API already promises for an update
+   * that does not mention them.
+   */
+  floorLocked?: boolean;
 };
 
 type SelectionState = {
@@ -111,6 +133,8 @@ type SelectionState = {
   childThirdCourseIds: string[];
   childReplacements: Record<string, string>;
   locale: Locale;
+  /** The tables were decided before the kiosk opened — see EventDraft. */
+  floorLocked: boolean;
   setQuantity: (menuItemId: string, quantity: number) => void;
   setHall: (hallId: string) => void;
   setTableCategory: (tableCategoryId: string) => void;
@@ -191,6 +215,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
   childThirdCourseIds: [],
   childReplacements: {},
   locale: adminLocale(),
+  floorLocked: false,
   setQuantity: (menuItemId, quantity) => {
     set((state) => ({
       selectedItems: {
@@ -394,6 +419,11 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       selectedHallId: d.hallId || undefined,
       selectedTableCategoryId: d.tableCategoryId || undefined,
       guestCount: Math.max(d.guestCount, 0),
+      // What the hander-over has already decided. Absent — the Events page's
+      // own hand-over — these stay as they were: the session unanswered, the
+      // plan shown. See EventDraft for why each matters.
+      sessionKind: d.sessionKind ?? null,
+      floorLocked: !!d.floorLocked,
       customerName: d.customerName,
       customerPhone: d.customerPhone,
       secondCustomerName: d.secondCustomerName,
@@ -459,6 +489,7 @@ export const useTabletStore = create<SelectionState>()(persist((set) => ({
       childSecondCourseIds: [],
       childThirdCourseIds: [],
       childReplacements: {},
+      floorLocked: false,
       locale: adminLocale()
     });
   }

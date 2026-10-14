@@ -131,7 +131,12 @@ describe('what the booking is sent with', () => {
     expect(at, 'menuFields is gone — this test needs rewriting').toBeGreaterThan(-1);
     const payload = summary.slice(at, summary.indexOf('};', at));
     expect(payload).toContain('floorTables,');
-    expect(payload).toContain('wholeHall: !!wholeAreaId,');
+    expect(payload).toContain('wholeHall: !!wholeAreaId }');
+    // …and OMITTED ENTIRELY when the tables were already held — a booking
+    // taken on the admin map reserved them before any menu existed, and an
+    // update carrying this page's empty selection would release them. Absent,
+    // not `[]`: an update that does not mention the tables leaves them alone.
+    expect(payload).toContain('...(floorLocked ? {} : { floorTables, wholeHall: !!wholeAreaId })');
     // The server has to know WHICH venue a whole-area booking is for, and a
     // dining session has no hall picker to have set it.
     expect(summary).toContain('hallId: wholeAreaId || selectedHallId || undefined,');
@@ -180,7 +185,10 @@ describe('the admin map', () => {
   });
 
   it('clicking a taken table opens the booking that holds it', () => {
-    expect(admin).toContain('setOpenBooking(holder ?? null);');
+    // On the plain day view. While a booking is being DRAFTED the press only
+    // selects, because the table's panel then carries Reserve and the layout
+    // controls — see floorMapBooking.test.ts.
+    expect(admin).toMatch(/if \(!editing && !booking && !assigning\) \{\s*setOpenBooking\(holders\.get\(table\.id\) \?\? null\);/);
     expect(admin).toContain('const bookingCard = (b: MapBooking, clicked?: MapTable | null) =>');
   });
 
@@ -261,7 +269,9 @@ describe('the admin map', () => {
     // A PATCH carrying the tables ONLY: the rest of the evening was decided on
     // the Events page and must not be rewritten from the map.
     expect(admin).toContain('eventService.update(assigning.eventNumber, { floorTables: pickedList, hallId: current.id })');
-    expect(admin).toContain('if (booking || assigning) {');
+    // Reserving a table is now an explicit button rather than the press
+    // itself; the arithmetic behind it is unchanged.
+    expect(admin).toContain('const toggleReserved = (table: MapTable) => {');
     // Stopping at the head count the booking is already priced on.
     expect(admin).toContain('seatsRemaining(Object.entries(next).map(');
   });

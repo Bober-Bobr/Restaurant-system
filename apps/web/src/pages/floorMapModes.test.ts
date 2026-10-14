@@ -79,9 +79,19 @@ describe('a press means exactly one thing', () => {
     expect(raw).toMatch(/\.fm-table-group\.is-inert \{[^}]*pointer-events: none/);
   });
 
-  it('a table is draggable in the LAYOUT editor only', () => {
-    expect(page).toContain("editingTables ? 'is-editable' : ''");
-    expect(page).toMatch(/\{editingTables && selected && \(/);
+  it('a table is draggable while it can be ARRANGED, and nowhere else', () => {
+    // The layout editor, and also while a booking is being drafted — taking a
+    // booking is exactly when somebody finds the party needs the two tables
+    // moved, and being sent to the other editor would lose the draft. Not the
+    // day view, and not the drawing editor.
+    expect(page).toContain("arranging ? 'is-editable' : ''");
+    expect(page).toMatch(/\{arranging && selected && \(/);
+    expect(page).toMatch(/const arranging = editingTables \|\| !!booking \|\| !!assigning;/);
+    // And it is NOT folded into `editing`, which is what keeps the day's
+    // bookings off the plan — during a booking what is taken is the most
+    // important thing on the screen.
+    expect(page).toMatch(/const editing = mode !== 'view'/);
+    expect(page).not.toMatch(/const editing = [^\n]*booking/);
   });
 
   it('the topmost shape under the finger is the one picked', () => {
@@ -127,9 +137,9 @@ describe('the day\'s bookings are not drawn in either editor', () => {
 });
 
 describe('each control belongs to one editor', () => {
-  it('"Add table" is in the layout editor', () => {
+  it('"Add table" is wherever tables can be arranged', () => {
     // Not `<button[^>]*>`: an arrow function in an attribute contains a `>`.
-    expect(page).toMatch(/\{editingTables && \(\s*<button[\s\S]{0,160}?\{t\('fm_add_table'\)\}/);
+    expect(page).toMatch(/\{arranging && \(\s*<button[\s\S]{0,160}?\{t\('fm_add_table'\)\}/);
   });
 
   it('adding an AREA is in the map editor — creating a venue is a map-level act', () => {
@@ -186,8 +196,8 @@ describe('each control belongs to one editor', () => {
     expect(dispatch.indexOf('featurePanel')).toBeLessThan(dispatch.indexOf('tablePanel'));
   });
 
-  it('a table\'s form is the layout editor\'s; elsewhere it reads as facts', () => {
-    expect(fn('tablePanel')).toContain('if (!editingTables) {');
+  it('a table\'s form is for arranging; elsewhere it reads as facts', () => {
+    expect(fn('tablePanel')).toContain('if (!arranging) {');
   });
 });
 

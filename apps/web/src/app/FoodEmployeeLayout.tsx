@@ -3,7 +3,9 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { publicRestaurantService } from '../services/publicRestaurant.service';
 import { getPhotoUrl } from '../utils/photoUrl';
-import { orderService } from '../services/order.service';
+import { orderService, type FloorList } from '../services/order.service';
+import { WaiterCallBanner } from '../components/WaiterCallBanner';
+import { callingOrders } from '../utils/waiterCalls';
 import { useLiveQuery } from '../services/live';
 import { useAuthStore } from '../store/auth.store';
 import { useAdminStore } from '../store/admin.store';
@@ -45,15 +47,27 @@ export const FoodEmployeeLayout = () => {
   const { area, surface, canSwitch, onAFloor, switchTo, switching } = useWorkArea();
 
   // The one number they must not miss: guests waiting on them right now.
-  // Only on the floor that has guest calls at all. In Small Banquets the host
-  // ordered through the supervisor and there is no guest device to call from,
-  // so this would be a number that is always zero, polled every five seconds.
-  const alerts = useLiveQuery<number>('waiterAlerts', {
-    queryKey: ['wt-alerts'],
-    queryFn: () => orderService.alertCount(),
+  /**
+   * The orders this waiter is looking after — read HERE as well as on the page.
+   *
+   * The same query key and the same function, so React Query serves both from
+   * one poll: nothing is fetched twice. It is read in the layout because the
+   * CALL has to reach the waiter wherever they are, including on the statistics
+   * tab, and because the badge and the banner then come from one list and
+   * cannot disagree about whether somebody is waiting. (It replaces a separate
+   * five-second count endpoint, which could say "1" beside a banner naming no
+   * table.)
+   *
+   * Only on the floor that has guest calls at all: in Small Banquets the host
+   * ordered through the supervisor and there is no device to call from.
+   */
+  const live = useLiveQuery<FloorList>('waiterOrders', {
+    queryKey: ['wt-orders', 'OPEN'],
+    queryFn: () => orderService.listMine('OPEN'),
     enabled: !!accessToken && surface.waiterCalls,
   });
-  const calling = alerts.data ?? 0;
+  const callingNow = surface.waiterCalls ? callingOrders(live.data?.orders ?? []) : [];
+  const calling = callingNow.length;
 
   // Read through the PUBLIC endpoint rather than /restaurants: a Food Employee
   // has no rights on the admin restaurant routes, and this returns exactly the
@@ -263,6 +277,10 @@ export const FoodEmployeeLayout = () => {
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '18px 14px 60px' }}>
         <Outlet />
       </main>
+
+      {/* "Table 7 is calling the waiter!" — a sound, a buzz and a banner, on
+          every page of the workspace. See components/WaiterCallBanner.tsx. */}
+      {callingNow.length > 0 && <WaiterCallBanner orders={callingNow} t={t} />}
     </div>
   );
 };

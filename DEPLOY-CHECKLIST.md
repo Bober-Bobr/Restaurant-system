@@ -3840,3 +3840,50 @@ Corrections to §74. **No migration.**
     is comfortably thumb-sized, the two tabs are a full-width pair, and a long
     restaurant name ellipsises instead of pushing anything off the screen.
     Check it in both floors' colours and in all three languages.
+
+## §76 — The booking flow's corrections, dish photos, and the waiter's call alert
+
+Corrections to §74/§75 plus one new thing. **No migration.**
+
+1. **`supervisor.v-menu.uz/<slug>/` → "New booking".** There is now a rule
+    between it and the two editors. Press it.
+2. **Everything the layout editor does is available**: drag a table, resize it
+    by its corner, change its seats/shape/area, add a table — all while the
+    draft stands, and the day's bookings stay coloured on the plan throughout.
+3. **Select a table**: the panel shows it with a highlighted **"Reserve table
+    N"** at the top, its full layout form below, and "Back to the booking"
+    last. Press Reserve, then Back, and confirm the booking form lists it with
+    a guest stepper.
+4. Select a table **somebody else holds**: Reserve is disabled and the panel
+    says which booking holds it. (On an "Assign tables" draft, fill the head
+    count and check the other refusal appears instead.)
+5. **Pick "Banquet" and create.** The kiosk must open **straight on the table
+    packages** — no "Which evening is this?" screen — with the restaurant's
+    halls, packages and dishes loaded.
+6. Go to the Summary: **no floor plan**, and the name, phone, date, time, head
+    count and room are already filled in. Confirm the menu, then **go back to
+    the map and check the party still holds its tables** — this is the one that
+    matters, because confirming used to release them.
+7. From the **Events page**, "Change menu" on an ordinary booking: the kiosk
+    still asks which evening it is (where that applies) and still shows the
+    floor plan. Nothing about that path changed.
+8. **Pick "Food service"** on a new booking: every dish is a card with its
+    **photograph**, a chosen one is ringed with its portions on the corner, a
+    dish with no photo shows a lettered tile, and tapping a photo opens it full
+    size. Check it at 390px too — two cards across, no description, nothing
+    clipped.
+9. **The waiter's call alert** (`food-admin.v-menu.uz/<slug>`, dining floor):
+    place a guest order from `test.v-menu.uz/<slug>`, claim it, then press
+    "call waiter" on the guest's device. Within ~6s the waiter's phone must
+    **sound two tones, vibrate, and show a banner at the bottom reading "Table
+    7 is calling the waiter!"** with how long they have waited.
+10. The banner appears on the **Statistics** tab too. "Open" goes to the orders
+    list; the × silences the banner only — the badge and the card still say the
+    table is waiting. Acknowledge on the card and the banner goes.
+11. Two tables calling at once: the banner names the one that has waited
+    **longest** and counts the rest. Acknowledge it, and the banner moves to
+    the next.
+12. Acknowledge a call, then have the same table call again: it must **sound
+    again**.
+13. On the **Small Banquets floor** there is no banner and no sound — there is
+    no guest device to call from.

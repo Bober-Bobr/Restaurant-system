@@ -223,7 +223,7 @@ export const TabletSummaryPage = () => {
     brideName, setBrideName, groomName, setGroomName,
     honoreePersonName, setHonoreePersonName,
     sessionKind, setSessionKind,
-    floorSelections, wholeAreaId } = useTabletStore();
+    floorSelections, wholeAreaId, floorLocked } = useTabletStore();
 
   const menuItems         = usePublicDataStore((s) => s.menuItems);
   const halls             = usePublicDataStore((s) => s.halls);
@@ -541,8 +541,14 @@ export const TabletSummaryPage = () => {
         // The map's choices. The server re-checks them against the day and
         // derives the head count itself — a client that reports its own
         // seating sets its own limits.
-        floorTables,
-        wholeHall: !!wholeAreaId,
+        //
+        // OMITTED ENTIRELY when the tables were already held: an update that
+        // does not mention them leaves them alone, and sending the empty
+        // selection this page never filled in would release the tables the
+        // party is sitting at. Not `[]`, not `undefined` inside the object —
+        // absent, because `JSON.stringify` drops an undefined key and that is
+        // precisely the behaviour being relied on.
+        ...(floorLocked ? {} : { floorTables, wholeHall: !!wholeAreaId }),
         childrenTableCategoryId: childrenActive ? childrenTableCategory!.id : undefined,
         childrenCount: childrenActive ? childrenCount : 0,
         menuConfig: buildMenuConfig(),
@@ -990,8 +996,18 @@ export const TabletSummaryPage = () => {
                 it a page away from the date and time it depends on: what is
                 free is entirely a question about a DAY, and the day is typed
                 directly above. So it lives here, under those fields, and the
-                menu page no longer carries it at all. */}
-            <KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />
+                menu page no longer carries it at all.
+
+                NOT when the tables are already held. A booking taken on the
+                admin floor map reserved them before any menu existed, so the
+                plan here would be asking a question that has been answered —
+                and an empty selection on this page would RELEASE them (see
+                `floorLocked`). The fields above are prefilled from that
+                booking instead, which is the whole of what this page still
+                has to collect. */}
+            {!floorLocked && (
+              <KioskFloorSection date={eventDate} large guestCount={guestCount} t={t} />
+            )}
 
             {/* Event overview */}
             <section className="rg-card p-4 sm:p-6 reveal">
