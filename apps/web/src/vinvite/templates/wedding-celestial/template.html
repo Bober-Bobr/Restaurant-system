@@ -1142,6 +1142,38 @@ html.js .deck.unveil.in-view .print {
 }
 
 /* --------------------------------------------------------------------------
+   13b. A SECOND COUPLE — double weddings
+   --------------------------------------------------------------------------
+   Two pairs married in one evening. Everything belonging to the second couple
+   carries `.duo` and stays hidden until the boot finds a name for it and puts
+   `has-duo` on <html>, so an invitation with the fields empty renders exactly
+   as it did before they existed.
+
+   `display: revert` rather than a value per site: the clusters are an <h1>, an
+   <h2> and a <span> in a running line, and one rule has to put each back to
+   ITS own default instead of making all three blocks.
+
+   The second pair is set in the same type as the first — neither couple is a
+   footnote at their own wedding — so the display sizes come down a step,
+   because four names is twice the type in the same width.
+   -------------------------------------------------------------------------- */
+.duo { display: none; }
+html.has-duo .duo { display: revert; }
+html.has-duo .hero-names { font-size: clamp(1.9rem, 8.6vw, 3.6rem); }
+html.has-duo .card-names { font-size: clamp(1.4rem, 5.8vw, 2.1rem); }
+/* A rule between the pairs, never a second ampersand: the ampersand already
+   says "these two are marrying", and a second one reads as a list of four. */
+.hero-names.duo, .card-names.duo { position: relative; margin-top: 0.55em; padding-top: 0.45em; }
+.hero-names.duo::before, .card-names.duo::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: clamp(40px, 11vw, 84px); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--star-gold), transparent);
+}
+/* Inline places take the second pair as one already-joined string, so there is
+   no dangling separator while only one of its names has been typed. */
+.duo-sep { padding: 0 0.4em; color: var(--star-gold); }
+
+/* --------------------------------------------------------------------------
    14. REDUCED MOTION
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
@@ -1365,7 +1397,7 @@ html.js .deck.unveil.in-view .print {
      ====================================================================== -->
 <div class="star-gate" id="starGate" data-vi-intro>
   <div class="sg-label">
-    <span class="caps"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span></span>
+    <span class="caps"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span><span class="duo"><span class="duo-sep" aria-hidden="true">·</span><span data-bind="couple2Line"></span></span></span>
     <h2 data-t="gateTitle">A night was written for you</h2>
   </div>
 
@@ -1427,6 +1459,11 @@ html.js .deck.unveil.in-view .print {
       <span class="amp">&amp;</span>
       <span data-bind="brideName">Aurora</span>
     </h1>
+    <h1 class="hero-names duo">
+      <span data-bind="groomName2"></span>
+      <span class="amp" data-bind="amp2">&amp;</span>
+      <span data-bind="brideName2"></span>
+    </h1>
 
     <div class="rule hero-rule" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0 L9.4 6.6 L16 8 L9.4 9.4 L8 16 L6.6 9.4 L0 8 L6.6 6.6 Z"/></svg>
@@ -1463,6 +1500,11 @@ html.js .deck.unveil.in-view .print {
       <span data-bind="groomName">Lucas</span>
       <span class="card-star" aria-hidden="true">✦</span>
       <span data-bind="brideName">Aurora</span>
+    </h2>
+    <h2 class="card-names duo">
+      <span data-bind="groomName2"></span>
+      <span class="card-star" aria-hidden="true">✦</span>
+      <span data-bind="brideName2"></span>
     </h2>
 
     <div class="card-when">
@@ -1667,7 +1709,7 @@ html.js .deck.unveil.in-view .print {
   </svg>
   <p class="script-line unveil">Merci · Tack · Thank you</p>
   <p class="thanks unveil" style="--unveil-delay: 0.15s" data-t="footerThanks">For every mile you cross and every star you wish on — our sky is fuller because you are in it.</p>
-  <p class="fine unveil" style="--unveil-delay: 0.3s"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span></p>
+  <p class="fine unveil" style="--unveil-delay: 0.3s"><span data-bind="groomName">Lucas</span> &amp; <span data-bind="brideName">Aurora</span><span class="duo"><span class="duo-sep" aria-hidden="true">·</span><span data-bind="couple2Line"></span></span></p>
 </footer>
 
 <footer id="vconnect">
@@ -1838,9 +1880,26 @@ function revObserve(el){ if (revObs) revObs.observe(el); else el.classList.add('
    ============================================================ */
 function bindTexts(){
   var bride = loc(cfg('couple.bride','')), groom = loc(cfg('couple.groom',''));
+  /* A SECOND couple — a double wedding, two pairs married the same evening.
+     Optional: with both fields empty `pair2` is '', nothing below adds a
+     separator and `has-duo` is never set, so the page is what it always was.
+
+     The two pairs are joined by a MIDDOT and never by a second ampersand: the
+     ampersand already means "these two are marrying each other", and using it
+     again turns four names into one list of four people. */
+  var groom2 = loc(cfg('couple.groom2','')), bride2 = loc(cfg('couple.bride2',''));
+  var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+  var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+  var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
   var map = {
     brideName: bride,
     groomName: groom,
+    groomName2: groom2,
+    brideName2: bride2,
+    /* Bound rather than literal, so a second pair with only one name typed so
+       far does not print a dangling '&'. */
+    amp2: (groom2 && bride2) ? '&' : '',
+    couple2Line: pair2,
     dateFull: fmtWeekday() + ' · ' + fmtDateLong(),
     dateLong: fmtDateLong(),
     dateWeekday: fmtWeekday(),
@@ -1856,7 +1915,12 @@ function bindTexts(){
   $$('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
   $$('[data-t-aria]').forEach(function(el){ el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-  document.title = (groom && bride) ? (groom + ' & ' + bride) : 'Invitation';
+  /* One class reveals every `.duo` element on the page, rather than each site
+     deciding for itself. add/remove rather than toggle(force) so it behaves
+     identically in the build's DOM shim. */
+  if (pair2) document.documentElement.classList.add('has-duo');
+  else document.documentElement.classList.remove('has-duo');
+  document.title = bothPairs || 'Invitation';
   document.documentElement.lang = lang;
 
   var logo = $('#vconnectLogo');

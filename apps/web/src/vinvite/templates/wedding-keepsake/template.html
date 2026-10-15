@@ -1031,6 +1031,32 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
 }
 
 /* --------------------------------------------------------------------------
+   15b. A SECOND COUPLE — double weddings
+   --------------------------------------------------------------------------
+   Two pairs married in one evening. Everything belonging to the second couple
+   carries `.duo` and stays hidden until the boot finds a name for it and puts
+   `has-duo` on <html>, so an invitation with the fields empty is byte-identical
+   to what it was before they existed.
+
+   The folded card, the cover and the closing line take the pairs as ONE joined
+   string (`coupleLine`), so only the hero needs a cluster of its own. Its type
+   comes down a step there, because four names is twice the type in the same
+   width — the pair is set in the same face as the first either way, since
+   neither couple is a footnote at their own wedding.
+   -------------------------------------------------------------------------- */
+.duo { display: none; }
+html.has-duo .duo { display: revert; }
+html.has-duo .hero-names { font-size: clamp(1.9rem, 7.6vw, 3.3rem); }
+/* A rule between the pairs, never a second ampersand: the ampersand already
+   says "these two are marrying", and a second one reads as a list of four. */
+.hero-names.duo { position: relative; margin-top: 0.5em; padding-top: 0.42em; }
+.hero-names.duo::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: clamp(40px, 11vw, 84px); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* --------------------------------------------------------------------------
    16. REDUCED MOTION
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
@@ -1111,6 +1137,11 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
       <span data-bind="groomName">&nbsp;</span>
       <span class="amp">&amp;</span>
       <span data-bind="brideName">&nbsp;</span>
+    </h1>
+    <h1 class="hero-names duo">
+      <span data-bind="groomName2"></span>
+      <span class="amp" data-bind="amp2">&amp;</span>
+      <span data-bind="brideName2"></span>
     </h1>
     <div class="filigree hero-fil" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1 C10 5 11 5 15 8 C11 11 10 11 8 15 C6 11 5 11 1 8 C5 5 6 5 8 1 Z" opacity="0.85"/></svg>
@@ -1574,12 +1605,30 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
     var bride = loc(cfg('couple.bride', ''));
     var groom = loc(cfg('couple.groom', ''));
     var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+    /* A SECOND couple — a double wedding, two pairs married the same evening.
+       Optional: with both fields empty `pair2` is '', nothing below adds a
+       separator and `has-duo` is never set, so the page is what it always was.
+
+       The pairs are joined by a MIDDOT and never by a second ampersand: the
+       ampersand already means "these two are marrying each other", and using
+       it again turns four names into one list of four people. */
+    var groom2 = loc(cfg('couple.groom2', ''));
+    var bride2 = loc(cfg('couple.bride2', ''));
+    var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+    var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
     var timeText = loc(cfg('event.timeText', ''));
 
     var map = {
       brideName: bride,
       groomName: groom,
-      coupleLine: couple,
+      groomName2: groom2,
+      brideName2: bride2,
+      /* Bound rather than literal, so a second pair with only one name typed
+         so far does not print a dangling '&'. */
+      amp2: (groom2 && bride2) ? '&' : '',
+      /* The folded card, its cover and the closing line all read this one
+         string, so they carry both pairs with no markup of their own. */
+      coupleLine: bothPairs,
       kicker: loc(cfg('invite.kicker', '')),
       heroSub: loc(cfg('invite.sub', '')),
       dateLong: fmtDateLong(),
@@ -1625,7 +1674,12 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
     $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
     $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-    document.title = couple || 'Invitation';
+    /* One class reveals every `.duo` element on the page, rather than each
+       site deciding for itself. add/remove rather than toggle(force) so it
+       behaves identically in the build's DOM shim. */
+    if (pair2) document.documentElement.classList.add('has-duo');
+    else document.documentElement.classList.remove('has-duo');
+    document.title = bothPairs || 'Invitation';
     document.documentElement.lang = lang;
   }
 
@@ -2170,7 +2224,12 @@ html.js .pic.in-view { opacity: 1; transform: rotate(var(--tw)) translateY(0) sc
       var end = new Date(start.getTime() + 5 * 3600000);
       var stamp = function (d) { return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; };
       var bride = loc(cfg('couple.bride', '')), groom = loc(cfg('couple.groom', ''));
-      var title = ((groom && bride) ? groom + ' & ' + bride : (groom || bride || t('wedding')));
+      var groom2 = loc(cfg('couple.groom2', '')), bride2 = loc(cfg('couple.bride2', ''));
+      var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+      /* The calendar entry names BOTH couples: a guest adding a double wedding
+         to their diary is being invited by all four of them. */
+      var title = ((groom && bride) ? groom + ' & ' + bride : (groom || bride || t('wedding')))
+        + (pair2 ? '  ·  ' + pair2 : '');
       var ics = [
         'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//v-invite//EN', 'BEGIN:VEVENT',
         'UID:' + Date.now() + '@v-invite',

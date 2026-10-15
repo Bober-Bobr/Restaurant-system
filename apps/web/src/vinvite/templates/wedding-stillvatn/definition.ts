@@ -32,6 +32,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'hero' },
+  { key: 'couple2', labelKey: 'tg_couple2', icon: '💞', section: 'hero' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'invite' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'date' },
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
@@ -48,8 +49,14 @@ const groups: TemplateFieldGroup[] = [
 const fields: TemplateField[] = [
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
   { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
-  // The word between the names, set in the handwriting face.
+  // The word between the names, set in the handwriting face. It serves both
+  // pairs — one word, typed once.
   { key: 'amp', path: 'invite.amp', type: 'localized-text', group: 'couple', labelKey: 'fld_label' },
+
+  // A DOUBLE WEDDING — two couples married in one evening. Both optional, and
+  // asked for groom first, in the order the page prints them.
+  { key: 'groom2', path: 'couple.groom2', type: 'localized-text', group: 'couple2', labelKey: 'fld_groom' },
+  { key: 'bride2', path: 'couple.bride2', type: 'localized-text', group: 'couple2', labelKey: 'fld_bride' },
 
   // Left empty by default: the opening then prints the formatted event date,
   // which cannot go stale when the date is changed.
@@ -139,6 +146,10 @@ const defaultConfig = {
   couple: {
     groom: { en: 'Mattis', ru: 'Маттис', uz: 'Mattis' },
     bride: { en: 'Elin', ru: 'Элин', uz: 'Elin' },
+    // Empty by default: a double wedding is the exception, and a sample second
+    // pair would have to be deleted by everybody else.
+    groom2: {},
+    bride2: {},
   },
   invite: {
     amp: { en: 'and', ru: 'и', uz: 'va' },

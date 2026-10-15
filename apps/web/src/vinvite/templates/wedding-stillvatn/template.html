@@ -443,6 +443,30 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:10px;letter-spac
   .modal__card{padding:clamp(24px,6vw,34px)}
 }
 
+/* ── A SECOND COUPLE — double weddings ─────────────────────────────────────
+   Two pairs married in one evening. Everything belonging to the second couple
+   carries `.duo` and stays hidden until the boot finds a name for it and puts
+   `has-duo` on <html>, so an invitation with the fields empty is byte-identical
+   to what it was before they existed.
+
+   `display: revert` rather than a value per site: one rule puts an <h1> back
+   to a block and a <span> in a running line back to inline.
+
+   The second pair surfaces in the same hand as the first — neither couple is a
+   footnote at their own wedding — so the clamp comes down a step, because four
+   names is twice the type in the same width. A rule separates the pairs rather
+   than a second ampersand: the ampersand already says "these two are
+   marrying", and a second one reads as one list of four people. */
+.duo{display:none}
+html.has-duo .duo{display:revert}
+html.has-duo .dawn__names{font-size:clamp(26px,8vw,96px)}
+.dawn__names.duo{position:relative;margin-top:.22em;padding-top:.3em}
+.dawn__names.duo::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:clamp(44px,12vw,96px);height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important;animation-iteration-count:1 !important}
@@ -556,6 +580,11 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:10px;letter-spac
       <span class="split" data-name="groom"></span>
       <span class="amp" data-bind="amp"></span>
       <span class="split" data-name="bride"></span>
+    </h1>
+    <h1 class="dawn__names duo">
+      <span class="split" data-name="groom2"></span>
+      <span class="amp" data-bind="amp2"></span>
+      <span class="split" data-name="bride2"></span>
     </h1>
     <p class="dawn__meta" data-bind="heroMeta"></p>
   </div>
@@ -1016,6 +1045,17 @@ function bindTexts() {
   var bride = loc(cfg('couple.bride', ''));
   var groom = loc(cfg('couple.groom', ''));
   var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+  /* A SECOND couple — a double wedding, two pairs married the same evening.
+     Optional: with both fields empty `pair2` is '', nothing below adds a
+     separator and `has-duo` is never set, so the page is what it always was.
+
+     The pairs are joined by a MIDDOT and never by a second ampersand: the
+     ampersand already means "these two are marrying each other", and using it
+     again turns four names into one list of four people. */
+  var groom2 = loc(cfg('couple.groom2', ''));
+  var bride2 = loc(cfg('couple.bride2', ''));
+  var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+  var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
   var place = loc(cfg('venue.name', ''));
 
   var map = {
@@ -1024,6 +1064,9 @@ function bindTexts() {
     venueName: place,
     venueAddress: loc(cfg('venue.address', '')),
     amp: loc(cfg('invite.amp', '')) || t('and'),
+    /* The second pair's connector, bound separately from the first pair's so a
+       pair with only one name typed so far prints no dangling "and". */
+    amp2: (groom2 && bride2) ? (loc(cfg('invite.amp', '')) || t('and')) : '',
     heroMeta: loc(cfg('invite.meta', '')) || fmtDateLong(),
     inviteLede: loc(cfg('invite.lede', '')),
     inviteDate: fmtDateLong() + (place ? '  ·  ' + place : ''),
@@ -1086,18 +1129,26 @@ function bindTexts() {
   $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
   $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-  splitNames(bride, groom);
+  splitNames({ groom: groom, bride: bride, groom2: groom2, bride2: bride2 });
   renderCardDate();
 
-  document.title = couple || 'Invitation';
+  /* One class reveals every `.duo` element on the page, rather than each site
+     deciding for itself. add/remove rather than toggle(force) so it behaves
+     identically in the build's DOM shim. */
+  if (pair2) document.documentElement.classList.add('has-duo');
+  else document.documentElement.classList.remove('has-duo');
+  document.title = bothPairs || 'Invitation';
   document.documentElement.lang = lang;
 }
 
 /* The names surface letter by letter, slowly — 110ms apart rather than the 70
    the other designs use, because nothing here is in a hurry. */
-function splitNames(bride, groom) {
+/* Keyed by `data-name` through a table rather than a bride/else test: on a
+   double wedding the hero carries FOUR splits, and "bride or else the groom"
+   filled the second pair's with the first pair's names. */
+function splitNames(names) {
   $$('.dawn__names .split').forEach(function (el) {
-    var text = el.getAttribute('data-name') === 'bride' ? bride : groom;
+    var text = names[el.getAttribute('data-name')] || '';
     el.setAttribute('aria-label', text || '');
     el.innerHTML = '';
     for (var i = 0; i < text.length; i++) {

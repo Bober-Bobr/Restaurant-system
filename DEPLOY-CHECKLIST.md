@@ -3909,3 +3909,39 @@ Corrections to §74/§75 plus one new thing. **No migration.**
     would move it).
 5. Check 3 and 4 in all three languages — the bug was in the layout's
     translation helper, so every string it passes through was affected.
+
+## §78 — A second bride and groom, in every wedding design
+
+**No migration.** Nothing changes until somebody types a second pair, so this
+deploy is invisible to every invitation already published — which is the first
+thing to check.
+
+1. **Nothing changed for a single couple.** Open an invitation that is already
+    published, in each of the ten wedding designs: the hero, the envelope or
+    gate card, the invitation card, the footer and the browser-tab title must
+    read exactly as before, with no stray separator, no empty line and no gap
+    where a second pair would go.
+2. **The builder asks.** `v-invite.uz` → a wedding project → the form now has a
+    **"Second couple · double wedding"** group under "Bride & groom", with the
+    groom's box first. The designs that ask the first pair for formal names ask
+    the second pair for them too; **Anor va atlas** also offers the second
+    couple's two portraits, and **Oq fotiha** offers their two families in the
+    families group.
+3. **Type a second pair** and watch the preview: both couples appear, in the
+    same size type, separated by a hairline rule — never by a second "&".
+4. The **tab title** names both couples ("A & B · C & D"), and so do the
+    envelope/gate card, the closing line and, in Keepsake, the calendar entry
+    the "add to calendar" button writes.
+5. **Type only ONE of the two second names**: the one name shows and there is
+    **no dangling ampersand** beside it.
+6. **Clear both second names again**: everything belonging to the second couple
+    must disappear immediately, with no reload — the whole feature hangs off one
+    class, and this is the half that is easy to leave switched on.
+7. Check a long second pair on a **phone** (390px): four names must not push
+    anything off the screen, and the page must not scroll sideways.
+8. In **Anor va atlas** the couple section shows four portraits; a second couple
+    with no photos uploaded shows the drawn placeholder, not a broken image.
+9. In **Oq fotiha** the hero shows four names in the broken loaf, and the
+    families section shows four households.
+10. Switch languages on a double-wedding invitation: both pairs follow, and the
+    word between each pair is the one that language uses.

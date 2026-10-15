@@ -590,6 +590,39 @@ html.js .person.in-view .portrait-mask { clip-path: inset(0 0 0 0); }
 .couple-amp { text-align: center; font-family: var(--font-name); font-style: italic; font-size: 2rem; color: var(--gold); }
 
 /* ==========================================================================
+   12b. A SECOND COUPLE — qosh toy, the double wedding
+   --------------------------------------------------------------------------
+   Two pairs married in one evening, which this market does hold. Everything
+   belonging to the second couple carries `.duo` and stays hidden until the
+   boot finds a name for it and puts `has-duo` on <html>, so an invitation
+   with the fields empty is byte-identical to what it was before.
+
+   `display: revert` rather than a value per site: one rule puts an <h1> back
+   to a block and a <span> in a running line back to inline. The portrait grid
+   is the exception and says `grid` for itself — reverting it would strand the
+   two portraits in a column on a desktop.
+
+   The envelope card and the closing line take both pairs as ONE joined string
+   (`coupleLine`), so they need no markup of their own.
+   ========================================================================== */
+.duo { display: none; }
+html.has-duo .duo { display: revert; }
+html.has-duo .couple-grid.duo { display: grid; }
+html.has-duo .hero-names { font-size: clamp(1.9rem, 8.4vw, 3.4rem); }
+/* A rule between the pairs rather than a second ampersand: the ampersand
+   already says "these two are marrying", and a second one reads as a list of
+   four people. */
+.hero-names.duo { position: relative; margin-top: 0.42em; padding-top: 0.36em; }
+.hero-names.duo::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: clamp(40px, 11vw, 84px); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+/* The second couple's portraits stand a clear gap below the first pair's, with
+   the same pomegranate divider the section opens with. */
+.couple-grid.duo { margin-top: 2.6rem; }
+
+/* ==========================================================================
    13. GALLERY — album with a pomegranate branch
    ========================================================================== */
 .gallery-sec { position: relative; padding: var(--pad-sec) var(--edge) calc(var(--pad-sec) * 1.1); background: linear-gradient(180deg, var(--ivory), var(--cream) 55%, var(--ivory)); overflow: hidden; }
@@ -986,6 +1019,11 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
       <span class="amp">&amp;</span>
       <span data-bind="brideName">&nbsp;</span>
     </h1>
+    <h1 class="hero-names duo">
+      <span data-bind="groomName2"></span>
+      <span class="amp" data-bind="amp2">&amp;</span>
+      <span data-bind="brideName2"></span>
+    </h1>
     <div class="guli-rule hero-rule" aria-hidden="true">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1 L12 6 L17 4 L15 9 L19 12 L14 12 L15 17 L10 14 L5 17 L6 12 L1 12 L5 9 L3 4 L8 6 Z"/></svg>
     </div>
@@ -1106,6 +1144,37 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
         <div class="portrait-frame" aria-hidden="true"></div>
       </div>
       <div class="p-name" data-bind="brideFull">&nbsp;</div>
+      <div class="p-role" data-t="theBride">Kelin</div>
+    </div>
+  </div>
+
+  <!-- The second couple, on a qosh toy. Their own portraits rather than two
+       more names under the first pair's: this section IS the two photographs,
+       and a second couple with no faces in it would read as an omission. -->
+  <div class="couple-grid duo">
+    <div class="person observe" id="personGroom2">
+      <div class="portrait">
+        <div class="portrait-mask">
+          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
+          <img id="groomPhoto2" alt="" class="hidden">
+        </div>
+        <div class="portrait-frame" aria-hidden="true"></div>
+      </div>
+      <div class="p-name" data-bind="groomFull2">&nbsp;</div>
+      <div class="p-role" data-t="theGroom">Kuyov</div>
+    </div>
+
+    <div class="couple-amp" aria-hidden="true">❦</div>
+
+    <div class="person observe" id="personBride2">
+      <div class="portrait">
+        <div class="portrait-mask">
+          <div class="ph"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="24" cy="18" r="9"/><path d="M8 42 C8 32 16 28 24 28 C32 28 40 32 40 42"/></svg></div>
+          <img id="bridePhoto2" alt="" class="hidden">
+        </div>
+        <div class="portrait-frame" aria-hidden="true"></div>
+      </div>
+      <div class="p-name" data-bind="brideFull2">&nbsp;</div>
       <div class="p-role" data-t="theBride">Kelin</div>
     </div>
   </div>
@@ -1398,6 +1467,17 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     var bride = loc(cfg('couple.bride', ''));
     var groom = loc(cfg('couple.groom', ''));
     var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+    /* A SECOND couple — qosh toy, two pairs married the same evening.
+       Optional: with the fields empty `pair2` is '', nothing below adds a
+       separator and `has-duo` is never set, so the page is what it always was.
+
+       The pairs are joined by a MIDDOT and never by a second ampersand: the
+       ampersand already means "these two are marrying each other", and using
+       it again turns four names into one list of four people. */
+    var groom2 = loc(cfg('couple.groom2', ''));
+    var bride2 = loc(cfg('couple.bride2', ''));
+    var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+    var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
     var timeText = loc(cfg('event.timeText', '')) || fmtTime();
     var occasion = loc(cfg('invite.occasion', '')) || t('talbon');
     var venueName = loc(cfg('venue.name', ''));
@@ -1405,9 +1485,18 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     var map = {
       brideName: bride,
       groomName: groom,
-      coupleLine: couple,
+      /* The envelope card and the closing line read this one string, so they
+         carry both pairs with no markup of their own. */
+      coupleLine: bothPairs,
       brideFull: loc(cfg('couple.brideFull', '')) || bride,
       groomFull: loc(cfg('couple.groomFull', '')) || groom,
+      groomName2: groom2,
+      brideName2: bride2,
+      /* Bound rather than literal, so a second pair with only one name typed
+         so far does not print a dangling '&'. */
+      amp2: (groom2 && bride2) ? '&' : '',
+      groomFull2: loc(cfg('couple.groomFull2', '')) || groom2,
+      brideFull2: loc(cfg('couple.brideFull2', '')) || bride2,
       occasion: occasion,
       kicker: loc(cfg('invite.kicker', '')),
       heroWhen: fmtDateLong() + ' · ' + timeText,
@@ -1442,7 +1531,12 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
     $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-    document.title = couple || 'Invitation';
+    /* One class reveals every `.duo` element on the page, rather than each
+       site deciding for itself. add/remove rather than toggle(force) so it
+       behaves identically in the build's DOM shim. */
+    if (pair2) document.documentElement.classList.add('has-duo');
+    else document.documentElement.classList.remove('has-duo');
+    document.title = bothPairs || 'Invitation';
     document.documentElement.lang = lang;
   }
 
@@ -1586,7 +1680,12 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     var couple = $('#couple');
     var hasBride = !!(loc(cfg('couple.brideFull', '')) || loc(cfg('couple.bride', '')));
     var hasGroom = !!(loc(cfg('couple.groomFull', '')) || loc(cfg('couple.groom', '')));
-    if (couple && hid.couple !== true) couple.classList.toggle('card-off', !hasBride && !hasGroom);
+    /* The second pair counts here too: on a qosh toy entered from the bottom
+       up, a section holding their two portraits must not be switched off for
+       having nobody in the FIRST pair yet. */
+    var hasPair2 = !!(loc(cfg('couple.groomFull2', '')) || loc(cfg('couple.groom2', ''))
+      || loc(cfg('couple.brideFull2', '')) || loc(cfg('couple.bride2', '')));
+    if (couple && hid.couple !== true) couple.classList.toggle('card-off', !hasBride && !hasGroom && !hasPair2);
 
     var brand = $('#brand');
     if (brand && hid.brand !== true) brand.classList.toggle('card-off', !loc(cfg('venue.name', '')));
@@ -1921,6 +2020,8 @@ html.js .anor-divider.in-view svg { opacity: 1; transform: none; }
     bindTexts();
     bindPhoto('bridePhoto', 'couple.bridePhoto');
     bindPhoto('groomPhoto', 'couple.groomPhoto');
+    bindPhoto('bridePhoto2', 'couple.bridePhoto2');
+    bindPhoto('groomPhoto2', 'couple.groomPhoto2');
     renderBrand();
     renderSchedule();
     renderGallery();

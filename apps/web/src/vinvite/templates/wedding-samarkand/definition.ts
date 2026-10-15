@@ -31,6 +31,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'hero' },
+  { key: 'couple2', labelKey: 'tg_couple2', icon: '💞', section: 'hero' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'invite' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'date' },
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
@@ -51,6 +52,14 @@ const fields: TemplateField[] = [
   { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
   { key: 'groomFull', path: 'couple.groomFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
+
+  // A DOUBLE WEDDING — two couples married in one evening. All four optional,
+  // and asked for groom first, in the order the page prints them. The full
+  // names fall back to the short ones exactly as the first pair's do.
+  { key: 'groom2', path: 'couple.groom2', type: 'localized-text', group: 'couple2', labelKey: 'fld_groom' },
+  { key: 'bride2', path: 'couple.bride2', type: 'localized-text', group: 'couple2', labelKey: 'fld_bride' },
+  { key: 'groomFull2', path: 'couple.groomFull2', type: 'localized-text', group: 'couple2', labelKey: 'fld_name' },
+  { key: 'brideFull2', path: 'couple.brideFull2', type: 'localized-text', group: 'couple2', labelKey: 'fld_name' },
   // The word between the names — "va" by default. Blank falls back to the
   // chrome's own "and" in whichever language is being read.
   { key: 'amp', path: 'invite.amp', type: 'localized-text', group: 'couple', labelKey: 'fld_label' },
@@ -138,6 +147,12 @@ const defaultConfig = {
     bride: { uz: 'Zarina', ru: 'Зарина', en: 'Zarina' },
     groomFull: { uz: 'Timur Aliyev', ru: 'Тимур Алиев', en: 'Timur Aliyev' },
     brideFull: { uz: 'Zarina Rashidova', ru: 'Зарина Рашидова', en: 'Zarina Rashidova' },
+    // Empty by default: a double wedding is the exception, and a sample second
+    // pair would have to be deleted by everybody else.
+    groom2: {},
+    bride2: {},
+    groomFull2: {},
+    brideFull2: {},
   },
   invite: {
     kicker: {

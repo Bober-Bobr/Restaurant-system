@@ -443,6 +443,31 @@ html:not(.js) .dish { opacity: 1; transform: none; }
 .opt-off { display: none !important; }
 
 /* --------------------------------------------------------------------------
+   11b · A SECOND COUPLE — qosh fotiha, two matches read over at once
+   --------------------------------------------------------------------------
+   Everything belonging to the second couple carries `.duo` and stays hidden
+   until the boot finds a name for it and puts `has-duo` on <html>, so an
+   invitation with the fields empty is byte-identical to what it was before.
+
+   `display: revert` rather than a value per site: one rule puts a <p> back to
+   a block and a <span> in a running line back to inline.
+
+   The names live in the gap the loaf opens, which is a fixed hole in a round
+   of bread — so with four of them in there the type comes down a step rather
+   than the names being allowed to grow out of the break. A rule separates the
+   pairs rather than a second "va": the word already means "these two are
+   marrying", and a second one reads as one list of four people.
+   -------------------------------------------------------------------------- */
+.duo { display: none; }
+html.has-duo .duo { display: revert; }
+html.has-duo .hero__name { font-size: clamp(19px, 5vw, 36px); }
+html.has-duo .hero__amp { font-size: clamp(13px, 2.2vw, 19px); }
+.duo-rule {
+  width: clamp(34px, 9vw, 64px); height: 1px; margin: 7px auto;
+  background: linear-gradient(90deg, transparent, var(--saffron), transparent);
+}
+
+/* --------------------------------------------------------------------------
    12 · REDUCED MOTION
    -------------------------------------------------------------------------- */
 /* Everything arrives, nothing travels. The entrances are FAST-FORWARDED, never
@@ -542,6 +567,10 @@ html:not(.js) .dish { opacity: 1; transform: none; }
         <p class="hero__name" data-bind="groomName"></p>
         <p class="hero__amp" data-t="andWord"></p>
         <p class="hero__name" data-bind="brideName"></p>
+        <span class="duo-rule duo" aria-hidden="true"></span>
+        <p class="hero__name duo" data-bind="groomName2"></p>
+        <p class="hero__amp duo" data-bind="amp2"></p>
+        <p class="hero__name duo" data-bind="brideName2"></p>
       </div>
     </div>
 
@@ -607,6 +636,20 @@ html:not(.js) .dish { opacity: 1; transform: none; }
         <p class="fam__side" data-t="brideSide"></p>
         <p class="fam__name" data-bind="brideFamily"></p>
         <p class="fam__who" data-bind="brideParents"></p>
+      </div>
+      <!-- The second couple's two families. A fotiha is the meeting of
+           families rather than a party for a couple, so a second match read
+           over the same cloth brings two more of them — a pair of names in
+           the hero with nobody behind them would miss the point of the day. -->
+      <div class="fam rv duo">
+        <p class="fam__side" data-t="groomSide"></p>
+        <p class="fam__name" data-bind="groomFamily2"></p>
+        <p class="fam__who" data-bind="groomParents2"></p>
+      </div>
+      <div class="fam rv duo">
+        <p class="fam__side" data-t="brideSide"></p>
+        <p class="fam__name" data-bind="brideFamily2"></p>
+        <p class="fam__who" data-bind="brideParents2"></p>
       </div>
     </div>
   </div>
@@ -859,11 +902,27 @@ html:not(.js) .dish { opacity: 1; transform: none; }
        family reads (see templateNameOrder.test.ts). */
     var sep = ' ' + t('andWord') + ' ';
     var couple = (groom && bride) ? (groom + sep + bride) : (groom || bride);
+    /* A SECOND couple — a qosh fotiha, two matches read over at once.
+       Optional: with the fields empty `pair2` is '', nothing below adds a
+       separator and `has-duo` is never set, so the page is what it always was.
+
+       The pairs are joined by a MIDDOT and never by a second "va": the word
+       already means "these two are marrying each other", and using it again
+       turns four names into one list of four people. */
+    var groom2 = loc(cfg('couple.groom2', ''));
+    var bride2 = loc(cfg('couple.bride2', ''));
+    var pair2 = (groom2 && bride2) ? (groom2 + sep + bride2) : (groom2 || bride2);
+    var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
 
     var map = {
       gateTitle:      loc(cfg('invite.gateTitle', '')),
       groomName:      groom,
       brideName:      bride,
+      groomName2:     groom2,
+      brideName2:     bride2,
+      /* Bound rather than taking the first pair's `data-t="andWord"`, so a
+         second pair with only one name typed so far prints no dangling word. */
+      amp2:           (groom2 && bride2) ? t('andWord') : '',
       occasion:       loc(cfg('invite.occasion', '')),
       heroLede:       loc(cfg('invite.lede', '')),
       blessing:       loc(cfg('blessing.text', '')),
@@ -878,6 +937,10 @@ html:not(.js) .dish { opacity: 1; transform: none; }
       groomParents:   loc(cfg('families.groomParents', '')),
       brideFamily:    loc(cfg('families.brideName', '')),
       brideParents:   loc(cfg('families.brideParents', '')),
+      groomFamily2:   loc(cfg('families.groom2Name', '')),
+      groomParents2:  loc(cfg('families.groom2Parents', '')),
+      brideFamily2:   loc(cfg('families.bride2Name', '')),
+      brideParents2:  loc(cfg('families.bride2Parents', '')),
       dasturxonTitle: loc(cfg('dasturxon.title', '')),
       dasturxonLede:  loc(cfg('dasturxon.lede', '')),
       galleryTitle:   loc(cfg('gallery_title', '')),
@@ -898,8 +961,8 @@ html:not(.js) .dish { opacity: 1; transform: none; }
     });
     $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
 
-    var gn = $('#gateNames'); if (gn) gn.textContent = couple;
-    var fn = $('#finalNames'); if (fn) fn.textContent = couple;
+    var gn = $('#gateNames'); if (gn) gn.textContent = bothPairs;
+    var fn = $('#finalNames'); if (fn) fn.textContent = bothPairs;
     var fd = $('#factDate'); if (fd) fd.textContent = fmtDateLong();
     var fw = $('#factWeekday'); if (fw) fw.textContent = fmtWeekday();
     var ft = $('#factTime'); if (ft) ft.textContent = loc(cfg('event.timeText', '')) || fmtTime();
@@ -907,7 +970,12 @@ html:not(.js) .dish { opacity: 1; transform: none; }
     var fdt = $('#finalDate'); if (fdt) fdt.textContent = fmtDateLong() + '  ·  ' + fmtTime();
     var okt = $('#okText'); if (okt) okt.textContent = t('savedYes');
 
-    document.title = couple || 'Fotiha';
+    /* One class reveals every `.duo` element on the page, rather than each
+       site deciding for itself. add/remove rather than toggle(force) so it
+       behaves identically in the build's DOM shim. */
+    if (pair2) document.documentElement.classList.add('has-duo');
+    else document.documentElement.classList.remove('has-duo');
+    document.title = bothPairs || 'Fotiha';
     document.documentElement.setAttribute('lang', lang);
 
     var mapLink = $('#mapLink');

@@ -22,6 +22,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'top' },
+  { key: 'couple2', labelKey: 'tg_couple2', icon: '💞', section: 'top' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'top' },
   { key: 'blessing', labelKey: 'tg_blessing', icon: '🤲', section: 'blessing' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'details' },
@@ -39,6 +40,12 @@ const fields: TemplateField[] = [
   // that asks in the other order is how the two get typed into the wrong boxes.
   { key: 'groom', path: 'couple.groom', type: 'localized-text', group: 'couple', labelKey: 'fld_groom' },
   { key: 'bride', path: 'couple.bride', type: 'localized-text', group: 'couple', labelKey: 'fld_bride' },
+
+  // A SECOND couple — a qosh fotiha, two matches read over at once. Both
+  // optional, and asked for groom first like the pair above. Their two
+  // FAMILIES are in the families group below, where the first pair's are.
+  { key: 'groom2', path: 'couple.groom2', type: 'localized-text', group: 'couple2', labelKey: 'fld_groom' },
+  { key: 'bride2', path: 'couple.bride2', type: 'localized-text', group: 'couple2', labelKey: 'fld_bride' },
 
   { key: 'gateTitle', path: 'invite.gateTitle', type: 'localized-text', group: 'invite', labelKey: 'fld_title' },
   { key: 'occasion', path: 'invite.occasion', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
@@ -61,6 +68,12 @@ const fields: TemplateField[] = [
   { key: 'groomParents', path: 'families.groomParents', type: 'localized-text', group: 'families', labelKey: 'fld_desc' },
   { key: 'brideFamily', path: 'families.brideName', type: 'localized-text', group: 'families', labelKey: 'fld_name' },
   { key: 'brideParents', path: 'families.brideParents', type: 'localized-text', group: 'families', labelKey: 'fld_desc' },
+  // The second couple's families, on a qosh fotiha. Optional like the pair
+  // itself, and in the same order: the groom's side first.
+  { key: 'groom2Family', path: 'families.groom2Name', type: 'localized-text', group: 'families', labelKey: 'fld_name' },
+  { key: 'groom2Parents', path: 'families.groom2Parents', type: 'localized-text', group: 'families', labelKey: 'fld_desc' },
+  { key: 'bride2Family', path: 'families.bride2Name', type: 'localized-text', group: 'families', labelKey: 'fld_name' },
+  { key: 'bride2Parents', path: 'families.bride2Parents', type: 'localized-text', group: 'families', labelKey: 'fld_desc' },
 
   { key: 'dasturxonTitle', path: 'dasturxon.title', type: 'localized-text', group: 'dasturxon', labelKey: 'fld_title' },
   { key: 'dasturxonLede', path: 'dasturxon.lede', type: 'localized-text', group: 'dasturxon', labelKey: 'fld_sub' },
@@ -115,6 +128,10 @@ export const weddingFotihaTemplate: TemplateDefinition = {
     couple: {
       groom: { uz: 'Oybek', ru: 'Ойбек', en: 'Oybek' },
       bride: { uz: 'Nilufar', ru: 'Нилуфар', en: 'Nilufar' },
+      // Empty by default: a qosh fotiha is the exception, and a sample second
+      // pair would have to be deleted by everybody else.
+      groom2: {},
+      bride2: {},
     },
     invite: {
       gateTitle: { uz: 'Fotiha toyimizga', ru: 'На нашу фотиху', en: 'To our fotiha' },
@@ -169,6 +186,11 @@ export const weddingFotihaTemplate: TemplateDefinition = {
         ru: 'Отец — Баходир ака, мать — Зулфия опа',
         en: 'Her father Bahodir, her mother Zulfiya',
       },
+      // The second couple's families — empty, like the second pair itself.
+      groom2Name: {},
+      groom2Parents: {},
+      bride2Name: {},
+      bride2Parents: {},
     },
     dasturxon: {
       title: { uz: 'Dasturxon', ru: 'Дастурхан', en: 'The table' },

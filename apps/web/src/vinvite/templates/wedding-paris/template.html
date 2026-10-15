@@ -721,6 +721,38 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
 }
 
 /* ============================================================
+   A SECOND COUPLE — double weddings
+   ------------------------------------------------------------
+   Two pairs married in one evening. Everything belonging to the
+   second couple carries `.duo` and stays hidden until the boot
+   finds a name for it and puts `has-duo` on <html> — so an
+   invitation with the fields empty is byte-identical to what it
+   was before they existed.
+
+   `display: revert` rather than a value per site: one rule has to
+   put an <h1> back to a block and a <span> in a running line back
+   to inline.
+
+   The second pair is set in the same hand as the first — neither
+   couple is a footnote at their own wedding — so the hero's clamp
+   comes down a step, because four names is twice the type in the
+   same width. A rule separates the pairs rather than a second
+   ampersand: the ampersand already says "these two are marrying",
+   and a second one reads as one list of four people.
+   ============================================================ */
+.duo{display:none}
+html.has-duo .duo{display:revert}
+html.has-duo .hero__names{font-size:clamp(26px,8.4vw,104px)}
+html.has-duo .invite__title{font-size:clamp(27px,4.4vw,58px)}
+.hero__names.duo{position:relative;margin-top:.22em;padding-top:.3em}
+.hero__names.duo::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:clamp(44px,12vw,96px);height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-lt),transparent);
+}
+.duo-sep{padding:0 .4em;color:var(--gold-lt)}
+
+/* ============================================================
    MOTION PREFERENCES
    ============================================================ */
 @media (prefers-reduced-motion:reduce){
@@ -841,6 +873,11 @@ footer.sign p{font-family:var(--util);font-weight:300;font-size:11px;letter-spac
       <span class="split" data-name="groom"></span>
       <span class="amp" data-bind="amp"></span>
       <span class="split" data-name="bride"></span>
+    </h1>
+    <h1 class="hero__names duo">
+      <span class="split" data-name="groom2"></span>
+      <span class="amp" data-bind="amp2"></span>
+      <span class="split" data-name="bride2"></span>
     </h1>
     <p class="hero__meta" data-bind="heroMeta"></p>
   </div>
@@ -1401,6 +1438,21 @@ function bindTexts() {
   var groomFull = loc(cfg('couple.groomFull', '')) || groom;
   var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
   var coupleFull = (groomFull && brideFull) ? (groomFull + ' & ' + brideFull) : (groomFull || brideFull);
+  /* A SECOND couple — a double wedding, two pairs married the same evening.
+     Optional: with the fields empty `pair2` and `pairFull2` are '', nothing
+     below adds a separator and `has-duo` is never set, so the page is what it
+     always was.
+
+     The pairs are joined by a MIDDOT and never by a second ampersand: the
+     ampersand already means "these two are marrying each other", and using it
+     again turns four names into one list of four people. */
+  var groom2 = loc(cfg('couple.groom2', ''));
+  var bride2 = loc(cfg('couple.bride2', ''));
+  var groomFull2 = loc(cfg('couple.groomFull2', '')) || groom2;
+  var brideFull2 = loc(cfg('couple.brideFull2', '')) || bride2;
+  var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+  var pairFull2 = (groomFull2 && brideFull2) ? (groomFull2 + ' & ' + brideFull2) : (groomFull2 || brideFull2);
+  var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
   var venueName = loc(cfg('venue.name', ''));
   var region = loc(cfg('venue.region', ''));
 
@@ -1411,8 +1463,11 @@ function bindTexts() {
     venueAddress: loc(cfg('venue.address', '')),
     kicker: loc(cfg('invite.kicker', '')),
     amp: loc(cfg('invite.amp', '')) || t('and'),
+    /* The second pair's connector. Bound separately from the first pair's so a
+       pair with only one name typed so far prints no dangling "and". */
+    amp2: (groom2 && bride2) ? (loc(cfg('invite.amp', '')) || t('and')) : '',
     heroMeta: loc(cfg('invite.meta', '')) || fmtDateLong(),
-    coupleFull: coupleFull,
+    coupleFull: coupleFull + (pairFull2 ? '  ·  ' + pairFull2 : ''),
     inviteLede: loc(cfg('invite.lede', '')),
     inviteDate: fmtNumeric() + (region ? '  —  ' + region : ''),
     arrivalCap: loc(cfg('arrival.caption', '')),
@@ -1450,7 +1505,7 @@ function bindTexts() {
     finaleTitle: loc(cfg('finale.title', '')),
     finaleMsg: loc(cfg('finale.message', '')),
     finaleDate: fmtDateLong() + (venueName ? '  ·  ' + venueName : ''),
-    footerLine: couple + (couple ? '  ·  ' : '') + fmtNumeric(),
+    footerLine: bothPairs + (bothPairs ? '  ·  ' : '') + fmtNumeric(),
 
     rsvpLede: loc(cfg('rsvp.lede', ''))
   };
@@ -1462,18 +1517,26 @@ function bindTexts() {
   $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
   $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
 
-  splitNames(bride, groom);
+  splitNames({ groom: groom, bride: bride, groom2: groom2, bride2: bride2 });
 
-  document.title = couple || 'Invitation';
+  /* One class reveals every `.duo` element on the page, rather than each site
+     deciding for itself. add/remove rather than toggle(force) so it behaves
+     identically in the build's DOM shim. */
+  if (pair2) document.documentElement.classList.add('has-duo');
+  else document.documentElement.classList.remove('has-duo');
+  document.title = bothPairs || 'Invitation';
   document.documentElement.lang = lang;
 }
 
 /* The hero title lands letter by letter, so each name is rebuilt as spans with
    a staggered delay. Rebuilt on every render: the names change under the
    editor's hands. */
-function splitNames(bride, groom) {
+/* Keyed by `data-name` through a table rather than a bride/else test: on a
+   double wedding the hero carries FOUR splits, and "bride or else the groom"
+   filled the second pair's with the first pair's names. */
+function splitNames(names) {
   $$('.hero__names .split').forEach(function (el) {
-    var text = el.getAttribute('data-name') === 'bride' ? bride : groom;
+    var text = names[el.getAttribute('data-name')] || '';
     el.setAttribute('aria-label', text || '');
     el.innerHTML = '';
     for (var i = 0; i < text.length; i++) {

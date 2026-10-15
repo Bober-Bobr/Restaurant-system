@@ -161,6 +161,9 @@ const dict = {
     tg_couple: 'Bride & groom',
     fld_groom: 'Groom',
     fld_bride: 'Bride',
+    // A double wedding: two couples married in one evening. Optional
+    // everywhere — left empty, the design is exactly what it was.
+    tg_couple2: 'Second couple · double wedding',
     fld_invite_text: 'Invitation text',
     tg_datetime: 'Date & time',
     tg_venue: 'Venue & address',
@@ -600,6 +603,7 @@ const dict = {
     tg_couple: 'Жених и невеста',
     fld_groom: 'Жених',
     fld_bride: 'Невеста',
+    tg_couple2: 'Вторая пара · двойная свадьба',
     fld_invite_text: 'Текст приглашения',
     tg_datetime: 'Дата и время',
     tg_venue: 'Место и адрес',
@@ -1035,6 +1039,7 @@ const dict = {
     tg_couple: 'Kuyov va kelin',
     fld_groom: 'Kuyov',
     fld_bride: 'Kelin',
+    tg_couple2: 'Ikkinchi juftlik · qosh toy',
     fld_invite_text: 'Taklifnoma matni',
     tg_datetime: 'Sana va vaqt',
     tg_venue: 'Manzilgoh va manzil',

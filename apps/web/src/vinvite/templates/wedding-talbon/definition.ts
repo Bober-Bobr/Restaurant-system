@@ -17,6 +17,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 const groups: TemplateFieldGroup[] = [
   { key: 'couple', labelKey: 'tg_couple', icon: '💍', section: 'top' },
+  { key: 'couple2', labelKey: 'tg_couple2', icon: '💞', section: 'couple' },
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'top' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'details' },
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'brand' },
@@ -36,6 +37,17 @@ const fields: TemplateField[] = [
   { key: 'brideFull', path: 'couple.brideFull', type: 'localized-text', group: 'couple', labelKey: 'fld_name' },
   { key: 'groomPhoto', path: 'couple.groomPhoto', type: 'image', group: 'couple', labelKey: 'fld_photo' },
   { key: 'bridePhoto', path: 'couple.bridePhoto', type: 'image', group: 'couple', labelKey: 'fld_photo' },
+
+  // A DOUBLE WEDDING — qosh toy, two couples married in one evening. All of it
+  // optional, asked for groom first like the pair above, and the portraits are
+  // offered because that section IS the two photographs: a second couple with
+  // no faces in it would read as an omission rather than a choice.
+  { key: 'groom2', path: 'couple.groom2', type: 'localized-text', group: 'couple2', labelKey: 'fld_groom' },
+  { key: 'bride2', path: 'couple.bride2', type: 'localized-text', group: 'couple2', labelKey: 'fld_bride' },
+  { key: 'groomFull2', path: 'couple.groomFull2', type: 'localized-text', group: 'couple2', labelKey: 'fld_name' },
+  { key: 'brideFull2', path: 'couple.brideFull2', type: 'localized-text', group: 'couple2', labelKey: 'fld_name' },
+  { key: 'groomPhoto2', path: 'couple.groomPhoto2', type: 'image', group: 'couple2', labelKey: 'fld_photo' },
+  { key: 'bridePhoto2', path: 'couple.bridePhoto2', type: 'image', group: 'couple2', labelKey: 'fld_photo' },
 
   { key: 'occasion', path: 'invite.occasion', type: 'localized-text', group: 'invite', labelKey: 'fld_kicker' },
   { key: 'kicker', path: 'invite.kicker', type: 'localized-text', group: 'invite', labelKey: 'fld_sub' },
@@ -87,6 +99,14 @@ const defaultConfig = {
     brideFull: { uz: 'Malika Karimova', ru: 'Малика Каримова', en: 'Malika Karimova' },
     groomPhoto: '',
     bridePhoto: '',
+    // Empty by default: a qosh toy is the exception, and a sample second pair
+    // would have to be deleted by everybody else.
+    groom2: {},
+    bride2: {},
+    groomFull2: {},
+    brideFull2: {},
+    groomPhoto2: '',
+    bridePhoto2: '',
   },
   invite: {
     occasion: { uz: 'Talbon marosimi', ru: 'Талбон', en: 'Talbon celebration' },

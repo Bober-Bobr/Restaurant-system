@@ -38,9 +38,13 @@ function markup(src: string): string {
  * Templates name them in two ways — `data-bind="groomName"` on a plain span,
  * and `data-name="groom"` on the four newest, whose hero rebuilds each name as
  * individual letter spans. Both are the same decision.
+ *
+ * The trailing `2?` picks up a DOUBLE WEDDING's second pair, which is the same
+ * decision again: four names on the page is four chances to print the bride
+ * first, and the second pair is the one nobody looks at twice.
  */
 function nameRun(src: string): ('groom' | 'bride')[] {
-  return [...markup(src).matchAll(/data-(?:bind|name)="(groom|bride)(?:Name|Full)?"/g)]
+  return [...markup(src).matchAll(/data-(?:bind|name)="(groom|bride)(?:Name|Full)?2?"/g)]
     .map((m) => m[1] as 'groom' | 'bride');
 }
 
@@ -78,7 +82,9 @@ describe.each(WEDDINGS.map((t) => [t.id] as const))('%s', (id) => {
    * a different thing wearing the same name.
    */
   const joins = [
-    ...[...src.matchAll(/var\s+couple(?:Full)?\s*=\s*([^;]+);/g)].map((m) => m[1]),
+    // `pair2` / `pairFull2` are the second couple of a double wedding, joined
+    // exactly as the first is and just as easy to put back the wrong way round.
+    ...[...src.matchAll(/var\s+(?:couple|pair)(?:Full)?2?\s*=\s*([^;]+);/g)].map((m) => m[1]),
     ...[...src.matchAll(/document\.title\s*=\s*([^;]+);/g)].map((m) => m[1]),
     ...[...src.matchAll(/var\s+title\s*=\s*([^;]+);/g)].map((m) => m[1]),
   ].filter((j) => /\bbride/.test(j) && /\bgroom/.test(j));
@@ -93,13 +99,13 @@ describe.each(WEDDINGS.map((t) => [t.id] as const))('%s', (id) => {
     // old way round underneath it. That is not hypothetical: it is exactly what
     // the first version of this check did.
     const wrong = joins.filter((expr) => {
-      const cat = /\b(groom|bride)(?:Full)?\s*\+[^+]*\+\s*(groom|bride)(?:Full)?\b/.exec(expr);
+      const cat = /\b(groom|bride)(?:Full)?2?\s*\+[^+]*\+\s*(groom|bride)(?:Full)?2?\b/.exec(expr);
       return cat ? cat[1] !== 'groom' : false;
     });
     expect(wrong, 'these join the two names bride-first').toEqual([]);
 
     // And the join has to be found at all, or the check above is vacuous.
-    const joined = joins.filter((expr) => /\b(?:groom|bride)(?:Full)?\s*\+[^+]*\+\s*(?:groom|bride)(?:Full)?\b/.test(expr));
+    const joined = joins.filter((expr) => /\b(?:groom|bride)(?:Full)?2?\s*\+[^+]*\+\s*(?:groom|bride)(?:Full)?2?\b/.test(expr));
     expect(joined.length, 'no expression joins the two names — has the shape changed?')
       .toBe(joins.length);
   });
@@ -117,7 +123,13 @@ describe('the builder asks in the same order it prints', () => {
   for (const tpl of WEDDINGS) {
     it(tpl.id, () => {
       const paths = tpl.fields.map((f) => f.path);
-      for (const pair of [['couple.groom', 'couple.bride'], ['couple.groomFull', 'couple.brideFull']]) {
+      for (const pair of [
+        ['couple.groom', 'couple.bride'],
+        ['couple.groomFull', 'couple.brideFull'],
+        // The double wedding's second pair, asked for in the same order.
+        ['couple.groom2', 'couple.bride2'],
+        ['couple.groomFull2', 'couple.brideFull2'],
+      ]) {
         const [g, b] = pair.map((p) => paths.indexOf(p));
         if (g === -1 || b === -1) continue;
         expect(g, `${pair[1]} is asked for before ${pair[0]}`).toBeLessThan(b);

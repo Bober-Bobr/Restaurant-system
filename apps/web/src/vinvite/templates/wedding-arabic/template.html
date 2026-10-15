@@ -1113,6 +1113,44 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
 /* Never let a luxury button exceed its container, whatever the label. */
 .btn-luxury { max-width: 100%; }
 
+/* ==========================================================================
+   A SECOND COUPLE — double weddings
+   --------------------------------------------------------------------------
+   Two pairs married in one evening. Every element belonging to the second
+   couple carries `.duo` and is HIDDEN until the boot finds a name for it and
+   puts `has-duo` on <html> — so an invitation with the fields empty is
+   byte-identical to what it was before they existed.
+
+   `display: revert` rather than a value per site: the clusters are an <h1>,
+   a <span> inside a running line and a <div>, and one rule has to put each
+   back to ITS own default instead of making all three blocks.
+
+   The second pair is set in the SAME type as the first — neither couple is a
+   footnote at their own wedding — so the display sizes come down a step
+   instead, because four names is twice the type in the same width.
+   ========================================================================== */
+.duo { display: none; }
+html.has-duo .duo { display: revert; }
+html.has-duo .hero-title { font-size: clamp(2.1rem, 7vw, 4.4rem); }
+html.has-duo .invite-names { font-size: clamp(1.7rem, 5.2vw, 3rem); }
+/* The two pairs are separated by a rule rather than by another ampersand: an
+   ampersand already joins each couple, and a second one reads as one list of
+   four people. */
+.hero-title.duo, .invite-names.duo { position: relative; margin-top: 0.5em; padding-top: 0.42em; }
+.hero-title.duo::before, .invite-names.duo::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: clamp(44px, 12vw, 90px); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+/* Inline places — the gate's eyebrow, the envelope calligraphy, the footer —
+   take the second pair as one already-joined string, so there is no dangling
+   separator when only one of the two names has been typed. */
+.duo-sep { padding: 0 0.4em; color: var(--gold); }
+/* The folded letter inside the envelope is the one inline place where the
+   second pair takes a line of its own — the paper is narrow and four names
+   across it do not fit. */
+html.has-duo .p-names .duo { display: block; font-size: 0.8em; }
+
 @media (max-height: 640px) {
   .intro-scene { width: min(70vw, 360px); }
   .intro-label h2 { font-size: 1.2rem; }
@@ -1160,7 +1198,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
 <div class="intro" id="intro" data-vi-intro>
   <div class="intro-inner">
     <div class="intro-label">
-      <span class="eyebrow"><span data-bind="groomName">Зайд</span> &amp; <span data-bind="brideName">Лейла</span></span>
+      <span class="eyebrow"><span data-bind="groomName">Зайд</span> &amp; <span data-bind="brideName">Лейла</span><span class="duo"><span class="duo-sep" aria-hidden="true">·</span><span data-bind="couple2Line"></span></span></span>
       <h2 data-t="letterArrived">Вам письмо</h2>
     </div>
 
@@ -1199,7 +1237,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
               <path d="M526 360 l6 -6 l6 6 l-6 6 z"/>
             </g>
           </svg>
-          <p class="env-callig"><span data-bind="groomName">Зайд</span> ♡ <span data-bind="brideName">Лейла</span></p>
+          <p class="env-callig"><span data-bind="groomName">Зайд</span> ♡ <span data-bind="brideName">Лейла</span><span class="duo"><span class="duo-sep" aria-hidden="true">·</span><span data-bind="couple2Line"></span></span></p>
         </div>
 
         <div class="env-flap" id="envFlap">
@@ -1237,7 +1275,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
         <div class="paper-half top">
           <div class="paper-content">
             <span class="p-arabic" lang="ar">دعوة زفاف</span>
-            <span class="p-names"><span data-bind="groomName">Зайд</span><br>&amp; <span data-bind="brideName">Лейла</span></span>
+            <span class="p-names"><span data-bind="groomName">Зайд</span><br>&amp; <span data-bind="brideName">Лейла</span><span class="duo" data-bind="couple2Line"></span></span>
             <span class="p-heart">♡</span>
           </div>
         </div>
@@ -1314,6 +1352,11 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
       <span class="mask"><span class="amp">&amp;</span></span>
       <span class="mask"><span data-bind="brideName">Лейла</span></span>
     </h1>
+    <h1 class="hero-title duo">
+      <span class="mask"><span data-bind="groomName2"></span></span>
+      <span class="mask"><span class="amp" data-bind="amp2">&amp;</span></span>
+      <span class="mask"><span data-bind="brideName2"></span></span>
+    </h1>
     <div class="separator hero-sep" aria-hidden="true"><span class="gem"></span></div>
     <p class="hero-desc" data-bind="heroDate">15 ноября · 18:30</p>
     <a class="btn-luxury hero-cta" id="viewInvitation" data-t="openOurInvitation">Откройте приглашение</a>
@@ -1367,6 +1410,11 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
       <span data-bind="groomName">Зайд</span>
       <span class="invite-heart" aria-hidden="true">♡</span>
       <span data-bind="brideName">Лейла</span>
+    </h2>
+    <h2 class="invite-names duo">
+      <span data-bind="groomName2"></span>
+      <span class="invite-heart" aria-hidden="true">♡</span>
+      <span data-bind="brideName2"></span>
     </h2>
 
     <div class="invite-datetime">
@@ -1531,7 +1579,7 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
   </svg>
   <p class="arabic-line reveal" lang="ar">بارك الله لهما</p>
   <p class="thanks reveal" style="--reveal-delay: 0.15s" data-t="thankYouLong">Спасибо, что разделяете с нами нашу историю.</p>
-  <p class="names reveal" style="--reveal-delay: 0.3s"><span data-bind="groomName">Зайд</span> &amp; <span data-bind="brideName">Лейла</span></p>
+  <p class="names reveal" style="--reveal-delay: 0.3s"><span data-bind="groomName">Зайд</span> &amp; <span data-bind="brideName">Лейла</span><span class="duo"><span class="duo-sep" aria-hidden="true">·</span><span data-bind="couple2Line"></span></span></p>
 </footer>
 
 <footer id="vconnect">
@@ -1670,9 +1718,26 @@ function loadImg(el, src, alt){
    ============================================================ */
 function bindTexts(){
   var groom = loc(cfg('couple.groom','')), bride = loc(cfg('couple.bride',''));
+  /* A SECOND couple — a double wedding, two pairs married the same evening.
+     Optional: with both fields empty `pair2` is '', nothing below adds a
+     separator and `has-duo` is never set, so the page is what it always was.
+
+     The pairs are joined by a MIDDOT and never by a second ampersand: the
+     ampersand already means "these two are marrying each other", and using it
+     again turns four names into one list of four people. */
+  var groom2 = loc(cfg('couple.groom2','')), bride2 = loc(cfg('couple.bride2',''));
+  var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+  var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+  var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
   var map = {
     groomName: groom,
     brideName: bride,
+    groomName2: groom2,
+    brideName2: bride2,
+    /* The second pair's ampersand is BOUND rather than literal, so a pair with
+       only one name typed so far does not print a dangling '&'. */
+    amp2: (groom2 && bride2) ? '&' : '',
+    couple2Line: pair2,
     heroDate: fmtWeekday() + ' · ' + fmtDateLong() + ' · ' + fmtTimeShort(),
     paperDate: fmtDateLong(),
     dateFull: fmtWeekday() + ', ' + fmtDateLong(),
@@ -1696,7 +1761,12 @@ function bindTexts(){
   var envMono = $('#envMonogram');
   if (envMono) envMono.textContent = initials;
   $('#sealMonogram').textContent = initials;
-  document.title = (groom && bride) ? (groom + ' & ' + bride) : 'Invitation';
+  /* One class is what reveals every `.duo` element on the page, rather than
+     each of the six sites deciding for itself. Written as add/remove rather
+     than toggle(force) so it behaves the same in the build's DOM shim. */
+  if (pair2) document.documentElement.classList.add('has-duo');
+  else document.documentElement.classList.remove('has-duo');
+  document.title = bothPairs || 'Invitation';
   document.documentElement.lang = lang;
 
   var logo = $('#vconnectLogo');
