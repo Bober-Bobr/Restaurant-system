@@ -13,6 +13,7 @@ import { menuScopeOfRole } from '../utils/menuScope';
 import { CATEGORY_LABEL_KEY } from '../utils/menuCategories';
 import { dishName } from '../utils/menuI18n';
 import { groupKitchenDishes, servedPortions, type DishGroup } from '../utils/kitchenDishes';
+import { diningDishRows } from '../utils/eventPdf';
 import {
   EMPTY_FILTERS, isFiltering, visibleEvents, type KitchenFilters, type KitchenSort,
 } from '../utils/kitchenEvents';
@@ -114,6 +115,10 @@ export const EmployeeEventsPage = () => {
       guestCount: event.guestCount,
       selectedItems,
       menuItems,
+      // A food-service booking's dishes are on its order snapshot, not among
+      // its menu selections — without this the kitchen's own copy of the sheet
+      // for a party eating a la carte has no food on it.
+      orderedDishes: diningDishRows(event, menuItems),
       pricing: { subtotalCents: 0, serviceFeeCents: 0, taxCents: 0, perGuestCents: 0, totalCents: 0 },
       locale,
       // The employee export carries the restaurant's own brand like every

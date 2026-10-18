@@ -535,6 +535,12 @@ const resources = {
     sbo_sent: 'Order placed for #{number} — {portions} portions.',
     sbo_failed: 'The order could not be placed: {message}',
     sbo_guests: 'Guests',
+    // The cart button and the panel it opens, and the rail that navigates the
+    // menu — the basket used to be a block above the dishes and took a third
+    // of the sheet with it.
+    sbo_cart: 'Order',
+    sbo_categories: 'Categories',
+    sbo_close: 'Keep choosing',
     fm_picked_tables: 'Picked: {count} ({labels}). Press a table again to let it go.',
     fm_merge: 'Merge tables',
     fm_merge_hint: 'Tap the tables to push together. The merged table takes their places and seats the sum of their seats.',
@@ -1984,6 +1990,9 @@ const resources = {
     sbo_sent: 'Заказ оформлен для №{number} — порций: {portions}.',
     sbo_failed: 'Не удалось оформить заказ: {message}',
     sbo_guests: 'Гостей',
+    sbo_cart: 'Заказ',
+    sbo_categories: 'Категории',
+    sbo_close: 'Выбирать дальше',
     fm_picked_tables: 'Выбрано: {count} ({labels}). Нажмите на стол снова, чтобы снять выбор.',
     fm_merge: 'Объединить столы',
     fm_merge_hint: 'Отметьте столы, которые нужно сдвинуть вместе. Объединённый стол займёт их место, а его вместимость — сумма их мест.',
@@ -3431,6 +3440,9 @@ const resources = {
     sbo_sent: '№{number} uchun buyurtma berildi — porsiya: {portions}.',
     sbo_failed: 'Buyurtma berilmadi: {message}',
     sbo_guests: 'Mehmonlar',
+    sbo_cart: 'Buyurtma',
+    sbo_categories: 'Turkumlar',
+    sbo_close: 'Tanlashni davom etish',
     fm_picked_tables: 'Tanlangan: {count} ({labels}). Bekor qilish uchun stolni yana bosing.',
     fm_merge: 'Stollarni birlashtirish',
     fm_merge_hint: 'Birga suriladigan stollarni belgilang. Birlashgan stol ularning joyini oladi, orindiqlari esa yigindisi boladi.',

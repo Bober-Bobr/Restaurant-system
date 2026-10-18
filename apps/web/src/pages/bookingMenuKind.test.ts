@@ -163,12 +163,16 @@ describe('the dish basket', () => {
     expect(sheet).toMatch(/Math\.min\(MAX_PORTIONS, Number\(digits\)\)/);
   });
 
-  it('the basket and its total sit ABOVE the menu', () => {
-    // On a long menu the total would otherwise be off the screen while the
-    // dishes are being picked.
-    // By the CLASS attributes, not by any mention: `['sbo-menu']` is also the
+  it('the total is in the FOOTER, so a long menu cannot scroll it away', () => {
+    // It used to be a basket block above the dishes, which kept the total on
+    // screen and cost the menu a third of the sheet. The footer is a row of
+    // the sheet's own grid, so it is on screen without taking the menu's room.
+    // By the CLASS attribute, not by any mention: `['sbo-menu']` is also the
     // menu query's key, which appears near the top of the file.
-    expect(sheet.indexOf('className="sbo-basket"')).toBeLessThan(sheet.indexOf('className="sbo-menu"'));
+    expect(sheet.indexOf('className="sbo-menu"')).toBeLessThan(sheet.indexOf('<footer className="sbo-foot">'));
+    const foot = sheet.slice(sheet.indexOf('<footer className="sbo-foot">'));
+    expect(foot).toContain('formatSum(total)');
+    expect(foot).toContain("t('sbo_portions', { count: portions })");
   });
 
   it('it wears the floor\'s dark green, not the supervisor app\'s own look', () => {

@@ -44,6 +44,61 @@ function buildTableDishes(
   ];
 }
 
+/**
+ * The category a food-service line falls under when its dish cannot be found.
+ *
+ * It is written as a CATEGORY so the server groups it like any other: the
+ * exporter translates `category.toLowerCase()`, and `other_dishes` is a key it
+ * already has (it captions the second table), so the block reads "Other dishes"
+ * in all three languages instead of `OTHER_DISHES`.
+ */
+const UNKNOWN_DISH_CATEGORY = 'OTHER_DISHES';
+
+/**
+ * The dishes of a FOOD-SERVICE booking, as rows for the printed sheet.
+ *
+ * A party eating à la carte has no table package and no kiosk extras — which is
+ * every source the banquet payload below is built from — so its sheet came out
+ * with the dish table empty. That is the whole of "the dishes by category and
+ * their quantities are not displayed" after an order taken on the floor map:
+ * those dishes live on `menuConfig.diningOrder`, and nothing read them.
+ *
+ * The NAME is the order's own snapshot, because that is a record of what was
+ * agreed and a dish renamed since must not rewrite it. The CATEGORY is looked
+ * up live from the dish table, because the snapshot has never carried one — and
+ * a line whose dish has since been deleted, or switched off for this system and
+ * therefore absent from the list, still prints, under the fallback heading. The
+ * kitchen needs the dish far more than it needs the right heading over it.
+ */
+export function diningDishRows(
+  event: Pick<Event, 'menuConfig'>,
+  menuItems: MenuItem[],
+): { name: string; category: string; qty: number }[] {
+  const order = event.menuConfig?.diningOrder;
+  if (!order) return [];
+  const byId = new Map(menuItems.map((item) => [item.id, item]));
+  return order.lines
+    .filter((line) => line.quantity > 0)
+    .map((line) => ({
+      name: line.name,
+      category: (line.menuItemId ? byId.get(line.menuItemId)?.category : undefined) ?? UNKNOWN_DISH_CATEGORY,
+      qty: line.quantity,
+    }));
+}
+
+/**
+ * What a food-service order came to, from its own lines.
+ *
+ * Read from the lines rather than the `totalCents` stored beside them, for the
+ * reason `diningPortions` is: it is one free-form JSON column, and a figure that
+ * its own lines do not add up to must not be the one on the invoice.
+ */
+export function diningTotalCents(event: Pick<Event, 'menuConfig'>): number {
+  const order = event.menuConfig?.diningOrder;
+  if (!order) return 0;
+  return order.lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0);
+}
+
 // Build the payload POSTed to /public/export/pdf (and /excel) to regenerate the
 // banquet summary for an existing event from its stored menuConfig.
 export function buildEventExportPayload(
@@ -82,6 +137,11 @@ export function buildEventExportPayload(
       )
     : [];
 
+  // A food-service booking's dishes and money, which come from the order
+  // snapshot rather than from a table package it does not have.
+  const orderedDishes = diningDishRows(event, menuItems);
+  const diningCents = diningTotalCents(event);
+
   // Pricing rebuilt from stored data (no ad-hoc discount is persisted).
   const menuSubtotalCents = menuItems.reduce(
     (sum, item) => sum + item.priceCents * (selectedItems[item.id] ?? 0), 0,
@@ -90,7 +150,10 @@ export function buildEventExportPayload(
   // the rebuilt document has to price it the same way — see utils/tablePricing.
   const ratePerPerson = effectiveRatePerPerson(tableCategory, cfg?.removedPackageItemIds ?? []);
   const tableRateCents = tableCategory ? ratePerPerson * guestCount : 0;
-  const subtotalCents = menuSubtotalCents + tableRateCents;
+  // The order's own money is ADDED rather than substituted: a booking can hold
+  // both (a banquet whose host also ordered dishes for the pass), and a
+  // document that priced one of the two would be wrong about the evening.
+  const subtotalCents = menuSubtotalCents + tableRateCents + diningCents;
   const perGuestCents = guestCount > 0 ? Math.round(subtotalCents / guestCount) : subtotalCents;
 
   // Optional children's table add-on.
@@ -133,6 +196,7 @@ export function buildEventExportPayload(
     selectedItems,
     menuItems,
     includedDishes,
+    orderedDishes,
     pricing: {
       perGuestCents,
       originalPerGuestCents: perGuestCents,

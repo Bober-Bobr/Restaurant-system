@@ -3945,3 +3945,44 @@ thing to check.
     families section shows four households.
 10. Switch languages on a double-wedding invitation: both pairs follow, and the
     word between each pair is the one that language uses.
+
+---
+
+## §79 — A food-service booking's dishes on the printed sheet, and the order sheet redrawn
+
+**No migration.** Both halves are Small Banquets' food-service flow: the
+document a booking is downloaded as, and the screen the order is composed on.
+
+1. On the floor map, take a booking, choose **Food service**, order several
+    dishes across several categories, and place it.
+2. Open that booking on the **Events page** and download its **PDF**: every
+    dish must be there, under its own category heading, with the portions that
+    were ordered. Before this it printed the "Name | Quantity (pcs)" header and
+    nothing under it.
+3. The served courses (hot appetizers, first, main, third) lead the document in
+    their own table, exactly as they do for a banquet; everything else follows.
+4. The portions are the ones ORDERED — a hot appetizer ordered ten times says
+    ten, not one per guest. The total at the foot is the order's own, not zero.
+5. Download the same booking from the **kitchen's** page (SMALL_KITCHEN): the
+    dishes must be on that copy too. It builds its own request body.
+6. A **banquet** booking's PDF must be byte-for-byte what it was: package
+    dishes, courses in serving order, paid Additional dishes inside their own
+    category block.
+7. Rename a dish in the menu, then download an older food-service booking: the
+    sheet keeps the name **as ordered**. Switch a dish off for Small Banquets
+    and download again: the dish still prints, under "Other dishes".
+8. Compose a new order on the map: the **basket block above the menu is gone**,
+    and the dishes fill the sheet. The order's portions and total are in the
+    footer, which must stay on screen however far the menu is scrolled.
+9. The **cart button is in the bottom-left corner**. Pressing it shows every
+    chosen dish with its portions, the note for the kitchen, and the total;
+    Escape and "Keep choosing" close it and the order survives both.
+10. The **categories** run down the left on a desktop. Pressing one scrolls the
+    menu to it and the pressed row stays marked as you scroll on; a category
+    you have taken portions from carries the count.
+11. On a **tablet (860px)** the categories become a scrolling row above the
+    dishes, and on a **phone (390px)** the sheet fills the screen, the cart
+    becomes a full-width bar and the two buttons share the row beneath it —
+    neither wrapping to two lines.
+12. Search for a dish: only matching categories remain in the rail, and the
+    menu jumps back to the top rather than leaving you mid-list.

@@ -30,6 +30,18 @@ interface SummaryData {
   selectedItems: { [itemId: string]: number };
   menuItems: MenuItem[];
   includedDishes?: { name: string; category: string; categoryLabel?: string; servings?: number }[];
+  /**
+   * The dishes of a FOOD-SERVICE order on this booking, with their portions.
+   *
+   * A party eating à la carte has no table package and no kiosk extras, so
+   * `includedDishes` and `selectedItems` are both empty for it and its sheet
+   * came out with no dishes on it at all. These rows are grouped into the same
+   * category blocks as everything else — a cook reads one heading per category
+   * whichever kind of evening it is — and carry their own portion counts, so
+   * `servedPortions`' per-guest rule does not apply: a party that asked for
+   * forty portions asked for forty.
+   */
+  orderedDishes?: { name: string; category: string; qty: number }[];
   // Optional children's table add-on.
   childrenTableName?: string;
   childrenCount?: number;
@@ -157,6 +169,39 @@ export function splitServedBlocks(blocks: CategoryBlock[]): { served: CategoryBl
     .filter((b): b is CategoryBlock => !!b && b.rows.length > 0);
   const rest = blocks.filter((b) => !isServedCategory(b.category) && b.rows.length > 0);
   return { served, rest };
+}
+
+/**
+ * Every dish on one booking, arranged into the document's two tables.
+ *
+ * The three sources a booking can carry its food in, in one place: the table
+ * package's included dishes, the paid Additional dishes the guest ticked in the
+ * kiosk, and a FOOD-SERVICE order composed on the floor map. The third was
+ * missing, and a party eating à la carte has only the third — so its sheet came
+ * out with the dish table empty, which is the whole of "the dishes by category
+ * and their quantities are not displayed".
+ *
+ * It is exported and pure because it is the arrangement, not the drawing: the
+ * rest of this file is PDFKit calls that no test can read back.
+ */
+export function documentDishTables(
+  data: Pick<SummaryData, 'includedDishes' | 'orderedDishes' | 'selectedItems' | 'menuItems' | 'guestCount'>,
+  labelFor: (category: string) => string,
+): { served: CategoryBlock[]; rest: CategoryBlock[] } {
+  const selected = data.selectedItems ?? {};
+  const additional = [
+    ...data.menuItems
+      .filter((item) => (selected[item.id] ?? 0) > 0)
+      .map((item) => ({ name: item.name, category: item.category, qty: selected[item.id]! })),
+    // The order's dishes go in beside the paid Additional ones: both are "what
+    // was asked for on top of the package", and both already carry the portions
+    // they were asked for in, so `servedPortions`' per-guest rule — which is
+    // about what a PACKAGE declares — must not be applied to them.
+    ...(data.orderedDishes ?? []),
+  ];
+  return splitServedBlocks(groupDishesByCategory(
+    data.includedDishes ?? [], additional, data.guestCount, labelFor,
+  ));
 }
 
 function resolveUploadPath(url: string | null | undefined): string | null {
@@ -355,17 +400,7 @@ export async function generateSummaryPdf(data: SummaryData): Promise<Buffer> {
       try { return translate(key, data.locale); } catch { return category; }
     };
 
-    const selectedMenuItems = data.menuItems.filter((item) => data.selectedItems[item.id]! > 0);
-    const { served, rest } = splitServedBlocks(groupDishesByCategory(
-      data.includedDishes ?? [],
-      selectedMenuItems.map((item) => ({
-        name: item.name,
-        category: item.category,
-        qty: data.selectedItems[item.id]!,
-      })),
-      data.guestCount,
-      labelFor,
-    ));
+    const { served, rest } = documentDishTables(data, labelFor);
 
     let shade = false;
     const renderBlocks = (caption: string | null, blocks: CategoryBlock[]) => {

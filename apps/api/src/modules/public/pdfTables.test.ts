@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SERVED_CATEGORIES,
+  documentDishTables,
   groupDishesByCategory,
   isServedCategory,
   servedPortions,
@@ -175,6 +176,73 @@ describe('what is served during the evening goes in its own table, first', () =>
 
   it('an empty booking produces neither table', () => {
     const { served, rest } = splitServedBlocks(groupDishesByCategory([], [], 0, label));
+    expect(served).toEqual([]);
+    expect(rest).toEqual([]);
+  });
+});
+
+/**
+ * A FOOD-SERVICE booking's dishes — a Small Banquets party eating à la carte,
+ * whose order was composed on the floor map.
+ *
+ * It has no table package and no kiosk extras, which are the only two sources
+ * the document was built from, so its sheet printed no food at all: the dish
+ * table was empty on exactly the document the kitchen needs most.
+ */
+describe('a party eating a la carte has its dishes on the sheet', () => {
+  const menuItem = (id: string, name: string, category: string) =>
+    ({ id, name, category, priceCents: 1000 });
+
+  it('the ordered dishes are grouped by category, with their portions', () => {
+    const { served, rest } = documentDishTables({
+      includedDishes: [],
+      selectedItems: {},
+      menuItems: [],
+      guestCount: 40,
+      orderedDishes: [
+        { name: 'Plov', category: 'SECOND_COURSE', qty: 40 },
+        { name: 'Achichuk', category: 'SALADS_OIL', qty: 8 },
+        { name: 'Non', category: 'PASTRY', qty: 40 },
+      ],
+    }, label);
+    // The served course leads, as it does for a banquet: one arrangement, so
+    // the two kinds of evening cannot read differently on paper.
+    expect(served.map((b) => b.category)).toEqual(['SECOND_COURSE']);
+    expect(served[0]!.rows).toEqual([{ name: 'Plov', category: 'SECOND_COURSE', qty: '40' }]);
+    expect(rest.map((b) => b.category)).toEqual(['SALADS_OIL', 'PASTRY']);
+    expect(rest.flatMap((b) => b.rows.map((r) => r.qty))).toEqual(['8', '40']);
+  });
+
+  it('the portions are the ones ORDERED, never recomputed per guest', () => {
+    // `servedPortions` plates a hot appetizer per head because that is what a
+    // package's `servings` cannot say. An order says it outright: a host who
+    // asked for ten asked for ten, at a party of forty.
+    const { served } = documentDishTables({
+      includedDishes: [], selectedItems: {}, menuItems: [], guestCount: 40,
+      orderedDishes: [{ name: 'Kebab', category: 'HOT_APPETIZERS', qty: 10 }],
+    }, label);
+    expect(served[0]!.rows[0]!.qty).toBe('10');
+  });
+
+  it('and a booking carrying BOTH prints both, each dish once', () => {
+    // A banquet whose host also ordered dishes for the pass. Substituting one
+    // for the other would be a document that is wrong about the evening.
+    const { served, rest } = documentDishTables({
+      includedDishes: [dish('Plov', 'SECOND_COURSE', 1)],
+      selectedItems: { m1: 40 },
+      menuItems: [menuItem('m1', 'Caesar', 'SALADS_OIL')],
+      guestCount: 40,
+      orderedDishes: [{ name: 'Wine', category: 'ALCOHOL', qty: 12 }],
+    }, label);
+    const names = [...served, ...rest].flatMap((b) => b.rows.map((r) => r.name));
+    expect(names.sort()).toEqual(['Caesar', 'Plov', 'Wine']);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('a booking with nothing on it is still neither table', () => {
+    const { served, rest } = documentDishTables(
+      { includedDishes: [], selectedItems: {}, menuItems: [], guestCount: 0 }, label,
+    );
     expect(served).toEqual([]);
     expect(rest).toEqual([]);
   });
