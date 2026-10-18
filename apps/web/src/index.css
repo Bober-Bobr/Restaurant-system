@@ -805,13 +805,31 @@
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
-.adm-page-in { animation: admPageIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* `backwards`, NOT `both` — and that is a layout rule, not a taste in motion.
+   `both` keeps the LAST keyframe applied for ever, and the last keyframe here
+   sets `transform`. A keyframe's `transform: none` computes to the identity
+   MATRIX, not to `none`, so every page wrapped in this class kept a transform
+   on it permanently — and an element with a transform is a containing block for
+   `position: fixed` descendants. So no full-screen overlay inside a page was
+   actually fixed to the VIEWPORT: `inset: 0` sized it to the page instead.
+   Measured on the Small Banquets order sheet at 390px: a dialog 5312px tall
+   centring its card 2400px down the page, so a phone showed the dark backdrop
+   and nothing else — the reported black screen. It was invisible on a desktop
+   only because the pages there were short enough for the card to land near the
+   viewport; the same harness at 1280px with a long page hid it too.
+   `backwards` keeps the half the animation needs — the from-state during the
+   delay, so nothing flashes before it starts — and the end state is the
+   element's natural one anyway, so nothing is lost by not pinning it. */
+.adm-page-in { animation: admPageIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
 /* Staggered entrance for a list or card grid: put `.adm-stagger` on the
    container and its children come in one after another. Capped at 12 because
    past roughly half a second the delay stops reading as choreography and starts
    reading as the page being slow — later children simply animate with the 12th. */
-.adm-stagger > * { animation: admPageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* `backwards` for the reason above — these carry a delay, which is exactly what
+   the backwards half is for, and a card that kept a transform for ever is a
+   containing block for anything fixed inside it. */
+.adm-stagger > * { animation: admPageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .adm-stagger > *:nth-child(1)  { animation-delay: 0.00s; }
 .adm-stagger > *:nth-child(2)  { animation-delay: 0.04s; }
 .adm-stagger > *:nth-child(3)  { animation-delay: 0.08s; }

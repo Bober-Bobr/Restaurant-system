@@ -301,7 +301,11 @@ describe('the categories are a rail, and pressing one SCROLLS', () => {
     expect(phone).toMatch(/scroll-snap-type: x proximity/);
     // The sheet fills the screen there: a dimmed border around a dialog at
     // 390px is a strip of nothing taken out of the menu.
-    expect(phone).toMatch(/\.sbo-sheet \{ height: 100%/);
+    expect(phone).toMatch(/\.sbo-sheet \{[\s\S]{0,80}height: 100%/);
+    // And OPAQUE there, because at full screen it is not a floating panel any
+    // more: the translucent card surface let the page underneath show faintly
+    // through the dish grid, which on a dark ground reads as a fault.
+    expect(phone).toMatch(/\.sbo-sheet \{[\s\S]{0,200}background: var\(--adm-bg\) !important/);
     // And the panel is pinned to both edges, or a 520px panel hangs off a
     // 390px screen.
     expect(phone).toMatch(/\.sbo-cart-panel \{ left: 0; right: 0; width: auto;/);

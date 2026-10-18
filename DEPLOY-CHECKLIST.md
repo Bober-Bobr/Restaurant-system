@@ -3986,3 +3986,32 @@ document a booking is downloaded as, and the screen the order is composed on.
     neither wrapping to two lines.
 12. Search for a dish: only matching categories remain in the rail, and the
     menu jumps back to the top rather than leaving you mid-list.
+
+---
+
+## §80 — The black screen on a phone: a page entrance that was a containing block
+
+**No migration.** One line of shared CSS, so it reaches **every admin layout**:
+`.adm-page-in` and `.adm-stagger > *` now fill `backwards` instead of `both`.
+With `both` they kept a keyframe transform for ever, and an element with a
+transform is the containing block for `position: fixed` children — so a
+full-screen overlay inside any page was sized to the PAGE, not the screen.
+
+1. On a phone, take a booking on the Small Banquets map, choose **Food
+    service**: the dish panel must fill the screen. Before this it was a black
+    screen — the dialog was as tall as the page and its card sat far below the
+    fold.
+2. Do it again with the map **scrolled down**: the panel still covers the
+    screen, and the map behind does not move while you scroll the dish list.
+3. Close the panel: the page is where you left it and scrolls normally again.
+4. At full screen the panel is **opaque** — no page text showing through the
+    dish grid or the cart bar.
+5. **Check the other overlays in the admin apps**, which the same CSS change
+    reaches: the reschedule dialog on the Events page, the kiosk's full-screen
+    choosers, the photo lightbox and the Small Banquets map's own dialogs. Each
+    must sit over the viewport on a long, scrolled page.
+6. The route-change entrance itself must look unchanged: open each admin app
+    and move between pages — the page still fades up by 14px, with no flash
+    before it starts and nothing left half-transparent afterwards.
+7. Card grids that stagger in (the dashboards) likewise: each card still
+    arrives in turn and ends fully opaque.

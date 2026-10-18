@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { menuService } from '../services/menu.service';
 import { getPhotoUrl } from '../utils/photoUrl';
@@ -264,6 +265,21 @@ export const SmallBanquetOrderSheet = ({
    */
   const activeCategory = active ?? grouped[0]?.category ?? null;
 
+  /**
+   * The page behind is held still for as long as the sheet is open.
+   *
+   * It covers the whole screen, and on a phone a scroll that runs off the end
+   * of the menu otherwise chains to the floor map underneath — so the map
+   * moves under a finger that is choosing dishes, and closing the sheet lands
+   * somewhere nobody navigated to. The previous value is restored rather than
+   * cleared, because this page is not the only thing that may have set it.
+   */
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
+
   // Escape closes the cart and nothing else. The sheet itself is left alone:
   // an order half composed must not be dismissed by the key that shuts a panel.
   useEffect(() => {
@@ -273,7 +289,26 @@ export const SmallBanquetOrderSheet = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [cartOpen]);
 
-  return (
+  /**
+   * THE SHEET IS PORTALLED TO THE BODY, and that is what makes it full-screen.
+   *
+   * It is rendered from the floor map, so in the tree it sits inside the
+   * supervisor layout's page wrapper — and any ancestor carrying a transform,
+   * a filter or `contain` becomes the containing block for a `position: fixed`
+   * child, which makes `inset: 0` mean "the size of the PAGE" rather than "the
+   * size of the screen". That is precisely what happened (see `.adm-page-in` in
+   * index.css): on a phone the dialog came out 5312px tall and centred its card
+   * far below the fold, so all anybody saw was the dark backdrop.
+   *
+   * The shared animation is fixed, so this is no longer the thing standing
+   * between the sheet and the screen. It stays because a full-screen dialog
+   * must not depend on what happens to be above it in the tree: the next
+   * ancestor to grow a transform would break it again, silently, and only on
+   * the long pages where it matters most. The palette travels with it —
+   * `.sb-floor` declares every `--adm-*` token itself rather than inheriting
+   * the section's, so nothing is lost by leaving the layout's scope.
+   */
+  return createPortal((
     <div className="sb-floor sbo-root" role="dialog" aria-modal="true" aria-label={t('sbo_title')}>
       <div className="sbo-sheet adm-card">
         <header className="sbo-head">
@@ -689,7 +724,15 @@ export const SmallBanquetOrderSheet = ({
           .sbo-root { padding: 0; }
           /* Full screen, squared off: at this width the dimmed border around a
              dialog is a strip of nothing taken out of the menu. */
-          .sbo-sheet { height: 100%; max-width: none; border-radius: 0 !important; }
+          /* OPAQUE at full screen. The adm-card surface is translucent, which is
+             right when it floats over a dimmed map and wrong when it IS the
+             screen: the page underneath showed faintly through the dish grid
+             and the cart bar, which on a dark ground reads as a rendering
+             fault rather than as depth. */
+          .sbo-sheet {
+            height: 100%; max-width: none; border-radius: 0 !important;
+            background: var(--adm-bg) !important;
+          }
           .sbo-body { grid-template-columns: minmax(0, 1fr); gap: 10px; }
           .sbo-side { grid-template-rows: auto auto; }
           .sbo-cats {
@@ -734,5 +777,5 @@ export const SmallBanquetOrderSheet = ({
         }
       `}</style>
     </div>
-  );
+  ), document.body);
 };
