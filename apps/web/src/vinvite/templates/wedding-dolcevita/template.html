@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Invitation</title>
+<!--__CONFIG__-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Hanken+Grotesk:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   LA DOLCE VITA — a wedding on the Amalfi Coast, set as a magazine
+   --------------------------------------------------------------------------
+   Identity : limestone paper, terracotta, cypress and one Mediterranean blue.
+              Bodoni for the type, a grotesque for the editorial metadata. The
+              page is laid out as an ISSUE — a masthead, a contents list, six
+              numbered chapters, picture credits under every plate.
+   Motion   : the hero film opens the issue and the cover type rises word by
+              word out of its mask as the shot settles · three distinct image
+              reveals, matched to the kind of picture (a widening letterbox for
+              landscapes, a rise for details, a pan for architecture) · a folio
+              follows the reader with the chapter and the page number · the day
+              is set as letterpress numerals · the journal is a contact strip
+              that scrolls sideways, pinned, driven by the page scroll · petals
+              bloom once, at the finale.
+   Structure: chapters, not blocks. Each is numbered, titled in Italian (the
+              design's conceit) and introduced by a translated eyebrow, so the
+              frame reads as a magazine in every language.
+   Contract : window.__CONFIG__ / __LANGS__ / __ORIGIN__ / __CONTACTS__ arrive
+              in <head>; live edits by postMessage; RSVP posts to the parent.
+   Assets   : bundled in apps/web/public/dolcevita/ and addressed through
+              __ORIGIN__ — the page runs on the opaque about:srcdoc origin and
+              cannot resolve a relative URL.
+
+   ── A NOTE ON CROPPING, which is what shaped every box on this page ───────
+   Every bundled plate is 1600x893 (16:9); the two portraits are 1200 wide.
+   `object-fit: cover` fills its box by throwing away whatever does not fit, so
+   a box whose proportions differ from the art's is a crop, and a desktop is
+   where that bites: it is the wide viewport, so a full-height section is a
+   much wider box than the picture in it.
+
+   Three rules follow, and they are why the ratios below are what they are:
+
+   · A FRAME THAT DOES NOT HAVE TO FILL THE SCREEN TAKES THE ART'S OWN RATIO.
+     The interlude, the wide ceremony plate and the journal's landscape frames
+     are 16/9, not 92svh, 21/9 and 16/10. Measured at 1920px the interlude was
+     a 1920x883 box holding a 16:9 frame — 2.17:1 against 1.78:1, so a third of
+     the picture's height was off screen before the parallax rig took its own
+     share.
+   · THE PARALLAX OVERSHOOT IS THE SMALLEST THAT HIDES THE EDGE. A layer that
+     travels has to be larger than its frame or the move exposes a seam, and
+     every percent of that is a permanent crop on top of the box's own. 6% a
+     side covers the ±2.2% these depths actually travel.
+   · WHERE A SECTION MUST FILL THE VIEWPORT the crop is unavoidable, so the
+     subject is placed instead: the hero, the finale and the chapter grounds
+     carry an `object-position` chosen for what is in the frame, and nothing is
+     scaled up on top of it.
+   ========================================================================== */
+
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --paper:#F2ECE2;
+  --paper-deep:#E8DFD0;
+  --ink:#24201B;
+  --ink-soft:#6A6157;
+  --rule:rgba(36,32,27,.18);
+  --terracotta:#A9533A;
+  --wine:#6B2B31;
+  --cypress:#2E3A2B;
+  --olive:#6E7148;
+  --sea:#1E3954;
+  --brass:#9C7E52;
+
+  /* BODONI MODA HAS NO CYRILLIC, and this product's two largest audiences
+     read Russian. A stack takes each glyph from the first family that has it,
+     so the second name in each is the Cyrillic companion — not a fallback for
+     when something fails, but the face every Russian guest actually reads.
+     Measured in a browser: with Bodoni alone the Russian lede came out in the
+     system serif, which is a different magazine. Playfair Display is the
+     closest Didone with a real Cyrillic italic (this design is full of
+     italics, and a synthesised oblique Cyrillic is worse than none), and
+     Montserrat carries the tracked metadata. Latin — which is uz and en, and
+     the design's own Italian — stays Bodoni throughout. */
+  --serif:"Bodoni Moda","Playfair Display","Bodoni 72","Didot","Bodoni MT",Georgia,serif;
+  /* THE OPTICAL SIZE IS THE RENDERED SIZE, never a chosen number.
+     Bodoni Moda is a variable font with an `opsz` axis, and a Didone's
+     hairlines thin as it rises: at `opsz 96` — which each display rule here
+     asked for — the serifs and the em dash have no ink at all below about
+     120px. Every heading on this page is a `clamp()`, so on a phone they
+     render at a third of that; measured against a control at 160px, an em
+     dash at opsz 96 is a blank gap and at the size the browser picks for
+     itself it is there at every width. `auto` is the default for a font with
+     the axis, and it is stated once here so nothing re-pins it per rule. */
+  --sans:"Hanken Grotesk","Montserrat",-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+
+  --gutter:clamp(20px,5.5vw,96px);
+  --col:min(1320px,100%);
+  --ease:cubic-bezier(.19,1,.22,1);      /* long, decelerating */
+  --ease-io:cubic-bezier(.65,0,.35,1);
+
+  /* The parallax overshoot, in one place — see the note above. */
+  --bleed:6%;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{font-optical-sizing:auto}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-weight:300;
+  font-size:clamp(15px,.35vw + 14px,17px);line-height:1.7;
+  overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  font-feature-settings:"kern","liga";
+}
+body.is-locked{overflow:hidden}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+a{color:inherit}
+:focus-visible{outline:1px solid var(--terracotta);outline-offset:4px}
+p{margin:0 0 1em}
+h1,h2,h3{margin:0;font-weight:400}
+
+/* A section, tile or control switched off in the builder, or one with nothing
+   in it. Both hide rather than collapse, so no gap is left behind. */
+.opt-off,.card-off,.hidden{display:none !important}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Editorial metadata — tracked small caps, the house style for every label */
+.meta{
+  font-family:var(--sans);font-weight:500;
+  font-size:clamp(10px,.18vw + 9.5px,11.5px);
+  letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft);
+}
+.serif{font-family:var(--serif)}
+
+/* Picture credits, set like a magazine's */
+.cap{
+  display:flex;gap:.9em;align-items:baseline;margin-top:.9em;
+  font-size:12px;line-height:1.5;color:var(--ink-soft);
+}
+.cap b{font-weight:500;letter-spacing:.14em;text-transform:uppercase;font-size:10.5px;color:var(--ink)}
+
+/* ============================================================
+   PLATFORM CHROME — the language bar and the music button
+   ------------------------------------------------------------
+   Both sit at the FOOT of the screen, because the top of this design is the
+   folio: a running header that slides in once the reader is past the cover and
+   spans the full width. A language bar in the corner would be under it.
+   ============================================================ */
+#langbar{position:fixed;left:14px;bottom:14px;z-index:130;display:flex;gap:6px}
+#langbar button{
+  padding:7px 11px;border-radius:999px;
+  font-family:var(--sans);font-weight:500;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(242,236,226,.82);background:rgba(36,32,27,.58);
+  border:1px solid rgba(242,236,226,.26);backdrop-filter:blur(6px);
+  transition:.35s var(--ease-io);
+}
+#langbar button.active{color:var(--paper);background:var(--terracotta);border-color:var(--terracotta)}
+
+#music-btn{
+  position:fixed;right:14px;bottom:14px;z-index:130;
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(36,32,27,.58);border:1px solid rgba(242,236,226,.26);backdrop-filter:blur(6px);
+}
+#music-btn .bars{display:flex;align-items:flex-end;gap:3px;height:15px}
+#music-btn .bars span{width:2px;height:5px;background:var(--paper);border-radius:1px}
+#music-btn[aria-pressed="true"] .bars span{animation:bar .9s var(--ease-io) infinite alternate}
+#music-btn[aria-pressed="true"] .bars span:nth-child(2){animation-delay:.18s}
+#music-btn[aria-pressed="true"] .bars span:nth-child(3){animation-delay:.36s}
+@keyframes bar{from{height:4px}to{height:15px}}
+
+/* ============================================================
+   0 · THE FILM
+   ============================================================ */
+.film{position:relative;height:100svh;min-height:540px;overflow:hidden;background:#1a1612;color:var(--paper)}
+.film__media{position:absolute;inset:0}
+/* A hero HAS to fill the viewport, so this one crop is unavoidable. What it
+   does not do is add to it: nothing here is scaled up, and the frame is held
+   at 50% 42% because the horizon and the couple sit above centre in the shot. */
+.film__media video,.film__media img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:50% 42%;
+}
+.film__poster{transition:opacity 1.2s var(--ease-io)}
+.film.is-playing .film__poster{opacity:0}
+.film__video{opacity:0;transition:opacity .8s var(--ease-io)}
+.film.video-ready .film__video{opacity:1}
+
+/* Reading light for the cover type, arriving only once the film has finished */
+.film__grade{
+  position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:
+    linear-gradient(to top,rgba(24,20,16,.62) 0%,rgba(24,20,16,.18) 38%,transparent 60%),
+    linear-gradient(to bottom,rgba(24,20,16,.38),transparent 22%);
+  transition:opacity 2.2s var(--ease-io);
+}
+.film.is-cover .film__grade{opacity:1}
+/* A pool of shade directly under the cover type. The film opens on a bright
+   frame and comes to rest on a dusk one, so the backdrop is darkened rather
+   than the type — type dark enough for the opening would vanish seconds later. */
+.film__scrim{
+  position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(120% 70% at 50% 82%,rgba(18,15,12,.62),transparent 70%);
+  transition:opacity 2s var(--ease-io);
+}
+.film.is-cover .film__scrim{opacity:1}
+.film__hem{
+  position:absolute;left:0;right:0;bottom:-1px;height:14vh;pointer-events:none;
+  background:linear-gradient(transparent,var(--paper));opacity:0;
+  transition:opacity 2s var(--ease-io) .6s;
+}
+.film.is-cover .film__hem{opacity:1}
+
+.film__ctl{position:absolute;top:clamp(62px,9vh,96px);right:var(--gutter);z-index:5;display:flex;gap:18px}
+.film__ctl button{
+  font-family:var(--sans);font-weight:500;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+  color:rgba(242,236,226,.82);min-height:44px;padding:0 2px;
+  border-bottom:1px solid rgba(242,236,226,.35);
+  transition:color .4s,border-color .4s;
+}
+.film__ctl button:hover{color:#fff;border-color:#fff}
+
+/* The cover — masthead, names, cover lines — set into the final frame */
+.cover{
+  position:absolute;inset:0;z-index:3;pointer-events:none;
+  padding:clamp(18px,3.4vh,34px) var(--gutter) clamp(28px,7vh,72px);
+  display:grid;grid-template-rows:auto 1fr auto;
+}
+.cover__mast{
+  display:flex;justify-content:space-between;align-items:baseline;gap:1em;
+  border-bottom:1px solid rgba(242,236,226,.4);padding-bottom:.8em;
+  opacity:0;transform:translateY(-8px);
+  transition:opacity 1.4s var(--ease-io) .2s,transform 1.6s var(--ease) .2s;
+}
+.cover__mast .serif{font-size:clamp(18px,2vw,26px);letter-spacing:.32em;text-transform:uppercase}
+.cover__mast .meta{color:rgba(242,236,226,.8)}
+.cover__foot{display:grid;grid-template-columns:1fr;gap:clamp(16px,3vw,40px);align-items:end}
+@media (min-width:860px){.cover__foot{grid-template-columns:1fr auto}}
+.cover__names{
+  font-family:var(--serif);font-weight:400;
+  font-size:clamp(46px,9.6vw,164px);line-height:.88;letter-spacing:-.015em;
+  text-shadow:0 2px 26px rgba(16,13,10,.45);
+}
+.cover__names + .cover__names{margin-top:.12em}
+.cover__names .amp{
+  font-style:italic;font-size:.46em;color:rgba(242,236,226,.82);
+  margin:0 .1em;vertical-align:.2em;
+}
+html.has-duo .cover__names{font-size:clamp(30px,5.6vw,96px)}
+.cover__lines{text-align:left;max-width:24ch;text-shadow:0 1px 18px rgba(16,13,10,.5)}
+@media (min-width:860px){.cover__lines{text-align:right}}
+.cover__lines p{margin:0 0 .35em;font-family:var(--serif);font-style:italic;font-size:clamp(16px,1.4vw,22px);line-height:1.3}
+.cover__lines .meta{color:rgba(242,236,226,.82);display:block;margin-top:.9em}
+
+@media (max-width:640px){
+  .cover{padding-bottom:96px}
+  .cover__mast .meta{display:none}
+  .cover__mast .serif{font-size:15px;letter-spacing:.24em;white-space:nowrap}
+}
+
+/* The names land letter by letter as the shot settles. */
+.cover__names .ch{
+  display:inline-block;opacity:0;transform:translateY(.42em);
+  transition:opacity .9s var(--ease-io),transform 1.1s var(--ease);
+}
+.film.is-cover .cover__names .ch{opacity:1;transform:none}
+/* …and the cover lines rise out of a mask. */
+.cover .w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em}
+.cover .w>span{display:inline-block;transform:translateY(105%);transition:transform 1.5s var(--ease)}
+.film.is-cover .cover__mast{opacity:1;transform:none}
+.film.is-cover .w>span{transform:none}
+
+/* ============================================================
+   FOLIO — the running header of a printed magazine
+   ============================================================ */
+.folio{
+  position:fixed;top:0;left:0;right:0;z-index:80;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1em;
+  padding:calc(4px + env(safe-area-inset-top,0px)) var(--gutter) 4px;
+  background:rgba(242,236,226,.92);
+  backdrop-filter:saturate(1.1) blur(6px);-webkit-backdrop-filter:saturate(1.1) blur(6px);
+  border-bottom:1px solid var(--rule);
+  transform:translateY(-101%);transition:transform .7s var(--ease);
+}
+.folio.on{transform:none}
+.folio__title{font-family:var(--serif);font-size:14px;letter-spacing:.28em;text-transform:uppercase}
+.folio__chap{text-align:center}
+.folio__chap button{display:inline-flex;gap:.7em;align-items:center;min-height:44px}
+.folio__chap .serif{font-style:italic;font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink)}
+.folio__page{text-align:right}
+@media (max-width:640px){
+  .folio{grid-template-columns:1fr auto}
+  .folio__title{display:none}
+  .folio__chap{text-align:left}
+}
+
+.index{
+  position:fixed;top:0;left:0;right:0;z-index:79;background:var(--paper);
+  padding:calc(64px + 2vh) var(--gutter) 40px;border-bottom:1px solid var(--rule);
+  transform:translateY(-102%);transition:transform .8s var(--ease);
+  max-height:100svh;overflow-y:auto;overscroll-behavior:contain;
+}
+.index.open{transform:none}
+.index ol{list-style:none;margin:0 auto;padding:0;max-width:880px}
+.index li{border-top:1px solid var(--rule)}
+.index li:last-child{border-bottom:1px solid var(--rule)}
+.index a{
+  display:grid;grid-template-columns:3.2em 1fr auto;gap:1em;align-items:baseline;
+  padding:14px 0;text-decoration:none;transition:color .4s,padding-left .5s var(--ease);
+}
+.index a:hover,.index a:focus-visible{color:var(--terracotta);padding-left:10px}
+.index .num{font-family:var(--serif);font-style:italic;color:var(--ink-soft)}
+.index .t{font-family:var(--serif);font-size:clamp(20px,2.4vw,30px)}
+
+/* ============================================================
+   LAYOUT PRIMITIVES
+   ============================================================ */
+.page{max-width:var(--col);margin:0 auto;padding-inline:var(--gutter)}
+section{position:relative}
+.spread{padding-block:clamp(90px,14vw,200px)}
+.chapter-head{
+  display:grid;grid-template-columns:auto 1fr;gap:clamp(16px,3vw,48px);align-items:end;
+  border-top:1px solid var(--ink);padding-top:clamp(14px,1.6vw,22px);
+  margin-bottom:clamp(40px,6vw,90px);
+}
+.chapter-head .num{
+  font-family:var(--serif);font-size:clamp(56px,10vw,164px);line-height:.78;font-weight:400;
+  color:var(--ink);
+}
+.chapter-head .ti{padding-bottom:.4em}
+.chapter-head h2{font-family:var(--serif);font-style:italic;font-size:clamp(26px,3.2vw,48px);line-height:1.05;margin-top:.25em}
+
+.lede{font-family:var(--serif);font-size:clamp(21px,2.1vw,33px);line-height:1.32}
+.lede::first-letter{font-size:3.1em;float:left;line-height:.82;padding:.06em .1em 0 0;color:var(--terracotta);font-style:normal}
+.body-col{max-width:42ch;color:var(--ink-soft)}
+.body-col p{font-size:clamp(15px,.3vw + 14px,17px)}
+
+/* ============================================================
+   IMAGE REVEALS — three techniques, matched to the kind of picture
+   ============================================================ */
+.ph{position:relative;overflow:hidden;background:var(--paper-deep)}
+.ph img{width:100%;height:100%;object-fit:cover}
+
+/* landscapes open like a widening letterbox */
+.rv-letterbox{clip-path:inset(22% 0 22% 0);transition:clip-path 1.9s var(--ease)}
+.rv-letterbox img{transform:scale(1.06);transition:transform 2.4s var(--ease)}
+.rv-letterbox.in{clip-path:inset(0 0 0 0)}
+.rv-letterbox.in img{transform:scale(1)}
+
+/* details rise from the bottom edge, as if lifted from a page */
+.rv-rise{clip-path:inset(100% 0 0 0);transition:clip-path 1.6s var(--ease)}
+.rv-rise img{transform:scale(1.1) translateY(3%);transition:transform 2.2s var(--ease)}
+.rv-rise.in{clip-path:inset(0 0 0 0)}
+.rv-rise.in img{transform:none}
+
+/* architecture is drawn in from one side, like a slow pan */
+.rv-pan{clip-path:inset(0 100% 0 0);transition:clip-path 1.8s var(--ease)}
+.rv-pan img{transform:translateX(-3%) scale(1.05);transition:transform 2.4s var(--ease)}
+.rv-pan.in{clip-path:inset(0 0 0 0)}
+.rv-pan.in img{transform:none}
+
+/* type: each word slides up out of a mask */
+.words .w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em;margin-bottom:-.08em}
+.words .w>span{display:inline-block;transform:translateY(105%);transition:transform 1.3s var(--ease)}
+.words.in .w>span{transform:none}
+.fade{opacity:0;transform:translateY(14px);transition:opacity 1.2s var(--ease-io),transform 1.4s var(--ease)}
+.fade.in{opacity:1;transform:none}
+
+/* A parallax plate is oversized inside its frame so the travel can never
+   uncover an edge. `--bleed` is the smallest overshoot that does it. */
+.ph > img[data-depth]{
+  position:absolute;left:0;top:calc(var(--bleed) * -1);
+  width:100%;height:calc(100% + var(--bleed) * 2);
+  will-change:translate;
+}
+[data-depth]{will-change:translate}
+
+/* ============================================================
+   I · THE DESTINATION
+   ============================================================ */
+.dest{display:grid;grid-template-columns:1fr;gap:clamp(30px,4vw,60px)}
+/* The art's own ratio, not 16/10 — see the cropping note at the top. */
+.dest__main{aspect-ratio:16/9}
+.dest__door{aspect-ratio:3/4;width:min(62%,340px);justify-self:start}
+@media (min-width:900px){
+  .dest{grid-template-columns:5fr 7fr;grid-template-rows:auto auto;gap:0 clamp(40px,5vw,90px);align-items:start}
+  .dest__text{grid-column:1;grid-row:1;padding-top:clamp(10px,3vw,50px)}
+  .dest__fig{grid-column:2;grid-row:1 / span 2;margin-right:calc(var(--gutter) * -1)}
+  .dest__doorfig{grid-column:1;grid-row:2;margin-top:clamp(40px,6vw,90px);position:relative;z-index:2}
+  .dest__door{width:min(78%,360px)}
+}
+.dest__text .lede{margin-bottom:1.4em}
+.dest__sign{margin-top:clamp(26px,3.4vw,40px)}
+.dest__sign .names{font-family:var(--serif);font-size:clamp(19px,1.5vw,26px);line-height:1.3}
+.dest__sign .when{margin-top:.7em}
+
+/* ── The full-bleed interlude ─────────────────────────────────────────────
+   Its box takes the PLATE's proportions rather than a slice of the viewport.
+   As `92svh` it was 1920x883 on a desktop — 2.17:1 around a 1.78:1 picture,
+   so a third of the frame's height was never on screen. A floor keeps it from
+   becoming a letterbox strip on a phone, where the crop goes the other way and
+   `object-position` is what holds the subject. */
+.bleed{position:relative;width:100%;height:max(clamp(300px,52svh,600px),calc(100vw * 0.5625));overflow:hidden}
+.bleed .ph{position:absolute;inset:0}
+.bleed .ph img{object-position:50% 46%}
+.bleed__cap{position:absolute;left:var(--gutter);bottom:clamp(18px,3vw,34px);z-index:2;color:var(--paper)}
+.bleed__cap .cap{color:rgba(242,236,226,.86);margin:0}
+.bleed__cap .cap b{color:var(--paper)}
+.bleed::after{
+  content:"";position:absolute;inset:auto 0 0 0;height:30%;pointer-events:none;
+  background:linear-gradient(transparent,rgba(24,20,16,.42));
+}
+
+/* ============================================================
+   II · A MOMENT TOGETHER
+   ============================================================ */
+.together{display:grid;grid-template-columns:1fr;gap:clamp(28px,4vw,56px)}
+.together__street{aspect-ratio:16/9}
+.together__terrace{aspect-ratio:16/9}
+.together__hands{aspect-ratio:4/5;width:min(64%,320px)}
+.pull{
+  font-family:var(--serif);font-style:italic;font-size:clamp(26px,3.4vw,54px);line-height:1.08;
+  letter-spacing:-.01em;max-width:17ch;
+}
+@media (min-width:900px){
+  .together{grid-template-columns:repeat(12,1fr);grid-auto-rows:auto;gap:0}
+  .together__a{grid-column:1 / span 5;grid-row:1 / span 2}
+  .together__b{grid-column:7 / span 6;grid-row:1;margin-right:calc(var(--gutter) * -1)}
+  .together__q{grid-column:7 / span 5;grid-row:2;padding-top:clamp(40px,5vw,80px)}
+  .together__c{grid-column:4 / span 3;grid-row:3;margin-top:calc(clamp(60px,9vw,150px) * -1);position:relative;z-index:2}
+  .together__hands{width:100%}
+  .together__d{grid-column:8 / span 4;grid-row:3;align-self:end;padding-top:clamp(40px,5vw,80px)}
+}
+
+/* ============================================================
+   III · THE ART OF THE CELEBRATION
+   ============================================================ */
+/* 16/9, not 21/9: a cinematic crop of a picture that is already cinematic
+   throws away a third of it for nothing. */
+.cele__wide{aspect-ratio:16/9}
+.cele__pair{display:grid;grid-template-columns:1fr;gap:clamp(24px,3vw,40px);margin-top:clamp(40px,6vw,90px)}
+.cele__table{aspect-ratio:16/9}
+.cele__flower{aspect-ratio:4/3;width:min(70%,360px)}
+@media (min-width:900px){
+  .cele__pair{grid-template-columns:7fr 4fr;align-items:end;gap:clamp(40px,5vw,90px)}
+  .cele__flowerfig{margin-bottom:calc(clamp(40px,6vw,100px) * -1)}
+  .cele__flower{width:100%}
+}
+.cele__text{display:grid;grid-template-columns:1fr;gap:1.4em;margin-top:clamp(36px,4vw,60px)}
+@media (min-width:900px){.cele__text{grid-template-columns:1fr 1fr;max-width:860px;margin-left:auto}}
+
+/* ============================================================
+   IV · THE DATE, set like a letterpress card
+   ============================================================ */
+.date{background:var(--paper-deep);overflow:hidden}
+.date::before{
+  /* faint paper fibre, generated rather than loaded */
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .42  0 0 0 0 .36  0 0 0 0 .3  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.dateset{position:relative;max-width:980px;margin:0 auto;text-align:center}
+.dateset__day{font-family:var(--serif);font-size:clamp(14px,1vw + 10px,18px);font-style:italic;color:var(--ink-soft)}
+.dateset__num{
+  font-family:var(--serif);font-weight:400;line-height:.8;
+  font-size:clamp(120px,24vw,340px);letter-spacing:-.04em;
+  display:block;margin:.08em 0 .02em;
+}
+.dateset__num span{display:inline-block;overflow:hidden;vertical-align:top}
+.dateset__num span i{display:inline-block;font-style:normal;transform:translateY(102%);transition:transform 1.6s var(--ease)}
+.dateset.in .dateset__num span:nth-child(2) i{transition-delay:.12s}
+.dateset.in .dateset__num i{transform:none}
+.dateset__rule{
+  display:block;height:1px;background:var(--ink);width:min(520px,70%);
+  margin:clamp(14px,2vw,26px) auto;
+  transform:scaleX(0);transition:transform 1.8s var(--ease) .5s;
+}
+.dateset.in .dateset__rule{transform:scaleX(1)}
+.dateset__month{font-family:var(--serif);font-style:italic;font-size:clamp(36px,6vw,92px);line-height:1}
+.dateset__yr{margin-top:1.4em;letter-spacing:.6em}
+.dateset__note{margin:clamp(26px,3.4vw,44px) auto 0;max-width:46ch;color:var(--ink-soft)}
+
+/* ============================================================
+   V · THE PARTICULARS and THE PROGRAMME
+   set as an index with dotted leaders
+   ============================================================ */
+.prog{max-width:980px}
+.prog__list{margin:0;padding:0;list-style:none}
+.prog__row{
+  display:grid;grid-template-columns:1fr;gap:.2em;
+  padding:clamp(16px,2vw,24px) 0;border-top:1px solid var(--rule);
+}
+.prog__row:last-child{border-bottom:1px solid var(--rule)}
+.prog__line{display:flex;align-items:baseline;gap:.8em}
+.prog__k{font-family:var(--serif);font-size:clamp(19px,1.9vw,27px);white-space:nowrap}
+.prog__lead{flex:1;border-bottom:1px dotted rgba(36,32,27,.38);transform:translateY(-.3em);min-width:24px}
+.prog__v{font-family:var(--serif);font-style:italic;font-size:clamp(16px,1.5vw,22px);text-align:right}
+.prog__note{color:var(--ink-soft);font-size:14px;max-width:62ch}
+@media (max-width:620px){
+  .prog__line{flex-wrap:wrap}
+  .prog__lead{display:none}
+  .prog__v{text-align:left;width:100%}
+}
+.prog__foot{margin-top:2.4em;color:var(--ink-soft);font-size:13px}
+
+/* ============================================================
+   VI · THE JOURNAL — a pinned contact strip
+   ============================================================ */
+.journal{position:relative;background:#1E1A16;color:var(--paper)}
+.journal__pin{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.journal__head{
+  padding:0 var(--gutter);margin-bottom:clamp(20px,3vh,40px);
+  display:flex;justify-content:space-between;align-items:baseline;gap:1em;flex-wrap:wrap;row-gap:.4em;
+}
+.journal__head h2{font-family:var(--serif);font-style:italic;font-size:clamp(26px,3vw,44px)}
+.journal__head .meta{color:rgba(242,236,226,.6)}
+.strip{display:flex;gap:clamp(14px,1.8vw,28px);padding:0 var(--gutter);will-change:transform}
+.frame{flex:0 0 auto;position:relative}
+.frame .ph{height:clamp(240px,58svh,620px);background:#2a241f}
+/* One height, three widths. The landscape frames take the plate's own 16/9 —
+   as 16/10 they clipped a tenth of every picture in the strip for a rhythm the
+   varied widths already supply. The tall frames hold the two PORTRAIT plates,
+   which is why they are the only ones that are not 16/9. */
+.frame--w .ph{aspect-ratio:16/9}
+.frame--t .ph{aspect-ratio:3/4}
+.frame--s .ph{aspect-ratio:4/3}
+.frame .ph img{transition:transform 1.4s var(--ease)}
+.frame:hover .ph img{transform:scale(1.03)}
+.frame figcaption{
+  display:flex;justify-content:space-between;margin-top:.7em;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(242,236,226,.6);
+}
+.frame figcaption b{font-weight:500;color:var(--paper);flex:none}
+.frame figcaption span{min-width:0}
+.journal.native .frame figcaption{flex-wrap:wrap;row-gap:.2em}
+.journal.native .frame--t figcaption,.journal.native .frame--s figcaption{display:block}
+.journal__progress{
+  position:absolute;left:var(--gutter);right:var(--gutter);bottom:clamp(66px,9vh,88px);
+  height:1px;background:rgba(242,236,226,.18);
+}
+.journal__progress i{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--paper);transform:scaleX(0);transform-origin:left}
+
+/* On a phone the strip is simply a native horizontal scroller. */
+.journal.native .journal__pin{position:relative;height:auto;padding-block:clamp(70px,14vw,120px)}
+.journal.native .strip{
+  overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;
+  padding-bottom:6px;transform:none !important;
+  gap:14px;scroll-padding-inline:var(--gutter);align-items:flex-start;
+}
+.journal.native .strip::-webkit-scrollbar{display:none}
+/* Widths chosen so every frame still shares one height: 16:9 at 82vw,
+   3:4 at 34.6vw, 4:3 at 61.5vw. */
+.journal.native .frame{scroll-snap-align:start;width:82vw;max-width:560px}
+.journal.native .frame--t{width:34.6vw;max-width:236px}
+.journal.native .frame--s{width:61.5vw;max-width:420px}
+.journal.native .frame .ph{height:auto;width:100%}
+.journal.native .journal__progress{display:none}
+.journal__swipe{display:none}
+.journal.native .journal__swipe{display:inline}
+.journal__count{display:none;margin:1.2em var(--gutter) 0;color:rgba(242,236,226,.6)}
+.journal.native .journal__count{display:block}
+
+/* ============================================================
+   FINALE — THE EVENING
+   ============================================================ */
+.finale{position:relative;min-height:100svh;display:grid;align-items:end;overflow:hidden;color:var(--paper)}
+.finale .ph{position:absolute;inset:0;background:#141c26}
+/* Viewport-tall by design, so the subject is placed rather than the box
+   reshaped: the couple stand in the lower half of this frame. */
+.finale .ph img{object-position:50% 56%}
+.finale::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(to top,rgba(14,18,26,.82) 0%,rgba(14,18,26,.36) 46%,rgba(14,18,26,.1) 100%);
+}
+.finale__in{
+  position:relative;z-index:2;
+  padding:clamp(80px,14vh,160px) var(--gutter) clamp(50px,10vh,110px);
+  max-width:var(--col);margin:0 auto;width:100%;
+}
+.finale h2{
+  font-family:var(--serif);font-size:clamp(38px,6.6vw,112px);line-height:.92;letter-spacing:-.015em;
+  max-width:13ch;text-shadow:0 2px 24px rgba(10,14,20,.5);
+}
+.finale__row{
+  display:grid;grid-template-columns:1fr;gap:clamp(24px,3vw,50px);
+  margin-top:clamp(28px,4vw,56px);align-items:end;
+}
+@media (min-width:860px){.finale__row{grid-template-columns:1fr auto}}
+.finale__msg{max-width:42ch;color:rgba(242,236,226,.88);font-size:clamp(15px,.3vw + 14px,17px);margin:0}
+.finale .meta{color:rgba(242,236,226,.74)}
+
+.reply-btn{
+  display:inline-flex;align-items:center;gap:1em;padding:18px 30px;min-height:52px;
+  background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-weight:500;font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  transition:background .45s var(--ease-io),color .45s var(--ease-io);
+}
+.reply-btn:hover{background:var(--terracotta);color:var(--paper)}
+.reply-btn .arr{display:inline-block;transition:transform .6s var(--ease)}
+.reply-btn:hover .arr{transform:translateX(4px)}
+.reply-btn[aria-expanded="true"] .arr{transform:rotate(90deg)}
+
+/* ============================================================
+   RSVP — a reader reply coupon that unfolds in place
+   ------------------------------------------------------------
+   Not a modal. This design is a magazine, and a magazine's reply device is a
+   coupon you tear out of the page — so it unfolds beneath the final plate
+   rather than covering it.
+   ============================================================ */
+.coupon-wrap{
+  display:grid;grid-template-rows:0fr;transition:grid-template-rows 1.1s var(--ease);
+  background:var(--paper);scroll-margin-top:56px;
+}
+.coupon-wrap.open{grid-template-rows:1fr}
+.coupon-wrap>div{overflow:hidden}
+.coupon{max-width:860px;margin:0 auto;padding:clamp(56px,8vw,110px) var(--gutter)}
+.coupon__cut{display:flex;align-items:center;gap:1em;margin-bottom:clamp(30px,4vw,50px);color:var(--ink-soft)}
+.coupon__cut::before,.coupon__cut::after{content:"";flex:1;border-top:1px dashed rgba(36,32,27,.4)}
+.coupon h3{font-family:var(--serif);font-style:italic;font-size:clamp(28px,3.4vw,50px);line-height:1.05;margin-bottom:.4em}
+.coupon__sub{color:var(--ink-soft);margin-bottom:2.4em}
+.fields{display:grid;grid-template-columns:1fr;gap:0 clamp(24px,3vw,44px)}
+@media (min-width:720px){.fields{grid-template-columns:1fr 1fr}.fields .wide{grid-column:1 / -1}}
+.field{position:relative;padding-top:1.5em;margin-bottom:1.6em}
+.field label,.field .label{
+  position:absolute;top:0;left:0;
+  font-family:var(--sans);font-weight:500;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);
+}
+.field input,.field textarea,.field select{
+  width:100%;font:inherit;font-family:var(--serif);font-size:20px;color:var(--ink);
+  background:transparent;border:0;border-bottom:1px solid rgba(36,32,27,.32);border-radius:0;padding:.5em 0;
+  transition:border-color .4s;
+}
+.field input:not([type=radio]),.field select{height:2.7em;line-height:1.3}
+.field textarea{resize:vertical;min-height:84px;line-height:1.4}
+.field input:focus,.field textarea:focus,.field select:focus{outline:0;border-bottom-color:var(--terracotta)}
+.field.invalid input{border-bottom-color:var(--wine)}
+.field select{
+  appearance:none;-webkit-appearance:none;padding-right:1.6em;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5l5 5 5-5' fill='none' stroke='%2324201B' stroke-width='1.2'/></svg>");
+  background-repeat:no-repeat;background-position:right 2px center;
+}
+/* Attendance — two chips, which is what the rest of the platform's designs
+   use, so one reply form behaves the same whichever design a guest opens. */
+.choice{display:flex;gap:12px clamp(18px,3vw,40px);flex-wrap:wrap;margin-top:.9em}
+.chip{
+  min-height:48px;padding:10px 22px;
+  font-family:var(--serif);font-size:19px;color:var(--ink);
+  border:1px solid rgba(36,32,27,.3);border-radius:999px;
+  transition:.35s var(--ease-io);
+}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.coupon__actions{display:flex;flex-wrap:wrap;gap:1.4em;align-items:center;margin-top:1.4em}
+.send{
+  padding:18px 34px;min-height:52px;background:var(--ink);color:var(--paper);
+  font-family:var(--sans);font-weight:500;font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  transition:background .45s;
+}
+.send:hover{background:var(--terracotta)}
+.send[disabled]{opacity:.55;cursor:wait}
+.coupon__err{font-size:14px;color:var(--wine);min-height:1.4em;opacity:0;transition:opacity .3s}
+.coupon__err.show{opacity:1}
+.coupon form.gone{display:none}
+.coupon__done{display:none}
+.coupon__done.on{display:block}
+.coupon__done h3{margin-bottom:.3em}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer.colophon{padding:clamp(40px,6vw,70px) var(--gutter);border-top:1px solid var(--rule);background:var(--paper)}
+footer.colophon .inner{max-width:var(--col);margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:1em}
+
+#vconnect{
+  background:#1B1815;color:rgba(242,236,226,.5);text-align:center;
+  padding:1.6rem var(--gutter) 2rem;
+  font-family:var(--sans);font-weight:300;font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+}
+#vconnect img{width:34px;height:auto;margin:0 auto .6rem;opacity:.9}
+#vcContacts{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center;margin-top:.9rem}
+#vcContacts a{display:inline-flex;align-items:center;gap:.35rem;color:var(--brass);text-decoration:none;letter-spacing:.08em;text-transform:none;font-size:12px}
+#vcContacts svg{width:14px;height:14px}
+
+/* ============================================================
+   A SECOND BRIDE AND GROOM — a double wedding
+   ============================================================ */
+.duo{display:none}
+html.has-duo .duo{display:revert}
+
+/* ============================================================
+   PETALS — the one celebration, at the finale
+   ============================================================ */
+#petals{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:70}
+#petals.on-top{z-index:200}
+
+/* ============================================================
+   MOTION PREFERENCES
+   ------------------------------------------------------------
+   Everything below the fold is hidden until it is revealed, so this block has
+   to leave the page VISIBLE rather than merely still. Durations are collapsed
+   instead of animations being removed, for the reason the still-cover
+   stylesheet gives: across these designs the visible state is the END of the
+   motion.
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+  }
+  .rv-letterbox,.rv-rise,.rv-pan{clip-path:none !important}
+  .rv-letterbox img,.rv-rise img,.rv-pan img{transform:none !important}
+  .words .w>span,.cover .w>span{transform:none !important}
+  .cover__names .ch{opacity:1 !important;transform:none !important}
+  .fade{opacity:1 !important;transform:none !important}
+  .dateset__num i{transform:none !important}
+  .dateset__rule{transform:none !important}
+  #petals{display:none}
+}
+</style>
+</head>
+<body>
+
+<canvas id="petals" aria-hidden="true"></canvas>
+
+<div id="langbar" class="hidden" aria-label="Language"></div>
+
+<!-- ============================================================
+     FOLIO + CONTENTS
+     ============================================================ -->
+<header class="folio" id="folio">
+  <span class="folio__title" data-t="brand"></span>
+  <span class="folio__chap">
+    <button type="button" id="indexBtn" aria-expanded="false" aria-controls="index">
+      <span class="meta" data-t="indice"></span>
+      <span class="serif" id="folioChap"></span>
+    </button>
+  </span>
+  <span class="folio__page meta" id="folioPage">p. 01</span>
+</header>
+
+<nav class="index" id="index" hidden>
+  <ol>
+    <li><a href="#invite"><span class="num">I</span><span class="t" data-t="ch1"></span><span class="meta" data-t="ix1"></span></a></li>
+    <li><a href="#story"><span class="num">II</span><span class="t" data-t="ch2"></span><span class="meta" data-t="ix2"></span></a></li>
+    <li><a href="#ceremony"><span class="num">III</span><span class="t" data-t="ch3"></span><span class="meta" data-t="ix3"></span></a></li>
+    <li><a href="#calendar"><span class="num">IV</span><span class="t" data-t="ch4"></span><span class="meta" data-t="ix4"></span></a></li>
+    <li><a href="#details"><span class="num">V</span><span class="t" data-t="ch5"></span><span class="meta" data-t="ix5"></span></a></li>
+    <li><a href="#gallery"><span class="num">VI</span><span class="t" data-t="ch6"></span><span class="meta" data-t="ix6"></span></a></li>
+    <li><a href="#finale"><span class="num">&mdash;</span><span class="t" data-t="ch7"></span><span class="meta" data-t="ix7"></span></a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================
+     0 · THE FILM — the first and only thing on screen at load
+     ============================================================ -->
+<header class="film" id="hero" data-folio="chF">
+  <div class="film__media">
+    <img class="film__poster" id="heroPoster" alt="" data-art>
+    <video class="film__video" id="film" muted playsinline preload="metadata"></video>
+  </div>
+  <div class="film__grade" aria-hidden="true"></div>
+  <div class="film__scrim" aria-hidden="true"></div>
+
+  <div class="film__ctl">
+    <button type="button" id="skip" data-t="enterNow"></button>
+  </div>
+
+  <div class="cover">
+    <div class="cover__mast">
+      <span class="serif" data-t="brand"></span>
+      <span class="meta" data-bind="issue"></span>
+    </div>
+    <div></div>
+    <div class="cover__foot">
+      <div>
+        <h1 class="cover__names">
+          <span class="split" data-name="groom"></span>
+          <span class="amp" data-bind="amp"></span>
+          <span class="split" data-name="bride"></span>
+        </h1>
+        <h1 class="cover__names duo">
+          <span class="split" data-name="groom2"></span>
+          <span class="amp" data-bind="amp2"></span>
+          <span class="split" data-name="bride2"></span>
+        </h1>
+      </div>
+      <div class="cover__lines">
+        <p data-bind="coverLine1"></p>
+        <p data-bind="coverLine2"></p>
+        <span class="meta" data-bind="coverMeta"></span>
+      </div>
+    </div>
+  </div>
+  <div class="film__hem" aria-hidden="true"></div>
+</header>
+
+<main>
+
+<!-- ============================================================
+     I · THE DESTINATION — and the invitation itself
+     ============================================================ -->
+<section class="spread" id="invite" data-folio="ch1" aria-labelledby="ch1-h">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">I</span>
+      <div class="ti">
+        <span class="meta" data-t="cap1"></span>
+        <h2 class="words" id="ch1-h" data-t="ch1"></h2>
+      </div>
+    </div>
+
+    <div class="dest">
+      <div class="dest__text">
+        <p class="lede fade" data-bind="destLede"></p>
+        <div class="body-col fade">
+          <p data-bind="destBody"></p>
+        </div>
+        <div class="dest__sign fade">
+          <p class="meta" data-t="marriageOf"></p>
+          <p class="names" data-bind="coupleFull"></p>
+          <p class="meta when" data-bind="inviteDate"></p>
+        </div>
+      </div>
+
+      <figure class="dest__fig" style="margin:0">
+        <div class="ph rv-pan dest__main">
+          <img loading="eager" decoding="async" data-art data-asset="villa.jpg" alt="">
+        </div>
+        <figcaption class="cap"><b data-t="fig1"></b><span data-t="fig1cap"></span></figcaption>
+      </figure>
+
+      <figure class="dest__doorfig" style="margin:0">
+        <div class="ph rv-rise dest__door">
+          <img loading="lazy" decoding="async" data-art data-asset="door.jpg" alt="" data-depth="-0.04">
+        </div>
+        <figcaption class="cap"><b data-t="fig2"></b><span data-t="fig2cap"></span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- The interlude: the couple and the sea -->
+<section class="bleed" id="arrival" data-opt="arrival" data-folio="ch1">
+  <div class="ph rv-letterbox">
+    <img loading="lazy" decoding="async" data-art data-asset="cliff.jpg" alt="" data-depth="0.07">
+  </div>
+  <div class="bleed__cap"><p class="cap"><b data-t="fig3"></b><span data-bind="arrivalCap"></span></p></div>
+</section>
+
+<!-- ============================================================
+     II · A MOMENT TOGETHER
+     ============================================================ -->
+<section class="spread" id="story" data-opt="story" data-folio="ch2" aria-labelledby="ch2-h">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">II</span>
+      <div class="ti">
+        <span class="meta" data-t="cap2"></span>
+        <h2 class="words" id="ch2-h" data-t="ch2"></h2>
+      </div>
+    </div>
+
+    <div class="together">
+      <figure class="together__a" style="margin:0">
+        <div class="ph rv-rise together__street">
+          <img loading="lazy" decoding="async" data-art data-asset="lane.jpg" alt="">
+        </div>
+        <figcaption class="cap"><b data-t="fig4"></b><span data-t="fig4cap"></span></figcaption>
+      </figure>
+
+      <figure class="together__b" style="margin:0">
+        <div class="ph rv-letterbox together__terrace">
+          <img loading="lazy" decoding="async" data-art data-asset="balustrade.jpg" alt="">
+        </div>
+        <figcaption class="cap"><b data-t="fig5"></b><span data-t="fig5cap"></span></figcaption>
+      </figure>
+
+      <blockquote class="together__q" style="margin:0">
+        <p class="pull words" data-bind="pullQuote"></p>
+      </blockquote>
+
+      <figure class="together__c" style="margin:0">
+        <div class="ph rv-rise together__hands">
+          <img loading="lazy" decoding="async" data-art data-asset="hands.jpg" alt="" data-depth="-0.05">
+        </div>
+        <figcaption class="cap"><b data-t="fig6"></b><span data-t="fig6cap"></span></figcaption>
+      </figure>
+
+      <div class="together__d body-col fade">
+        <p data-bind="togetherBody"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     III · THE ART OF THE CELEBRATION
+     ============================================================ -->
+<section class="spread" id="ceremony" data-opt="ceremony" data-folio="ch3" aria-labelledby="ch3-h">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">III</span>
+      <div class="ti">
+        <span class="meta" data-t="cap3"></span>
+        <h2 class="words" id="ch3-h" data-t="ch3"></h2>
+      </div>
+    </div>
+
+    <figure style="margin:0">
+      <div class="ph rv-letterbox cele__wide">
+        <img loading="lazy" decoding="async" data-art data-asset="aisle.jpg" alt="" data-depth="0.05">
+      </div>
+      <figcaption class="cap"><b data-t="fig7"></b><span data-bind="ceremonyCap"></span></figcaption>
+    </figure>
+
+    <div class="cele__pair">
+      <figure style="margin:0">
+        <div class="ph rv-pan cele__table">
+          <img loading="lazy" decoding="async" data-art data-asset="table.jpg" alt="">
+        </div>
+        <figcaption class="cap"><b data-t="fig8"></b><span data-t="fig8cap"></span></figcaption>
+      </figure>
+      <figure class="cele__flowerfig" style="margin:0">
+        <div class="ph rv-rise cele__flower">
+          <img loading="lazy" decoding="async" data-art data-asset="roses.jpg" alt="">
+        </div>
+        <figcaption class="cap"><b data-t="fig9"></b><span data-t="fig9cap"></span></figcaption>
+      </figure>
+    </div>
+
+    <div class="cele__text">
+      <p class="lede fade" style="font-size:clamp(20px,1.8vw,28px)" data-bind="celeLede"></p>
+      <div class="body-col fade"><p data-bind="celeBody"></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     IV · THE DATE
+     ============================================================ -->
+<section class="spread date" id="calendar" data-opt="calendar" data-folio="ch4" aria-labelledby="ch4-h">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">IV</span>
+      <div class="ti">
+        <span class="meta" data-t="cap4"></span>
+        <h2 class="words" id="ch4-h" data-t="ch4"></h2>
+      </div>
+    </div>
+
+    <div class="dateset" id="dateset">
+      <p class="dateset__day" id="dWeekday"></p>
+      <span class="dateset__num" id="dNum" aria-hidden="true"></span>
+      <span class="dateset__rule" aria-hidden="true"></span>
+      <p class="dateset__month" id="dMonth"></p>
+      <p class="dateset__yr meta" id="dYear"></p>
+      <p class="sr" id="dReadable"></p>
+      <p class="dateset__note fade" data-bind="calNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     V · THE PARTICULARS
+     ============================================================ -->
+<section class="spread" id="details" data-opt="details" data-folio="ch5" aria-labelledby="ch5-h">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">V</span>
+      <div class="ti">
+        <span class="meta" data-t="cap5"></span>
+        <h2 class="words" id="ch5-h" data-t="ch5"></h2>
+      </div>
+    </div>
+
+    <div class="prog">
+      <ol class="prog__list" id="detailList"></ol>
+      <p class="prog__foot" data-bind="detailsFoot"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     THE PROGRAMME — the running order of the evening
+     ============================================================ -->
+<section class="spread" id="program" data-opt="program" data-folio="ch5" aria-labelledby="prog-h" style="padding-top:0">
+  <div class="page">
+    <div class="chapter-head">
+      <span class="num">&mdash;</span>
+      <div class="ti">
+        <span class="meta" data-t="cap5b"></span>
+        <h2 class="words" id="prog-h" data-t="chProgramme"></h2>
+      </div>
+    </div>
+    <div class="prog">
+      <ol class="prog__list" id="progList"></ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     VI · THE JOURNAL — a contact strip that scrolls sideways
+     ============================================================ -->
+<section class="journal" id="gallery" data-opt="gallery" data-folio="ch6">
+  <div class="journal__pin">
+    <div class="journal__head">
+      <h2 data-t="ch6"></h2>
+      <span class="meta">
+        <span data-t="cap6"></span>
+        <span class="journal__swipe"> &nbsp;&middot;&nbsp; <span data-t="dragScroll"></span></span>
+      </span>
+    </div>
+    <div class="strip" id="strip" tabindex="0" data-t-aria="galleryLabel" aria-label="Gallery"></div>
+    <p class="journal__count meta" id="stripCount" aria-hidden="true"></p>
+    <div class="journal__progress" aria-hidden="true"><i id="stripBar"></i></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FINALE · THE EVENING
+     ============================================================ -->
+<section class="finale" id="finale" data-folio="ch7" aria-labelledby="fin-h">
+  <div class="ph">
+    <img loading="lazy" decoding="async" data-art data-asset="evening.jpg" alt="" data-depth="0.06">
+  </div>
+  <div class="finale__in">
+    <span class="meta fade" data-t="cap7"></span>
+    <h2 class="words" id="fin-h" style="margin-top:.4em" data-bind="finaleTitle"></h2>
+    <div class="finale__row">
+      <p class="finale__msg fade" data-bind="finaleMsg"></p>
+      <div class="fade" id="replyBlock" data-opt="rsvp">
+        <button type="button" class="reply-btn" id="rsvpOpen" aria-expanded="false" aria-controls="couponWrap">
+          <span data-t="replyToInvitation"></span><span class="arr" aria-hidden="true">&rarr;</span>
+        </button>
+        <p class="meta" style="margin-top:1.2em" data-bind="rsvpLede"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The coupon unfolds here, beneath the final plate -->
+<div class="coupon-wrap" id="couponWrap" data-opt="rsvp">
+  <div>
+    <div class="coupon">
+      <div class="coupon__cut meta" aria-hidden="true"><span data-t="cutHere"></span></div>
+
+      <form id="rsvpForm" novalidate>
+        <h3 data-t="reply"></h3>
+        <p class="coupon__sub" data-bind="couponSub"></p>
+
+        <div class="fields">
+          <div class="field">
+            <label for="rsvpName" data-t="fullName"></label>
+            <input id="rsvpName" name="name" type="text" autocomplete="name">
+          </div>
+          <div class="field" id="guestField">
+            <label for="rsvpGuests" data-t="guestCount"></label>
+            <select id="rsvpGuests" name="guests">
+              <option>1</option><option>2</option><option>3</option>
+              <option>4</option><option>5</option><option>6</option>
+            </select>
+          </div>
+          <div class="field wide">
+            <span class="label" data-t="willYouAttend"></span>
+            <div class="choice" id="attendRow" role="group">
+              <button type="button" class="chip" data-attend="yes" aria-pressed="true" data-t="accept"></button>
+              <button type="button" class="chip" data-attend="no" aria-pressed="false" data-t="decline"></button>
+            </div>
+          </div>
+          <div class="field wide">
+            <label for="rsvpMsg" data-t="messageLabel"></label>
+            <textarea id="rsvpMsg" name="message"></textarea>
+          </div>
+        </div>
+
+        <div class="coupon__actions">
+          <button class="send" type="submit" id="rsvpSubmit"><span data-t="send"></span></button>
+          <p class="coupon__err" id="rsvpErr" data-t="sendFailed"></p>
+        </div>
+      </form>
+
+      <div class="coupon__done" id="rsvpSuccess" tabindex="-1">
+        <h3 data-t="thankYou"></h3>
+        <p class="coupon__sub" id="successText"></p>
+        <button class="send" type="button" id="thanksClose" data-t="close"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer class="colophon">
+  <div class="inner">
+    <span class="meta" data-bind="colophonL"></span>
+    <span class="meta" data-bind="colophonR"></span>
+  </div>
+</footer>
+
+<footer id="vconnect">
+  <img id="vconnectLogo" alt="v-invite" width="34" height="40">
+  <span data-t="developedBy"></span>
+  <div id="vcContacts"></div>
+</footer>
+
+<button id="music-btn" class="hidden" aria-pressed="false" data-t-aria="music" aria-label="Music">
+  <span class="bars"><span></span><span></span><span></span></span>
+</button>
+<audio id="audio" loop preload="none"></audio>
+
+<script>
+/* ============================================================================
+   LA DOLCE VITA — rich-template contract.
+   Config arrives as window.__CONFIG__ / __LANGS__ / __ORIGIN__ / __CONTACTS__;
+   live edits arrive by postMessage; RSVPs post back to the parent. CSS owns the
+   look and the movement — this script binds the content, runs the film, sets
+   the date, builds the two indexes and the journal, follows the reader with the
+   folio, and takes the reply.
+   ========================================================================== */
+(function () {
+'use strict';
+
+var CONFIG = window.__CONFIG__ || {};
+var LANGS = (window.__LANGS__ && window.__LANGS__.length) ? window.__LANGS__ : ['en'];
+var lang = LANGS[0];
+var ORIGIN = window.__ORIGIN__ || '';
+var ADMIN_EDIT = window.__ADMIN_EDIT__ === true;
+
+/* ── Built-in UI strings (template chrome — not honoree-editable) ───────────
+   The chapter TITLES stay Italian in all three dictionaries: they are the
+   design, the way "Entrez" is on the Paris design, and a magazine called La
+   Dolce Vita whose contents page reads "The destination" is a different
+   magazine. What translates is the small editorial furniture around them — the
+   chapter eyebrow, the contents list's right-hand column, the picture credits
+   and every control. uz avoids apostrophes, per the repo convention. */
+var UI = {
+  en: {
+    brand: 'La Dolce Vita', indice: 'Indice',
+    ch1: 'La destinazione', ch2: 'Un momento insieme', ch3: 'L’arte della festa',
+    ch4: 'La data', ch5: 'Il programma', ch6: 'Il diario', ch7: 'La sera',
+    chProgramme: 'La serata',
+    ix1: 'The place', ix2: 'The two of us', ix3: 'The celebration',
+    ix4: 'The date', ix5: 'The details', ix6: 'The journal', ix7: 'Reply',
+    cap1: 'Chapter one', cap2: 'Chapter two', cap3: 'Chapter three',
+    cap4: 'Chapter four', cap5: 'Chapter five', cap5b: 'The running order',
+    cap6: 'Chapter six', cap7: 'Finale', chF: 'Arrivo',
+    fig1: 'Fig. 1', fig2: 'Fig. 2', fig3: 'Fig. 3', fig4: 'Fig. 4', fig5: 'Fig. 5',
+    fig6: 'Fig. 6', fig7: 'Fig. 7', fig8: 'Fig. 8', fig9: 'Fig. 9',
+    fig1cap: 'The villa from the lower garden, half past five.',
+    fig2cap: 'The east door, under the lemon tree.',
+    fig4cap: 'The long way up, between the old walls.',
+    fig5cap: 'The upper terrace, after the rehearsal.',
+    fig6cap: 'Detail.',
+    fig8cap: 'One long table, laid by hand.',
+    fig9cap: 'Garden roses, olive, a single ribbon.',
+    enterNow: 'Enter now', and: 'and',
+    marriageOf: 'The marriage of',
+    dragScroll: 'Drag, scroll or swipe', galleryLabel: 'Gallery, scrollable',
+    fSunset: 'Sunset', fDoor: 'The east door', fDusk: 'Dusk on the terrace',
+    fStone: 'Stone, four o’clock', fVilla: 'The villa', fHands: 'Hands',
+    fLane: 'The lane', fTable: 'The table',
+    dDate: 'Date', dCeremony: 'Venue', dAddress: 'Address',
+    dReception: 'Reception', dDress: 'Dress', dTravel: 'Getting there', dStay: 'Staying over',
+    replyToInvitation: 'Reply to the invitation', reply: 'Risposta', cutHere: 'Cut here',
+    fullName: 'Your name', willYouAttend: 'Will you join us?',
+    accept: 'Con piacere', decline: 'Purtroppo no',
+    guestCount: 'Number of guests', messageLabel: 'A note to the couple',
+    send: 'Send reply', sending: 'Sending…',
+    sendFailed: 'Could not send. Please try again.', thankYou: 'Grazie',
+    savedYes: 'We have you down. See you on the coast.',
+    savedNo: 'We will miss you, and we will raise a glass anyway.',
+    close: 'Close', music: 'Music',
+    developedBy: 'Developed with love by V-INVITE'
+  },
+  ru: {
+    brand: 'La Dolce Vita', indice: 'Indice',
+    ch1: 'La destinazione', ch2: 'Un momento insieme', ch3: 'L’arte della festa',
+    ch4: 'La data', ch5: 'Il programma', ch6: 'Il diario', ch7: 'La sera',
+    chProgramme: 'La serata',
+    ix1: 'Место', ix2: 'Мы двое', ix3: 'Праздник',
+    ix4: 'Дата', ix5: 'Подробности', ix6: 'Дневник', ix7: 'Ответ',
+    cap1: 'Глава первая', cap2: 'Глава вторая', cap3: 'Глава третья',
+    cap4: 'Глава четвёртая', cap5: 'Глава пятая', cap5b: 'Порядок вечера',
+    cap6: 'Глава шестая', cap7: 'Финал', chF: 'Arrivo',
+    fig1: 'Илл. 1', fig2: 'Илл. 2', fig3: 'Илл. 3', fig4: 'Илл. 4', fig5: 'Илл. 5',
+    fig6: 'Илл. 6', fig7: 'Илл. 7', fig8: 'Илл. 8', fig9: 'Илл. 9',
+    fig1cap: 'Вилла из нижнего сада, половина шестого.',
+    fig2cap: 'Восточная дверь, под лимонным деревом.',
+    fig4cap: 'Долгий подъём между старыми стенами.',
+    fig5cap: 'Верхняя терраса, после репетиции.',
+    fig6cap: 'Деталь.',
+    fig8cap: 'Один длинный стол, накрытый вручную.',
+    fig9cap: 'Садовые розы, олива, одна лента.',
+    enterNow: 'Войти', and: 'и',
+    marriageOf: 'Свадьба',
+    dragScroll: 'Листайте или тяните', galleryLabel: 'Галерея, прокручивается',
+    fSunset: 'Закат', fDoor: 'Восточная дверь', fDusk: 'Сумерки на террасе',
+    fStone: 'Камень, четыре часа', fVilla: 'Вилла', fHands: 'Руки',
+    fLane: 'Переулок', fTable: 'Стол',
+    dDate: 'Дата', dCeremony: 'Место', dAddress: 'Адрес',
+    dReception: 'Банкет', dDress: 'Дресс-код', dTravel: 'Как добраться', dStay: 'Где остановиться',
+    replyToInvitation: 'Ответить на приглашение', reply: 'Risposta', cutHere: 'Отрезать здесь',
+    fullName: 'Ваше имя', willYouAttend: 'Сможете приехать?',
+    accept: 'Con piacere', decline: 'Purtroppo no',
+    guestCount: 'Количество гостей', messageLabel: 'Пара слов для нас',
+    send: 'Отправить', sending: 'Отправляем…',
+    sendFailed: 'Не удалось отправить. Попробуйте ещё раз.', thankYou: 'Grazie',
+    savedYes: 'Ваш ответ получен. До встречи на побережье.',
+    savedNo: 'Нам будет вас не хватать, но бокал мы поднимем.',
+    close: 'Закрыть', music: 'Музыка',
+    developedBy: 'Сделано с любовью в V-INVITE'
+  },
+  uz: {
+    brand: 'La Dolce Vita', indice: 'Indice',
+    ch1: 'La destinazione', ch2: 'Un momento insieme', ch3: 'L’arte della festa',
+    ch4: 'La data', ch5: 'Il programma', ch6: 'Il diario', ch7: 'La sera',
+    chProgramme: 'La serata',
+    ix1: 'Manzil', ix2: 'Biz ikkimiz', ix3: 'Bayram',
+    ix4: 'Sana', ix5: 'Tafsilotlar', ix6: 'Kundalik', ix7: 'Javob',
+    cap1: 'Birinchi bob', cap2: 'Ikkinchi bob', cap3: 'Uchinchi bob',
+    cap4: 'Tortinchi bob', cap5: 'Beshinchi bob', cap5b: 'Kecha tartibi',
+    cap6: 'Oltinchi bob', cap7: 'Final', chF: 'Arrivo',
+    fig1: 'Rasm 1', fig2: 'Rasm 2', fig3: 'Rasm 3', fig4: 'Rasm 4', fig5: 'Rasm 5',
+    fig6: 'Rasm 6', fig7: 'Rasm 7', fig8: 'Rasm 8', fig9: 'Rasm 9',
+    fig1cap: 'Pastki bogdan korinadigan villa, besh yarimda.',
+    fig2cap: 'Sharqiy eshik, limon daraxti tagida.',
+    fig4cap: 'Qadimiy devorlar orasidan uzun yol.',
+    fig5cap: 'Yuqori ayvon, mashqdan keyin.',
+    fig6cap: 'Tafsilot.',
+    fig8cap: 'Qol bilan tuzalgan bitta uzun dasturxon.',
+    fig9cap: 'Bog atirgullari, zaytun va bitta lenta.',
+    enterNow: 'Kirish', and: 'va',
+    marriageOf: 'Nikoh toyi',
+    dragScroll: 'Suring yoki tortib koring', galleryLabel: 'Galereya',
+    fSunset: 'Quyosh botishi', fDoor: 'Sharqiy eshik', fDusk: 'Ayvonda shom',
+    fStone: 'Tosh, soat tortda', fVilla: 'Villa', fHands: 'Qollar',
+    fLane: 'Kocha', fTable: 'Dasturxon',
+    dDate: 'Sana', dCeremony: 'Manzil', dAddress: 'Adres',
+    dReception: 'Ziyofat', dDress: 'Kiyim uslubi', dTravel: 'Qanday yetib borish', dStay: 'Qayerda qolish',
+    replyToInvitation: 'Taklifnomaga javob berish', reply: 'Risposta', cutHere: 'Shu yerdan qirqing',
+    fullName: 'Ismingiz', willYouAttend: 'Kela olasizmi?',
+    accept: 'Con piacere', decline: 'Purtroppo no',
+    guestCount: 'Mehmonlar soni', messageLabel: 'Bizga ikki ogiz soz',
+    send: 'Yuborish', sending: 'Yuborilmoqda…',
+    sendFailed: 'Yuborib bolmadi. Qaytadan urinib koring.', thankYou: 'Grazie',
+    savedYes: 'Javobingiz qabul qilindi. Sohilda korishguncha.',
+    savedNo: 'Sizni sogtnamiz, ammo qadahni baribir kotaramiz.',
+    close: 'Yopish', music: 'Musiqa',
+    developedBy: 'V-INVITE tomonidan mehr bilan yaratildi'
+  }
+};
+
+var $ = function (s, c) { return (c || document).querySelector(s); };
+var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
+var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+var small = function () { return (window.innerWidth || 1024) < 900; };
+
+function t(key) { return (UI[lang] && UI[lang][key]) || UI.en[key] || key; }
+function loc(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  return v[lang] || v.en || v.ru || v.uz || '';
+}
+function cfg(path, dflt) {
+  var cur = CONFIG, parts = path.split('.');
+  for (var i = 0; i < parts.length; i++) {
+    if (cur == null || typeof cur !== 'object') return dflt;
+    cur = cur[parts[i]];
+  }
+  return cur == null ? dflt : cur;
+}
+
+/* Bundled artwork lives at the web origin; the page itself runs on the opaque
+   about:srcdoc origin and cannot resolve a relative path. */
+function asset(file) { return ORIGIN + '/dolcevita/' + file; }
+
+/* ── Dates ───────────────────────────────────────────────────────────────── */
+function eventDate() {
+  var d = new Date(cfg('event.dateISO', '2027-09-11T17:30:00'));
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+function intlLocale() { return lang === 'uz' ? 'uz-Latn-UZ' : (lang === 'ru' ? 'ru-RU' : 'en-GB'); }
+function fmt(opts) {
+  try { return new Intl.DateTimeFormat(intlLocale(), opts).format(eventDate()); }
+  catch (e) { return ''; }
+}
+function fmtDateLong() { return fmt({ day: 'numeric', month: 'long', year: 'numeric' }) || eventDate().toDateString(); }
+function fmtTime() {
+  var d = eventDate(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtNumeric() {
+  var d = eventDate(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear();
+}
+/* Roman numerals, which is how this design writes a year and a month — the
+   masthead's issue number and the date card's year. */
+function roman(n) {
+  var table = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+    [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  var out = '';
+  for (var i = 0; i < table.length; i++) {
+    while (n >= table[i][0]) { out += table[i][1]; n -= table[i][0]; }
+  }
+  return out;
+}
+function cap1(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+/* ── Text binding ────────────────────────────────────────────────────────── */
+function bindTexts() {
+  var groom = loc(cfg('couple.groom', ''));
+  var bride = loc(cfg('couple.bride', ''));
+  var groomFull = loc(cfg('couple.groomFull', '')) || groom;
+  var brideFull = loc(cfg('couple.brideFull', '')) || bride;
+  var couple = (groom && bride) ? (groom + ' & ' + bride) : (groom || bride);
+  var coupleFull = (groomFull && brideFull) ? (groomFull + ' & ' + brideFull) : (groomFull || brideFull);
+
+  /* A SECOND couple — a double wedding, two pairs married the same evening.
+     Optional: with the fields empty `pair2` and `pairFull2` are '', nothing
+     below adds a separator and `has-duo` is never set, so the page is exactly
+     what it was.
+
+     The pairs are joined by a MIDDOT and never by a second ampersand: the
+     ampersand already means "these two are marrying each other", and used
+     again it turns four names into one list of four people. */
+  var groom2 = loc(cfg('couple.groom2', ''));
+  var bride2 = loc(cfg('couple.bride2', ''));
+  var groomFull2 = loc(cfg('couple.groomFull2', '')) || groom2;
+  var brideFull2 = loc(cfg('couple.brideFull2', '')) || bride2;
+  var pair2 = (groom2 && bride2) ? (groom2 + ' & ' + bride2) : (groom2 || bride2);
+  var pairFull2 = (groomFull2 && brideFull2) ? (groomFull2 + ' & ' + brideFull2) : (groomFull2 || brideFull2);
+  var bothPairs = couple + (pair2 ? '  ·  ' + pair2 : '');
+
+  var town = loc(cfg('venue.town', ''));
+  var region = loc(cfg('venue.region', ''));
+  var venueName = loc(cfg('venue.name', ''));
+  var d = eventDate();
+
+  var map = {
+    issue: 'Numero ' + (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '  ·  ' + roman(d.getFullYear()),
+    amp: loc(cfg('invite.amp', '')) || t('and'),
+    /* The second pair's connector, bound separately so a pair with only one
+       name typed so far prints no dangling "and". */
+    amp2: (groom2 && bride2) ? (loc(cfg('invite.amp', '')) || t('and')) : '',
+    coverLine1: loc(cfg('invite.coverLine', '')) || (town ? town + ', ' + cap1(fmt({ day: 'numeric', month: 'long' })) : fmtDateLong()),
+    coverLine2: loc(cfg('invite.kicker', '')),
+    coverMeta: region ? region + '  ·  ' + fmtNumeric() : fmtNumeric(),
+
+    destLede: loc(cfg('invite.lede', '')),
+    destBody: loc(cfg('invite.body', '')),
+    coupleFull: coupleFull + (pairFull2 ? '  ·  ' + pairFull2 : ''),
+    inviteDate: fmtDateLong() + '  ·  ' + fmtTime() + (venueName ? '  ·  ' + venueName : ''),
+    arrivalCap: loc(cfg('arrival.caption', '')),
+
+    pullQuote: loc(cfg('story.quote', '')),
+    togetherBody: loc(cfg('story.body', '')),
+
+    ceremonyCap: loc(cfg('ceremony.caption', '')),
+    celeLede: loc(cfg('ceremony.lede', '')),
+    celeBody: loc(cfg('ceremony.body', '')),
+
+    calNote: loc(cfg('calendar.note', '')),
+
+    detailsFoot: loc(cfg('details.foot', '')),
+
+    finaleTitle: loc(cfg('finale.title', '')),
+    finaleMsg: loc(cfg('finale.message', '')),
+    rsvpLede: loc(cfg('rsvp.lede', '')),
+    couponSub: loc(cfg('rsvp.couponSub', '')),
+
+    colophonL: bothPairs + (town ? '  ·  ' + town : ''),
+    colophonR: fmtNumeric()
+  };
+
+  $$('[data-bind]').forEach(function (el) {
+    var v = map[el.getAttribute('data-bind')];
+    if (v != null) el.textContent = v;
+  });
+  $$('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); });
+  $$('[data-t-aria]').forEach(function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-t-aria'))); });
+
+  splitNames({ groom: groom, bride: bride, groom2: groom2, bride2: bride2 });
+  wrapWords();
+
+  /* One class reveals every `.duo` element on the page, rather than each site
+     deciding for itself. add/remove rather than toggle(force) so it behaves
+     identically in the build's DOM shim. */
+  if (pair2) document.documentElement.classList.add('has-duo');
+  else document.documentElement.classList.remove('has-duo');
+  document.title = bothPairs || 'Invitation';
+  document.documentElement.lang = lang;
+}
+
+/* The cover names land letter by letter as the shot settles, so each is
+   rebuilt as spans with a staggered delay. Rebuilt on every render: the names
+   change under the editor's hands.
+
+   Keyed by `data-name` through a table rather than a bride/else test: on a
+   double wedding the cover carries FOUR splits, and "bride or else the groom"
+   fills the second pair's with the first pair's names. */
+function splitNames(names) {
+  $$('.cover__names .split').forEach(function (el) {
+    var text = names[el.getAttribute('data-name')] || '';
+    el.setAttribute('aria-label', text || '');
+    el.innerHTML = '';
+    for (var i = 0; i < text.length; i++) {
+      var span = document.createElement('span');
+      span.className = 'ch';
+      span.style.transitionDelay = (i * 70) + 'ms';
+      span.textContent = text[i] === ' ' ? ' ' : text[i];
+      el.appendChild(span);
+    }
+  });
+}
+
+/* Word masks for the chapter titles, the pull quote and the cover lines: each
+   word gets its own overflow box so it can rise out of it. Text nodes only, so
+   any inline markup inside survives. */
+function wrapWords() {
+  $$('.words,.cover__lines p').forEach(function (host) {
+    if (!host.textContent.trim()) return;
+    var text = host.textContent;
+    host.innerHTML = '';
+    var parts = text.split(/(\s+)/);
+    var n = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i]) continue;
+      if (/^\s+$/.test(parts[i])) { host.appendChild(document.createTextNode(parts[i])); continue; }
+      var w = document.createElement('span');
+      w.className = 'w';
+      var inner = document.createElement('span');
+      inner.textContent = parts[i];
+      inner.style.transitionDelay = (n++ * 70) + 'ms';
+      w.appendChild(inner);
+      host.appendChild(w);
+    }
+  });
+  /* The cover lines arrive after the names have finished landing. */
+  $$('.cover__lines .w>span').forEach(function (s, i) { s.style.transitionDelay = (700 + i * 60) + 'ms'; });
+}
+
+/* ── Artwork ─────────────────────────────────────────────────────────────── */
+/* Set from script rather than in the markup, because the URL depends on
+   __ORIGIN__, which only exists once the bootstrap has run. */
+function bindArtwork() {
+  $$('[data-asset]').forEach(function (img) {
+    var url = asset(img.getAttribute('data-asset'));
+    if (img.getAttribute('src') !== url) img.setAttribute('src', url);
+  });
+  var poster = $('#heroPoster');
+  if (poster && !poster.getAttribute('src')) poster.setAttribute('src', asset('stone.jpg'));
+  var film = $('#film');
+  if (film && !film.getAttribute('poster')) film.setAttribute('poster', asset('stone.jpg'));
+}
+
+/* ── The date, set as letterpress ───────────────────────────────────────── */
+function renderDate() {
+  var num = $('#dNum');
+  if (num) {
+    var digits = String(eventDate().getDate()).split('');
+    num.innerHTML = '';
+    digits.forEach(function (c) {
+      var box = document.createElement('span');
+      var inner = document.createElement('i');
+      inner.textContent = c;
+      box.appendChild(inner);
+      num.appendChild(box);
+    });
+  }
+  var wd = $('#dWeekday'); if (wd) wd.textContent = cap1(fmt({ weekday: 'long' }));
+  var mo = $('#dMonth'); if (mo) mo.textContent = cap1(fmt({ month: 'long' }));
+  var yr = $('#dYear'); if (yr) yr.textContent = roman(eventDate().getFullYear());
+  var rd = $('#dReadable');
+  if (rd) rd.textContent = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/* ── The particulars and the programme, as two dotted-leader indexes ─────── */
+function progRow(key, value, note) {
+  var li = document.createElement('li');
+  li.className = 'prog__row fade';
+  var line = document.createElement('div');
+  line.className = 'prog__line';
+  var k = document.createElement('span'); k.className = 'prog__k'; k.textContent = key;
+  var lead = document.createElement('span'); lead.className = 'prog__lead'; lead.setAttribute('aria-hidden', 'true');
+  var v = document.createElement('span'); v.className = 'prog__v'; v.textContent = value;
+  line.appendChild(k); line.appendChild(lead); line.appendChild(v);
+  li.appendChild(line);
+  if (note) {
+    var n = document.createElement('span'); n.className = 'prog__note'; n.textContent = note;
+    li.appendChild(n);
+  }
+  return li;
+}
+
+/* A row with no value is a labelled empty line, so it is not written at all —
+   which is also how a couple drops one: by clearing the field. */
+function renderDetails() {
+  var host = $('#detailList');
+  if (!host) return;
+  host.innerHTML = '';
+  var rows = [
+    [t('dDate'), fmtDateLong() + '  ·  ' + fmtTime(), loc(cfg('details.dateNote', ''))],
+    [t('dCeremony'), loc(cfg('venue.name', '')), loc(cfg('details.ceremonyNote', ''))],
+    [t('dAddress'), loc(cfg('venue.address', '')), ''],
+    [t('dReception'), loc(cfg('details.reception', '')), loc(cfg('details.receptionNote', ''))],
+    [t('dDress'), loc(cfg('dress.title', '')), loc(cfg('dress.note', ''))],
+    [t('dTravel'), loc(cfg('travel.title', '')), loc(cfg('travel.note', ''))],
+    [t('dStay'), loc(cfg('stay.title', '')), loc(cfg('stay.note', ''))]
+  ];
+  var written = 0;
+  rows.forEach(function (r) {
+    if (!String(r[1] || '').trim()) return;
+    host.appendChild(progRow(r[0], r[1], r[2]));
+    written++;
+  });
+  var sec = $('#details');
+  if (sec) sec.classList.toggle('card-off', written === 0);
+}
+
+function renderSchedule() {
+  var host = $('#progList');
+  if (!host) return;
+  host.innerHTML = '';
+  var raw = cfg('schedule', []);
+  var items = Array.isArray(raw) ? raw.filter(function (s) {
+    return s && (String(s.time || '').trim() || loc(s.label));
+  }) : [];
+  items.forEach(function (item) {
+    host.appendChild(progRow(String(item.time || '').trim() || '·', loc(item.label), ''));
+  });
+  var sec = $('#program');
+  if (sec) sec.classList.toggle('card-off', items.length === 0);
+}
+
+/* ── The journal ─────────────────────────────────────────────────────────── */
+/* Eight bundled plates, in the shapes the strip is built for: five landscape,
+   two tall (the two PORTRAIT plates) and one square. The honoree's own photos
+   replace all of them the moment the first one is uploaded — a mixture of
+   somebody else's coast and their own album is worse than either. */
+var PLATES = [
+  { file: 'sunset.jpg', shape: 'w', cap: 'fSunset' },
+  { file: 'door.jpg', shape: 't', cap: 'fDoor' },
+  { file: 'dusk.jpg', shape: 'w', cap: 'fDusk' },
+  { file: 'stone.jpg', shape: 's', cap: 'fStone' },
+  { file: 'villa.jpg', shape: 'w', cap: 'fVilla' },
+  { file: 'hands.jpg', shape: 't', cap: 'fHands' },
+  { file: 'lane.jpg', shape: 'w', cap: 'fLane' },
+  { file: 'table.jpg', shape: 'w', cap: 'fTable' }
+];
+
+function journalItems() {
+  var raw = cfg('gallery', []);
+  var own = Array.isArray(raw) ? raw.filter(function (g) { return g && g.image; }) : [];
+  if (own.length) {
+    /* An uploaded photo is of unknown proportions, so every one of them gets a
+       landscape frame — the tall and square frames exist for the two bundled
+       portraits, and putting an arbitrary photo in them crops it hardest. */
+    return own.map(function (g, i) {
+      return { src: g.image, caption: loc(g.caption), shape: 'w', n: i + 1 };
+    });
+  }
+  return PLATES.map(function (p, i) {
+    return { src: asset(p.file), caption: t(p.cap), shape: p.shape, n: i + 1 };
+  });
+}
+
+function renderJournal() {
+  var strip = $('#strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+  var items = journalItems();
+  items.forEach(function (item) {
+    var fig = document.createElement('figure');
+    fig.className = 'frame frame--' + item.shape;
+    fig.style.margin = '0';
+    var ph = document.createElement('div');
+    ph.className = 'ph';
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.alt = '';
+    img.setAttribute('src', item.src);
+    ph.appendChild(img);
+    var capEl = document.createElement('figcaption');
+    var b = document.createElement('b');
+    b.textContent = (item.n < 10 ? '0' : '') + item.n;
+    var s = document.createElement('span');
+    s.textContent = item.caption;
+    capEl.appendChild(b); capEl.appendChild(s);
+    fig.appendChild(ph); fig.appendChild(capEl);
+    strip.appendChild(fig);
+  });
+  var count = $('#stripCount');
+  if (count) count.textContent = '01 / ' + (items.length < 10 ? '0' : '') + items.length;
+  sizeJournal();
+}
+
+/* The strip is driven by the PAGE scroll on a desktop — the section is pinned
+   and made as tall as the strip is wide, so scrolling the page moves it
+   sideways. Below 900px, and whenever motion is reduced, it is a plain
+   horizontal scroller instead: a pinned section on a phone takes the page away
+   from a reader who is only trying to get past it. */
+var journalTravel = 0;
+function sizeJournal() {
+  var journal = $('#gallery'), strip = $('#strip');
+  if (!journal || !strip) return;
+  if (small() || reduced || ADMIN_EDIT) {
+    journal.classList.add('native');
+    journal.style.height = '';
+    strip.style.transform = '';
+    journalTravel = 0;
+    return;
+  }
+  journal.classList.remove('native');
+  journalTravel = Math.max(0, strip.scrollWidth - (window.innerWidth || 1024));
+  journal.style.height = ((window.innerHeight || 800) + journalTravel) + 'px';
+}
+
+function initJournal() {
+  var strip = $('#strip'), journal = $('#gallery'), count = $('#stripCount');
+  if (!strip || !journal) return;
+  var queued = false;
+  strip.addEventListener('scroll', function () {
+    if (!journal.classList.contains('native') || queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      if (!count) return;
+      var left = strip.getBoundingClientRect().left;
+      var frames = $$('.frame', strip);
+      var best = Infinity, idx = 0;
+      frames.forEach(function (f, k) {
+        var d = Math.abs(f.getBoundingClientRect().left - left);
+        if (d < best) { best = d; idx = k; }
+      });
+      count.textContent = (idx + 1 < 10 ? '0' : '') + (idx + 1)
+        + ' / ' + (frames.length < 10 ? '0' : '') + frames.length;
+    });
+  }, { passive: true });
+}
+
+/* ── Reveal on scroll ────────────────────────────────────────────────────── */
+/* Every entrance below the fold is gated on intersection. Without an observer,
+   or inside the Design+ editor which must see every section at once,
+   everything is revealed rather than left invisible. */
+var revObs = null, frameObs = null;
+function revealEverything() {
+  $$('.fade,.words,.dateset,.rv-letterbox,.rv-rise,.rv-pan').forEach(function (el) {
+    el.classList.add('in');
+  });
+}
+function initObserver() {
+  if (ADMIN_EDIT || reduced || typeof IntersectionObserver === 'undefined') {
+    revealEverything();
+    return;
+  }
+  revObs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      revObs.unobserve(e.target);
+    });
+  }, { threshold: 0.18, rootMargin: '0px 0px -6% 0px' });
+  $$('.fade,.words,.dateset').forEach(function (el) { revObs.observe(el); });
+
+  /* A wiping plate starts FULLY CLIPPED, and a fully clipped element never
+     counts as visible to an IntersectionObserver — so watching the plate
+     itself means it can never reveal. Watch its unclipped frame instead. */
+  frameObs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      (e.target.__reveals || []).forEach(function (el) { el.classList.add('in'); });
+      frameObs.unobserve(e.target);
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  $$('.rv-letterbox,.rv-rise,.rv-pan').forEach(function (el) {
+    var host = (el.closest && el.closest('figure')) || el.parentElement || el;
+    if (!host.__reveals) host.__reveals = [];
+    host.__reveals.push(el);
+    frameObs.observe(host);
+  });
+}
+
+/* ── The film ────────────────────────────────────────────────────────────── */
+/* The tracking shot along the terrace is the whole opening beat, and it is
+   also 5.6 MB. It is not loaded at all when the guest has asked for less
+   motion or is on a metered connection — the poster frame is the same shot, so
+   the cover still reads. */
+var hero = $('#hero'), film = $('#film');
+var arrived = false, filmWatch = 0;
+
+function arrive() {
+  if (arrived) return;
+  arrived = true;
+  if (hero) hero.classList.add('is-cover');
+}
+
+function saveData() {
+  var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  return !!(c && (c.saveData || /^([23]g|slow-2g)$/.test(c.effectiveType || '')));
+}
+
+/* ── How long the opening runs ────────────────────────────────────────────
+   The film is 8 seconds, and for a guest that is 8 seconds of waiting before
+   the invitation can be read — every time the link is opened, not only the
+   first. So the opening is cut.
+
+   It is cut by playing the film FASTER, not by trimming the file. The same mp4
+   supplies the poster frame and the still that stands in under reduced motion
+   and on a slow connection, and the choreography has to reach its end: the
+   cover comes to rest on the final frame, so stopping the film early would
+   leave it resting on a half-finished camera move.
+
+   The moment the cover type lands stays a FRACTION of the film rather than a
+   number of seconds, so it still falls on the same moment of the shot whatever
+   the rate is — and the safety net below is derived from the rate for the same
+   reason. Both are one-line adjustments; nothing else reads the film's length. */
+var INTRO_RATE = 1.6;
+
+function initFilm() {
+  if (!film) { arrive(); return; }
+  if (reduced || ADMIN_EDIT || saveData()) {
+    // A <video> with no source is an empty black box in some browsers. The
+    // poster is the same shot, so take the element out entirely.
+    film.classList.add('hidden');
+    arrive();
+    return;
+  }
+
+  film.addEventListener('loadeddata', function () { if (hero) hero.classList.add('video-ready', 'is-playing'); });
+  film.addEventListener('error', function () { arrive(); });
+  film.addEventListener('ended', function () {
+    arrive();
+    // hold on the final frame rather than looping back to the start of the move
+    try { film.pause(); film.currentTime = Math.max(0, film.duration - 0.05); } catch (e) {}
+  });
+
+  /* Set in both places on purpose: some engines reset it across load(). */
+  film.playbackRate = INTRO_RATE;
+  film.addEventListener('loadedmetadata', function () { film.playbackRate = INTRO_RATE; });
+
+  var src = document.createElement('source');
+  src.setAttribute('src', asset('film.mp4'));
+  src.setAttribute('type', 'video/mp4');
+  film.appendChild(src);
+  try { film.load(); } catch (e) {}
+  var p = film.play ? film.play() : null;
+  if (p && p.catch) p.catch(function () { arrive(); });
+
+  /* Land the cover type as the camera comes to rest, not after a hard cut. */
+  filmWatch = setInterval(function () {
+    if (!film.duration) return;
+    if (film.currentTime > film.duration * 0.58) { clearInterval(filmWatch); arrive(); }
+  }, 120);
+  setTimeout(arrive, Math.round(9000 / INTRO_RATE));   // safety net if the video never plays at all
+}
+
+/* ── Parallax — one rAF loop for every layer ─────────────────────────────── */
+/* The independent `translate` property, never `transform`, so a moving layer
+   never fights the reveal transitions that animate `transform`.
+
+   THE TRAVEL IS DERIVED FROM THE OVERSHOOT, not from a pixels-per-scroll
+   factor, and that is the whole reason the overshoot could be cut.
+
+   The obvious way to write this — offset = (how far the section's centre is
+   from the viewport's) x depth — measures the move against a box that has
+   nothing to do with the size of the layer being moved. Measured in headless
+   Chrome at 1920x1080, every one of the six layers overran the room it had:
+   the roses plate travelled 103px inside a 17px allowance, the hands 81px
+   inside 21px. At the old 11% overshoot that is hidden, at the cost of a
+   permanent 20% crop on every parallax plate; the seam only appears when the
+   crop is reduced, which is how a rig like this quietly sets the floor on how
+   much picture a reader gets to see.
+
+   So the frame's own progress ACROSS THE VIEWPORT drives it — 0 as the frame
+   comes up past the fold, 1 as it leaves the top — and the offset spans
+   exactly the overshoot. `data-depth` is then a signed strength: ±0.07 is the
+   full span, a smaller magnitude is a gentler move, and the sign is the
+   direction. Nothing can expose an edge at any viewport size, and the
+   overshoot is the single number that trades travel against crop. */
+var BLEED = 0.06;            /* must match --bleed in the stylesheet */
+var FULL_DEPTH = 0.07;       /* the depth that uses the whole overshoot */
+var layers = [];
+function collectLayers() {
+  layers = [];
+  $$('[data-depth]').forEach(function (el) {
+    layers.push({
+      el: el,
+      d: parseFloat(el.getAttribute('data-depth')) || 0,
+      frame: el.parentElement || el
+    });
+  });
+}
+function paint() {
+  var vh = window.innerHeight || 800;
+  for (var i = 0; i < layers.length; i++) {
+    var L = layers[i];
+    var r = L.frame.getBoundingClientRect ? L.frame.getBoundingClientRect() : null;
+    if (!r || !r.height) continue;
+    if (r.bottom < -200 || r.top > vh + 200) continue;
+    var progress = (vh - r.top) / (vh + r.height);
+    if (progress < 0) progress = 0; else if (progress > 1) progress = 1;
+    /* 0.98, not the whole overshoot: at exactly the allowance the layer's edge
+       lands exactly on the frame's, and sub-pixel rounding there is a hairline
+       of background along one side. */
+    var allow = r.height * BLEED * 0.98;
+    var off = (0.5 - progress) * 2 * allow * (L.d / FULL_DEPTH);
+    if (off > allow) off = allow; else if (off < -allow) off = -allow;
+    L.el.style.translate = '0 ' + off.toFixed(1) + 'px';
+  }
+  /* The pinned journal: the page's scroll through the section IS the strip's
+     sideways travel. */
+  var journal = $('#gallery'), strip = $('#strip'), bar = $('#stripBar');
+  if (journal && strip && !journal.classList.contains('native')) {
+    var jr = journal.getBoundingClientRect();
+    var span = (journal.offsetHeight || vh) - vh || 1;
+    var p = Math.min(1, Math.max(0, -jr.top / span));
+    strip.style.transform = 'translate3d(' + (-p * journalTravel).toFixed(1) + 'px,0,0)';
+    if (bar) bar.style.transform = 'scaleX(' + p.toFixed(3) + ')';
+  }
+  updateFolio();
+}
+var queuedPaint = false;
+function onScroll() {
+  if (queuedPaint) return;
+  queuedPaint = true;
+  requestAnimationFrame(function () { queuedPaint = false; paint(); });
+}
+
+/* ── Folio — the chapter and the page number follow the reader ───────────── */
+var folioSections = [];
+function updateFolio() {
+  var folio = $('#folio');
+  if (folio) folio.classList.toggle('on', (window.scrollY || 0) > (window.innerHeight || 800) * 0.75);
+}
+function initFolio() {
+  var chap = $('#folioChap'), page = $('#folioPage');
+  folioSections = $$('[data-folio]');
+  if (typeof IntersectionObserver !== 'undefined') {
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var i = folioSections.indexOf(e.target);
+        if (chap) chap.textContent = t(e.target.getAttribute('data-folio'));
+        if (page) page.textContent = 'p. ' + (i * 2 + 1 < 10 ? '0' : '') + (i * 2 + 1);
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    folioSections.forEach(function (s) { obs.observe(s); });
+  }
+  if (chap && !chap.textContent) chap.textContent = t('chF');
+
+  var btn = $('#indexBtn'), panel = $('#index');
+  if (!btn || !panel) return;
+  function setOpen(open) {
+    if (open) {
+      panel.hidden = false;
+      requestAnimationFrame(function () { panel.classList.add('open'); });
+    } else {
+      panel.classList.remove('open');
+      setTimeout(function () { panel.hidden = true; }, reduced ? 0 : 800);
+    }
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  btn.addEventListener('click', function () { setOpen(btn.getAttribute('aria-expanded') !== 'true'); });
+  panel.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') { setOpen(false); if (btn.focus) btn.focus(); }
+  });
+}
+
+function initSkip() {
+  var skip = $('#skip');
+  if (!skip) return;
+  skip.addEventListener('click', function () {
+    arrive();
+    var target = $('#invite');
+    if (target && target.scrollIntoView) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+  });
+}
+
+/* ── Visibility ──────────────────────────────────────────────────────────── */
+function applyVisibility() {
+  var hid = cfg('hidden', {}) || {};
+  $$('[data-opt]').forEach(function (el) {
+    el.classList.toggle('opt-off', hid[el.getAttribute('data-opt')] === true);
+  });
+}
+
+/* ── Music ───────────────────────────────────────────────────────────────── */
+var audio = $('#audio'), musicBtn = $('#music-btn'), musicRetry = false;
+var RETRY_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+
+/* `musicOff` is the guest's own decision, and it outranks every automatic
+   start below. Without it, pressing pause and then scrolling would restart the
+   track — the retry listeners are still armed, and a scroll is a gesture. */
+var musicOff = false;
+
+function startMusic() {
+  if (musicOff) return;
+  if (!audio || !audio.getAttribute('src') || !audio.paused) return;
+  var p = audio.play ? audio.play() : null;
+  if (p && p.then) p.then(setPressed, armMusicRetry); else setPressed();
+}
+function setPressed() {
+  if (musicBtn) musicBtn.setAttribute('aria-pressed', 'true');
+}
+function armMusicRetry() {
+  if (musicRetry) return;
+  musicRetry = true;
+  var retry = function () {
+    if (musicOff) return;
+    var p = audio.play();
+    var stop = function () {
+      setPressed();
+      RETRY_EVENTS.forEach(function (ev) { window.removeEventListener(ev, retry); });
+    };
+    if (p && p.then) p.then(stop, function () {}); else stop();
+  };
+  RETRY_EVENTS.forEach(function (ev) { window.addEventListener(ev, retry); });
+}
+/* Autoplay is best-effort by necessity — every current browser refuses to
+   start audible media without a user gesture — so this attempts it on load
+   and, when that is refused, `armMusicRetry` starts the track on the guest's
+   FIRST tap, key or scroll. */
+function initMusic() {
+  if (musicBtn) musicBtn.addEventListener('click', function () {
+    if (!audio || !audio.getAttribute('src')) return;
+    if (audio.paused) { musicOff = false; startMusic(); }
+    else { musicOff = true; audio.pause(); musicBtn.setAttribute('aria-pressed', 'false'); }
+  });
+  startMusic();
+}
+function renderMusic() {
+  if (!audio || !musicBtn) return;
+  var url = cfg('music.url', '');
+  var hid = cfg('hidden', {}) || {};
+  if (!url || hid.music === true) {
+    audio.removeAttribute('src');
+    musicBtn.classList.add('hidden');
+    return;
+  }
+  if (audio.getAttribute('src') !== url) audio.setAttribute('src', url);
+  musicBtn.classList.remove('hidden');
+}
+
+/* ── Petals — one bloom, at the finale and on an accepted reply ──────────── */
+var cv = $('#petals'), ctx = null;
+var pW = 0, pH = 0, parts = [], running = false;
+/* Tones sampled from the plates: ivory and blush petals, olive leaves, and the
+   warm motes of late afternoon light. */
+var PETAL = [[244, 236, 224], [238, 222, 214], [230, 206, 198], [247, 240, 232]];
+var LEAF = [[124, 128, 92], [104, 110, 78]];
+
+function sizeCanvas() {
+  if (!cv || !ctx) return;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  pW = window.innerWidth || 400; pH = window.innerHeight || 800;
+  cv.width = pW * dpr; cv.height = pH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function burst(x, y, n) {
+  if (reduced || !ctx) return;
+  for (var i = 0; i < n; i++) {
+    var a = Math.random() * Math.PI * 2;
+    var sp = 1.2 + Math.random() * 3.2;
+    var kind = Math.random() < 0.14 ? 'leaf' : (Math.random() < 0.3 ? 'mote' : 'petal');
+    var col = kind === 'leaf' ? LEAF[i % LEAF.length] : PETAL[i % PETAL.length];
+    parts.push({
+      x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7 - 0.6,
+      r: kind === 'mote' ? 1 + Math.random() * 1.6 : 5 + Math.random() * 7,
+      rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.06,
+      flip: Math.random() * 6.28, vf: 0.04 + Math.random() * 0.05,
+      life: 1, decay: 0.0045 + Math.random() * 0.004, kind: kind, col: col
+    });
+  }
+  if (!running) { running = true; requestAnimationFrame(tick); }
+}
+
+function drawPetal(p) {
+  /* A curved petal whose width oscillates, so it reads as tumbling in 3D. */
+  var w = p.r * (0.45 + 0.55 * Math.abs(Math.cos(p.flip)));
+  var c = p.col;
+  var grad = ctx.createLinearGradient(0, -p.r, 0, p.r);
+  grad.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + p.life + ')');
+  grad.addColorStop(1, 'rgba(' + (c[0] - 26) + ',' + (c[1] - 30) + ',' + (c[2] - 28) + ',' + (p.life * 0.85) + ')');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, -p.r);
+  ctx.bezierCurveTo(w, -p.r * 0.6, w * 0.9, p.r * 0.7, 0, p.r);
+  ctx.bezierCurveTo(-w * 0.9, p.r * 0.7, -w, -p.r * 0.6, 0, -p.r);
+  ctx.fill();
+}
+
+function tick() {
+  if (!ctx) { running = false; return; }
+  ctx.clearRect(0, 0, pW, pH);
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i];
+    p.vy += p.kind === 'mote' ? 0.006 : 0.028;   /* petals fall slowly, light hangs */
+    p.vx *= 0.985; p.vy *= 0.985;
+    p.x += p.vx + Math.sin(p.flip) * 0.35; p.y += p.vy;
+    p.rot += p.vr; p.flip += p.vf; p.life -= p.decay;
+    if (p.life <= 0) continue;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    if (p.kind === 'mote') {
+      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, p.r * 3);
+      g.addColorStop(0, 'rgba(255,226,170,' + (p.life * 0.8) + ')');
+      g.addColorStop(1, 'rgba(255,226,170,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, p.r * 3, 0, 6.28); ctx.fill();
+    } else {
+      drawPetal(p);
+    }
+    ctx.restore();
+  }
+  parts = parts.filter(function (p) { return p.life > 0 && p.y < pH + 40; });
+  if (parts.length) requestAnimationFrame(tick);
+  else { running = false; ctx.clearRect(0, 0, pW, pH); }
+}
+
+function initPetals() {
+  if (!cv || reduced || !cv.getContext) return;
+  try { ctx = cv.getContext('2d'); } catch (e) { ctx = null; }
+  if (!ctx) return;
+  sizeCanvas();
+  window.addEventListener('resize', sizeCanvas, { passive: true });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { parts = []; running = false; }
+  });
+
+  /* One bloom, once, as the finale's title arrives. */
+  var target = $('#fin-h');
+  if (!target || typeof IntersectionObserver === 'undefined') return;
+  var fired = false;
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting || fired) return;
+      fired = true;
+      obs.disconnect();
+      setTimeout(function () {
+        burst((window.innerWidth || 400) * 0.4, (window.innerHeight || 800) * 0.46, small() ? 70 : 150);
+      }, 800);
+    });
+  }, { threshold: 0.5 });
+  obs.observe(target);
+}
+
+/* ── RSVP ────────────────────────────────────────────────────────────────── */
+/* The coupon unfolds in place beneath the final plate rather than covering it:
+   this design is a magazine, and a magazine's reply device is something you
+   tear out of the page. */
+var attending = true;
+var rsvpPending = null;
+
+function initRsvp() {
+  var wrap = $('#couponWrap'), form = $('#rsvpForm');
+  var openBtn = $('#rsvpOpen'), thanksClose = $('#thanksClose');
+  var success = $('#rsvpSuccess'), guestField = $('#guestField');
+
+  $$('#attendRow .chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      $$('#attendRow .chip').forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+      chip.setAttribute('aria-pressed', 'true');
+      attending = chip.getAttribute('data-attend') === 'yes';
+      if (guestField) guestField.style.display = attending ? '' : 'none';
+    });
+  });
+
+  if (openBtn && wrap) {
+    openBtn.addEventListener('click', function () {
+      var open = openBtn.getAttribute('aria-expanded') !== 'true';
+      openBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      wrap.classList.toggle('open', open);
+      if (!open) return;
+      startMusic();                 // the tap is the gesture autoplay needs
+      setTimeout(function () {
+        if (wrap.scrollIntoView) wrap.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+        var n = $('#rsvpName');
+        if (n && n.focus) n.focus({ preventScroll: true });
+      }, reduced ? 0 : 500);
+    });
+  }
+  if (thanksClose && wrap) {
+    thanksClose.addEventListener('click', function () {
+      wrap.classList.remove('open');
+      if (openBtn) {
+        openBtn.setAttribute('aria-expanded', 'false');
+        if (openBtn.focus) openBtn.focus();
+      }
+    });
+  }
+
+  if (!form) return;
+  form.addEventListener('submit', function (e) {
+    if (e.preventDefault) e.preventDefault();
+    var nameInput = $('#rsvpName');
+    var field = (nameInput && nameInput.closest) ? nameInput.closest('.field') : null;
+    var name = ((nameInput && nameInput.value) || '').trim();
+    if (!name) {
+      if (field) field.classList.add('invalid');
+      if (nameInput && nameInput.focus) nameInput.focus();
+      return;
+    }
+    if (field) field.classList.remove('invalid');
+    var err = $('#rsvpErr');
+    if (err) err.classList.remove('show');
+
+    var guestsInput = $('#rsvpGuests'), msgInput = $('#rsvpMsg');
+    var payload = {
+      name: name,
+      attending: attending,
+      guests: attending ? (parseInt(guestsInput && guestsInput.value, 10) || 1) : 0,
+      message: ((msgInput && msgInput.value) || '').trim() || undefined
+    };
+
+    var btn = $('#rsvpSubmit'), label = btn ? btn.querySelector('span') : null;
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = t('sending');
+
+    new Promise(function (resolve, reject) {
+      /* If no parent answers within 2.5s (the editor preview does not), treat
+         it as saved rather than showing the guest a failure. */
+      var timer = setTimeout(function () { rsvpPending = null; resolve(); }, 2500);
+      rsvpPending = { resolve: resolve, reject: reject, timer: timer };
+      window.parent.postMessage({ type: 'vinvite:rsvp', payload: payload }, '*');
+    }).then(function () {
+      var text = $('#successText');
+      if (text) text.textContent = attending ? t('savedYes') : t('savedNo');
+      form.classList.add('gone');
+      if (success) {
+        success.classList.add('on');
+        if (success.focus) success.focus();
+      }
+      if (attending && cv) {
+        cv.classList.add('on-top');
+        burst((window.innerWidth || 400) / 2, (window.innerHeight || 800) * 0.5, small() ? 90 : 180);
+      }
+    }, function () {
+      if (err) err.classList.add('show');
+    }).then(function () {
+      if (btn) btn.disabled = false;
+      if (label) label.textContent = t('send');
+    });
+  });
+}
+
+/* ── Platform credit ─────────────────────────────────────────────────────── */
+var SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.1 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.8.6A2 2 0 0 1 22 16.9z"/></svg>';
+var SVG_TG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.8 18.6l.3-4.2 7.7-6.9c.3-.3-.1-.5-.5-.2L7.7 13.2 3.6 11.9c-.9-.3-.9-.9.2-1.3l16-6.2c.7-.3 1.4.2 1.1 1.3l-2.7 12.8c-.2.9-.7 1.1-1.5.7l-4.1-3-2 2c-.2.2-.4.4-.8.4z"/></svg>';
+var SVG_IG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>';
+
+function renderPlatformContacts() {
+  var host = $('#vcContacts');
+  if (!host) return;
+  var c = window.__CONTACTS__ || {};
+  host.innerHTML = '';
+  function link(href, label, svg) {
+    var a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = svg + '<span>' + label + '</span>';
+    host.appendChild(a);
+  }
+  var phone = (c.phone || '').trim(), tg = (c.telegram || '').trim(), ig = (c.instagram || '').trim();
+  if (phone) link('tel:' + phone.replace(/[^\d+]/g, ''), phone, SVG_PHONE);
+  if (tg) link(tg.indexOf('http') === 0 ? tg : 'https://t.me/' + tg.replace(/^@/, ''),
+    tg.replace(/^https?:\/\/t\.me\//, '@').replace(/^@?/, '@'), SVG_TG);
+  if (ig) link(ig.indexOf('http') === 0 ? ig : 'https://instagram.com/' + ig.replace(/^@/, ''),
+    ig.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/^@?/, '@'), SVG_IG);
+
+  var logo = $('#vconnectLogo');
+  if (logo && !logo.getAttribute('src')) logo.setAttribute('src', ORIGIN + '/v-invite-logo.png');
+}
+
+/* ── Language bar ────────────────────────────────────────────────────────── */
+function renderLangbar() {
+  var bar = $('#langbar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  if (LANGS.length < 2) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  LANGS.forEach(function (l) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = String(l).toUpperCase();
+    b.className = (l === lang) ? 'active' : '';
+    b.addEventListener('click', function () {
+      if (lang === l) return;
+      lang = l;
+      renderAll();
+    });
+    bar.appendChild(b);
+  });
+}
+
+/* ── Host bridge ─────────────────────────────────────────────────────────── */
+window.addEventListener('message', function (e) {
+  var d = e.data;
+  if (!d || typeof d !== 'object') return;
+  if (d.type === 'vinvite:rsvp-ok' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.resolve(); rsvpPending = null; }
+  if (d.type === 'vinvite:rsvp-err' && rsvpPending) { clearTimeout(rsvpPending.timer); rsvpPending.reject(); rsvpPending = null; }
+  if (d.type === 'vinvite:config') {
+    if (d.contacts) window.__CONTACTS__ = d.contacts;
+    CONFIG = d.config || CONFIG;
+    if (d.languages && d.languages.length) {
+      LANGS = d.languages;
+      if (LANGS.indexOf(lang) === -1) lang = LANGS[0];
+    }
+    renderAll();
+  }
+  /* The editor jumped to a section being edited: every entrance must already
+     have played, or the admin is looking at a blank page. */
+  if (d.type === 'vinvite:focus') {
+    arrive();
+    revealEverything();
+  }
+});
+
+/* ── Full render (initial + on config / language change) ─────────────────── */
+function renderAll() {
+  renderPlatformContacts();
+  bindTexts();
+  bindArtwork();
+  renderDate();
+  renderDetails();
+  renderSchedule();
+  renderJournal();
+  applyVisibility();
+  renderMusic();
+  renderLangbar();
+  collectLayers();
+  if (ADMIN_EDIT || reduced) revealEverything();
+  if (!reduced) paint();
+}
+
+/* ── Boot ────────────────────────────────────────────────────────────────── */
+try {
+  renderAll();
+  initMusic();
+  initObserver();
+  initFolio();
+  initJournal();
+  initPetals();
+  initRsvp();
+  initSkip();
+  initFilm();
+  if (!reduced) {
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', function () { sizeJournal(); collectLayers(); onScroll(); }, { passive: true });
+  }
+  if (reduced || ADMIN_EDIT) arrive();
+} catch (err) {
+  /* A half-booted page must still be readable: show everything, drop the film
+     hold, and leave the page scrollable. */
+  arrive();
+  revealEverything();
+  document.body.classList.remove('is-locked');
+  if (window.console && console.error) console.error(err);
+}
+})();
+</script>
+</body>
+</html>

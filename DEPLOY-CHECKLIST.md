@@ -4015,3 +4015,61 @@ full-screen overlay inside any page was sized to the PAGE, not the screen.
     before it starts and nothing left half-transparent afterwards.
 7. Card grids that stagger in (the dashboards) likewise: each card still
     arrives in turn and ends fully opaque.
+
+---
+
+## §81 — "La Dolce Vita": a fourteenth invitation design, and the cropping it was built around
+
+**No migration.** A new rich template (`wedding-dolcevita`), its bundled
+artwork in `apps/web/public/dolcevita/` (9.0 MB: thirteen plates and a 5.6 MB
+film), one family added to the shared Google Fonts link in `index.html`
+(Bodoni Moda, for the marketing card), and a new `fld_region` label plus the
+design's three catalog strings in `vinvite/i18n.ts`.
+
+The design is shaped like a magazine rather than an invitation: a masthead over
+the opening film, a contents list behind a running folio, six numbered
+chapters, a picture credit under every plate, the day set as letterpress
+numerals, the particulars as an index with dotted leaders, and a reply COUPON
+that unfolds out of the page instead of a dialog that covers it.
+
+It deliberately has **no countdown block** — Chapter IV is this design's answer
+to "when" — and **no venue/map block**, so the two pinned lists in
+`templateCountdown.test.ts` and `templatePhotoSlots.test.ts` are unchanged.
+Adding either is the obvious follow-up.
+
+**Cropping was the second half of the job**, and most of the checks below are
+it. Every plate is 16:9; `object-fit: cover` throws away whatever does not fit
+its box, and a desktop is the wide viewport, so that is where it bit. Measured
+in headless Chrome at 1920/1440/1280/860/390: on a desktop **nothing is heavily
+cropped any more** — every plate shows 89–100% of its frame, against 45–56% on
+the first pass.
+
+1. On a **desktop**, scroll the whole invitation. No photograph is noticeably
+    cut: the lane, the roses, the wide ceremony plate and the journal's square
+    frame each show the whole subject. (These were the four that lost between a
+    half and a third of the picture.)
+2. The full-bleed interlude after Chapter I shows the **entire** frame on a
+    desktop — the couple, the cliff and the horizon, not a band through the
+    middle. It is taller than a screen at 1920px; that is deliberate.
+3. **No horizontal scrollbar at any width**, and in particular at ~860px, where
+    the interlude briefly pushed the page 132px wide during development.
+4. Scroll past each parallax plate slowly (the door, the interlude, the hands,
+    the aisle, the evening): **no band of background** appears along the top or
+    bottom edge of any of them as they move.
+5. On a **phone**: the cover's last line clears the language bar, the masthead
+    does not wrap into the issue number, and "Enter now" does not print over
+    the masthead rule.
+6. The journal: sideways, pinned, driven by the page scroll on a desktop; a
+    plain snapping scroller on a phone, with the frame number and its caption
+    on separate lines in the narrow frames.
+7. **Russian text must be set in a Didone, not in the system serif.** Bodoni
+    Moda has no Cyrillic, so the stacks name Playfair Display and Montserrat
+    after it for exactly those glyphs. Open it in ru and compare a heading with
+    the same heading in en: different language, same kind of letter.
+8. The reply coupon: open it from the finale, send a reply, see the petals and
+    the thank-you; close it and the button returns to "Reply".
+9. The language bar switches all three, including the picture credits and the
+    chapter eyebrows — the chapter TITLES stay Italian on purpose.
+10. On the marketing site: the design's card carries terracotta and is set in
+    Bodoni Moda; its name, one-line description and full description all read
+    in all three languages.

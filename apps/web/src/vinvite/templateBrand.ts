@@ -115,6 +115,12 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#3B3A34', buttonInk: '#F4F2EC', tint: '#EDEAE1',
     font: `'La Belle Aurore', ${SERIF_FALLBACK}`,
   },
+  // Limestone and terracotta over a Mediterranean afternoon.
+  'wedding-dolcevita': {
+    ink: '#9B4A33', inkDark: '#e9ab92', border: '#A9533A',
+    button: '#24201B', buttonInk: '#F2ECE2', tint: '#F2ECE2',
+    font: `'Bodoni Moda', ${SERIF_FALLBACK}`,
+  },
   // Estate green and engraved gold.
   'wedding-chateau': {
     ink: '#3d4a3b', inkDark: '#dfc48a', border: '#b8924e',

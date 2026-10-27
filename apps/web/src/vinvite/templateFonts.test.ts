@@ -63,7 +63,7 @@ function usedFamilies(src: string): Set<string> {
  */
 const SYSTEM = new Set([
   'Iowan Old Style', 'Snell Roundhand', 'Segoe Script', 'Segoe UI', 'Avenir Next', 'Futura',
-  'Optima', 'Palatino', 'Palatino Linotype', 'Didot', 'Bodoni MT', 'Times New Roman', 'Georgia',
+  'Optima', 'Palatino', 'Palatino Linotype', 'Didot', 'Bodoni MT', 'Bodoni 72', 'Times New Roman', 'Georgia',
   'Garamond', 'Baskerville', 'Hoefler Text', 'Courier New', 'Menlo', 'Monaco', 'system-ui',
   'Helvetica Neue', 'Helvetica', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji',
 ]);

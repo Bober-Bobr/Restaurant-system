@@ -45,7 +45,7 @@ function at(config: Record<string, unknown>, path: string): unknown {
 it('covers every wedding design', () => {
   // Not a tautology over an empty set, and it fails if a wedding design is
   // added without being given a second couple.
-  expect(WEDDINGS.length).toBe(10);
+  expect(WEDDINGS.length).toBe(11);
 });
 
 describe.each(WEDDINGS.map((t) => [t.id] as const))('%s', (id) => {

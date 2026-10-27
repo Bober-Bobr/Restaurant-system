@@ -3,6 +3,7 @@ import { birthdayPrestigeTemplate } from './birthday-prestige/definition';
 import { birthdayTuscanTemplate } from './birthday-tuscan/definition';
 import { weddingArabicTemplate } from './wedding-arabic/definition';
 import { weddingCelestialTemplate } from './wedding-celestial/definition';
+import { weddingDolceVitaTemplate } from './wedding-dolcevita/definition';
 import { weddingChateauTemplate } from './wedding-chateau/definition';
 import { weddingEternalVowsTemplate } from './wedding-eternal-vows/definition';
 import { weddingFotihaTemplate } from './wedding-fotiha/definition';
@@ -22,6 +23,7 @@ export const RICH_TEMPLATES: TemplateDefinition[] = [
   weddingArabicTemplate,
   weddingCelestialTemplate,
   weddingChateauTemplate,
+  weddingDolceVitaTemplate,
   weddingEternalVowsTemplate,
   weddingFotihaTemplate,
   weddingKeepsakeTemplate,
