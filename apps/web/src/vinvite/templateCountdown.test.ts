@@ -43,7 +43,7 @@ it('the designs given a countdown still have one', () => {
   // Named, so removing the section from all four turns every check below into a
   // vacuous pass and this one fails instead.
   expect(WITH_COUNTDOWN.map((t) => t.id).sort()).toEqual([
-    'wedding-chateau', 'wedding-paris', 'wedding-samarkand', 'wedding-stillvatn',
+    'wedding-chateau', 'wedding-paris', 'wedding-samarkand', 'wedding-stillvatn', 'wedding-zermatt',
   ]);
 });
 

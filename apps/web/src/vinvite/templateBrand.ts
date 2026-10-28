@@ -115,6 +115,12 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#3B3A34', buttonInk: '#F4F2EC', tint: '#EDEAE1',
     font: `'La Belle Aurore', ${SERIF_FALLBACK}`,
   },
+  // Ivory and forest green, under snow — a Swiss notice.
+  'wedding-zermatt': {
+    ink: '#1F3328', inkDark: '#A9C3AE', border: '#3D5464',
+    button: '#1F3328', buttonInk: '#F5F2EC', tint: '#ECE8DF',
+    font: `'Instrument Serif', ${SERIF_FALLBACK}`,
+  },
   // Limestone and terracotta over a Mediterranean afternoon.
   'wedding-dolcevita': {
     ink: '#9B4A33', inkDark: '#e9ab92', border: '#A9533A',

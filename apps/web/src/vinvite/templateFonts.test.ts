@@ -121,8 +121,14 @@ describe('the venue name is set in the hand', () => {
   // It is the heading over the "Where" block, and the one place a guest reads
   // the venue as an address rather than as scenery — a proper name, like the
   // couple's, so it gets the same treatment.
+  // Only where there IS a hand. `wedding-zermatt` is a Swiss typographic
+  // system with no script face at all — its couple's own names are set in the
+  // display serif — so "the venue name gets the same treatment as the couple's"
+  // is already true there, and demanding `var(--hand)` would be demanding a
+  // handwriting face this design deliberately does not have.
   for (const name of TEMPLATES) {
     const src = readFileSync(join(DIR, name, 'template.html'), 'utf8');
+    if (!/--hand\s*:/.test(src)) continue;
     const rule = /\.place__title\s*\{([^}]*)\}/.exec(src)?.[1];
     if (!rule) continue;
 

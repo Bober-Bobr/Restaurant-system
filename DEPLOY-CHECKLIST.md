@@ -4073,3 +4073,62 @@ the first pass.
 10. On the marketing site: the design's card carries terracotta and is set in
     Bodoni Moda; its name, one-line description and full description all read
     in all three languages.
+
+---
+
+## §82 — "Wedding in Zermatt": a fifteenth invitation design, and what a film costs
+
+**No migration.** Files: `apps/web/src/vinvite/templates/wedding-zermatt/`
+(new), `apps/web/public/zermatt/` (new, 20 MB), `templates/index.ts`,
+`templates/meta.ts`, `templateBrand.ts`, `i18n.ts`, `apps/web/index.html`, and
+five pinned lists in the template tests.
+
+`wedding-zermatt` is an alpine wedding drawn as a Swiss typographic SYSTEM: a
+twelve-column grid, numbered sections headed in Switzerland's three languages,
+an altitude printed in the margin beside every photograph, and the order of the
+day set as a railway departure board whose rows flap down as it arrives. It has
+a countdown and a venue block — unlike the design before it — so it joins the
+pinned lists in `templateCountdown.test.ts` and `templatePhotoSlots.test.ts`,
+and the venue plate is the one photograph the honoree can replace.
+
+**It ships TWO films, 16.8 MB of the 20 MB bundle** — a landscape cut and a
+portrait one. Only ever one is downloaded, chosen by the aspect ratio of the
+screen, and the portrait cut is why a phone sees the whole opening shot rather
+than a quarter of it.
+
+1. On a **desktop**, scroll the whole invitation. No editorial plate is
+   noticeably cut — measured, every one of them shows 99% of itself at 1920,
+   1440, 1280, 860 and 390px.
+2. **No horizontal scrollbar and no element spilling its parent at any of those
+   five widths.** The departure board collapses to two rows per entry under
+   620px rather than scrolling sideways.
+3. The four viewport-filling scenes — the opening, the meadow, the dusk
+   interlude and the last frame — **turn with the screen**: on a phone each one
+   is a PORTRAIT photograph filling the display, not a landscape one cropped to
+   a slot. Rotate the phone and the opening film swaps cut without restarting.
+4. Scroll slowly past the three moving scenes: **no band of background** along
+   the top or bottom edge as they drift.
+5. **The film may legitimately not play at all.** Both cuts are HEVC, as are
+   the films in the four designs before this one. Safari plays them; Chrome
+   plays them only where the platform provides a decoder (Windows with the HEVC
+   extension, most Android hardware); plain Chrome on Linux and Firefox cannot.
+   This design ASKS before fetching, so on those browsers the opening is the
+   poster frame of the same shot and **nothing is downloaded**. Check the
+   network panel on a desktop Chrome: either the film is fetched and plays, or
+   no mp4 is requested at all. A download that ends on the poster anyway is the
+   failure.
+6. Press a menu item: the section lands **below** the fixed masthead, not under
+   it. On a phone the menu is full-screen and Escape closes it.
+7. The departure board: the column headers **are visible** and the rows flap in
+   when the table reaches the screen, not before.
+8. The countdown holds at zero rather than vanishing or going negative, and the
+   four labels read in all three languages.
+9. **Russian must be set in a Didone, not in the system serif.** Instrument
+   Serif has no Cyrillic, so the stack names Playfair Display after it for
+   exactly those glyphs. Compare a heading in ru with the same heading in en:
+   different language, same kind of letter.
+10. A **double wedding**: type a second pair and check the cover prints them as
+    their own cluster below the first, never run on to the end of it.
+11. On the marketing site: the card carries forest green and is set in
+    Instrument Serif; name, one-line description and full description all read
+    in all three languages.

@@ -31,7 +31,9 @@ const read = (name: string) => readFileSync(join(DIR, name, 'template.html'), 'u
 const WITH_FILM = TEMPLATES.filter((n) => read(n).includes('function initFilm'));
 
 it('the designs that open on a film still do', () => {
-  expect(WITH_FILM.sort()).toEqual(['wedding-chateau', 'wedding-dolcevita', 'wedding-paris', 'wedding-samarkand']);
+  expect(WITH_FILM.sort()).toEqual([
+    'wedding-chateau', 'wedding-dolcevita', 'wedding-paris', 'wedding-samarkand', 'wedding-zermatt',
+  ]);
 });
 
 describe.each(WITH_FILM)('%s', (name) => {

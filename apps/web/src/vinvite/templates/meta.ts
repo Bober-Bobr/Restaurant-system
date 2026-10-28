@@ -45,6 +45,7 @@ export const TEMPLATE_META: TemplateMeta[] = [
   { id: 'wedding-samarkand', category: 'wedding', nameKey: 'tpl_wedding_samarkand', cover: '🏮', accent: '#C9A227' },
   { id: 'wedding-stillvatn', category: 'wedding', nameKey: 'tpl_wedding_stillvatn', cover: '🌾', accent: '#6B7A63' },
   { id: 'wedding-talbon', category: 'wedding', nameKey: 'tpl_wedding_talbon', cover: '🍎', accent: '#8f1d2e' },
+  { id: 'wedding-zermatt', category: 'wedding', nameKey: 'tpl_wedding_zermatt', cover: '🏔', accent: '#1F3328' },
 ];
 
 export function getTemplateMeta(id: string): TemplateMeta | null {

@@ -36,7 +36,7 @@ it('the templates that were given a replaceable plate still have one', () => {
   // Not a tautology over an empty set: name them, so removing the attribute from
   // all four turns every check below into a vacuous pass and this one fails.
   expect(WITH_SLOTS.map((t) => t.id).sort()).toEqual([
-    'wedding-chateau', 'wedding-paris', 'wedding-samarkand', 'wedding-stillvatn',
+    'wedding-chateau', 'wedding-paris', 'wedding-samarkand', 'wedding-stillvatn', 'wedding-zermatt',
   ]);
 });
 

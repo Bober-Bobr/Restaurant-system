@@ -12,6 +12,7 @@ import { weddingParisTemplate } from './wedding-paris/definition';
 import { weddingSamarkandTemplate } from './wedding-samarkand/definition';
 import { weddingStillvatnTemplate } from './wedding-stillvatn/definition';
 import { weddingTalbonTemplate } from './wedding-talbon/definition';
+import { weddingZermattTemplate } from './wedding-zermatt/definition';
 import { getPath } from './utils';
 import type { RichDesignData, TemplateCategory, TemplateDefinition } from './types';
 
@@ -31,6 +32,7 @@ export const RICH_TEMPLATES: TemplateDefinition[] = [
   weddingSamarkandTemplate,
   weddingStillvatnTemplate,
   weddingTalbonTemplate,
+  weddingZermattTemplate,
 ];
 
 export const TEMPLATE_CATEGORIES: { key: TemplateCategory; labelKey: string; icon: string }[] = [
