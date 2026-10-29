@@ -303,6 +303,114 @@ function activityByDay(
   });
 }
 
+// ── The calendar ────────────────────────────────────────────────────────────
+
+/**
+ * One month: every booking in every restaurant and area in scope, and every
+ * day's profit and loss.
+ *
+ * The day's figures follow the P&L tab's rule exactly — the LEDGER's day plus
+ * the day's closed orders — so the calendar can never contradict the headline.
+ * The bookings are listed beside it and never added, for the reason in the
+ * header: each one is already mirrored into the ledger.
+ *
+ * A day nobody entered in the ledger says `recorded: false` instead of reporting
+ * a zero balance, which would read as a day that broke even.
+ */
+export async function calendarReport(scope: ReportScope, month: string) {
+  const fromKey = localDayKey(scope.from, scope.tzOffsetMinutes);
+  const toKey = localDayKey(scope.to, scope.tzOffsetMinutes);
+
+  const managers = await repo.ledgerManagers(scope.restaurantIds);
+  const [days, orderDays, areaRows, bookingRows] = await Promise.all([
+    repo.ledgerDays(managers.map((m) => m.id), fromKey, toKey),
+    repo.ordersByDay(scope.restaurantIds, scope.from, scope.to, scope.tzOffsetMinutes),
+    repo.areas(scope.restaurantIds),
+    repo.calendarBookings(scope.restaurantIds, scope.from, scope.to),
+  ]);
+
+  // Several restaurants mean several managers, and so several ledger rows on
+  // one date — they are added together, the same as the P&L tab's total.
+  const ledgerByDay = new Map<string, { profit: Profit; closed: boolean; departments: Map<string, { profit: Profit; guests: number }> }>();
+  for (const day of days) {
+    const at = ledgerByDay.get(day.date) ?? { profit: zeroProfit(), closed: true, departments: new Map() };
+    at.profit = addProfit(at.profit, dayProfit(day as LedgerDay));
+    at.closed = at.closed && day.isClosed;
+    for (const department of day.events) {
+      const dep = at.departments.get(department.type) ?? { profit: zeroProfit(), guests: 0 };
+      dep.profit = addProfit(dep.profit, departmentProfit(department));
+      dep.guests += department.guestCount;
+      at.departments.set(department.type, dep);
+    }
+    ledgerByDay.set(day.date, at);
+  }
+  const ordersByDayMap = new Map(orderDays.map((bucket) => [bucket.bucket, bucket]));
+
+  let hasUsdAnywhere = false;
+  const dayRows = daysBetween(scope.from, scope.to, scope.tzOffsetMinutes).map((date) => {
+    const led = ledgerByDay.get(date);
+    const ledger = led?.profit ?? zeroProfit();
+    const ord = ordersByDayMap.get(date);
+    const orders = { count: ord?.orders ?? 0, revenueCents: ord?.revenueCents ?? 0 };
+    // The headline rule: ledger revenue plus order revenue; orders have no
+    // dollar side, so the dollar figures are the ledger's alone.
+    const revenueCents = ledger.revenueCents + orders.revenueCents;
+    const balanceCents = revenueCents - ledger.spentCents;
+    if (ledger.revenueUsdCents !== 0 || ledger.spentUsdCents !== 0) hasUsdAnywhere = true;
+    return {
+      date,
+      recorded: !!led,
+      closed: led?.closed ?? false,
+      ledger,
+      byDepartment: DEPARTMENTS
+        .filter((type) => led?.departments.has(type))
+        .map((type) => {
+          const dep = led!.departments.get(type)!;
+          return { type, guests: dep.guests, ...dep.profit };
+        }),
+      orders,
+      revenueCents,
+      spentCents: ledger.spentCents,
+      balanceCents,
+      marginPct: marginPct({ revenueCents, balanceCents }),
+      revenueUsdCents: ledger.revenueUsdCents,
+      spentUsdCents: ledger.spentUsdCents,
+      balanceUsdCents: ledger.balanceUsdCents,
+    };
+  });
+
+  return {
+    month,
+    range: { from: scope.from.toISOString(), to: scope.to.toISOString(), fromKey, toKey },
+    /** Empty means nobody keeps a ledger here — there is no spending side at all. */
+    ledgerManagers: managers.map((m) => ({ id: m.id, username: m.username, restaurantId: m.restaurantId })),
+    hasUsd: hasUsdAnywhere,
+    areas: areaRows.map((area) => ({
+      id: area.id, name: area.name, section: area.section, kind: area.kind,
+      restaurantId: area.restaurantId, isActive: area.isActive,
+    })),
+    bookings: bookingRows.map((row) => ({
+      id: row.id,
+      eventNumber: row.eventNumber,
+      eventDate: row.eventDate.toISOString(),
+      status: row.status,
+      section: row.section,
+      eventType: row.eventType,
+      customerName: row.customerName,
+      guestCount: row.guestCount,
+      childrenCount: row.childrenCount,
+      hallId: row.hallId,
+      restaurantId: row.restaurantId,
+      wholeHall: row.wholeHall,
+      tables: row.floorTables.map((one) => one.floorTable.label),
+      invoicedCents: invoiceTotalCents(row),
+      collectedCents: invoicePaidCents(row),
+      outstandingCents: invoiceOutstandingCents(row),
+    })),
+    days: dayRows,
+  };
+}
+
 // ── Dining areas ────────────────────────────────────────────────────────────
 
 /**

@@ -3,7 +3,7 @@ import { httpClient } from './http';
 /**
  * The owner's reports.
  *
- * Five reads and no writes — the API router has no POST or PATCH at all, which is
+ * Six reads and no writes — the API router has no POST or PATCH at all, which is
  * what makes it safe for this to be the one place all three systems' prices are
  * shown side by side.
  *
@@ -233,7 +233,66 @@ export type ScopeReport = {
   counts: { tableCategories: number; extraServices: number; reviews: number; invitations: number };
 };
 
+export type CalendarBooking = {
+  id: string;
+  eventNumber: number;
+  eventDate: string;
+  status: string;
+  section: string;
+  eventType: string | null;
+  customerName: string;
+  guestCount: number;
+  childrenCount: number;
+  hallId: string | null;
+  restaurantId: string | null;
+  wholeHall: boolean;
+  /** Labels of the floor tables it holds; empty for a booking with none. */
+  tables: string[];
+  invoicedCents: number;
+  collectedCents: number;
+  outstandingCents: number;
+};
+
+export type CalendarDay = {
+  date: string;
+  /** False when nobody entered this day in the ledger — NOT a zero balance. */
+  recorded: boolean;
+  closed: boolean;
+  ledger: Profit;
+  byDepartment: (Profit & { type: string; guests: number })[];
+  orders: { count: number; revenueCents: number };
+  /** Ledger revenue + order revenue, the P&L tab's own headline rule. */
+  revenueCents: number;
+  spentCents: number;
+  balanceCents: number;
+  marginPct: number | null;
+  revenueUsdCents: number;
+  spentUsdCents: number;
+  balanceUsdCents: number;
+};
+
+export type CalendarReport = {
+  month: string;
+  range: { from: string; to: string; fromKey: string; toKey: string };
+  ledgerManagers: { id: string; username: string; restaurantId: string | null }[];
+  /** One flag for the month: dollar figures everywhere or nowhere. */
+  hasUsd: boolean;
+  areas: { id: string; name: string; section: string; kind: string; restaurantId: string | null; isActive: boolean }[];
+  bookings: CalendarBooking[];
+  days: CalendarDay[];
+};
+
 export const reportService = {
+  /**
+   * One month of the calendar. Takes a MONTH, not the page's range: the grid is
+   * a month, and the range chips above it are a different question.
+   */
+  async calendar(restaurantId: string | undefined, month: string): Promise<CalendarReport> {
+    const { data } = await httpClient.get('/reports/calendar', {
+      params: { ...params({ restaurantId }), month },
+    });
+    return data;
+  },
   async scope(filters: ReportFilters): Promise<ScopeReport> {
     const { data } = await httpClient.get('/reports/scope', { params: params(filters) });
     return data;

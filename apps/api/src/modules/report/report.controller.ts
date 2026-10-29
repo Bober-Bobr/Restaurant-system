@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
 import { reportQuerySchema } from './report.schema.js';
-import { clampOffset, resolveRange, resolveReportRestaurants, type ReportScope } from './report.scope.js';
-import { areasReport, financeReport, menuReport, scopeReport, staffReport } from './report.service.js';
+import {
+  clampOffset, monthWindow, resolveRange, resolveReportRestaurants, type ReportScope,
+} from './report.scope.js';
+import {
+  areasReport, calendarReport, financeReport, menuReport, scopeReport, staffReport,
+} from './report.service.js';
 
 /**
  * One scope for every report, resolved per request.
@@ -27,6 +31,20 @@ export class ReportController {
   /** Profit and loss: the headline, the ledger, bookings, orders, per month, per day. */
   async finance(request: Request, response: Response) {
     response.json(await financeReport(await resolveScope(request)));
+  }
+
+  /**
+   * One month of bookings across every restaurant and area, with each day's P&L.
+   *
+   * Same scope resolution as every other report — the ownership check is not
+   * skipped because the window is a month rather than a range. Only the window
+   * is replaced, by the month asked for.
+   */
+  async calendar(request: Request, response: Response) {
+    const scope = await resolveScope(request);
+    const { month } = reportQuerySchema.parse(request.query);
+    const window = monthWindow(month, scope.tzOffsetMinutes);
+    response.json(await calendarReport({ ...scope, from: window.from, to: window.to }, window.month));
   }
 
   /** Per dining area. Revenue is real; spending is not recorded per area — see the service. */

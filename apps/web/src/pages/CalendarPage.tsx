@@ -8,25 +8,8 @@ import { useAuthStore } from '../store/auth.store';
 import { eventsPath } from '../utils/eventsPath';
 import { translate } from '../utils/translate';
 import type { Event, Hall } from '../types/domain';
+import { MONTH_KEYS, SLOT_COLORS, WEEKDAY_KEYS, slotForHour, type Slot } from '../utils/bookingCalendar';
 
-const MONTH_KEYS = [
-  'month_january', 'month_february', 'month_march', 'month_april',
-  'month_may', 'month_june', 'month_july', 'month_august',
-  'month_september', 'month_october', 'month_november', 'month_december',
-] as const;
-
-// Week starts on Monday (international standard)
-const WEEKDAY_KEYS = [
-  'weekday_mon', 'weekday_tue', 'weekday_wed', 'weekday_thu',
-  'weekday_fri', 'weekday_sat', 'weekday_sun',
-] as const;
-
-type Slot = 'breakfast' | 'lunch' | 'dinner';
-const SLOT_COLORS: Record<Slot, string> = {
-  breakfast: '#fde047',
-  lunch: '#fb923c',
-  dinner: '#818cf8',
-};
 const SLOT_KEYS: Record<Slot, Parameters<typeof translate>[0]> = {
   breakfast: 'breakfast',
   lunch: 'lunch',
@@ -46,14 +29,6 @@ const EVENT_TYPE_KEY: Record<string, Parameters<typeof translate>[0]> = {
   FOTIHA_TUI: 'event_type_fotiha_tui',
   NACHOR_OSHI: 'event_type_nachor_oshi',
 };
-
-// Returns which slot an event time falls into (or null if outside the windows).
-function slotForHour(hour: number): Slot | null {
-  if (hour >= 6 && hour < 11) return 'breakfast';
-  if (hour >= 11 && hour < 15) return 'lunch';
-  if (hour >= 15 && hour < 20) return 'dinner';
-  return null;
-}
 
 export const CalendarPage = () => {
   const { locale } = useAdminStore();

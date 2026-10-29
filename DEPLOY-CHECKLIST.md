@@ -4132,3 +4132,45 @@ than a quarter of it.
 11. On the marketing site: the card carries forest green and is set in
     Instrument Serif; name, one-line description and full description all read
     in all three languages.
+
+## §83 — The owner's Reports page gains a Calendar tab
+
+**No migration.** Files: `apps/api/src/modules/report/` (`report.routes.ts`,
+`report.controller.ts`, `report.service.ts`, `report.repository.ts`,
+`report.scope.ts`, `report.schema.ts`, `report.scope.test.ts`),
+`apps/web/src/pages/OwnerReportsPage.tsx`, `apps/web/src/services/report.service.ts`,
+`apps/web/src/utils/bookingCalendar.ts` (new, + test),
+`apps/web/src/pages/CalendarPage.tsx` (now imports the shared slot helper),
+`apps/web/src/utils/translate.ts`, `apps/web/src/pages/ledgerUsd.test.ts`.
+
+`cabinet.v-menu.uz` → Reports → **Calendar**, directly after Profit & loss. One
+month grid covering **every restaurant the owner has and every area in both
+sections**, each day listing its bookings (time and area, coloured by the
+admin calendar's breakfast / lunch / dinner slots); pressing a day shows that
+day's profit and loss and its bookings. A new read-only endpoint,
+`GET /api/reports/calendar?month=YYYY-MM`, behind the same OWNER/CHIEF_ADMIN
+gate and ownership check as the other five.
+
+1. Open the tab with **All my restaurants**: bookings from every restaurant
+   appear in one grid; narrowing to one restaurant narrows it.
+2. Today is selected on arrival. Press another day: the panel below shows its
+   **net profit/loss, revenue, spending, orders and bookings**, and the figures
+   for that day must match what the Restaurant Manager's ledger shows for it
+   **plus** that day's closed food-service orders (the P&L tab's own rule;
+   day-level extras included).
+3. A day nobody entered in the ledger says so ("This day is not in the
+   ledger") instead of showing a zero profit. A restaurant with no Restaurant
+   Manager shows the "no expense ledger" warning instead.
+4. The bookings table lists time, number, customer, event type, area,
+   restaurant (when several), guests, tables / whole area, status, invoiced and
+   collected. Cancelled bookings are not shown, as on the admin calendar.
+5. **Times are local**: a 19:00 banquet shows 19:00, not 14:00, and a 23:30 one
+   sits on its own evening.
+6. ‹ › move a month, crossing the year end; "This month" comes back. The area
+   filter narrows the bookings only, and the panel says the P&L stays the whole
+   day's.
+7. The 30 / 90 / 365-day chips are hidden on this tab (it reads its own month)
+   and come back on the others.
+8. On a **phone** the tabs are two columns with Calendar beside Profit & loss;
+   the grid shows each day with three slot dots, and the detail is in the panel
+   below. No horizontal page scroll at 390px (measured in ru and uz).

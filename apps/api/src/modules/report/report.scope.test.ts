@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  clampOffset, daysBetween, localDayKey, localMonthKey, monthsBetween, resolveRange,
+  clampOffset, daysBetween, localDayKey, localMonthKey, monthWindow, monthsBetween, resolveRange,
 } from './report.scope.js';
 
 // The window and the buckets. No database: the ownership half of this module is
@@ -102,5 +102,34 @@ describe('every bucket in the window is present', () => {
     // A mistyped year must not ask for a hundred thousand columns.
     expect(monthsBetween(new Date('1970-01-01'), new Date('2600-01-01'), 0).length).toBeLessThanOrEqual(600);
     expect(daysBetween(new Date('1970-01-01'), new Date('2600-01-01'), 0).length).toBeLessThanOrEqual(800);
+  });
+});
+
+describe('the calendar month', () => {
+  const TASHKENT = 300;
+
+  it('runs from local midnight on the 1st to the last instant of the month', () => {
+    // 00:00 on 1 August in Tashkent is 19:00 on 31 July in UTC. A window built
+    // in UTC would drop the evening of the 31st and take in the next month's
+    // first five hours.
+    const { from, to } = monthWindow('2026-08', TASHKENT);
+    expect(from.toISOString()).toBe('2026-07-31T19:00:00.000Z');
+    expect(to.toISOString()).toBe('2026-08-31T18:59:59.999Z');
+    expect(localDayKey(from, TASHKENT)).toBe('2026-08-01');
+    expect(localDayKey(to, TASHKENT)).toBe('2026-08-31');
+  });
+
+  it('gives every day of the month to the grid, and no more', () => {
+    const { from, to } = monthWindow('2027-02', TASHKENT);
+    expect(daysBetween(from, to, TASHKENT)).toHaveLength(28);
+    const leap = monthWindow('2028-02', TASHKENT);
+    expect(daysBetween(leap.from, leap.to, TASHKENT)).toHaveLength(29);
+  });
+
+  it('falls back to the current month rather than refusing a bad one', () => {
+    const now = new Date('2026-10-29T12:00:00.000Z');
+    expect(monthWindow('2026-13', TASHKENT, now).month).toBe('2026-10');
+    expect(monthWindow('nonsense', TASHKENT, now).month).toBe('2026-10');
+    expect(monthWindow(undefined, TASHKENT, now).month).toBe('2026-10');
   });
 });

@@ -19,6 +19,8 @@ export const reportQuerySchema = z.object({
   from: z.string().trim().min(1).optional(),
   to: z.string().trim().min(1).optional(),
   tz: z.coerce.number().int().min(-720).max(840).optional(),
+  /** `YYYY-MM`, the calendar tab only. Read by `monthWindow`, which clamps. */
+  month: z.string().trim().max(16).optional(),
 });
 
 export type ReportQuery = z.infer<typeof reportQuerySchema>;

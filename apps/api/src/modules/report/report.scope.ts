@@ -86,6 +86,31 @@ export function localMonthKey(at: Date, tzOffsetMinutes: number): string {
 }
 
 /**
+ * One calendar month in the reader's own time, as an instant window.
+ *
+ * The calendar tab asks for a MONTH rather than a from/to pair, because the grid
+ * it draws is a month and the range chips above it mean something else. The
+ * window runs from local midnight on the 1st to the last millisecond of the
+ * month, so a 23:30 booking on the 31st is in it and a 00:30 one on the 1st of
+ * the next month is not. An unreadable month falls back to the current one —
+ * the same "clamp, don't refuse" rule as the offset.
+ */
+export function monthWindow(
+  month: string | undefined, tzOffsetMinutes: number, now: Date = new Date(),
+): { month: string; from: Date; to: Date } {
+  const match = /^(\d{4})-(\d{2})$/.exec(month?.trim() ?? '');
+  const valid = match && Number(match[2]) >= 1 && Number(match[2]) <= 12;
+  const key = valid ? `${match![1]}-${match![2]}` : localMonthKey(now, tzOffsetMinutes);
+  const [year, monthNo] = key.split('-').map(Number);
+  const shift = tzOffsetMinutes * 60_000;
+  return {
+    month: key,
+    from: new Date(Date.UTC(year, monthNo - 1, 1) - shift),
+    to: new Date(Date.UTC(year, monthNo, 1) - shift - 1),
+  };
+}
+
+/**
  * Every month in the window, in order, so a month with no business is a gap in
  * the chart rather than a month that is missing from it. A chart drawn only from
  * the months that have rows puts August next to October and reads as continuous.

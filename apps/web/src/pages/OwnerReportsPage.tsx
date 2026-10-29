@@ -7,9 +7,12 @@ import {
 import { compactCount, compactSum, monthLabel, spansYears } from '../components/charts/chartGeometry';
 import { StickyHScroll } from '../components/ui/StickyHScroll';
 import {
-  reportService, type AreaRow, type AreasReport, type FinanceReport, type MenuReport,
-  type MenuRow, type ReportFilters, type ScopeReport, type StaffReport,
+  reportService, type AreaRow, type AreasReport, type CalendarBooking, type CalendarReport,
+  type FinanceReport, type MenuReport, type MenuRow, type ReportFilters, type ScopeReport, type StaffReport,
 } from '../services/report.service';
+import {
+  MONTH_KEYS, SLOTS, SLOT_COLORS, WEEKDAY_KEYS, byLocalDay, clockOf, localMonth, monthGrid, shiftMonth, slotForHour,
+} from '../utils/bookingCalendar';
 import { CATEGORY_LABEL_KEY } from '../utils/menuCategories';
 import { formatSum } from '../utils/currency';
 import { formatUsd } from '../utils/ledgerMoney';
@@ -18,9 +21,9 @@ import { translate, type Locale, type TranslationKey } from '../utils/translate'
 /**
  * The owner's Reports page.
  *
- * Four sections behind sub-tabs, and the tabs are not decoration: each section's
+ * Five sections behind sub-tabs, and the tabs are not decoration: each section's
  * query is `enabled` only while it is open, so opening Reports costs ONE request
- * rather than five. The dish list alone can be several hundred rows with three
+ * rather than six. The dish list alone can be several hundred rows with three
  * prices each, and an owner who wanted the profit figure should not wait for it.
  *
  * ── WHAT THIS PAGE IS CAREFUL ABOUT ────────────────────────────────────────
@@ -40,7 +43,9 @@ import { translate, type Locale, type TranslationKey } from '../utils/translate'
  * downloads, so a library here would be paid for by someone tapping an NFC tag.
  */
 
-type Section = 'pl' | 'areas' | 'menu' | 'staff';
+type Section = 'pl' | 'calendar' | 'areas' | 'menu' | 'staff';
+/** The tab order. Calendar sits beside Profit & loss: it is the same money, a day at a time. */
+const SECTIONS: Section[] = ['pl', 'calendar', 'areas', 'menu', 'staff'];
 const RANGES = [30, 90, 365] as const;
 
 const DEPARTMENT_KEY: Record<string, TranslationKey> = {
@@ -54,6 +59,12 @@ const ROLE_KEY: Record<string, TranslationKey> = {
   KITCHEN: 'kitchen_role', NFC_MAKER: 'nfc_maker_role', SUPERVISOR: 'supervisor_role',
   SMALL_KITCHEN: 'small_kitchen_role', PERFORMER: 'performer_role', HOST: 'host_role',
   CATERING_EMPLOYEE: 'food_employee_role',
+};
+
+const EVENT_TYPE_KEY: Record<string, TranslationKey> = {
+  RESERVATION: 'event_type_reservation', BANQUET: 'event_type_banquet', WEDDING: 'event_type_wedding',
+  BIRTHDAY: 'event_type_birthday', PRIVATE_PARTY: 'event_type_private_party', CORPORATE: 'event_type_corporate',
+  FOTIHA_TUI: 'event_type_fotiha_tui', NACHOR_OSHI: 'event_type_nachor_oshi',
 };
 
 const STATUS_KEY: Record<string, TranslationKey> = {
@@ -77,6 +88,13 @@ export const OwnerReportsPage = ({ locale }: { locale: Locale }) => {
   const [customTo, setCustomTo] = useState('');
 
   const today = dayKey(new Date());
+  const thisMonth = today.slice(0, 7);
+  // The calendar's own month, area and day. Held HERE rather than in the
+  // section, because the section remounts behind a skeleton on every month
+  // change and would forget the area somebody had narrowed it to.
+  const [calMonth, setCalMonth] = useState(() => localMonth(new Date()));
+  const [calArea, setCalArea] = useState('');
+  const [calDay, setCalDay] = useState<string | null>(today);
 
   // A custom range only takes effect once BOTH ends are typed. Applying it after
   // the first field would refetch against a window starting in 1970 and show a
@@ -120,6 +138,11 @@ export const OwnerReportsPage = ({ locale }: { locale: Locale }) => {
     queryFn: () => reportService.menu(filters),
     enabled: section === 'menu',
   });
+  const calendarQuery = useQuery({
+    queryKey: ['rep-calendar', restaurantId, calMonth],
+    queryFn: () => reportService.calendar(restaurantId || undefined, calMonth),
+    enabled: section === 'calendar',
+  });
   const staffQuery = useQuery({
     queryKey: ['rep-staff', ...key],
     queryFn: () => reportService.staff(filters),
@@ -145,16 +168,19 @@ export const OwnerReportsPage = ({ locale }: { locale: Locale }) => {
           </select>
         </label>
 
-        <div className="rep-chips">
+        {/* The range chips are not offered on the calendar, which reads a
+            month of its own — two windows on one screen, one of them silently
+            ignored, is a page that contradicts itself. */}
+        {section !== 'calendar' && <div className="rep-chips">
           {RANGES.map((days) => (
             <Chip key={days} active={rangeDays === days} onClick={() => setRangeDays(days)}>
               {t('rep_last_days', { days })}
             </Chip>
           ))}
           <Chip active={rangeDays === 0} onClick={() => setRangeDays(0)}>{t('rep_custom')}</Chip>
-        </div>
+        </div>}
 
-        {rangeDays === 0 && (
+        {section !== 'calendar' && rangeDays === 0 && (
           <>
             <label className="rep-field">
               <span className="adm-label">{t('rep_from')}</span>
@@ -177,7 +203,7 @@ export const OwnerReportsPage = ({ locale }: { locale: Locale }) => {
       )}
 
       <nav className="rep-tabs">
-        {(['pl', 'areas', 'menu', 'staff'] as Section[]).map((one) => (
+        {SECTIONS.map((one) => (
           <button key={one} type="button"
             className={`rep-tab${section === one ? ' is-active' : ''}`}
             onClick={() => setSection(one)}>
@@ -190,6 +216,35 @@ export const OwnerReportsPage = ({ locale }: { locale: Locale }) => {
         <Async query={financeQuery} t={t}>
           {(data) => <ProfitSection data={data} t={t} locale={locale} money={money} shortMoney={shortMoney} nameOf={nameOf} />}
         </Async>
+      )}
+      {section === 'calendar' && (
+        <>
+          {/* Outside the Async block, so the arrows stay put while a month loads. */}
+          <div className="rep-cal-nav">
+            <button type="button" className="rep-cal-arrow" aria-label={t('rep_cal_prev')}
+              onClick={() => setCalMonth(shiftMonth(calMonth, -1))}>‹</button>
+            <strong className="rep-cal-title" aria-live="polite">
+              {t(MONTH_KEYS[Number(calMonth.slice(5, 7)) - 1])} {calMonth.slice(0, 4)}
+            </strong>
+            <button type="button" className="rep-cal-arrow" aria-label={t('rep_cal_next')}
+              onClick={() => setCalMonth(shiftMonth(calMonth, 1))}>›</button>
+            {calMonth !== thisMonth && (
+              <Chip active={false} onClick={() => { setCalMonth(thisMonth); setCalDay(today); }}>
+                {t('rep_cal_today')}
+              </Chip>
+            )}
+          </div>
+          <Async query={calendarQuery} t={t}>
+            {(data) => (
+              <CalendarSection
+                data={data} month={calMonth} today={today}
+                area={calArea} onArea={setCalArea}
+                day={calDay && calDay.startsWith(calMonth) ? calDay : null} onDay={setCalDay}
+                t={t} locale={locale} money={money} shortMoney={shortMoney} nameOf={nameOf} many={many}
+              />
+            )}
+          </Async>
+        </>
       )}
       {section === 'areas' && (
         <Async query={areasQuery} t={t}>
@@ -470,6 +525,373 @@ function ProfitSection({
           {data.ledgerManagers.map((one) => `${one.username} — ${nameOf(one.restaurantId)}`).join(' · ')}
         </p>
       )}
+    </>
+  );
+}
+
+// ── The calendar ────────────────────────────────────────────────────────────
+
+/** Area filter values that are not a hall id. */
+const ALL_AREAS = '';
+const NO_AREA = '-';
+
+/**
+ * A month of bookings across every restaurant and every area, and the profit
+ * and loss of the day picked on it.
+ *
+ * It reads like the admin's own calendar (the slot colours and windows are the
+ * same helper), with two differences that follow from who is reading: ONE grid
+ * for the whole business rather than one per hall — an owner of three
+ * restaurants with five rooms each would otherwise scroll through fifteen — and
+ * each cell names its bookings rather than only colouring itself, because the
+ * question here is "what was on", not "is this hall free".
+ *
+ * The area filter narrows the BOOKINGS only. Spending is not recorded per area
+ * anywhere in the product (see the Dining areas tab), so the day's P&L stays the
+ * whole day's, and the panel says so while a filter is on.
+ */
+/**
+ * A day's heading. CH_HEX rather than CH throughout this section and the next:
+ * the `--ch-*` tokens are declared on `.ch` alone, so outside a chart a
+ * `var(--ch-revenue)` swatch or figure resolves to nothing and draws blank.
+ *
+ * Uzbek is spelled out from our own month names, because Chrome ships no long
+ * Uzbek date and `Intl` answered "2026 M10 24, Sat". The first letter is raised
+ * here rather than with `text-transform: capitalize`, which capitalises every
+ * word ("24 Октября 2026 Г.").
+ */
+function dayHeading(locale: Locale, t: T): (date: string) => string {
+  const intl = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return (date) => {
+    const at = new Date(`${date}T00:00:00`);
+    const text = locale === 'uz'
+      ? `${at.getDate()}-${t(MONTH_KEYS[at.getMonth()]).toLocaleLowerCase('uz')} ${at.getFullYear()}, ${t(WEEKDAY_KEYS[(at.getDay() + 6) % 7])}`
+      : intl.format(at);
+    return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
+  };
+}
+
+function CalendarSection({
+  data, month, today, area, onArea, day, onDay, t, locale, money, shortMoney, nameOf, many,
+}: {
+  data: CalendarReport; month: string; today: string;
+  area: string; onArea: (id: string) => void;
+  day: string | null; onDay: (date: string) => void;
+  t: T; locale: Locale; money: (v: number) => string; shortMoney: (v: number) => string;
+  nameOf: (id: string | null) => string; many: boolean;
+}) {
+  const areaById = useMemo(() => new Map(data.areas.map((one) => [one.id, one])), [data.areas]);
+  const areaName = (id: string | null, withRestaurant = many) => {
+    if (!id) return t('rep_unassigned');
+    const one = areaById.get(id);
+    if (!one) return '—';
+    return withRestaurant ? `${one.name} · ${nameOf(one.restaurantId)}` : one.name;
+  };
+
+  // An area is offered when it is in use or has bookings this month: a retired
+  // room that hosted somebody in this month must still be findable.
+  const booked = new Set(data.bookings.map((row) => row.hallId ?? NO_AREA));
+  const areaOptions = data.areas.filter((one) => one.isActive || booked.has(one.id));
+  // A filter left on an area this month does not have would show an empty
+  // month with nothing saying why; it falls back to every area instead.
+  const activeArea = area === ALL_AREAS || area === NO_AREA || areaById.has(area) ? area : ALL_AREAS;
+
+  const shown = activeArea === ALL_AREAS
+    ? data.bookings
+    : data.bookings.filter((row) => (row.hallId ?? NO_AREA) === activeArea);
+  const perDay = useMemo(() => byLocalDay(shown), [shown]);
+  const dayRows = useMemo(() => new Map(data.days.map((row) => [row.date, row])), [data.days]);
+
+  const longDate = dayHeading(locale, t);
+
+  const selected = day ? dayRows.get(day) ?? null : null;
+  const selectedBookings = day ? perDay.get(day) ?? [] : [];
+  const noLedger = data.ledgerManagers.length === 0;
+
+  return (
+    <>
+      <div className="rep-bar">
+        <label className="rep-field">
+          <span className="adm-label">{t('rep_area')}</span>
+          <select className="adm-input" value={activeArea} onChange={(e) => onArea(e.target.value)}>
+            <option value={ALL_AREAS}>{t('rep_cal_all_areas')}</option>
+            {areaOptions.map((one) => (
+              <option key={one.id} value={one.id}>{areaName(one.id)}</option>
+            ))}
+            {booked.has(NO_AREA) && <option value={NO_AREA}>{t('rep_unassigned')}</option>}
+          </select>
+        </label>
+        <p className="rep-note" style={{ margin: 0 }}>
+          {t('rep_cal_month_count', { count: shown.length })}
+        </p>
+      </div>
+
+      <ChartLegend series={[
+        ...SLOTS.map((slot) => ({ label: t(slot), color: SLOT_COLORS[slot] })),
+        { label: t('rep_profit'), color: CH_HEX.revenue },
+        { label: t('rep_loss'), color: CH_HEX.loss },
+      ]} />
+
+      <section className="adm-card rep-panel">
+        <div className="rep-cal-week" aria-hidden="true">
+          {WEEKDAY_KEYS.map((key) => <span key={key}>{t(key)}</span>)}
+        </div>
+        <div className="rep-cal-grid">
+          {monthGrid(month).map((date, index) => {
+            if (!date) return <span key={`blank-${index}`} />;
+            const list = perDay.get(date) ?? [];
+            const figures = dayRows.get(date);
+            // A balance is shown only where something was recorded — a
+            // blank day printed as "0" would read as a day that broke even.
+            const hasFigures = !!figures && (figures.recorded || figures.orders.count > 0);
+            const slots = new Set(list.map((row) => slotForHour(new Date(row.eventDate).getHours())));
+            const classes = ['rep-cal-cell'];
+            if (list.length > 0) classes.push('has-bookings');
+            if (date === today) classes.push('is-today');
+            if (date === day) classes.push('is-selected');
+            return (
+              <button key={date} type="button" className={classes.join(' ')}
+                aria-pressed={date === day}
+                aria-label={`${longDate(date)} · ${t('rep_bookings')}: ${list.length}`}
+                onClick={() => onDay(date)}>
+                <span className="rep-cal-head">
+                  <span className="rep-cal-num">{Number(date.slice(8))}</span>
+                  {list.length > 0 && <span className="rep-cal-count">{list.length}</span>}
+                </span>
+                {list.slice(0, 3).map((row) => {
+                  const slot = slotForHour(new Date(row.eventDate).getHours());
+                  return (
+                    <span key={row.id} className="rep-cal-chip"
+                      style={slot ? { borderLeftColor: SLOT_COLORS[slot] } : undefined}
+                      title={`${clockOf(row.eventDate)} · #${row.eventNumber} ${row.customerName} · ${areaName(row.hallId, true)}`}>
+                      <span className="rep-cal-time">{clockOf(row.eventDate)}</span>
+                      {' '}{activeArea === ALL_AREAS ? areaName(row.hallId, false) : row.customerName}
+                    </span>
+                  );
+                })}
+                {list.length > 3 && (
+                  <span className="rep-cal-more">{t('rep_cal_more', { count: list.length - 3 })}</span>
+                )}
+                {list.length > 0 && (
+                  <span className="rep-cal-dots" aria-hidden="true">
+                    {SLOTS.map((slot) => (
+                      <span key={slot} className="rep-cal-dot" style={slots.has(slot)
+                        ? { background: SLOT_COLORS[slot] }
+                        : { border: `1px solid ${SLOT_COLORS[slot]}80`, opacity: 0.45 }} />
+                    ))}
+                  </span>
+                )}
+                {hasFigures && (
+                  <span className="rep-cal-pl">
+                    <span className="ch-key" aria-hidden="true"
+                      style={{ background: figures!.balanceCents >= 0 ? CH_HEX.revenue : CH_HEX.loss }} />
+                    {shortMoney(figures!.balanceCents)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {!day || !selected ? (
+        <Notice tone="info" title={t('rep_tab_calendar')} body={t('rep_cal_pick_day')} />
+      ) : (
+        <CalendarDayPanel
+          date={day} heading={longDate(day)}
+          figures={selected} bookings={selectedBookings}
+          noLedger={noLedger} usd={data.hasUsd} areaFiltered={activeArea !== ALL_AREAS}
+          areaName={areaName} t={t} money={money} nameOf={nameOf} many={many}
+        />
+      )}
+    </>
+  );
+}
+
+/** The day picked on the calendar: its P&L, then what was booked on it. */
+function CalendarDayPanel({
+  date, heading, figures, bookings, noLedger, usd, areaFiltered, areaName, t, money, nameOf, many,
+}: {
+  date: string; heading: string;
+  figures: CalendarReport['days'][number]; bookings: CalendarBooking[];
+  noLedger: boolean; usd: boolean; areaFiltered: boolean;
+  areaName: (id: string | null, withRestaurant?: boolean) => string;
+  t: T; money: (v: number) => string; nameOf: (id: string | null) => string; many: boolean;
+}) {
+  const profitable = figures.balanceCents >= 0;
+  const hasFigures = figures.recorded || figures.orders.count > 0;
+  const guests = bookings.reduce((sum, row) => sum + row.guestCount, 0);
+  const ledger = figures.ledger;
+
+  return (
+    <>
+      <h3 className="adm-heading rep-cal-day" id={`rep-day-${date}`}>{heading}</h3>
+
+      {/* Why there is no figure, before the figure. Without a ledger there is
+          no spending side at all; with one, an unfilled day is not a zero. */}
+      {noLedger ? (
+        <Notice tone="warn" title={t('rep_ledger_missing')} body={t('rep_ledger_missing_hint')} />
+      ) : !figures.recorded && (
+        <Notice tone="info" title={t('rep_cal_not_recorded')} body={t('rep_cal_not_recorded_hint')} />
+      )}
+
+      {hasFigures && (
+        <section className="adm-card adm-card-lead rep-hero">
+          <div>
+            <span className="adm-label">{profitable ? t('rep_net') : t('rep_net_loss')}</span>
+            <strong className="rep-hero-value" style={{ color: profitable ? CH_HEX.revenue : CH_HEX.loss }}>
+              {money(figures.balanceCents)}
+            </strong>
+            <span className="rep-note">
+              {figures.marginPct === null ? t('rep_margin_na') : `${t('rep_margin')} ${figures.marginPct}%`}
+              {figures.closed && ` · ${t('rep_cal_closed')}`}
+            </span>
+            {usd && (
+              <span className="rep-usd" style={{ color: figures.balanceUsdCents >= 0 ? CH_HEX.revenue : CH_HEX.loss }}>
+                {figures.balanceUsdCents >= 0 ? t('rep_net_usd') : t('rep_net_loss_usd')}: {formatUsd(figures.balanceUsdCents)}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      <div className="rep-stats">
+        <Stat label={t('rep_revenue')} value={money(figures.revenueCents)} swatch={CH_HEX.revenue}
+          sub={usd ? formatUsd(figures.revenueUsdCents) : undefined} />
+        <Stat label={t('rep_spent')} value={money(figures.spentCents)} swatch={CH_HEX.spend}
+          sub={usd ? formatUsd(figures.spentUsdCents) : undefined} />
+        <Stat label={t('rep_orders')} value={String(figures.orders.count)} sub={money(figures.orders.revenueCents)} />
+        <Stat label={t('rep_bookings')} value={String(bookings.length)}
+          sub={`${guests.toLocaleString('ru-RU')} ${t('guests').toLowerCase()}`} />
+      </div>
+
+      {areaFiltered && <p className="rep-note" style={{ margin: 0 }}>{t('rep_cal_area_note')}</p>}
+
+      {hasFigures && (
+        <div className="rep-two">
+          <Panel title={t('rep_revenue_sources')}>
+            <RankedBars
+              color={CH_HEX.revenue}
+              emptyLabel={t('rep_no_data')}
+              rows={[
+                { key: 'g', name: t('rep_cal_from_guests'), value: ledger.guestsRevenueCents, display: money(ledger.guestsRevenueCents) },
+                { key: 's', name: t('rep_cal_services'), value: ledger.servicesRevenueCents, display: money(ledger.servicesRevenueCents) },
+                { key: 'o', name: t('rep_src_orders'), value: figures.orders.revenueCents, display: money(figures.orders.revenueCents) },
+              ].filter((row) => row.value > 0)}
+            />
+          </Panel>
+          <Panel title={t('rep_spend_breakdown')} note={ledger.extrasCents > 0 ? t('rep_extras_note') : undefined}>
+            <RankedBars
+              color={CH_HEX.spend}
+              emptyLabel={t('rep_no_data')}
+              rows={[
+                { key: 'p', name: t('rep_products'), value: ledger.productsCents, display: money(ledger.productsCents) },
+                { key: 's', name: t('rep_salaries'), value: ledger.salariesCents, display: money(ledger.salariesCents) },
+                { key: 'a', name: t('rep_additionals'), value: ledger.additionalsCents, display: money(ledger.additionalsCents) },
+                { key: 'e', name: t('rep_extras'), value: ledger.extrasCents, display: money(ledger.extrasCents) },
+              ].filter((row) => row.value > 0)}
+            />
+          </Panel>
+        </div>
+      )}
+
+      {figures.byDepartment.length > 0 && (
+        <Panel title={t('rep_by_department')}>
+          <StickyHScroll>
+            <table className="rep-table">
+              <thead>
+                <tr>
+                  <th>{t('rep_by_department')}</th>
+                  <th className="num">{t('guests')}</th>
+                  <th className="num">{t('rep_revenue')}</th>
+                  <th className="num">{t('rep_spent')}</th>
+                  <th className="num">{t('rep_profit')}</th>
+                  {/* The same three dollar columns as the P&L tab's table, and
+                      under the same one flag. */}
+                  {usd && <th className="num">{t('rep_revenue_usd')}</th>}
+                  {usd && <th className="num">{t('rep_spent_usd')}</th>}
+                  {usd && <th className="num">{t('rep_profit_usd')}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {figures.byDepartment.map((row) => (
+                  <tr key={row.type}>
+                    <td>{t(DEPARTMENT_KEY[row.type] ?? 'rep_by_department')}</td>
+                    <td className="num">{row.guests.toLocaleString('ru-RU')}</td>
+                    <td className="num">{money(row.revenueCents)}</td>
+                    <td className="num">{money(row.spentCents)}</td>
+                    <td className="num" style={{ color: row.balanceCents >= 0 ? CH_HEX.revenue : CH_HEX.loss }}>
+                      {money(row.balanceCents)}
+                    </td>
+                    {usd && <td className="num">{formatUsd(row.revenueUsdCents)}</td>}
+                    {usd && <td className="num">{formatUsd(row.spentUsdCents)}</td>}
+                    {usd && (
+                      <td className="num" style={{ color: row.balanceUsdCents >= 0 ? CH_HEX.revenue : CH_HEX.loss }}>
+                        {formatUsd(row.balanceUsdCents)}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </StickyHScroll>
+        </Panel>
+      )}
+
+      {/* ── What was booked, beside the P&L and never added to it ── */}
+      <Panel title={t('rep_cal_day_bookings')} note={bookings.length > 0 ? t('rep_cal_bookings_note') : undefined}>
+        {bookings.length === 0 ? (
+          <p className="rep-note" style={{ margin: 0 }}>{t('rep_cal_no_bookings')}</p>
+        ) : (
+          <StickyHScroll>
+            <table className="rep-table">
+              <thead>
+                <tr>
+                  <th>{t('rep_cal_time')}</th>
+                  <th>{t('rep_cal_booking')}</th>
+                  <th>{t('rep_area')}</th>
+                  {many && <th>{t('rep_restaurant')}</th>}
+                  <th className="num">{t('guests')}</th>
+                  <th>{t('rep_tables')}</th>
+                  <th>{t('rep_cal_status')}</th>
+                  <th className="num">{t('rep_invoiced')}</th>
+                  <th className="num">{t('rep_collected')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((row) => {
+                  const slot = slotForHour(new Date(row.eventDate).getHours());
+                  return (
+                    <tr key={row.id}>
+                      <td>
+                        {slot && <span className="ch-key" aria-hidden="true"
+                          style={{ background: SLOT_COLORS[slot], marginRight: 6 }} />}
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{clockOf(row.eventDate)}</span>
+                      </td>
+                      <td>
+                        <strong style={{ color: '#f1f5f9' }}>#{row.eventNumber}</strong> {row.customerName}
+                        {row.eventType && (
+                          <span className="rep-pill">{EVENT_TYPE_KEY[row.eventType] ? t(EVENT_TYPE_KEY[row.eventType]) : row.eventType}</span>
+                        )}
+                      </td>
+                      <td>
+                        {areaName(row.hallId, false)}
+                        {row.section === 'SMALL_BANQUET' && <span className="rep-pill is-off">{t('rep_section_small')}</span>}
+                      </td>
+                      {many && <td>{nameOf(row.restaurantId)}</td>}
+                      <td className="num">{row.guestCount}{row.childrenCount > 0 ? ` + ${row.childrenCount}` : ''}</td>
+                      <td>{row.wholeHall ? t('rep_cal_whole_area') : row.tables.length > 0 ? row.tables.join(', ') : '—'}</td>
+                      <td>{t(STATUS_KEY[row.status] ?? 'rep_bookings')}</td>
+                      <td className="num">{money(row.invoicedCents)}</td>
+                      <td className="num">{money(row.collectedCents)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </StickyHScroll>
+        )}
+      </Panel>
     </>
   );
 }
@@ -1053,6 +1475,57 @@ const PAGE_CSS = `
 
 .rep-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 13px; }
 
+/* ── The calendar ──────────────────────────────────────────────────────────
+   Seven columns of minmax(0, 1fr): with a bare 1fr a cell holding a long area
+   name would widen its column and push Sunday past the clipped edge. Every
+   chip ellipsises inside its cell for the same reason. */
+.rep-cal-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rep-cal-arrow {
+  width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+  background: rgba(var(--adm-accent-rgb),0.12);
+  border: 1px solid rgba(var(--adm-accent-rgb),0.35);
+  color: var(--adm-accent); font-size: 18px; font-weight: 700;
+}
+.rep-cal-title { min-width: 170px; text-align: center; color: #f8fafc; font-size: 15px; }
+.rep-cal-week, .rep-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.rep-cal-week span {
+  text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: rgba(226,232,240,0.45); padding: 4px 0;
+}
+.rep-cal-cell {
+  min-height: 108px; min-width: 0; padding: 6px; border-radius: 9px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(var(--adm-bg-rgb),0.4);
+  color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden;
+}
+/* The admin calendar's "booked" red, so the two read the same way. */
+.rep-cal-cell.has-bookings { background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.3); }
+.rep-cal-cell.is-today .rep-cal-num { color: var(--adm-accent); }
+.rep-cal-cell.is-selected { border-color: var(--adm-accent); box-shadow: inset 0 0 0 1px var(--adm-accent); }
+.rep-cal-cell:focus-visible { outline: 2px solid var(--adm-accent); outline-offset: 2px; }
+.rep-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.rep-cal-num { font-size: 13px; font-weight: 700; color: rgba(226,232,240,0.8); }
+.rep-cal-count {
+  font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px;
+  background: rgba(220,38,38,0.45); color: #fff;
+}
+.rep-cal-chip {
+  display: block; min-width: 0; font-size: 10.5px; line-height: 1.35; padding: 1px 5px;
+  border-left: 3px solid rgba(226,232,240,0.35); border-radius: 3px;
+  background: rgba(255,255,255,0.05); color: rgba(241,245,249,0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rep-cal-time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rep-cal-more { font-size: 10px; color: rgba(226,232,240,0.55); padding-left: 5px; }
+.rep-cal-dots { display: none; gap: 3px; justify-content: center; }
+.rep-cal-dot { width: 6px; height: 6px; border-radius: 50%; box-sizing: border-box; }
+.rep-cal-pl {
+  margin-top: auto; display: inline-flex; align-items: center; gap: 4px; min-width: 0;
+  font-size: 10.5px; font-weight: 700; color: rgba(226,232,240,0.75);
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;
+}
+.rep-cal-day { margin: 4px 0 0; }
+
 @media (max-width: 620px) {
   /* Two columns, so From/To and Category/Sort sit side by side — but the FIRST
      control spans both: a restaurant name or a search box in a 152px field is
@@ -1075,6 +1548,17 @@ const PAGE_CSS = `
     border-color: rgba(var(--adm-accent-rgb),0.45);
     background: rgba(var(--adm-accent-rgb),0.12);
   }
+  /* Five tabs in two columns leave one alone on the last row; it takes the
+     whole row rather than sitting under half of it. */
+  .rep-tab:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* A phone cell is ~44px wide: the chips and the balance cannot be read at
+     that size, so the cell becomes the admin calendar's — the day and its
+     three slot dots — and the panel below carries the detail. */
+  .rep-cal-week, .rep-cal-grid { gap: 3px; }
+  .rep-cal-cell { min-height: 54px; padding: 4px 2px; align-items: center; }
+  .rep-cal-head { justify-content: center; }
+  .rep-cal-chip, .rep-cal-more, .rep-cal-pl, .rep-cal-count { display: none; }
+  .rep-cal-dots { display: flex; margin-top: auto; }
   .rep-hero-value { font-size: 27px; }
   .rep-hero > svg { margin-left: 0; }
   .rep-stats { grid-template-columns: 1fr 1fr; }

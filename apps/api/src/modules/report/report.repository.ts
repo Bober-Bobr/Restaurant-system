@@ -90,7 +90,35 @@ export async function bookings(restaurantIds: string[], from: Date, to: Date) {
   });
 }
 
-export type OrderBucketRow = { bucket: string; orders: number; revenueCents: number };
+/**
+ * The bookings a calendar month shows, with who they are for and where they sit.
+ *
+ * The same invoice fields as `bookings` (the day panel prints what each one was
+ * invoiced) plus the name, the area and the tables. CANCELLED ones are left out
+ * here rather than filtered on the page, as on the admin's own calendar: a
+ * cancelled booking holds no room, and a cell full of them reads as a busy day.
+ */
+export async function calendarBookings(restaurantIds: string[], from: Date, to: Date) {
+  return prisma.event.findMany({
+    where: {
+      restaurantId: { in: restaurantIds },
+      eventDate: { gte: from, lte: to },
+      status: { not: 'CANCELLED' },
+    },
+    orderBy: { eventDate: 'asc' },
+    select: {
+      id: true, eventNumber: true, eventDate: true, status: true, section: true,
+      eventType: true, customerName: true, guestCount: true, childrenCount: true,
+      depositCents: true, hallId: true, restaurantId: true, wholeHall: true,
+      tableCategory: { select: { ratePerPerson: true } },
+      selections: { select: { quantity: true, unitPriceCents: true } },
+      payments: { select: { amountCents: true } },
+      floorTables: { select: { floorTable: { select: { label: true } } } },
+    },
+  });
+}
+
+export type OrderBucketRow ={ bucket: string; orders: number; revenueCents: number };
 
 /**
  * Closed food-service orders per day, in the reader's own time.

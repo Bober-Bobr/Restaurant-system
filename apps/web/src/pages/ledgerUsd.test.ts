@@ -204,13 +204,21 @@ describe('the owner\'s report shows dollars only where there are dollars', () =>
     expect(raw('pages/OwnerReportsPage.tsx')).toMatch(/\.rep-usd \{[^}]*display: block/);
   });
 
-  it('the department table gains its dollar columns together, or not at all', () => {
-    const headers = (reports.match(/\{usd && <th className="num">/g) ?? []).length;
-    const cells = (reports.match(/\{usd && <td className="num">/g) ?? []).length;
-    // Three headers; two plain cells plus the coloured balance cell.
-    expect(headers).toBe(3);
-    expect(cells).toBe(2);
-    expect(reports).toMatch(/\{usd && \([\s\S]{0,260}row\.balanceUsdCents/);
+  it('each department table gains its dollar columns together, or not at all', () => {
+    // Two tables carry them — the P&L tab's and the calendar day's — and each
+    // is counted on its own, so one losing a column cannot hide behind the other.
+    const tables = reports.split('<table className="rep-table">').slice(1)
+      .filter((table) => table.includes('row.balanceUsdCents'));
+    expect(tables).toHaveLength(2);
+    for (const table of tables) {
+      const body = table.slice(0, table.indexOf('</table>'));
+      const headers = (body.match(/\{usd && <th className="num">/g) ?? []).length;
+      const cells = (body.match(/\{usd && <td className="num">/g) ?? []).length;
+      // Three headers; two plain cells plus the coloured balance cell.
+      expect(headers).toBe(3);
+      expect(cells).toBe(2);
+      expect(body).toMatch(/\{usd && \([\s\S]{0,260}row\.balanceUsdCents/);
+    }
   });
 
   it('the report actually SELECTS the dollar columns', () => {
