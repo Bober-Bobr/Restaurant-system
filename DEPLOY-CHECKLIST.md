@@ -4174,3 +4174,27 @@ gate and ownership check as the other five.
 8. On a **phone** the tabs are two columns with Calendar beside Profit & loss;
    the grid shows each day with three slot dots, and the detail is in the panel
    below. No horizontal page scroll at 390px (measured in ru and uz).
+
+## §84 — "Golden Hour Envelope" (wedding-arabic): the gallery is always on the page
+
+**No migration.** Files: `apps/web/src/vinvite/templates/wedding-arabic/template.html`,
+`definition.ts` (a comment only).
+
+The design always had a "Moments — Our journey" gallery, but it removed itself
+while no photos were uploaded — so it never appeared in a template preview, on
+the marketing site or on a new invitation, and looked missing. It is now on the
+page from the start, filled with six gold-arch placeholder plates (crescent,
+lantern, rosette, pavilion, bloom, interlaced star) drawn as inline SVG in the
+template's own palette. The FIRST uploaded photo replaces all six — real photos
+and placeholders are never mixed — and the builder's "Gallery" visibility switch
+still removes the section.
+
+1. Open a new Arabic invitation with no photos: after the envelope, the gallery
+   shows six ornamental arches — three per row on a desktop, two per row on a
+   phone, all arched on the phone.
+2. Upload one photo in the builder's Gallery group: the placeholders vanish and
+   only the photo is shown; tapping it opens the lightbox (placeholders do not).
+3. Change the gold in Design+: the placeholders' strokes and ornaments follow.
+4. Switch the gallery off in Visibility: the section disappears.
+5. **Already-published Arabic invitations without photos now show the
+   placeholder gallery.** Owners who do not want it switch it off.

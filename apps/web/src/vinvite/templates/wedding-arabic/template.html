@@ -809,6 +809,35 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
 }
 .gallery-item:hover .gallery-veil span { transform: translateY(0); letter-spacing: 0.38em; }
 
+/* Placeholder plates — shown until the couple uploads a photo, and replaced
+   ALL AT ONCE by the first one (never mixed with real photos). Drawn inline
+   rather than as data URIs so every stroke reads the palette's custom
+   properties: a gold recoloured in Design+ recolours these too. Six tiles,
+   all the same shape, so the grid closes in even rows at two columns and at
+   three. Decorative only: no lightbox, no lift, hidden from screen readers. */
+.gallery-grid.is-placeholder .gallery-item:first-child { grid-column: auto; aspect-ratio: 0.82; }
+.gallery-item.is-ph { cursor: default; background: var(--champagne); }
+.gallery-item.is-ph:hover { transform: none; box-shadow: 0 18px 42px -18px rgba(90, 68, 38, 0.32); }
+/* The arch / square alternation (every third tile square) is a rhythm for
+   THREE columns; in two it lands as a random checker. Below the three-column
+   breakpoint every placeholder is arched. */
+@media (max-width: 1023px) {
+  .gallery-grid.is-placeholder .gallery-item { border-radius: 46% 46% 10px 10px / 34% 34% 10px 10px; }
+}
+.gallery-item.is-ph svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ph-s1 { stop-color: var(--cream); }
+.ph-s2 { stop-color: var(--champagne); }
+.ph-s3 { stop-color: var(--sand); }
+.ph-glow1 { stop-color: var(--gold-soft); stop-opacity: 0.55; }
+.ph-glow2 { stop-color: var(--gold-soft); stop-opacity: 0; }
+.ph-lattice { fill: none; stroke: var(--gold); stroke-width: 0.7; opacity: 0.3; }
+.ph-arch { fill: none; stroke: var(--gold); stroke-width: 1.6; }
+.ph-arch-in { fill: none; stroke: var(--gold-soft); stroke-width: 0.8; }
+.ph-line { fill: none; stroke: var(--gold-deep); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.ph-fill { fill: var(--gold); }
+.ph-fill-soft { fill: var(--gold-soft); }
+.ph-fill-deep { fill: var(--bronze); }
+
 /* Lightbox */
 #lightbox {
   position: fixed; inset: 0; z-index: 950;
@@ -1798,13 +1827,83 @@ function renderMap(){
 /* ============================================================
    Gallery — arch-framed photo tiles from config
    ============================================================ */
+/* The ornaments drawn inside each placeholder's arch, one per tile:
+   crescent and star, lantern, eight-point rosette, domed pavilion, arabesque
+   bloom, interlaced star. Strings, not DOM calls, so the linkedom smoke test
+   (which has innerHTML but no layout) runs them like a browser does. */
+var PH_MOTIFS = [
+  function(id){ return '<mask id="' + id + 'm"><rect width="164" height="200" fill="#fff"/><circle cx="90" cy="108" r="19" fill="#000"/></mask>' +
+    '<circle cx="80" cy="112" r="22" class="ph-fill" mask="url(#' + id + 'm)"/>' +
+    '<path class="ph-fill-deep" d="M104 92l2.4 5 5.5.8-4 3.9.9 5.5-4.8-2.6-4.9 2.6 1-5.5-4-3.9 5.5-.8z"/>'; },
+  function(){ return '<path class="ph-line" d="M82 58v14"/><path class="ph-fill-deep" d="M74 76h16l-3-5h-10z"/>' +
+    '<path class="ph-fill" d="M70 80h24l6 14v26l-6 12H70l-6-12V94z"/>' +
+    '<path class="ph-fill-soft" d="M74 96h16v22H74z" opacity=".75"/><path class="ph-line" d="M82 96v22M74 107h16"/>' +
+    '<path class="ph-fill-deep" d="M72 136h20l-4 6h-12z"/>'; },
+  function(){ return '<g transform="translate(82 112)"><rect x="-24" y="-24" width="48" height="48" class="ph-line"/>' +
+    '<rect x="-24" y="-24" width="48" height="48" class="ph-line" transform="rotate(45)"/>' +
+    '<circle r="15" class="ph-line"/><circle r="7" class="ph-fill"/>' +
+    '<g class="ph-fill-soft"><circle cy="-34" r="2.6"/><circle cy="34" r="2.6"/><circle cx="-34" r="2.6"/><circle cx="34" r="2.6"/></g></g>'; },
+  function(){ return '<path class="ph-fill" d="M60 142V112h44v30z"/><path class="ph-fill-soft" d="M58 112c0-18 11-30 24-34 13 4 24 16 24 34z"/>' +
+    '<path class="ph-line" d="M82 78v-12"/><circle cx="82" cy="63" r="3" class="ph-fill-deep"/>' +
+    '<path class="ph-fill-deep" d="M70 142v-16a5 5 0 0 1 10 0v16zM84 142v-16a5 5 0 0 1 10 0v16z"/>' +
+    '<path class="ph-line" d="M50 142h64"/>'; },
+  function(){ return '<path class="ph-line" d="M82 150V96"/><path class="ph-line" d="M82 132c-10-2-18-10-20-20M82 122c10-2 18-10 20-20"/>' +
+    '<path class="ph-fill" d="M82 96c-14-6-18-22-8-32 4 8 8 10 8 10s4-2 8-10c10 10 6 26-8 32z"/>' +
+    '<circle cx="60" cy="110" r="4" class="ph-fill-soft"/><circle cx="104" cy="100" r="4" class="ph-fill-soft"/>'; },
+  function(){ var d = '';
+    for (var k = 0; k < 8; k++) d += '<ellipse rx="27" ry="9" transform="rotate(' + (k * 22.5) + ')" class="ph-line"/>';
+    return '<g transform="translate(82 112)">' + d + '<circle r="9" class="ph-fill"/><circle r="3.5" class="ph-fill-deep"/></g>'; },
+];
+function placeholderSvg(i){
+  var id = 'ph' + i;
+  /* A pointed arch window: the same silhouette as the tiles' own frames. */
+  var arch = 'M34 182V90Q34 54 82 30Q130 54 130 90V182Z';
+  var archIn = 'M41 182V92Q41 60 82 39Q123 60 123 92V182Z';
+  return '<svg viewBox="0 0 164 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
+    '<defs>' +
+      '<linearGradient id="' + id + 'b" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" class="ph-s1"/><stop offset=".6" class="ph-s2"/><stop offset="1" class="ph-s3"/></linearGradient>' +
+      '<radialGradient id="' + id + 'g" cx=".5" cy=".55" r=".5">' +
+        '<stop offset="0" class="ph-glow1"/><stop offset="1" class="ph-glow2"/></radialGradient>' +
+      /* An eight-point star lattice — two squares, one turned 45° — tiled. */
+      '<pattern id="' + id + 'p" width="24" height="24" patternUnits="userSpaceOnUse">' +
+        '<rect x="6" y="6" width="12" height="12" class="ph-lattice"/>' +
+        '<rect x="6" y="6" width="12" height="12" class="ph-lattice" transform="rotate(45 12 12)"/></pattern>' +
+    '</defs>' +
+    '<rect width="164" height="200" fill="url(#' + id + 'b)"/>' +
+    '<rect width="164" height="200" fill="url(#' + id + 'p)"/>' +
+    '<path d="' + arch + '" fill="url(#' + id + 'b)"/>' +
+    '<path d="' + arch + '" fill="url(#' + id + 'g)"/>' +
+    '<path d="' + arch + '" class="ph-arch"/><path d="' + archIn + '" class="ph-arch-in"/>' +
+    PH_MOTIFS[i % PH_MOTIFS.length](id) +
+  '</svg>';
+}
+var PH_COUNT = 6;
+
 function renderGallery(){
   var items = cfg('gallery', []);
   if (!Array.isArray(items)) items = [];
   items = items.filter(function(g){ return g && g.image; });
   var grid = $('#galleryGrid');
   grid.innerHTML = '';
-  $('#gallery').style.display = items.length ? '' : 'none';
+  /* The section is always on the page now; only the builder's switch
+     (hidden.gallery → .opt-off) takes it away. With no photos it shows the
+     placeholder plates, and the FIRST uploaded photo replaces all of them —
+     a stranger's ornament never sits beside somebody's own album. */
+  $('#gallery').style.display = '';
+  grid.classList.toggle('is-placeholder', !items.length);
+  if (!items.length) {
+    for (var p = 0; p < PH_COUNT; p++) {
+      var ph = document.createElement('figure');
+      ph.className = 'gallery-item is-ph reveal-scale' + (p % 3 !== 1 ? ' arch' : '');
+      ph.setAttribute('aria-hidden', 'true');
+      ph.style.setProperty('--reveal-delay', ((p % 3) * 0.1) + 's');
+      ph.innerHTML = placeholderSvg(p) + '<div class="gallery-sheen"></div>';
+      grid.appendChild(ph);
+      revObserve(ph);
+    }
+    return;
+  }
   items.forEach(function(g, i){
     var fig = document.createElement('figure');
     fig.className = 'gallery-item reveal-scale' + (i % 3 !== 1 ? ' arch' : '');

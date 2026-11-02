@@ -80,7 +80,9 @@ const defaultConfig = {
     },
     mapUrl: '',
   },
-  // Photos the couple uploads; an empty list hides the gallery section.
+  // Photos the couple uploads. While the list is empty the section shows six
+  // gold-arch placeholder plates drawn in the template; the first photo
+  // replaces all of them. Only hidden.gallery takes the section away.
   gallery: [] as { image: string; caption: Record<string, string> }[],
   music: { url: '' },
   // Sections switched off in the builder (all visible by default).
