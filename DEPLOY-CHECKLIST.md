@@ -4209,3 +4209,30 @@ and looked missing. It is now TWO sections:
 6. A **studio override** for this design (Design+ config saved on
    `v-invite.uz/settings`) was saved without story text, so invitations created
    from it start with no story until the override is re-saved with one.
+
+## §85 — "Lantern Night" (wedding-samarkand): a photo gallery the couple fills
+
+**No migration.** Files: `apps/web/src/vinvite/templates/wedding-samarkand/template.html`,
+`definition.ts`.
+
+Lantern Night had no photo gallery at all — its garden journey is the design's
+own artwork, and the definition said so ("There is no gallery field"). It now
+has **"Our moments"** (`#album`), after the garden journey and before the
+finale: the couple's photos in round-headed gold arches on the night ground,
+three per row on a desktop and two on a phone, each opening full-screen in a
+lightbox (arrows, ←/→, Escape, a tap outside). Until a photo is uploaded it
+shows six of the design's own bundled plates — already on the page, so no extra
+download — and the FIRST upload replaces all six. The lantern rail gains a lamp
+for it.
+
+1. Builder → **📷 Фотогалерея** (after "Прогулка по саду"): the heading per
+   language, then "+ Добавить" for each photo with a caption per language.
+2. A new invitation shows the section with six garden plates; upload one photo
+   and only that photo remains. Tap it: the lightbox opens; with two or more
+   photos the arrows and the arrow keys move through them; Escape closes and
+   focus returns to the photo.
+3. Visibility → "Фотогалерея" switches the section off, and its lamp leaves the
+   rail.
+4. **Already-published Lantern Night invitations now show the section** with the
+   six bundled plates and the "Our moments" heading in the reader's language.
+   Owners who do not want it switch it off.

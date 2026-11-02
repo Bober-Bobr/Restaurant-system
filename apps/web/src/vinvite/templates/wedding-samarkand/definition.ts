@@ -23,7 +23,10 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 //
 // Artwork is part of the design rather than a set of slots — it ships bundled
 // in apps/web/public/samarkand/ and is addressed through `window.__ORIGIN__`.
-// There is no gallery field: the journey is the gallery.
+// The journey is the DESIGN's garden; the couple's own photographs have a
+// section of their own, "Our moments" (`album`, from `gallery`). Until a photo
+// is uploaded it shows six of the bundled plates, and the first upload replaces
+// all of them.
 //
 // Defaults are written in Uzbek first — this is a Samarkand nikoh — with ru and
 // en filled so the language bar works out of the box. uz avoids apostrophes,
@@ -37,6 +40,7 @@ const groups: TemplateFieldGroup[] = [
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
   { key: 'story', labelKey: 'tg_story', icon: '💞', section: 'couple' },
   { key: 'journey', labelKey: 'sec_journey', icon: '🏛', section: 'journey' },
+  { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'album' },
   { key: 'details', labelKey: 'tg_details', icon: '📋', section: 'details' },
   { key: 'schedule', labelKey: 'tg_schedule', icon: '🕰', section: 'details' },
   { key: 'finale', labelKey: 'sec_final', icon: '🥂', section: 'final' },
@@ -107,6 +111,11 @@ const fields: TemplateField[] = [
   { key: 'j5', path: 'journey.five', type: 'localized-text', group: 'journey', labelKey: 'fld_caption' },
   { key: 'j6', path: 'journey.six', type: 'localized-text', group: 'journey', labelKey: 'fld_caption' },
 
+  // The couple's photo gallery. The heading falls back to "Our moments" in
+  // the reader's language when left blank.
+  { key: 'albumTitle', path: 'album.title', type: 'localized-text', group: 'gallery', labelKey: 'fld_sub' },
+  { key: 'gallery', path: 'gallery', type: 'gallery', group: 'gallery', labelKey: 'tg_gallery' },
+
   { key: 'dateNote', path: 'details.dateNote', type: 'localized-text', group: 'details', labelKey: 'fld_time_note' },
   { key: 'detCeremony', path: 'details.ceremony', type: 'localized-text', group: 'details', labelKey: 'fld_venue_name' },
   { key: 'detCeremonyNote', path: 'details.ceremonyNote', type: 'localized-text', group: 'details', labelKey: 'fld_desc' },
@@ -135,6 +144,7 @@ const fields: TemplateField[] = [
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
   { key: 'v_program', path: 'hidden.program', type: 'toggle', group: 'visibility', labelKey: 'sec_program' },
   { key: 'v_journey', path: 'hidden.journey', type: 'toggle', group: 'visibility', labelKey: 'sec_journey' },
+  { key: 'v_album', path: 'hidden.album', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
   { key: 'v_music', path: 'hidden.music', type: 'toggle', group: 'visibility', labelKey: 'sec_music' },
   { key: 'v_place', path: 'hidden.place', type: 'toggle', group: 'visibility', labelKey: 'sec_venue' },
@@ -317,6 +327,11 @@ const defaultConfig = {
   },
   music: { url: '' },
   // Sections switched off in the builder (all visible by default).
+  album: {
+    title: { uz: 'Bizning lahzalarimiz', ru: 'Наши мгновения', en: 'Our moments' },
+  },
+  // Photos the couple uploads; while empty, the section shows bundled plates.
+  gallery: [] as { image: string; caption: Record<string, string> }[],
   hidden: {} as Record<string, boolean>,
 };
 
@@ -333,7 +348,7 @@ export const weddingSamarkandTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'countdown', 'details', 'place', 'journey', 'final'],
+  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'countdown', 'details', 'place', 'journey', 'album', 'final'],
   // The lantern gold only. The burgundy and the ruby are the silk and the
   // petals; recolouring them with a picked accent would take the fabric with
   // them.

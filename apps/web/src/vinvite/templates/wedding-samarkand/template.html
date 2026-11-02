@@ -587,6 +587,76 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
   #dust{display:none}
 }
 
+/* ── OUR MOMENTS — the couple's own photographs ───────────────────────────
+   The journey below is the DESIGN's garden; this is the couple's album, so it
+   is a plain grid rather than another scroll mechanic. Each photo sits in a
+   round-headed arch with a hairline of gold, on the night ground. Until a
+   photo is uploaded the design's own plates stand in (already on the page, so
+   no extra bytes), and the first upload replaces all of them. */
+.album{background:var(--night)}
+.album__title{font-size:clamp(30px,5vw,64px);margin:.2em 0 0;color:var(--ivory)}
+.album__grid{
+  margin:clamp(34px,5vw,64px) auto 0;max-width:1080px;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:clamp(12px,2.2vw,28px);
+}
+@media (min-width:900px){.album__grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.album__item{
+  position:relative;display:block;width:100%;margin:0;padding:0;
+  aspect-ratio:3/4;overflow:hidden;
+  border:1px solid rgba(201,162,39,.5);
+  border-radius:50% 50% 6px 6px / 34% 34% 6px 6px;
+  background:var(--plum);
+  box-shadow:0 0 0 5px rgba(201,162,39,.06),0 30px 60px -30px rgba(0,0,0,.85);
+  font:inherit;color:inherit;
+}
+button.album__item{cursor:zoom-in}
+.album__item img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  transition:transform 1.4s var(--ease);
+}
+button.album__item:hover img,button.album__item:focus-visible img{transform:scale(1.06)}
+button.album__item:focus-visible{outline:2px solid var(--gold-lt);outline-offset:4px}
+/* Lamplight from below, so a caption reads on any photo. */
+.album__item::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 55%,rgba(18,10,16,.78));
+}
+.album__cap{
+  position:absolute;left:0;right:0;bottom:0;z-index:1;
+  padding:0 12px clamp(12px,2vw,20px);text-align:center;
+  font-family:var(--hand);font-size:clamp(18px,2vw,26px);line-height:1.15;
+  color:var(--gold-lt);overflow-wrap:anywhere;
+}
+
+/* The lightbox. Its state is .is-open, never a bare .open — this template
+   already uses .open for three other things. */
+.album-lb{
+  position:fixed;inset:0;z-index:900;display:none;
+  align-items:center;justify-content:center;
+  padding:clamp(16px,4vw,48px);
+  background:rgba(18,10,16,.94);
+}
+.album-lb.is-open{display:flex}
+.album-lb figure{margin:0;max-width:min(1100px,100%);text-align:center}
+.album-lb img{
+  display:block;max-width:100%;max-height:78vh;max-height:78svh;margin:0 auto;
+  border:1px solid rgba(201,162,39,.45);
+}
+.album-lb figcaption{
+  margin-top:14px;font-family:var(--hand);font-size:clamp(20px,2.4vw,30px);color:var(--gold-lt);
+}
+.album-lb button{
+  position:absolute;width:48px;height:48px;border-radius:50%;cursor:pointer;
+  border:1px solid rgba(201,162,39,.5);background:rgba(42,22,34,.7);
+  color:var(--ivory);font-size:22px;line-height:1;
+}
+.album-lb button:hover,.album-lb button:focus-visible{color:var(--gold-lt);border-color:var(--gold-lt)}
+.album-lb__close{top:clamp(12px,3vw,28px);right:clamp(12px,3vw,28px)}
+.album-lb__prev{left:clamp(8px,2vw,28px);top:50%;transform:translateY(-50%)}
+.album-lb__next{right:clamp(8px,2vw,28px);top:50%;transform:translateY(-50%)}
+.album-lb button[hidden]{display:none}
+
 /* ── WHERE ─────────────────────────────────────────────────────────────────
    The practical block: what the place looks like, its address, and one link
    out to a map. Dark like the rest of this design — a pale card would read as
@@ -957,6 +1027,26 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
 </section>
 
 <!-- ============================================================
+     OUR MOMENTS — the couple's photo gallery (config.gallery)
+     ============================================================ -->
+<section class="album pad" id="album" data-opt="album" aria-labelledby="album-h">
+  <div class="wrap center">
+    <p class="eyebrow reveal" data-t="albumEyebrow"></p>
+    <h2 class="album__title reveal" id="album-h" data-bind="albumTitle"></h2>
+  </div>
+  <div class="wrap">
+    <div class="album__grid" id="albumGrid"></div>
+  </div>
+</section>
+
+<div class="album-lb" id="albumLb" role="dialog" aria-modal="true" aria-labelledby="albumLbCap">
+  <button class="album-lb__close" id="albumClose" type="button" data-t-aria="close" aria-label="Close">&times;</button>
+  <button class="album-lb__prev" id="albumPrev" type="button" data-t-aria="albumPrev" aria-label="Previous">&#8249;</button>
+  <button class="album-lb__next" id="albumNext" type="button" data-t-aria="albumNext" aria-label="Next">&#8250;</button>
+  <figure><img id="albumLbImg" alt=""><figcaption id="albumLbCap"></figcaption></figure>
+</div>
+
+<!-- ============================================================
      8 · FINAL PALACE
      ============================================================ -->
 <section class="final" id="final" aria-labelledby="fin-h">
@@ -1091,7 +1181,8 @@ var UI = {
     openMap: 'Xaritada ochish',
     howToFindUs: 'Bizni qanday topish mumkin',
     rThreshold: 'Hovli', rInvite: 'Taklifnoma', rCouple: 'Biz haqimizda',
-    rDate: 'Sana', rDetails: 'Tafsilotlar', rJourney: 'Bog', rFinal: 'Keling',
+    rDate: 'Sana', rDetails: 'Tafsilotlar', rJourney: 'Bog', rAlbum: 'Suratlar', rFinal: 'Keling',
+    albumEyebrow: 'Suratlar', albumTitle: 'Bizning lahzalarimiz', albumPrev: 'Oldingi', albumNext: 'Keyingi',
     developedBy: 'V-INVITE tomonidan mehr bilan yaratildi'
   },
   ru: {
@@ -1116,7 +1207,8 @@ var UI = {
     openMap: 'Открыть на карте',
     howToFindUs: 'Как нас найти',
     rThreshold: 'Двор', rInvite: 'Приглашение', rCouple: 'О нас',
-    rDate: 'Дата', rDetails: 'Детали', rJourney: 'Сад', rFinal: 'Приходите',
+    rDate: 'Дата', rDetails: 'Детали', rJourney: 'Сад', rAlbum: 'Фотографии', rFinal: 'Приходите',
+    albumEyebrow: 'Фотографии', albumTitle: 'Наши мгновения', albumPrev: 'Предыдущая', albumNext: 'Следующая',
     developedBy: 'Сделано с любовью в V-INVITE'
   },
   en: {
@@ -1141,7 +1233,8 @@ var UI = {
     openMap: 'Open in maps',
     howToFindUs: 'How to find us',
     rThreshold: 'The courtyard', rInvite: 'The invitation', rCouple: 'Our story',
-    rDate: 'The date', rDetails: 'Details', rJourney: 'The garden', rFinal: 'Come',
+    rDate: 'The date', rDetails: 'Details', rJourney: 'The garden', rAlbum: 'Photographs', rFinal: 'Come',
+    albumEyebrow: 'Photographs', albumTitle: 'Our moments', albumPrev: 'Previous', albumNext: 'Next',
     developedBy: 'Developed with love by V-INVITE'
   }
 };
@@ -1213,6 +1306,8 @@ function bindTexts() {
   var place = venueName + (venueName && city ? ', ' : '') + city;
 
   var map = {
+    // The photo gallery's heading; blank falls back to the chrome's own.
+    albumTitle: loc(cfg('album.title', '')) || t('albumTitle'),
     // The "Where" block. Both must be in this map: a data-bind whose key is
     // absent is left exactly as authored, and these are authored empty.
     venueName: venueName,
@@ -1424,7 +1519,17 @@ function initFilm() {
    taller than the viewport can never present 30% of itself at once, and the
    reveal is the only path out of opacity:0. */
 var revObs = null;
+/* Nodes built AFTER boot (the gallery, on every config push) missed the
+   observer's first sweep. Before boot they are left for it; after, they are
+   observed, or shown at once where there is no observer. */
+var observerReady = false;
+function revealLater(el) {
+  if (!observerReady) return;
+  if (revObs) revObs.observe(el);
+  else el.classList.add('in');
+}
 function initObserver() {
+  observerReady = true;
   if (ADMIN_EDIT || reduced || typeof IntersectionObserver === 'undefined') {
     revealEverything();
     return;
@@ -1603,7 +1708,7 @@ function renderRail() {
   if (!el) return;
   var stops = [
     ['#threshold', 'rThreshold'], ['#invite', 'rInvite'], ['#couple', 'rCouple'],
-    ['#date', 'rDate'], ['#details', 'rDetails'], ['#journey', 'rJourney'], ['#final', 'rFinal']
+    ['#date', 'rDate'], ['#details', 'rDetails'], ['#journey', 'rJourney'], ['#album', 'rAlbum'], ['#final', 'rFinal']
   ];
   el.innerHTML = '';
   var lamps = [];
@@ -1632,6 +1737,104 @@ function renderRail() {
       el.classList.toggle('on', window.scrollY > (window.innerHeight || 800) * 0.6);
     }
   };
+}
+
+/* ── Our moments — the photo gallery ─────────────────────────────────────── */
+/* The design's own plates, shown until the couple uploads a photo. Six, so the
+   grid closes in even rows at both two and three columns; every one of them is
+   already on the page, so they cost nothing to show. */
+var ALBUM_STANDINS = ['courtyard.jpg', 'arch.jpg', 'suzani.jpg', 'rooftop.jpg', 'corridor.jpg', 'garden.jpg'];
+var albumShown = [];
+function renderAlbum() {
+  var grid = $('#albumGrid');
+  if (!grid) return;
+  var items = cfg('gallery', []);
+  if (!Array.isArray(items)) items = [];
+  items = items.filter(function (g) { return g && g.image; });
+  grid.innerHTML = '';
+  albumShown = [];
+  /* The first uploaded photo replaces ALL the stand-ins — a stranger's
+     courtyard never sits beside somebody's own album. Stand-ins are scenery,
+     not photographs, so they do not open the lightbox. */
+  if (!items.length) {
+    ALBUM_STANDINS.forEach(function (file) {
+      var cell = document.createElement('div');
+      cell.className = 'album__item reveal';
+      cell.setAttribute('aria-hidden', 'true');
+      var img = document.createElement('img');
+      img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+      img.setAttribute('src', asset(file));
+      cell.appendChild(img);
+      grid.appendChild(cell);
+      revealLater(cell);
+    });
+    return;
+  }
+  items.forEach(function (g, i) {
+    var cap = loc(g.caption);
+    albumShown.push({ src: g.image, cap: cap });
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'album__item reveal';
+    b.setAttribute('aria-label', cap || t('albumTitle'));
+    var img = document.createElement('img');
+    img.alt = cap || ''; img.loading = 'lazy'; img.decoding = 'async';
+    img.setAttribute('src', g.image);
+    b.appendChild(img);
+    if (cap) {
+      var c = document.createElement('span');
+      c.className = 'album__cap';
+      c.textContent = cap;
+      b.appendChild(c);
+    }
+    b.addEventListener('click', function () { openAlbum(i, b); });
+    grid.appendChild(b);
+    revealLater(b);
+  });
+}
+
+var albumAt = 0, albumFrom = null, albumOverflow = '';
+function showAlbum(i) {
+  var n = albumShown.length;
+  if (!n) return;
+  albumAt = (i + n) % n;
+  var one = albumShown[albumAt];
+  $('#albumLbImg').setAttribute('src', one.src);
+  $('#albumLbImg').alt = one.cap || '';
+  $('#albumLbCap').textContent = one.cap || '';
+  if (n < 2) { $('#albumPrev').setAttribute('hidden', ''); $('#albumNext').setAttribute('hidden', ''); }
+  else { $('#albumPrev').removeAttribute('hidden'); $('#albumNext').removeAttribute('hidden'); }
+}
+function openAlbum(i, from) {
+  albumFrom = from || null;
+  showAlbum(i);
+  /* Hold the page still behind it, and put back exactly what was there. */
+  albumOverflow = document.documentElement.style.overflow;
+  document.documentElement.style.overflow = 'hidden';
+  $('#albumLb').classList.add('is-open');
+  var close = $('#albumClose');
+  if (close && close.focus) close.focus();
+}
+function closeAlbum() {
+  var lb = $('#albumLb');
+  if (!lb || !lb.classList.contains('is-open')) return;
+  lb.classList.remove('is-open');
+  document.documentElement.style.overflow = albumOverflow;
+  if (albumFrom && albumFrom.focus) albumFrom.focus();
+}
+function initAlbum() {
+  var lb = $('#albumLb');
+  if (!lb) return;
+  $('#albumClose').addEventListener('click', closeAlbum);
+  $('#albumPrev').addEventListener('click', function () { showAlbum(albumAt - 1); });
+  $('#albumNext').addEventListener('click', function () { showAlbum(albumAt + 1); });
+  lb.addEventListener('click', function (e) { if (e.target === lb) closeAlbum(); });
+  document.addEventListener('keydown', function (e) {
+    if (!lb.classList.contains('is-open')) return;
+    if (e.key === 'Escape') closeAlbum();
+    else if (e.key === 'ArrowLeft') showAlbum(albumAt - 1);
+    else if (e.key === 'ArrowRight') showAlbum(albumAt + 1);
+  });
 }
 
 /* ── Programme ───────────────────────────────────────────────────────────── */
@@ -2191,6 +2394,7 @@ function renderAll() {
   renderCountdown();
   applyVisibility();
   renderPlace();
+  renderAlbum();
   renderMusic();
   renderLangbar();
   renderRail();
@@ -2213,6 +2417,7 @@ try {
   initPlaque();
   initDust();
   initRsvp();
+  initAlbum();
   initSkip();
   initFilm();
   if (!reduced) {
