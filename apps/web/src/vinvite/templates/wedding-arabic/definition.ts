@@ -4,7 +4,7 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 
 // ── "Golden Hour Envelope" Arabic luxury wedding template ────────────────────
 // Envelope gate (wax seal → flap → letter slides out & unfolds) → golden-hour
-// hero → invitation card → venue/date/time + map → photo gallery → countdown →
+// hero → invitation card → venue/date/time + map → our story → photo gallery → countdown →
 // RSVP → V-invite attribution. Warm ivory · champagne gold · deep coffee.
 
 const groups: TemplateFieldGroup[] = [
@@ -13,6 +13,7 @@ const groups: TemplateFieldGroup[] = [
   { key: 'invite', labelKey: 'tg_invite', icon: '✉️', section: 'invitation' },
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'countdown' },
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
+  { key: 'story', labelKey: 'tg_story', icon: '💞', section: 'story' },
   { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'gallery' },
   { key: 'music', labelKey: 'tg_music', icon: '🎵' },
   { key: 'visibility', labelKey: 'tg_visibility', icon: '👁' },
@@ -39,6 +40,10 @@ const fields: TemplateField[] = [
   { key: 'address', path: 'venue.address', type: 'localized-text', group: 'venue', labelKey: 'fld_address' },
   { key: 'mapUrl', path: 'venue.mapUrl', type: 'text', group: 'venue', labelKey: 'fld_map_url', placeholder: 'https://yandex.uz/maps/…' },
 
+  // The story is its own section, separate from the photographs. Emptying the
+  // text removes the section, as does its visibility switch.
+  { key: 'storyText', path: 'story.text', type: 'localized-textarea', group: 'story', labelKey: 'fld_text' },
+
   { key: 'gallery', path: 'gallery', type: 'gallery', group: 'gallery', labelKey: 'tg_gallery' },
 
   { key: 'music', path: 'music.url', type: 'audio', group: 'music', labelKey: 'tg_music' },
@@ -46,6 +51,7 @@ const fields: TemplateField[] = [
   // Block visibility: hidden.<key> === true switches the section off.
   { key: 'v_message', path: 'hidden.message', type: 'toggle', group: 'visibility', labelKey: 'sec_message' },
   { key: 'v_details', path: 'hidden.details', type: 'toggle', group: 'visibility', labelKey: 'sec_details' },
+  { key: 'v_story', path: 'hidden.story', type: 'toggle', group: 'visibility', labelKey: 'sec_story' },
   { key: 'v_gallery', path: 'hidden.gallery', type: 'toggle', group: 'visibility', labelKey: 'sec_gallery' },
   { key: 'v_countdown', path: 'hidden.countdown', type: 'toggle', group: 'visibility', labelKey: 'sec_countdown' },
   { key: 'v_rsvp', path: 'hidden.rsvp', type: 'toggle', group: 'visibility', labelKey: 'sec_rsvp' },
@@ -80,6 +86,15 @@ const defaultConfig = {
     },
     mapUrl: '',
   },
+  // An invitation saved before this section existed has no story text, and
+  // the section stays hidden for it.
+  story: {
+    text: {
+      ru: 'Мы встретились случайно — на свадьбе друзей, под такими же золотыми арками.\nОдин разговор превратился в вечер, а вечер — в годы.\nТеперь мы хотим, чтобы в самый важный день вы были рядом.',
+      uz: 'Biz tasodifan uchrashdik — dostlarimizning toyida, xuddi shunday oltin ravoqlar ostida.\nBir suhbat butun oqshomga, oqshom esa yillarga aylandi.\nEndi eng muhim kunimizda siz yonimizda bolishingizni istaymiz.',
+      en: 'We met by chance — at a friends’ wedding, beneath golden arches much like these.\nOne conversation became an evening, and the evening became years.\nNow we would love you beside us on the day that matters most.',
+    },
+  },
   // Photos the couple uploads. While the list is empty the section shows six
   // gold-arch placeholder plates drawn in the template; the first photo
   // replaces all of them. Only hidden.gallery takes the section away.
@@ -100,6 +115,6 @@ export const weddingArabicTemplate: TemplateDefinition = {
   fields,
   groups,
   Renderer: RichRenderer,
-  sectionIds: ['hero', 'invitation', 'details', 'gallery', 'countdown', 'rsvp'],
+  sectionIds: ['hero', 'invitation', 'details', 'story', 'gallery', 'countdown', 'rsvp'],
   accentVars: ['--gold', '--gold-deep', '--gold-soft', '--bronze'],
 };

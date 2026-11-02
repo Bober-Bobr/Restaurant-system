@@ -4175,26 +4175,37 @@ gate and ownership check as the other five.
    the grid shows each day with three slot dots, and the detail is in the panel
    below. No horizontal page scroll at 390px (measured in ru and uz).
 
-## §84 — "Golden Hour Envelope" (wedding-arabic): the gallery is always on the page
+## §84 — "Golden Hour Envelope" (wedding-arabic): "Our story" and a separate photo gallery
 
 **No migration.** Files: `apps/web/src/vinvite/templates/wedding-arabic/template.html`,
-`definition.ts` (a comment only).
+`definition.ts`.
 
-The design always had a "Moments — Our journey" gallery, but it removed itself
-while no photos were uploaded — so it never appeared in a template preview, on
-the marketing site or on a new invitation, and looked missing. It is now on the
-page from the start, filled with six gold-arch placeholder plates (crescent,
-lantern, rosette, pavilion, bloom, interlaced star) drawn as inline SVG in the
-template's own palette. The FIRST uploaded photo replaces all six — real photos
-and placeholders are never mixed — and the builder's "Gallery" visibility switch
-still removes the section.
+The design had one section, "Moments — Our story", which held the photo gallery
+and removed itself while no photos were uploaded — so it appeared in no preview
+and looked missing. It is now TWO sections:
 
-1. Open a new Arabic invitation with no photos: after the envelope, the gallery
-   shows six ornamental arches — three per row on a desktop, two per row on a
-   phone, all arched on the phone.
-2. Upload one photo in the builder's Gallery group: the placeholders vanish and
-   only the photo is shown; tapping it opens the lightbox (placeholders do not).
-3. Change the gold in Design+: the placeholders' strokes and ornaments follow.
-4. Switch the gallery off in Visibility: the section disappears.
+- **Our story** (new, id `story`): the couple's own words beside one tall
+  ornamental arch (interlaced rings). Builder group "Our story" with a text
+  field and its own visibility switch. It removes itself when the text is
+  empty — so **invitations already saved have no story section** (their config
+  has no story text), and new ones start with a sample story in ru/uz/en.
+- **Photo gallery** (the existing section, still id `gallery`, still
+  `config.gallery` and `hidden.gallery` — so uploaded photos and Design+
+  styling carry over): retitled "Moments — Our photographs". With no photos it
+  shows six gold-arch placeholder plates drawn as inline SVG in the template's
+  palette; the FIRST uploaded photo replaces all six.
+
+1. A new Arabic invitation: after the details, "Our story" (text beside the
+   arch; stacked on a phone), then "Our photographs" with six ornamental arches
+   — three per row on a desktop, two on a phone.
+2. Builder: the "Our story" group edits the text; clearing it removes the
+   section. Its switch under Visibility hides it too.
+3. Upload one photo in the Gallery group: the placeholders vanish and only the
+   photo shows; tapping it opens the lightbox.
+4. Change the gold in Design+: both sections' ornaments follow.
 5. **Already-published Arabic invitations without photos now show the
-   placeholder gallery.** Owners who do not want it switch it off.
+   placeholder gallery** (no story section, though). Owners who do not want
+   the gallery switch it off.
+6. A **studio override** for this design (Design+ config saved on
+   `v-invite.uz/settings`) was saved without story text, so invitations created
+   from it start with no story until the override is re-saved with one.

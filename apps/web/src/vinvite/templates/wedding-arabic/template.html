@@ -809,6 +809,39 @@ body.is-open .scroll-hint { animation: hero-rise 1.4s var(--ease-settle) 2.7s fo
 }
 .gallery-item:hover .gallery-veil span { transform: translateY(0); letter-spacing: 0.38em; }
 
+/* ==========================================================================
+   OUR STORY — one tall ornamental arch beside the couple's words
+   ========================================================================== */
+.story-section {
+  position: relative;
+  padding: var(--section-pad) 1.25rem;
+  background: var(--cream);
+}
+.story-body {
+  max-width: 940px; margin: 0 auto;
+  display: grid; gap: 1.8rem; justify-items: center;
+}
+.story-plate {
+  position: relative; margin: 0;
+  width: min(240px, 64vw); aspect-ratio: 0.82;
+  border-radius: 46% 46% 10px 10px / 34% 34% 10px 10px;
+  overflow: hidden; background: var(--champagne);
+  box-shadow: 0 18px 42px -18px rgba(90, 68, 38, 0.32);
+}
+.story-plate svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.story-text {
+  margin: 0; max-width: 34em; text-align: center;
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(1.12rem, 2.2vw, 1.4rem); line-height: 1.75;
+  color: var(--coffee-soft);
+  white-space: pre-line; overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .story-body { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); align-items: center; gap: clamp(2rem, 5vw, 4rem); }
+  .story-plate { width: 100%; }
+  .story-text { text-align: left; }
+}
+
 /* Placeholder plates — shown until the couple uploads a photo, and replaced
    ALL AT ONCE by the first one (never mixed with real photos). Drawn inline
    rather than as data URIs so every stroke reads the palette's custom
@@ -1504,12 +1537,29 @@ html.has-duo .p-names .duo { display: block; font-size: 0.8em; }
 </section>
 
 <!-- ======================================================================
-     GALLERY — built from config photos
+     OUR STORY — the couple's own words beside one ornamental arch. Its own
+     section, separate from the photographs below; it removes itself when the
+     text is empty, so an invitation saved before it existed is unchanged.
+     ====================================================================== -->
+<section class="story-section" id="story" data-opt="story">
+  <div class="section-head reveal">
+    <span class="eyebrow" data-t="storyEyebrow">С чего всё началось</span>
+    <h2 class="section-title"><span data-t="ourJourney">Наша</span> <em data-t="journeyWord">история</em></h2>
+    <div class="separator" aria-hidden="true"><span class="gem"></span></div>
+  </div>
+  <div class="story-body">
+    <figure class="story-plate reveal-scale" id="storyPlate" aria-hidden="true"></figure>
+    <p class="story-text reveal" data-bind="storyText"></p>
+  </div>
+</section>
+
+<!-- ======================================================================
+     PHOTO GALLERY — built from config photos
      ====================================================================== -->
 <section class="gallery-section" id="gallery" data-opt="gallery">
   <div class="section-head reveal">
     <span class="eyebrow" data-t="moments">Моменты</span>
-    <h2 class="section-title"><span data-t="ourJourney">Наша</span> <em data-t="journeyWord">история</em></h2>
+    <h2 class="section-title"><span data-t="galleryA">Наши</span> <em data-t="galleryB">фотографии</em></h2>
     <div class="separator" aria-hidden="true"><span class="gem"></span></div>
   </div>
 
@@ -1653,6 +1703,7 @@ var UI = {
     venue:'Место', date:'Дата', time:'Время', openMap:'Открыть карту',
     receptionFollows:'Приём после церемонии',
     moments:'Моменты', ourJourney:'Наша', journeyWord:'история',
+    storyEyebrow:'С чего всё началось', galleryA:'Наши', galleryB:'фотографии',
     countingDays:'Считаем дни', untilWeWed:'До', wedWord:'свадьбы',
     days:'Дни', hours:'Часы', minutes:'Минуты', seconds:'Секунды',
     kindlyRespond:'Пожалуйста, ответьте', reserveSeat:'Подтвердите', seatWord:'присутствие',
@@ -1672,6 +1723,7 @@ var UI = {
     venue:'Manzilgoh', date:'Sana', time:'Vaqt', openMap:'Xaritani ochish',
     receptionFollows:'Marosimdan keyin ziyofat',
     moments:'Lahzalar', ourJourney:'Bizning', journeyWord:'tariximiz',
+    storyEyebrow:'Hammasi qanday boshlangan', galleryA:'Bizning', galleryB:'suratlarimiz',
     countingDays:'Kunlarni sanaymiz', untilWeWed:'Toyga', wedWord:'qadar',
     days:'Kun', hours:'Soat', minutes:'Daqiqa', seconds:'Soniya',
     kindlyRespond:'Iltimos, javob bering', reserveSeat:'Ishtirokingizni', seatWord:'tasdiqlang',
@@ -1690,7 +1742,8 @@ var UI = {
     theCelebration:'The celebration', weddingDetails:'Wedding', detailsWord:'details',
     venue:'Venue', date:'Date', time:'Time', openMap:'Open map',
     receptionFollows:'Reception to follow',
-    moments:'Moments', ourJourney:'Our', journeyWord:'journey',
+    moments:'Moments', ourJourney:'Our', journeyWord:'story',
+    storyEyebrow:'How it began', galleryA:'Our', galleryB:'photographs',
     countingDays:'Counting the days', untilWeWed:'Until we', wedWord:'wed',
     days:'Days', hours:'Hours', minutes:'Minutes', seconds:'Seconds',
     kindlyRespond:'Kindly respond', reserveSeat:'Reserve your', seatWord:'seat',
@@ -1776,7 +1829,8 @@ function bindTexts(){
     timeLine: fmtTimeShort(),
     venueName: loc(cfg('venue.name','')),
     venueAddress: loc(cfg('venue.address','')),
-    inviteText: loc(cfg('invite.text',''))
+    inviteText: loc(cfg('invite.text','')),
+    storyText: loc(cfg('story.text',''))
   };
   $$('[data-bind]').forEach(function(el){
     var v = map[el.getAttribute('data-bind')];
@@ -1854,8 +1908,8 @@ var PH_MOTIFS = [
     for (var k = 0; k < 8; k++) d += '<ellipse rx="27" ry="9" transform="rotate(' + (k * 22.5) + ')" class="ph-line"/>';
     return '<g transform="translate(82 112)">' + d + '<circle r="9" class="ph-fill"/><circle r="3.5" class="ph-fill-deep"/></g>'; },
 ];
-function placeholderSvg(i){
-  var id = 'ph' + i;
+function placeholderSvg(i, prefix, motif){
+  var id = (prefix || 'ph') + i;
   /* A pointed arch window: the same silhouette as the tiles' own frames. */
   var arch = 'M34 182V90Q34 54 82 30Q130 54 130 90V182Z';
   var archIn = 'M41 182V92Q41 60 82 39Q123 60 123 92V182Z';
@@ -1875,10 +1929,27 @@ function placeholderSvg(i){
     '<path d="' + arch + '" fill="url(#' + id + 'b)"/>' +
     '<path d="' + arch + '" fill="url(#' + id + 'g)"/>' +
     '<path d="' + arch + '" class="ph-arch"/><path d="' + archIn + '" class="ph-arch-in"/>' +
-    PH_MOTIFS[i % PH_MOTIFS.length](id) +
+    (motif || PH_MOTIFS[i % PH_MOTIFS.length])(id) +
   '</svg>';
 }
 var PH_COUNT = 6;
+
+/* Two interlaced rings with a small diamond above — the story's own
+   ornament, so it is not a seventh copy of a gallery placeholder. */
+function storyMotif(){
+  return '<circle cx="71" cy="116" r="19" class="ph-line" style="stroke-width:2.4"/>' +
+    '<circle cx="93" cy="116" r="19" class="ph-line" style="stroke-width:2.4"/>' +
+    '<path class="ph-fill" d="M82 80l6 7-6 7-6-7z"/>' +
+    '<g class="ph-fill-soft"><circle cx="58" cy="150" r="2.4"/><circle cx="82" cy="154" r="2.4"/><circle cx="106" cy="150" r="2.4"/></g>';
+}
+/* Story: shown only while it has words. The ornament is drawn once — it
+   reads the palette through CSS, so a recolour needs no redraw. */
+function renderStory(){
+  var text = loc(cfg('story.text', ''));
+  $('#story').style.display = text ? '' : 'none';
+  var plate = $('#storyPlate');
+  if (plate && !plate.firstChild) plate.innerHTML = placeholderSvg(0, 'st', storyMotif);
+}
 
 function renderGallery(){
   var items = cfg('gallery', []);
@@ -2284,6 +2355,7 @@ function renderAll(){
   bindTexts();
   applyVisibility();
   renderMap();
+  renderStory();
   renderGallery();
   renderMusic();
   renderLangbar();
