@@ -68,8 +68,11 @@ describe.each(WITH_COUNTDOWN.map((t) => [t.id, t] as const))('%s', (id, tpl) => 
 
   it('re-renders on a config push, so an edited date updates live', () => {
     const renderAll = src.slice(src.indexOf('function renderAll'));
+    // Called directly, or through an isolating step(renderCountdown) wrapper
+    // (Lantern Night runs every render step on its own so one block's bad
+    // field cannot stop the rest).
     expect(renderAll.slice(0, 700), 'renderAll does not renderCountdown')
-      .toMatch(/\brenderCountdown\(\s*\)/);
+      .toMatch(/\brenderCountdown\(\s*\)|\bstep\(renderCountdown\)/);
   });
 
   it('writes a numeral only when it changes', () => {

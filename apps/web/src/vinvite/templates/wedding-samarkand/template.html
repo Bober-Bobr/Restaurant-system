@@ -588,12 +588,12 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
 }
 
 /* ── OUR MOMENTS — the couple's own photographs ───────────────────────────
-   The journey below is the DESIGN's garden; this is the couple's album, so it
+   The journey further down is the DESIGN's garden; this is the couple's album, so it
    is a plain grid rather than another scroll mechanic. Each photo sits in a
    round-headed arch with a hairline of gold, on the night ground. Until a
    photo is uploaded the design's own plates stand in (already on the page, so
    no extra bytes), and the first upload replaces all of them. */
-.album{background:var(--night)}
+.album{background:linear-gradient(180deg,var(--night-2),var(--night))}
 .album__title{font-size:clamp(30px,5vw,64px);margin:.2em 0 0;color:var(--ivory)}
 .album__grid{
   margin:clamp(34px,5vw,64px) auto 0;max-width:1080px;
@@ -874,6 +874,28 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
 </section>
 
 <!-- ============================================================
+     OUR MOMENTS — the couple's photo gallery (config.gallery).
+     Straight after their story, where a guest still is: at the foot of the
+     page, after six screens of the garden walk, nobody found it.
+     ============================================================ -->
+<section class="album pad" id="album" data-opt="album" aria-labelledby="album-h">
+  <div class="wrap center">
+    <p class="eyebrow reveal" data-t="albumEyebrow"></p>
+    <h2 class="album__title reveal" id="album-h" data-bind="albumTitle"></h2>
+  </div>
+  <div class="wrap">
+    <div class="album__grid" id="albumGrid"></div>
+  </div>
+</section>
+
+<div class="album-lb" id="albumLb" role="dialog" aria-modal="true" aria-labelledby="albumLbCap">
+  <button class="album-lb__close" id="albumClose" type="button" data-t-aria="close" aria-label="Close">&times;</button>
+  <button class="album-lb__prev" id="albumPrev" type="button" data-t-aria="albumPrev" aria-label="Previous">&#8249;</button>
+  <button class="album-lb__next" id="albumNext" type="button" data-t-aria="albumNext" aria-label="Next">&#8250;</button>
+  <figure><img id="albumLbImg" alt=""><figcaption id="albumLbCap"></figcaption></figure>
+</div>
+
+<!-- ============================================================
      5 · THE DATE PLAQUE
      ============================================================ -->
 <section class="date pad" id="date" data-opt="date" aria-labelledby="date-h">
@@ -1039,26 +1061,6 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
     <p class="journey__hint" aria-hidden="true" data-t="keepScrolling"></p>
   </div>
 </section>
-
-<!-- ============================================================
-     OUR MOMENTS — the couple's photo gallery (config.gallery)
-     ============================================================ -->
-<section class="album pad" id="album" data-opt="album" aria-labelledby="album-h">
-  <div class="wrap center">
-    <p class="eyebrow reveal" data-t="albumEyebrow"></p>
-    <h2 class="album__title reveal" id="album-h" data-bind="albumTitle"></h2>
-  </div>
-  <div class="wrap">
-    <div class="album__grid" id="albumGrid"></div>
-  </div>
-</section>
-
-<div class="album-lb" id="albumLb" role="dialog" aria-modal="true" aria-labelledby="albumLbCap">
-  <button class="album-lb__close" id="albumClose" type="button" data-t-aria="close" aria-label="Close">&times;</button>
-  <button class="album-lb__prev" id="albumPrev" type="button" data-t-aria="albumPrev" aria-label="Previous">&#8249;</button>
-  <button class="album-lb__next" id="albumNext" type="button" data-t-aria="albumNext" aria-label="Next">&#8250;</button>
-  <figure><img id="albumLbImg" alt=""><figcaption id="albumLbCap"></figcaption></figure>
-</div>
 
 <!-- ============================================================
      8 · FINAL PALACE
@@ -1722,7 +1724,7 @@ function renderRail() {
   if (!el) return;
   var stops = [
     ['#threshold', 'rThreshold'], ['#invite', 'rInvite'], ['#couple', 'rCouple'],
-    ['#date', 'rDate'], ['#details', 'rDetails'], ['#journey', 'rJourney'], ['#album', 'rAlbum'], ['#final', 'rFinal']
+    ['#album', 'rAlbum'], ['#date', 'rDate'], ['#details', 'rDetails'], ['#journey', 'rJourney'], ['#final', 'rFinal']
   ];
   el.innerHTML = '';
   var lamps = [];
@@ -1759,14 +1761,33 @@ function renderRail() {
    already on the page, so they cost nothing to show. */
 var ALBUM_STANDINS = ['courtyard.jpg', 'arch.jpg', 'suzani.jpg', 'rooftop.jpg', 'corridor.jpg', 'garden.jpg'];
 var albumShown = [];
+/* The uploaded photos, read leniently. The builder stores { image, caption },
+   but a photo is a photo however it arrives — a bare URL string, or an object
+   naming it url/src — and a stand-in courtyard shown in place of a picture the
+   couple DID upload is the one failure this block cannot have. */
+function photoUrl(g) {
+  if (!g) return '';
+  if (typeof g === 'string') return g.trim();
+  var v = g.image || g.url || g.src || '';
+  if (v && typeof v === 'object') v = v.url || v.src || '';
+  return typeof v === 'string' ? v.trim() : '';
+}
+function albumPhotos() {
+  var raw = cfg('gallery', []);
+  if (!Array.isArray(raw)) raw = raw && typeof raw === 'object' ? Object.keys(raw).map(function (k) { return raw[k]; }) : [];
+  var out = [];
+  raw.forEach(function (g) {
+    var url = photoUrl(g);
+    if (url) out.push({ image: url, caption: g && typeof g === 'object' ? g.caption : null });
+  });
+  return out;
+}
 function renderAlbum() {
   var grid = $('#albumGrid');
   if (!grid) return;
-  var items = cfg('gallery', []);
-  if (!Array.isArray(items)) items = [];
-  items = items.filter(function (g) { return g && g.image; });
   grid.innerHTML = '';
   albumShown = [];
+  var items = albumPhotos();
   /* The first uploaded photo replaces ALL the stand-ins — a stranger's
      courtyard never sits beside somebody's own album. Stand-ins are scenery,
      not photographs, so they do not open the lightbox. */
@@ -1869,7 +1890,7 @@ function renderProgramme() {
     row.className = 'prog__row';
     var time = document.createElement('span');
     time.className = 'prog__t';
-    time.textContent = (item.time || '').trim();
+    time.textContent = String(item.time == null ? '' : item.time).trim();
     var what = document.createElement('span');
     what.className = 'prog__w';
     what.textContent = loc(item.label) || '';
@@ -2403,23 +2424,32 @@ function initCountdown() {
   cdTimer = setInterval(renderCountdown, 1000);
 }
 
+/* Each step runs on its own. renderAll is what a config push from the builder
+   re-runs, and it used to be one chain: anything throwing on a real
+   invitation's data stopped every step after it — and the photo gallery came
+   late in that chain, so the stand-ins drawn at boot stayed on screen and the
+   couple's uploaded photos never replaced them. One block's bad field may now
+   cost that block, never the page. */
+function step(fn) {
+  try { fn(); } catch (err) { if (window.console && console.error) console.error(err); }
+}
 function renderAll() {
-  renderPlatformContacts();
-  bindTexts();
-  bindArtwork();
-  renderProgramme();
-  renderCountdown();
-  applyVisibility();
-  renderPlace();
-  renderAlbum();
-  renderMusic();
-  renderLangbar();
-  renderRail();
-  collectLayers();
+  step(bindTexts);
+  step(bindArtwork);
+  step(renderAlbum);
+  step(renderPlatformContacts);
+  step(renderProgramme);
+  step(renderCountdown);
+  step(applyVisibility);
+  step(renderPlace);
+  step(renderMusic);
+  step(renderLangbar);
+  step(renderRail);
+  step(collectLayers);
   if (!reduced) {
-    paintParallax();
-    if (journey) journey.paint();
-    if (rail) rail.paint();
+    step(paintParallax);
+    step(function () { if (journey) journey.paint(); });
+    step(function () { if (rail) rail.paint(); });
   }
 }
 

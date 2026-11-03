@@ -94,7 +94,8 @@ describe('the Where block is wired end to end', () => {
       // is only useful once renderPlace() has put one on it.
       expect(src).toContain('function renderPlace');
       const call = src.slice(src.indexOf('function renderAll'));
-      expect(call.slice(0, 600), 'renderPlace is defined but never called').toContain('renderPlace();');
+      // Directly, or through an isolating step(renderPlace) wrapper.
+      expect(call.slice(0, 600), 'renderPlace is defined but never called').toMatch(/renderPlace\(\);|step\(renderPlace\);/);
     });
 
     it(`${id}: falls back to a map search when no URL was entered`, () => {

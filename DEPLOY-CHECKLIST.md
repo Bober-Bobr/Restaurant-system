@@ -4263,3 +4263,33 @@ for it.
    a blank screen. Fixed once in the shared runtime for all designs. Also
    affected before this: **Dolce Vita's contents list** and **Tuscan's section
    dots** (desktop). Check each: tap an entry → the page scrolls, never blanks.
+
+## §87 — Lantern Night's gallery: moved up, and uploaded photos always replace the stand-ins
+
+**No migration.** Files: `wedding-samarkand/template.html`, `wedding-samarkand/definition.ts`,
+`apps/web/src/vinvite/templates/utils.ts` (`resolveAssetUrls`), a new
+`templateGalleryPhotos.test.ts`, and two widened assertions in
+`templateCountdown.test.ts` / `templatePhotoSlots.test.ts`.
+
+Reported: the gallery showed only the design's generated plates, never the
+uploaded photos, and sat at the very bottom (~12,600px of a 13,900px page, after
+the six-screen garden walk).
+
+- **Moved** to straight after the couple's story, before the date plaque — about
+  4,100px down on a phone. Builder group "Фотогалерея" now follows "Наша
+  история"; the lantern rail's lamp moved with it.
+- **Every drawing step runs on its own** (`step()` in `renderAll`), with the
+  gallery drawn early. It was one chain re-run on every builder edit, so anything
+  throwing on real invitation data stopped the gallery and left the stand-ins up.
+- **A photo is read in any stored shape** (`{image}`, `{url}`, `{src}` or a bare
+  path), in the template and in `resolveAssetUrls`, which now makes every one of
+  them an absolute API URL before it enters the frame.
+
+1. Open a Lantern Night invitation in the builder → **📷 Фотогалерея** (under
+   "Наша история") → "+ Добавить" → upload a photo. The preview jumps to "Наши
+   мгновения" and the six garden plates are replaced by the photo.
+2. Open the PUBLISHED invitation (after the autosave shows "saved"): the gallery
+   follows the story, with the uploaded photos; tapping one opens it full screen.
+3. **If an invitation still shows only the garden plates after this deploy**,
+   its saved config has no photos in it — send the invitation's link, so its
+   stored data can be looked at directly.

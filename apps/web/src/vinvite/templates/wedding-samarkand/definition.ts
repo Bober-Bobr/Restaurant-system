@@ -24,7 +24,8 @@ import type { TemplateDefinition, TemplateField, TemplateFieldGroup } from '../t
 // Artwork is part of the design rather than a set of slots — it ships bundled
 // in apps/web/public/samarkand/ and is addressed through `window.__ORIGIN__`.
 // The journey is the DESIGN's garden; the couple's own photographs have a
-// section of their own, "Our moments" (`album`, from `gallery`). Until a photo
+// section of their own, "Our moments" (`album`, from `gallery`), straight after
+// their story rather than at the foot of the page. Until a photo
 // is uploaded it shows six of the bundled plates, and the first upload replaces
 // all of them.
 //
@@ -39,8 +40,8 @@ const groups: TemplateFieldGroup[] = [
   { key: 'datetime', labelKey: 'tg_datetime', icon: '🗓', section: 'date' },
   { key: 'venue', labelKey: 'tg_venue', icon: '📍', section: 'details' },
   { key: 'story', labelKey: 'tg_story', icon: '💞', section: 'couple' },
-  { key: 'journey', labelKey: 'sec_journey', icon: '🏛', section: 'journey' },
   { key: 'gallery', labelKey: 'tg_gallery', icon: '📷', section: 'album' },
+  { key: 'journey', labelKey: 'sec_journey', icon: '🏛', section: 'journey' },
   { key: 'details', labelKey: 'tg_details', icon: '📋', section: 'details' },
   { key: 'schedule', labelKey: 'tg_schedule', icon: '🕰', section: 'details' },
   { key: 'finale', labelKey: 'sec_final', icon: '🥂', section: 'final' },
@@ -348,7 +349,7 @@ export const weddingSamarkandTemplate: TemplateDefinition = {
   Renderer: RichRenderer,
   // These must match the real element ids in template.html — the Design+ runtime
   // anchors by getElementById and silently skips a section it cannot find.
-  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'date', 'countdown', 'details', 'place', 'journey', 'album', 'final'],
+  sectionIds: ['hero', 'threshold', 'invite', 'couple', 'album', 'date', 'countdown', 'details', 'place', 'journey', 'final'],
   // The lantern gold only. The burgundy and the ruby are the silk and the
   // petals; recolouring them with a picked accent would take the fabric with
   // them.

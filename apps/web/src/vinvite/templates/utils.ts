@@ -54,12 +54,21 @@ export function resolveAssetUrls(template: TemplateDefinition, config: Record<st
     } else if (f.type === 'gallery') {
       const arr = getPath(clone, f.path);
       if (Array.isArray(arr)) {
-        for (const item of arr) {
-          if (item && typeof item === 'object' && typeof (item as { image?: unknown }).image === 'string') {
-            const it = item as { image: string };
-            if (it.image) it.image = getPhotoUrl(it.image) ?? it.image;
+        // A photo can reach here as { image }, as { url } / { src }, or as a bare
+        // path string; every form must leave absolute, because inside the srcdoc
+        // frame a relative "/uploads/…" resolves against the invitation's own
+        // host, which does not serve uploads.
+        arr.forEach((item, i) => {
+          if (typeof item === 'string') {
+            if (item) arr[i] = getPhotoUrl(item) ?? item;
+            return;
           }
-        }
+          if (!item || typeof item !== 'object') return;
+          const it = item as Record<string, unknown>;
+          for (const key of ['image', 'url', 'src']) {
+            if (typeof it[key] === 'string' && it[key]) it[key] = getPhotoUrl(it[key] as string) ?? it[key];
+          }
+        });
       }
     }
   }
