@@ -419,6 +419,13 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
     letter-spacing:0;text-transform:none;color:var(--ink);min-height:56px;
   }
   .nav.menu-open .nav__links{opacity:1;visibility:visible;transition:opacity .4s var(--ease-io)}
+  /* The panel is position:fixed INSIDE the bar, and the bar's backdrop-filter
+     makes the bar the containing block for fixed descendants — so "inset:0"
+     meant the 57px bar, not the screen: measured, a 400x100 panel with the six
+     links spilling from 113px above the screen to 197px down it. While the
+     menu is open the bar drops its blur (the opaque panel covers the page
+     anyway), and the panel is the whole screen again. */
+  .nav.menu-open{-webkit-backdrop-filter:none;backdrop-filter:none}
   .nav__menu{display:inline-flex;align-items:center;justify-content:flex-end}
 }
 
@@ -1707,6 +1714,23 @@ function initNav() {
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && nav.classList.contains('menu-open')) { setMenu(false); if (btn.focus) btn.focus(); }
+  });
+  /* EVERY in-page link is scrolled here, never followed. The invitation is a
+     srcdoc frame, and a srcdoc document resolves a relative URL against the
+     PARENT page's address — so href="#place" means
+     "https://v-invite.uz/<name>#place", and following it navigated the
+     invitation's own frame away to that page, which in the sandbox draws as a
+     blank screen. Delegated on the document so the menu, the monogram and any
+     anchor added later are all covered by one rule. */
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (!a) return;
+    e.preventDefault();
+    var id = a.getAttribute('href').slice(1);
+    var dest = id ? document.getElementById(id) : null;
+    if (!dest) return;
+    if (!opened) { openInvitation(null, id); return; }
+    if (dest.scrollIntoView) dest.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
   });
 }
 

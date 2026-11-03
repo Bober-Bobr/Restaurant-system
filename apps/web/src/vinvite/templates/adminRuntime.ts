@@ -767,7 +767,36 @@ export const ADMIN_RUNTIME = `(function(){
     }
   });
 
-  function boot(){ render(); watchEmpty(); }
+  /* ── In-page links ──────────────────────────────────────────────────────
+     A template runs in a srcdoc frame, and a srcdoc document resolves a
+     relative URL against the PARENT page's address — so a plain
+     <a href="#place"> means "https://v-invite.uz/<name>#place", and following
+     it navigates the invitation's own frame away to that page, which in the
+     sandbox draws as a blank screen. Zermatt's menu, Dolce Vita's contents and
+     Tuscan's section dots all did exactly that.
+
+     Every such click is therefore scrolled here instead of followed. Written
+     once, in the one script every template shares, so a design added later
+     cannot fall into it. A template that handles its own links (Zermatt opens
+     its seal first) calls preventDefault, and this pass then stays out of the
+     way. A link to an id that is not on the page is still not followed: going
+     nowhere is better than going blank. SVG use/href references are not
+     clicks and are untouched. */
+  function guardInPageLinks(){
+    document.addEventListener('click', function(e){
+      if (e.defaultPrevented) return;
+      var a = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      if (!a) return;
+      e.preventDefault();
+      var id = (a.getAttribute('href') || '').slice(1);
+      var dest = id ? document.getElementById(id) : null;
+      if (!dest || !dest.scrollIntoView) return;
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      dest.scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+    });
+  }
+
+  function boot(){ render(); watchEmpty(); guardInPageLinks(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();`;

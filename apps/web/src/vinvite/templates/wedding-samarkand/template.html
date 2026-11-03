@@ -603,6 +603,12 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
 @media (min-width:900px){.album__grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .album__item{
   position:relative;display:block;width:100%;margin:0;padding:0;
+  /* Every tile is a plain BOX that sizes itself from aspect-ratio — never a
+     <button>. WebKit has not reliably applied aspect-ratio to a button, and a
+     button whose only child is an absolutely placed image then has no height
+     at all: the uploaded photos (buttons) vanished while the stand-ins (divs)
+     drew, which is exactly what was reported. The button is now a transparent
+     layer OVER the tile (.album__hit), which needs no size of its own. */
   aspect-ratio:3/4;overflow:hidden;
   border:1px solid rgba(201,162,39,.5);
   border-radius:50% 50% 6px 6px / 34% 34% 6px 6px;
@@ -610,16 +616,24 @@ html.has-duo .invite__title{font-size:clamp(25px,4.2vw,56px)}
   box-shadow:0 0 0 5px rgba(201,162,39,.06),0 30px 60px -30px rgba(0,0,0,.85);
   font:inherit;color:inherit;
 }
-button.album__item{cursor:zoom-in}
 .album__item img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;
   transition:transform 1.4s var(--ease);
 }
-button.album__item:hover img,button.album__item:focus-visible img{transform:scale(1.06)}
-button.album__item:focus-visible{outline:2px solid var(--gold-lt);outline-offset:4px}
+.album__item.is-photo:hover img,.album__item.is-photo:focus-within img{transform:scale(1.06)}
+.album__hit{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;
+  width:100%;height:100%;margin:0;padding:0;border:0;border-radius:inherit;
+  background:transparent;color:inherit;font:inherit;cursor:zoom-in;
+  -webkit-appearance:none;appearance:none;
+}
+.album__hit:focus-visible{outline:2px solid var(--gold-lt);outline-offset:-4px}
+/* A browser with no aspect-ratio at all (Safari before 15) still gets a 3:4
+   tile, from the padding trick, rather than a row of zero-height boxes. */
+@supports not (aspect-ratio:1/1){.album__item{height:0;padding-top:133.333%}}
 /* Lamplight from below, so a caption reads on any photo. */
 .album__item::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
+  content:"";position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;
   background:linear-gradient(180deg,transparent 55%,rgba(18,10,16,.78));
 }
 .album__cap{
@@ -632,7 +646,7 @@ button.album__item:focus-visible{outline:2px solid var(--gold-lt);outline-offset
 /* The lightbox. Its state is .is-open, never a bare .open — this template
    already uses .open for three other things. */
 .album-lb{
-  position:fixed;inset:0;z-index:900;display:none;
+  position:fixed;top:0;left:0;right:0;bottom:0;z-index:900;display:none;
   align-items:center;justify-content:center;
   padding:clamp(16px,4vw,48px);
   background:rgba(18,10,16,.94);
@@ -1773,23 +1787,26 @@ function renderAlbum() {
   items.forEach(function (g, i) {
     var cap = loc(g.caption);
     albumShown.push({ src: g.image, cap: cap });
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'album__item reveal';
-    b.setAttribute('aria-label', cap || t('albumTitle'));
+    var tile = document.createElement('figure');
+    tile.className = 'album__item is-photo reveal';
     var img = document.createElement('img');
-    img.alt = cap || ''; img.loading = 'lazy'; img.decoding = 'async';
+    img.alt = cap || ''; img.decoding = 'async';
     img.setAttribute('src', g.image);
-    b.appendChild(img);
+    tile.appendChild(img);
     if (cap) {
-      var c = document.createElement('span');
+      var c = document.createElement('figcaption');
       c.className = 'album__cap';
       c.textContent = cap;
-      b.appendChild(c);
+      tile.appendChild(c);
     }
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'album__hit';
+    b.setAttribute('aria-label', cap || t('albumTitle'));
     b.addEventListener('click', function () { openAlbum(i, b); });
-    grid.appendChild(b);
-    revealLater(b);
+    tile.appendChild(b);
+    grid.appendChild(tile);
+    revealLater(tile);
   });
 }
 

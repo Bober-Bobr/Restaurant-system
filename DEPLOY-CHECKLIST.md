@@ -4236,3 +4236,30 @@ for it.
 4. **Already-published Lantern Night invitations now show the section** with the
    six bundled plates and the "Our moments" heading in the reader's language.
    Owners who do not want it switch it off.
+
+## §86 — Three invitation fixes: Lantern Night's photos, Zermatt's menu, and every in-page link
+
+**No migration.** Files: `apps/web/src/vinvite/templates/adminRuntime.ts`,
+`wedding-samarkand/template.html`, `wedding-zermatt/template.html`, and a new
+`templateInPageLinks.test.ts`.
+
+1. **Lantern Night — uploaded photos not showing.** Each photo was a `<button>`
+   sized only by `aspect-ratio`, with an absolutely placed image inside; where
+   that is not applied to a button (WebKit — Safari and every iPhone browser)
+   the tile has no height, so uploads vanished while the stand-in plates (plain
+   boxes) drew. Every tile is now a self-sizing box with a transparent button
+   laid over it, plus a padding fallback where `aspect-ratio` is missing.
+   **Check on an iPhone**: upload two photos → both appear in arches; tap one →
+   the lightbox opens. (Could not be verified in WebKit here — see the report.)
+2. **Zermatt — the header menu.** On a phone the menu panel was clipped to the
+   57px header bar, because the bar's blur (`backdrop-filter`) makes it the
+   containing block for the "full-screen" panel; the links spilled over the
+   page. And tapping a link blanked the invitation (item 3). Now: Menu opens a
+   full-screen panel; tapping a section closes it and scrolls there, landing
+   below the header.
+3. **Every template — a `#` link navigated the invitation away.** An invitation
+   runs in a `srcdoc` frame, which resolves `#place` against the PARENT page's
+   address, so following it loaded `v-invite.uz/<name>#place` into the frame —
+   a blank screen. Fixed once in the shared runtime for all designs. Also
+   affected before this: **Dolce Vita's contents list** and **Tuscan's section
+   dots** (desktop). Check each: tap an entry → the page scrolls, never blanks.
