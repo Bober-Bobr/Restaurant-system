@@ -272,6 +272,18 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
   object-fit:cover;object-position:50% 46%;
 }
 .ouv__poster{transition:opacity 1.2s var(--ease-io)}
+/* EXPLICIT LAYERS, and the type on a compositing layer of its own. iPhone
+   WebKit (Safari, and Telegram's and Instagram's in-app browsers, which are all
+   WebKit there) draws a playing <video> as a hardware layer, and after a scroll
+   it can repaint that layer OVER positioned siblings that sit above it in the
+   markup but have no layer of their own — the cover's names, date and button
+   vanished after scrolling back up. With every layer here at z-index auto the
+   order rested on DOM order alone. Now it is stated, and translateZ(0) lifts
+   the type onto its own layer so the video cannot be composited over it.
+   (.ouv__in has no fixed descendants, so the transform re-contains nothing.) */
+.ouv__v,.ouv__poster{z-index:0}
+.ouv__shade{z-index:1}
+.ouv__in{z-index:2;-webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .ouv.is-playing .ouv__poster{opacity:0}
 /* Reading light only where the type sits — the left edge and the top, never
    across the middle of the picture. */

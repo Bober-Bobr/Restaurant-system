@@ -1070,7 +1070,6 @@ function OrderForm({ t, tier }: { t: (k: ViKey) => string; tier: TemplateTier | 
               <input
                 className="vi-input" value={promo} maxLength={60}
                 autoComplete="off" autoCapitalize="characters" spellCheck={false}
-                placeholder={t('ord_promo_ph')}
                 data-state={promoValid ? 'ok' : showBad ? 'bad' : undefined}
                 aria-invalid={showBad || undefined}
                 onChange={(e) => setPromo(e.target.value.toUpperCase())}

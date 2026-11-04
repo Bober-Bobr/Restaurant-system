@@ -4315,3 +4315,19 @@ No migration. Web only.
   track plays.
 - Limit, unchanged by any code: no browser lets a page start audible music with
   NO interaction at all. A swipe alone does not count either; the first tap does.
+
+## §89 — Zermatt's cover text on iPhone in-app browsers; promo field placeholder removed
+
+No migration. Web only.
+
+- **Zermatt cover, iPhone WebKit (Telegram/Instagram in-app browsers, Safari):**
+  the cover's layers (poster, film, shade, type) had no z-index and the type no
+  layer of its own, so WebKit could repaint the playing video's hardware layer
+  over the names/date/button after a scroll. Explicit z-index 0/1/2 and
+  `translateZ(0)` on `.ouv__in`. Chrome checked for regressions (open → scroll
+  down → back up: names opaque and topmost); the iPhone fault itself cannot be
+  reproduced off-device — confirm in Telegram on an iPhone after deploy.
+  §88 (the opened-cover fade) must be deployed too; it was the other cause.
+- **Promo code field on `/main`:** the placeholder "e.g. EMIR" is gone (key
+  `ord_promo_ph` removed in en/ru/uz). EMIR is a real code, so the sample handed
+  every visitor a working discount.

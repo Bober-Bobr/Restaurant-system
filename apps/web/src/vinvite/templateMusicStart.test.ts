@@ -111,6 +111,12 @@ describe('Zermatt keeps its cover text after the invitation is opened', () => {
   it('no rule fades the title once opened', () => {
     expect(html).not.toMatch(/\.ouv\.is-opened \.ouv__title/);
   });
+  it('the type sits on its own layer above the film, for iPhone WebKit', () => {
+    // Telegram's in-app browser on iPhone is WebKit; a playing video layer was
+    // repainted over the cover's text after scrolling back up.
+    expect(html).toMatch(/\.ouv__v,\.ouv__poster\{z-index:0\}/);
+    expect(html).toMatch(/\.ouv__in\{z-index:2;[^}]*transform:translateZ\(0\)/);
+  });
   it('the cover button still scrolls down after the first press', () => {
     const fn = html.slice(html.indexOf('function openInvitation('), html.indexOf('var onWheel'));
     expect(fn).toMatch(/if \(opened\) \{[\s\S]*scrollIntoView[\s\S]*return;\s*\}/);
