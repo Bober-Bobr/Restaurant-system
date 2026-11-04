@@ -20,6 +20,7 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { soleHallId } from '../utils/soleHall';
+import { banquetMenuOf, diningOrderOf } from '../utils/eventMenuKind';
 import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../hooks/useSessionDraft';
 
 /**
@@ -835,6 +836,8 @@ export const AdminEventsPage = () => {
           };
           const dishTypes  = searchResult.selections?.length ?? 0;
           const totalPcs   = searchResult.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
+          const searchDining = diningOrderOf(searchResult);
+          const searchBanquet = searchDining ? [] : banquetMenuOf(searchResult, menuItems, locale);
 
           return (
             <div className="tablet-fade-up" style={{ background: 'rgba(var(--adm-bg-rgb),0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 18 }}>
@@ -888,9 +891,18 @@ export const AdminEventsPage = () => {
                   )}
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>Menu</p>
+                  <p style={{ margin: 0, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(226,232,240,0.45)' }}>{t('menu')}</p>
                   <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>
-                    {dishTypes > 0 ? `${dishTypes} dish${dishTypes !== 1 ? 'es' : ''}, ${totalPcs} pcs` : '—'}
+                    {/* Same three readings as the list's Menu column: selection
+                        rows, a food-service order, or a kiosk-chosen banquet
+                        menu on menuConfig (which writes no selection rows). */}
+                    {dishTypes > 0
+                      ? `${dishTypes === 1 ? t('dish_count_one') : t('dishes_count', { count: dishTypes })} · ${t('pcs_total', { count: totalPcs })}`
+                      : searchDining
+                        ? `${t('menu_kind_dining')} · ${searchDining.lines.length === 1 ? t('dish_count_one') : t('dishes_count', { count: searchDining.lines.length })}`
+                        : searchBanquet.length > 0
+                          ? `${t('menu_kind_banquet')} · ${searchBanquet.length === 1 ? t('dish_count_one') : t('dishes_count', { count: searchBanquet.length })}`
+                          : '—'}
                   </p>
                 </div>
                 {searchResult.eventType === 'BIRTHDAY' && searchResult.birthdayPersonName && (
@@ -995,6 +1007,7 @@ export const AdminEventsPage = () => {
       {isError ? <p>{t('failed_load_events')}</p> : null}
       {filteredEvents ? (
         <EventList
+          menuItems={menuItems}
           events={filteredEvents}
           onEdit={(eventId) => {
             const event = filteredEvents.find((item) => item.id === eventId);

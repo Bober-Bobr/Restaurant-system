@@ -1,8 +1,8 @@
-import type { Event } from '../../types/domain';
+import type { Event, MenuItem } from '../../types/domain';
 import { Button } from '../ui/button';
 import { useAdminStore } from '../../store/admin.store';
 import { translate } from '../../utils/translate';
-import { diningOrderOf, diningPortions } from '../../utils/eventMenuKind';
+import { banquetMenuOf, diningOrderOf, diningPortions } from '../../utils/eventMenuKind';
 
 type EventListProps = {
   events: Event[];
@@ -11,6 +11,8 @@ type EventListProps = {
   onDownloadPdf?: (eventId: number) => void;
   onReschedule?: (eventId: number) => void;
   deletingId?: number | null;
+  /** The dish list, so a banquet's kiosk-chosen menu can be named. */
+  menuItems?: MenuItem[];
 };
 
 const statusStyle: Record<string, React.CSSProperties> = {
@@ -48,7 +50,7 @@ function formatDateTime(iso: string) {
   };
 }
 
-export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedule, deletingId }: EventListProps) => {
+export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedule, deletingId, menuItems }: EventListProps) => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) =>
     translate(key, locale, params);
@@ -97,6 +99,8 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedul
             /** The food-service order recorded on this booking, if it is one. */
             const dining = diningOrderOf(event);
             const totalPcs   = event.selections?.reduce((s, sel) => s + sel.quantity, 0) ?? 0;
+            /** A banquet's kiosk-chosen menu, read from menuConfig. */
+            const banquet = dining ? [] : banquetMenuOf(event, menuItems, locale);
 
             return (
               <tr key={event.id}>
@@ -165,6 +169,27 @@ export const EventList = ({ events, onDelete, onEdit, onDownloadPdf, onReschedul
                         {dining.lines.map((line, i) => (
                           <p key={`${line.menuItemId ?? line.name}-${i}`} style={{ margin: 0, fontSize: 11, color: 'rgba(226,232,240,0.6)' }}>
                             {line.quantity}× {line.name}
+                          </p>
+                        ))}
+                      </div>
+                    </>
+                  ) : dishTypes === 0 && banquet.length > 0 ? (
+                    /* A BANQUET whose menu was chosen in the kiosk — every one
+                       booked from the Small Banquets map, and the kiosk's own.
+                       The kiosk records its menu on menuConfig and writes no
+                       selection rows, so this column used to say "—" for all
+                       of them (see banquetMenuOf). */
+                    <>
+                      <p style={{ margin: 0, color: 'var(--adm-accent)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                        {t('menu_kind_banquet')}
+                      </p>
+                      <p style={{ margin: '2px 0 0', color: '#e2e8f0' }}>
+                        {banquet.length === 1 ? t('dish_count_one') : t('dishes_count', { count: banquet.length })}
+                      </p>
+                      <div style={{ margin: '4px 0 0', display: 'grid', gap: 2, whiteSpace: 'normal', maxWidth: 220 }}>
+                        {banquet.filter((line) => line.name).map((line, i) => (
+                          <p key={`${line.menuItemId}-${i}`} style={{ margin: 0, fontSize: 11, color: 'rgba(226,232,240,0.6)' }}>
+                            {line.quantity ? `${line.quantity}× ` : ''}{line.name}
                           </p>
                         ))}
                       </div>

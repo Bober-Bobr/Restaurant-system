@@ -4350,3 +4350,21 @@ No migration. Web only. Reported from Telegram's in-app browser on iPhone.
   names: measured with fonts held 3 s, the names appeared at 3.2 s before and
   0.1 s after. Text shows in the fallback face, then swaps.
 - Other templates load their fonts the same blocking way — not changed here.
+
+## §91 — Events page shows a kiosk-chosen banquet menu; restoring Sangizar's "Street"
+
+No migration. Web only.
+
+- **Menu column for banquets booked from the map (and every kiosk banquet).**
+  The kiosk stores the menu on `menuConfig` (courses + paid extras) and writes
+  no `EventMenuSelection` rows; the Events list's Menu column and the search
+  card counted only those rows, so they showed "—". `banquetMenuOf`
+  (utils/eventMenuKind.ts) reads `menuConfig`; the column now says "Banquet",
+  the dish count and the dish names (extras with "N×"). The search card's
+  hard-coded English "dishes, pcs" is translated at the same time.
+- **"Street" was deleted on the server (data, not code).** Restore with the
+  existing script — creates the area with its 73 tables and drawing:
+  `npm run import:floor-plan -w @banquet/api -- --restaurant "Sangizar" --dry-run`
+  then the same without `--dry-run`. It is the ORIGINAL plan: later edits,
+  any saved default layout and table assignments of bookings in that area
+  (cascaded away with the tables; their `hallId` became null) do not come back.
