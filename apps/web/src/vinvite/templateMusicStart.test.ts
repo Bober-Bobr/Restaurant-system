@@ -114,8 +114,29 @@ describe('Zermatt keeps its cover text after the invitation is opened', () => {
   it('the type sits on its own layer above the film, for iPhone WebKit', () => {
     // Telegram's in-app browser on iPhone is WebKit; a playing video layer was
     // repainted over the cover's text after scrolling back up.
-    expect(html).toMatch(/\.ouv__v,\.ouv__poster\{z-index:0\}/);
-    expect(html).toMatch(/\.ouv__in\{z-index:2;[^}]*transform:translateZ\(0\)/);
+    expect(html).toMatch(/\.ouv__v\{z-index:0;pointer-events:none\}/);
+    // The poster covers a film that has not started (a black box or the
+    // system play glyph on iPhone) until it has frames.
+    expect(html).toMatch(/\.ouv__poster\{z-index:1\}/);
+    expect(html).toMatch(/\.ouv__in\{z-index:3;[^}]*transform:translateZ\(0\)/);
+  });
+  it('the film has no controls — no pause, play or "again" over the cover', () => {
+    expect(html).not.toMatch(/id="(pauseBtn|playBtn)"/);
+    expect(html).not.toMatch(/replayFilm|playFilm|pauseFilm/);
+    expect(html).not.toMatch(/<video[^>]*\scontrols[\s>]/);
+  });
+  it('the font stylesheet cannot hold the first paint or the script', () => {
+    // Measured: with Google Fonts 3 s slow, a blocking link left the cover
+    // empty for 3.2 s; non-blocking, the names were up at 0.1 s.
+    const link = /<link[^>]*fonts\.googleapis\.com\/css2[^>]*>/.exec(html)?.[0] ?? '';
+    expect(link).toMatch(/media="print"/);
+    expect(link).toMatch(/onload="this\.media='all'"/);
+  });
+  it('the cover type is on screen from the first frame, never waiting on the film', () => {
+    expect(html).toMatch(/\.ouv \.st\{opacity:1;transform:none\}/);
+    expect(html).not.toMatch(/\.st\{opacity:0/);
+    const init = html.slice(html.indexOf('function initFilm()'), html.indexOf('function loadFilm()'));
+    expect(init).toMatch(/^function initFilm\(\) \{\s*arrive\(\);/);
   });
   it('the cover button still scrolls down after the first press', () => {
     const fn = html.slice(html.indexOf('function openInvitation('), html.indexOf('var onWheel'));

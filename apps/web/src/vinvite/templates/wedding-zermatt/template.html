@@ -10,7 +10,13 @@
 <!-- Instrument Serif sets the display type; Playfair Display is named second
      in the stack because INSTRUMENT SERIF HAS NO CYRILLIC — see the note at the
      head of the stylesheet. Inter Tight carries every label and does have it. -->
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- The font stylesheet is NON-BLOCKING (media="print", switched on when it
+     loads). A plain stylesheet blocks both the first paint and every script
+     below it, so the cover stayed blank — names unwritten — until Google Fonts
+     answered: measured, a 3 s font delay was a 3.2 s empty cover, which is what
+     a guest saw in Telegram's iPhone browser on mobile data. Now the cover
+     paints at once in the fallback face and swaps when the fonts arrive. -->
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 /* ============================================================================
    WEDDING IN ZERMATT — a Swiss-typographic invitation
@@ -281,9 +287,14 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
    order rested on DOM order alone. Now it is stated, and translateZ(0) lifts
    the type onto its own layer so the video cannot be composited over it.
    (.ouv__in has no fixed descendants, so the transform re-contains nothing.) */
-.ouv__v,.ouv__poster{z-index:0}
-.ouv__shade{z-index:1}
-.ouv__in{z-index:2;-webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
+/* The POSTER is above the film until the film has frames to show, then fades.
+   Below it, a <video> that has not started is whatever the engine draws for
+   one — on iPhone that can be a black box or the system's own play glyph in
+   the middle of the cover. The film never takes a press either. */
+.ouv__v{z-index:0;pointer-events:none}
+.ouv__poster{z-index:1}
+.ouv__shade{z-index:2}
+.ouv__in{z-index:3;-webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .ouv.is-playing .ouv__poster{opacity:0}
 /* Reading light only where the type sits — the left edge and the top, never
    across the middle of the picture. */
@@ -320,17 +331,6 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
   display:flex;flex-direction:column;align-items:flex-end;gap:10px;
 }
 .ouv__side .lbl{color:rgba(245,242,236,.8)}
-.ctl{
-  min-height:44px;display:inline-flex;align-items:center;gap:.6em;padding:0 2px;
-  font-family:var(--sans);font-weight:500;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(245,242,236,.9);border-bottom:1px solid rgba(245,242,236,.4);
-  transition:color .3s,border-color .3s;
-}
-.ctl:hover{color:#fff;border-color:#fff}
-/* `display:inline-flex` OVERRIDES the hidden attribute's own `display:none`, so
-   without this both film controls are on screen at once — which is what the
-   first screenshot showed: "pause" and "play" side by side over the cover. */
-.ctl[hidden]{display:none}
 
 .btn-open{
   display:inline-flex;align-items:center;gap:14px;min-height:52px;padding:0 26px;
@@ -349,13 +349,12 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
 }
 .btn-open:hover i{width:26px}
 
-/* The opening type arrives as the camera comes to rest, a beat apart */
-.ouv .st{opacity:0;transform:translateY(14px);transition:opacity 1.2s var(--ease-io),transform 1.4s var(--ease)}
-.ouv.is-cover .st{opacity:1;transform:none}
-.ouv.is-cover .st:nth-child(2){transition-delay:.15s}
-.ouv.is-cover .st:nth-child(3){transition-delay:.3s}
-.ouv.is-cover .st:nth-child(4){transition-delay:.45s}
-.ouv.is-cover .st:nth-child(5){transition-delay:.6s}
+/* The cover's type is ON SCREEN FROM THE FIRST FRAME. It used to start at
+   opacity 0 and wait for the film to reach 60% (or a 6-second safety net), so
+   in Telegram's iPhone browser — where the film starts late or not at all —
+   the cover sat there with no names on it. There is no hidden starting state
+   any more, so nothing can hold the words back. */
+.ouv .st{opacity:1;transform:none}
 /* Opening the invitation does NOT take the cover's type away. It used to fade
    the whole title block out, so a guest who opened it and scrolled back up met
    a bare photograph with every word gone — names, date and button. The cover
@@ -804,7 +803,7 @@ footer.colophon{
     <source id="posterTall" media="(max-aspect-ratio: 1/1)" data-asset="poster-tall.jpg">
     <img class="ouv__poster" id="heroPoster" alt="" fetchpriority="high" data-asset="poster.jpg">
   </picture>
-  <video class="ouv__v" id="film" muted playsinline preload="none" aria-hidden="true"></video>
+  <video class="ouv__v" id="film" muted playsinline webkit-playsinline disablepictureinpicture disableremoteplayback preload="none" aria-hidden="true" tabindex="-1"></video>
   <div class="ouv__shade" aria-hidden="true"></div>
 
   <div class="ouv__in">
@@ -831,8 +830,6 @@ footer.colophon{
 
     <div class="ouv__side">
       <span class="lbl" data-bind="heroWhere"></span>
-      <button type="button" class="ctl" id="pauseBtn" hidden data-t="pauseFilm"></button>
-      <button type="button" class="ctl" id="playBtn" hidden data-t="playFilm"></button>
     </div>
   </div>
 </section>
@@ -1214,7 +1211,6 @@ var UI = {
     weDe: 'Wir heiraten', weFr: 'Nous nous marions', weIt: 'Ci sposiamo',
     weOwn: 'We are getting married',
     openInvitation: 'Open the invitation',
-    pauseFilm: 'Pause film', playFilm: 'Play film', replayFilm: 'Replay film',
     and: 'and',
     fig01: '01', fig02: '02', fig03: '03', fig04: '04',
     fig05: '05', fig06: '06', fig07: '07', fig08: '08',
@@ -1264,7 +1260,6 @@ var UI = {
     weDe: 'Wir heiraten', weFr: 'Nous nous marions', weIt: 'Ci sposiamo',
     weOwn: 'Мы женимся',
     openInvitation: 'Открыть приглашение',
-    pauseFilm: 'Пауза', playFilm: 'Смотреть', replayFilm: 'Ещё раз',
     and: 'и',
     fig01: '01', fig02: '02', fig03: '03', fig04: '04',
     fig05: '05', fig06: '06', fig07: '07', fig08: '08',
@@ -1314,7 +1309,6 @@ var UI = {
     weDe: 'Wir heiraten', weFr: 'Nous nous marions', weIt: 'Ci sposiamo',
     weOwn: 'Biz turmush quramiz',
     openInvitation: 'Taklifnomani ochish',
-    pauseFilm: 'Toxtatish', playFilm: 'Korish', replayFilm: 'Yana bir bor',
     and: 'va',
     fig01: '01', fig02: '02', fig03: '03', fig04: '04',
     fig05: '05', fig06: '06', fig07: '07', fig08: '08',
@@ -1797,7 +1791,7 @@ function initObserver() {
    and only one is ever downloaded. */
 var hero = $('#hero'), film = $('#film');
 var heroPoster = $('#heroPoster');
-var arrived = false, filmWatch = 0, filmDead = false;
+var arrived = false, filmDead = false;
 
 function arrive() {
   if (arrived) return;
@@ -1856,17 +1850,18 @@ function showPoster() {
      element out entirely — an empty <video> is a black box in some engines. */
   if (film) film.classList.add('hidden');
   if (hero) hero.classList.remove('is-playing');
-  var pause = $('#pauseBtn'), play = $('#playBtn');
-  if (pause) pause.hidden = true;
-  if (play) play.hidden = true;
   arrive();
 }
 
+/* The film has NO controls. It had a pause button and a play/"again" button,
+   which on a phone sat in the middle of the cover under the open button — in
+   Telegram's iPhone browser they were the first thing a guest saw. The film
+   is a backdrop: it plays once, muted, and rests on its last frame; if the
+   browser will not play it, the poster (the same shot) simply stays. */
 function initFilm() {
-  if (!film) { arrive(); return; }
+  arrive();                      /* the cover's type never waits on the film */
+  if (!film) return;
   if (reduced || ADMIN_EDIT || saveData() || !filmDecodable(film)) { showPoster(); return; }
-
-  var pause = $('#pauseBtn'), play = $('#playBtn');
 
   film.addEventListener('loadeddata', function () {
     /* The poster is opaque above the film until this fires, so there is nothing
@@ -1874,13 +1869,9 @@ function initFilm() {
        `display:none` here at first, and a hidden video is not guaranteed to
        reach `loadeddata` at all, which left the hero on its poster for ever. */
     if (hero) hero.classList.add('is-playing');
-    if (pause) pause.hidden = false;
   });
   film.addEventListener('error', function () { filmDead = true; showPoster(); });
   film.addEventListener('ended', function () {
-    arrive();
-    if (pause) pause.hidden = true;
-    if (play) { play.hidden = false; play.textContent = t('replayFilm'); }
     /* Hold the final frame rather than looping back to the start of the move. */
     try { film.pause(); film.currentTime = Math.max(0, film.duration - 0.05); } catch (e) {}
   });
@@ -1888,30 +1879,13 @@ function initFilm() {
   /* Set in both places on purpose: some engines reset it across load(). */
   film.playbackRate = INTRO_RATE;
   film.addEventListener('loadedmetadata', function () { film.playbackRate = INTRO_RATE; });
-
-  if (pause) pause.addEventListener('click', function () {
-    try { film.pause(); } catch (e) {}
-    pause.hidden = true;
-    if (play) { play.hidden = false; play.textContent = t('playFilm'); }
-  });
-  if (play) play.addEventListener('click', function () {
-    if (filmDead) return;
-    if (film.ended) { try { film.currentTime = 0; } catch (e) {} }
-    var r = film.play ? film.play() : null;
-    if (r && r.then) r.then(function () {
-      play.hidden = true;
-      if (pause) pause.hidden = false;
-    }, function () {});
-  });
+  /* The PROPERTY as well as the attribute: iPhone WebKit decides whether a
+     film may play inline without a tap from `muted`, and a parsed attribute
+     has not always been reflected by the time play() is called. */
+  film.muted = true; film.defaultMuted = true;
+  film.controls = false;
 
   loadFilm();
-
-  /* Land the cover type as the camera comes to rest, not after a hard cut. */
-  filmWatch = setInterval(function () {
-    if (!film.duration) return;
-    if (film.currentTime > film.duration * 0.6) { clearInterval(filmWatch); arrive(); }
-  }, 120);
-  setTimeout(arrive, Math.round(9000 / INTRO_RATE));   // safety net if the video never plays at all
 }
 
 function loadFilm() {
@@ -1925,11 +1899,9 @@ function loadFilm() {
      assignment on this line would be a second answer to the same question. */
   var p = film.play ? film.play() : null;
   if (p && p.catch) p.catch(function () {
-    /* Autoplay refused — a muted film usually is not, but low-power mode does.
-       Offer it instead of leaving a frozen first frame. */
-    var play = $('#playBtn');
-    if (play) { play.hidden = false; play.textContent = t('playFilm'); }
-    arrive();
+    /* Autoplay refused — a muted film usually is not, but low-power mode and
+       some in-app browsers do. The poster stays up; nothing is offered. */
+    showPoster();
   });
 }
 

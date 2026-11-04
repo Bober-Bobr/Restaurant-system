@@ -4331,3 +4331,22 @@ No migration. Web only.
 - **Promo code field on `/main`:** the placeholder "e.g. EMIR" is gone (key
   `ord_promo_ph` removed in en/ru/uz). EMIR is a real code, so the sample handed
   every visitor a working discount.
+
+## §90 — Zermatt's cover: no film buttons, and the names show at once
+
+No migration. Web only. Reported from Telegram's in-app browser on iPhone.
+
+- **The "Again" / "Watch" (and Pause) film buttons are gone** — markup, styles,
+  handlers and their strings. On a phone they sat centred on the cover. The
+  film now plays once, muted, with no controls; if it cannot play, the poster
+  (same shot) stays. The poster now sits ABOVE the film until it has frames
+  (`z-index` poster 1 / film 0), so iPhone's own play glyph or a black box can
+  never show; `muted`/`controls` are also set as properties for WebKit.
+- **The cover type no longer waits on the film.** It started at opacity 0 and
+  appeared at 60% of the film or after a 6 s fallback; now it is visible from
+  the first frame (`initFilm` calls `arrive()` first).
+- **The Google Fonts stylesheet is non-blocking** (`media="print"` +
+  `onload`). It blocked both the first paint and the script that writes the
+  names: measured with fonts held 3 s, the names appeared at 3.2 s before and
+  0.1 s after. Text shows in the fallback face, then swaps.
+- Other templates load their fonts the same blocking way — not changed here.

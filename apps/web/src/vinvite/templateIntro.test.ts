@@ -58,14 +58,20 @@ describe.each(WITH_FILM)('%s', (name) => {
     expect(hits, 'only set once — a load() that resets it leaves the film at 1x').toBe(2);
   });
 
-  it('derives the safety net from the rate rather than restating it', () => {
+  // Zermatt's cover type does not wait on its film at all — it is on screen
+  // from the first frame (templateMusicStart.test.ts holds that), because in
+  // Telegram's iPhone browser the film starts late or never and the cover sat
+  // empty. So it has no title cue and no safety net to check.
+  const titleWaits = name !== 'wedding-zermatt';
+
+  it.runIf(titleWaits)('derives the safety net from the rate rather than restating it', () => {
     const net = /setTimeout\(arrive,\s*([^)]+)\)/.exec(src)?.[1] ?? '';
     expect(net, 'the safety net is gone').not.toBe('');
     expect(net, `the fallback reveal is still a fixed ${net.trim()}ms — raise the rate `
       + 'and it fires long after the film has finished').toContain('INTRO_RATE');
   });
 
-  it('still lands the title on a fraction of the film, not a wall-clock delay', () => {
+  it.runIf(titleWaits)('still lands the title on a fraction of the film, not a wall-clock delay', () => {
     // `currentTime > duration * f` is what keeps the title tied to the moment
     // the gates finish opening whatever the rate is. A setTimeout here would
     // have to be re-tuned every time the rate changes.
