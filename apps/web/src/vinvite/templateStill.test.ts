@@ -87,7 +87,9 @@ describe('still mode', () => {
     // A published invitation must animate. The shim and the stylesheet are both
     // conditional on the flag, so an accidental unconditional injection would
     // freeze the real thing for every guest.
-    expect(CODE).toMatch(/\$\{still \? STILL_SHIM : ''\}/);
+    // The other branch carries the music shim, which a published invitation
+    // needs so its track starts on a phone tap — never the still shim.
+    expect(CODE).toMatch(/\$\{still \? STILL_SHIM : MUSIC_SHIM\}/);
     expect(CODE).toMatch(/still \? `<style>\$\{STILL_CSS\}<\/style>` : ''/);
   });
 });

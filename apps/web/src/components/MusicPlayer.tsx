@@ -35,24 +35,30 @@ export function MusicPlayer({ src, accent, bottomOffset = 18 }: { src: string; a
     // Try immediately; most browsers refuse until the visitor interacts.
     start();
 
+    // Only these events carry the user activation a browser demands before
+    // audible playback. A finger's `pointerdown`/`touchstart` do NOT (only a
+    // mouse's pointerdown does), so listening on pointerdown alone started the
+    // music on a desktop and never on a phone. The listeners also stay armed
+    // until the track is actually PLAYING: they used to come off after the
+    // first try, so one refused attempt left nothing to try again.
+    const GESTURES = ['click', 'pointerup', 'touchend', 'keydown'] as const;
+    const disarm = () => GESTURES.forEach((ev) => window.removeEventListener(ev, onFirstGesture));
     const onFirstGesture = (event: Event) => {
-      // NOT when the gesture is the toggle button itself. `pointerdown` fires
-      // before `click`, so this handler used to start the track and the click
-      // that followed immediately paused it again — which is precisely why
-      // pressing the button appeared to do nothing at all.
+      // NOT when the gesture is the toggle button itself: this handler would
+      // start the track and the button's own click would pause it again —
+      // which is precisely why pressing the button appeared to do nothing.
       if (buttonRef.current?.contains(event.target as Node)) return;
-      start();
-      window.removeEventListener('pointerdown', onFirstGesture);
-      window.removeEventListener('keydown', onFirstGesture);
+      if (mutedByUser.current || !audio.paused) { disarm(); return; }
+      audio.play().then(disarm, () => { /* still blocked; keep listening */ });
     };
-    window.addEventListener('pointerdown', onFirstGesture);
-    window.addEventListener('keydown', onFirstGesture);
+    GESTURES.forEach((ev) => window.addEventListener(ev, onFirstGesture));
+    audio.addEventListener('play', disarm);
 
     return () => {
       audio.removeEventListener('play', sync);
       audio.removeEventListener('pause', sync);
-      window.removeEventListener('pointerdown', onFirstGesture);
-      window.removeEventListener('keydown', onFirstGesture);
+      audio.removeEventListener('play', disarm);
+      disarm();
       audio.pause();
     };
   }, [src]);

@@ -75,6 +75,77 @@ const STILL_SHIM = `
 `;
 
 /**
+ * Music starts on the guest's first tap — on a PHONE as well as a desktop.
+ *
+ * No browser lets a page start audible media before the reader has interacted
+ * with it, so every template tries on load and, when refused, waits for a
+ * gesture and tries again. All of them waited on pointerdown / touchstart /
+ * keydown / scroll — and only some events carry the "user activation" a browser
+ * demands: click, pointerup, touchend, keydown, and pointerdown from a MOUSE.
+ * A finger's touchstart and pointerdown do not, and neither does scrolling. So
+ * on a desktop the first click started the music, and on a phone no tap or
+ * swipe ever did; only the music button itself could.
+ *
+ * Fixed once, here, rather than in fifteen copies of that retry: this runs
+ * before the template's own script and wraps play(). A start refused for want
+ * of a gesture is NOT reported to the template — its promise is held, and the
+ * next activating gesture anywhere in the frame replays it and resolves it. The
+ * template then sees its own play() succeed, late, and marks its button as
+ * playing through the path it already has. Its own retry never arms.
+ *
+ * - Only AUDIBLE media is held. A muted opening film that is refused keeps the
+ *   template's own fallback (a play button, or the poster).
+ * - A press on the template's music button is left to the template: starting
+ *   the track here as well would let that same click toggle it straight off.
+ * - A deliberate pause() drops a start still waiting, so a guest who silenced
+ *   the music is not overruled by their next tap.
+ */
+export const MUSIC_SHIM = `
+  (function () {
+    var media = window.HTMLMediaElement && window.HTMLMediaElement.prototype;
+    if (!media || !media.play || !window.Promise) return;
+    var realPlay = media.play, realPause = media.pause;
+    var waiting = [];
+    var GESTURES = ['click', 'pointerup', 'touchend', 'keydown', 'mousedown'];
+    var TOGGLES = '#music-btn, #musicBtn, [data-music-toggle]';
+    function settle(el, ok) {
+      waiting = waiting.filter(function (w) {
+        if (w.el !== el) return true;
+        if (ok) w.resolve();
+        return false;
+      });
+    }
+    function flush(e) {
+      if (!waiting.length) return;
+      var t = e && e.target;
+      if (t && t.closest && t.closest(TOGGLES)) return;
+      waiting.slice().forEach(function (w) {
+        var p;
+        try { p = realPlay.call(w.el); } catch (err) { return; }
+        if (p && p.then) p.then(function () { settle(w.el, true); }, function () {});
+        else settle(w.el, true);
+      });
+    }
+    GESTURES.forEach(function (ev) { window.addEventListener(ev, flush, true); });
+    media.play = function () {
+      var el = this, p;
+      try { p = realPlay.apply(el, arguments); } catch (err) { return Promise.reject(err); }
+      if (!p || !p.then) return p;
+      return new Promise(function (resolve, reject) {
+        p.then(function () { settle(el, true); resolve(); }, function (err) {
+          if (!err || err.name !== 'NotAllowedError' || el.muted) { reject(err); return; }
+          waiting.push({ el: el, resolve: resolve });
+        });
+      });
+    };
+    media.pause = function () {
+      settle(this, false);
+      return realPause.apply(this, arguments);
+    };
+  })();
+`;
+
+/**
  * The belt to the shim's braces: anything animated purely in CSS that the
  * template did not gate on the media query stops here too.
  *
@@ -109,7 +180,7 @@ function buildSrcDoc(html: string, config: Record<string, unknown>, languages: s
   // default assets (served from the web origin, e.g. `${__ORIGIN__}/tuscan/…`).
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const bootstrap = `<script>
-    ${still ? STILL_SHIM : ''}
+    ${still ? STILL_SHIM : MUSIC_SHIM}
     window.__CONFIG__ = ${JSON.stringify(config)};
     window.__LANGS__ = ${JSON.stringify(languages)};
     window.__ORIGIN__ = ${JSON.stringify(origin)};

@@ -4293,3 +4293,25 @@ the six-screen garden walk).
 3. **If an invitation still shows only the garden plates after this deploy**,
    its saved config has no photos in it — send the invitation's link, so its
    stored data can be looked at directly.
+
+## §88 — Zermatt's cover keeps its text; invitation music starts on a phone tap
+
+No migration. Web only.
+
+- **Zermatt:** opening the invitation used to fade the cover's whole title block
+  (names, date, button), so scrolling back up showed a bare photo. The fade rule
+  is gone; the cover's button now scrolls down again on later presses.
+- **Music on phones, every rich template:** each template retried a blocked
+  autoplay on `pointerdown`/`touchstart`/`keydown`/`scroll` — none of which a
+  finger produces as a user activation, so on a phone no tap ever started the
+  track. `MUSIC_SHIM` (RichRenderer, injected before the template's script on
+  every non-still frame) holds a refused audible `play()` and replays it on the
+  first `click`/`pointerup`/`touchend`/`keydown`/`mousedown`, skipping the
+  template's own music button. Verified in real Chrome with touch emulation and
+  `--autoplay-policy=document-user-activation-required`: before, tap → silent;
+  after, tap → playing.
+- **`MusicPlayer`** (block-designer pages) had the same list and also gave up
+  after the first refused try; it now listens on activating gestures until the
+  track plays.
+- Limit, unchanged by any code: no browser lets a page start audible music with
+  NO interaction at all. A swipe alone does not count either; the first tap does.

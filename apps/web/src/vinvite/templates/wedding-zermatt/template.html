@@ -344,12 +344,10 @@ html.has-duo .ann__names{font-size:clamp(30px,4.4vw,72px)}
 .ouv.is-cover .st:nth-child(3){transition-delay:.3s}
 .ouv.is-cover .st:nth-child(4){transition-delay:.45s}
 .ouv.is-cover .st:nth-child(5){transition-delay:.6s}
-/* Once the invitation has been opened the type steps back and the film is left
-   alone — it is the last thing a guest scrolls past, not a title card. */
-.ouv.is-opened .ouv__title,.ouv.is-opened .ouv__side .lbl{
-  opacity:0;transform:translateY(-10px);
-  transition:opacity .8s var(--ease-io),transform 1s var(--ease);
-}
+/* Opening the invitation does NOT take the cover's type away. It used to fade
+   the whole title block out, so a guest who opened it and scrolled back up met
+   a bare photograph with every word gone — names, date and button. The cover
+   reads the same before and after; the button then simply scrolls down again. */
 
 /* PHONES, by ASPECT RATIO rather than width: the title moves into the sky at
    the top so the couple below it stays visible, and the film controls sit
@@ -1949,7 +1947,12 @@ function onOrientation() {
 var opened = false;
 function openInvitation(e, targetId) {
   if (e && e.preventDefault) e.preventDefault();
-  if (opened) return;
+  /* Already open — the cover's button is still on screen, so it scrolls on. */
+  if (opened) {
+    var again = $('#' + (targetId || 'announce')) || $('#announce');
+    if (e && again && again.scrollIntoView) again.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    return;
+  }
   opened = true;
   document.body.classList.remove('is-sealed');
   if (hero) hero.classList.add('is-opened');
