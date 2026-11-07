@@ -127,6 +127,12 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#24201B', buttonInk: '#F2ECE2', tint: '#F2ECE2',
     font: `'Bodoni Moda', ${SERIF_FALLBACK}`,
   },
+  // Antique gold and candlelit brown over ivory and blush — a key in a lock.
+  'wedding-golden-key': {
+    ink: '#7E5A22', inkDark: '#E3C27A', border: '#B8893A',
+    button: '#2E1F19', buttonInk: '#F7F0E3', tint: '#F3E2D6',
+    font: `'Libre Caslon Display', ${SERIF_FALLBACK}`,
+  },
   // Estate green and engraved gold.
   'wedding-chateau': {
     ink: '#3d4a3b', inkDark: '#dfc48a', border: '#b8924e',

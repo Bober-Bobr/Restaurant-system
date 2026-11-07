@@ -4368,3 +4368,29 @@ No migration. Web only.
   then the same without `--dry-run`. It is the ORIGINAL plan: later edits,
   any saved default layout and table assignments of bookings in that area
   (cascaded away with the tables; their `hallId` became null) do not come back.
+
+## §92 — New invitation design: "The Golden Key" (`wedding-golden-key`)
+
+No migration. Web only (plus the bundled photos).
+
+- **A new rich template**, built from the customer's own HTML: a sealed
+  gatefold card in the dark with a golden key; tapping the key slides it into a
+  medallion lock, turns it, and the cover swings open on the invitation. Below:
+  announcement, the couple in a gilded frame, details with a countdown, dress
+  code with a palette, a reply card, and a candlelit closing scene. The
+  animation and the CSS are the source's, unchanged in substance.
+- **Photos are bundled** in `apps/web/public/golden-key/` (five JPEGs, 1.5 MB,
+  re-encoded from the source's 10 MB PNGs) and every one can be replaced from
+  the builder (`invite.image`, `story.image`, `venue.image`, `rsvp.image`,
+  `finale.image`; empty = the bundled photo). `deploy.sh` copies `public/` with
+  the build, so nothing extra to do — just make sure the folder is committed.
+- **Departures from the source, all for the product's rules**: groom's name
+  first; an optional second couple; dates written from the event date (with
+  our own Uzbek month names); a yandex map link; the reply goes to the
+  invitation's RSVP list instead of a mailto; "Joyfully accepts" is
+  pre-selected; the "edit the settings in the script" notice and the
+  hosted-media warning are gone; language switcher and music button added.
+- `index.html` now also loads Libre Caslon Display (the design's name face on
+  the marketing card). Three new builder labels: `fld_dress_her/him/avoid`.
+- Check after deploy: open it from the template chooser, tap the key on a
+  phone, and switch RU/UZ/EN.
