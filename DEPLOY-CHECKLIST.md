@@ -4394,3 +4394,35 @@ No migration. Web only (plus the bundled photos).
   the marketing card). Three new builder labels: `fld_dress_her/him/avoid`.
 - Check after deploy: open it from the template chooser, tap the key on a
   phone, and switch RU/UZ/EN.
+
+## §93 — New invitation design: "Royal Burgundy Roses" (`wedding-burgundy-roses`)
+
+No migration. Web only (plus the bundled photos and film).
+
+- **A new rich template**, built from the customer's own HTML: a burgundy and
+  ivory envelope with a wax seal among roses; tapping the seal lifts the flap,
+  the card rises out of the pocket and opens out to fill the screen. Below: a
+  vertical film of a palace fountain with doves, the announcement under a rose
+  arch, the details on velvet beside a gilded painting, three framed
+  "paintings" hung one after another, dress code, countdown, reply card and a
+  candlelit closing scene with drifting petals. Animation and CSS are the
+  source's, unchanged in substance.
+- **Bundled media** in `apps/web/public/burgundy-roses/` (3.5 MB): eight JPEGs
+  re-encoded from the source's ~73 MB of PNGs, and the film re-encoded from
+  HEVC (5.6 MB, which plain Chrome on Linux and Firefox cannot play) to
+  **H.264, 720×1280, 1.5 MB**, which plays everywhere, plus its first frame as
+  the poster. The film is not loaded under reduced motion or on a
+  saveData/2G connection. Every photo can be replaced from the builder
+  (`invite.image`, `venue.image`, `gallery.photo1–3`, `dress.image`,
+  `countdown.image`, `finale.image`); the film stays. Commit the folder.
+- **Departures from the source, all for the product's rules**: groom's name
+  first; an optional second couple; dates written from the event date; a
+  yandex map link; the reply goes to the invitation's RSVP list instead of a
+  mailto/endpoint; "Joyfully accepts" pre-selected; the placeholder notice and
+  hosted-media warning are gone; the countdown always counts (no "set a date"
+  placeholder); language switcher and music button added; the dress-code
+  palette icon takes the couple's own colours.
+- `index.html` now also loads Crimson Pro (the design's name face on the
+  marketing card). New builder label: `sec_film`.
+- Check after deploy: open it from the template chooser, tap the seal on a
+  phone, press "Continue" and see the film play, switch RU/UZ/EN.

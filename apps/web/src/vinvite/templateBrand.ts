@@ -133,6 +133,12 @@ export const TEMPLATE_BRANDS: Record<string, TemplateBrand> = {
     button: '#2E1F19', buttonInk: '#F7F0E3', tint: '#F3E2D6',
     font: `'Libre Caslon Display', ${SERIF_FALLBACK}`,
   },
+  // Burgundy velvet and gilded frames over ivory — a wax-sealed envelope.
+  'wedding-burgundy-roses': {
+    ink: '#7A1F33', inkDark: '#E6C985', border: '#B8893A',
+    button: '#5A1424', buttonInk: '#FBF0E2', tint: '#F2DCD5',
+    font: `'Crimson Pro', ${SERIF_FALLBACK}`,
+  },
   // Estate green and engraved gold.
   'wedding-chateau': {
     ink: '#3d4a3b', inkDark: '#dfc48a', border: '#b8924e',
