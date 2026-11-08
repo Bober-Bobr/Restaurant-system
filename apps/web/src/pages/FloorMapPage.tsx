@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -59,6 +59,8 @@ import { useNavigate } from 'react-router-dom';
  */
 
 const MAP_KEY = ['floor-map'] as const;
+/** One cache entry per layout: the standing one, or one day's. */
+const mapKey = (day: string | null) => [...MAP_KEY, day ?? 'standing'] as const;
 /** What is taken, per day — a booking holds its tables for the whole of one. */
 const DAY_KEY = (day: string) => ['floor-map-day', day] as const;
 const SCHEDULE_KEY = (from: string, to: string) => ['floor-map-schedule', from, to] as const;
@@ -171,7 +173,43 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data, isLoading } = useQuery({ queryKey: MAP_KEY, queryFn: () => floorMapService.get() });
+  const [mode, setMode] = useState<EditMode>('view');
+  /** Nothing is drawn by the day's bookings in either editor — see renderTable. */
+  const editing = mode !== 'view';
+  const editingTables = mode === 'tables';
+  const editingZones = mode === 'zones';
+
+  // ── The day being looked at ──────────────────────────────────────────────
+  // The map is a picture of one DAY: which tables are taken depends entirely
+  // on which day is being asked about, so the date sits beside the tabs rather
+  // than inside a panel.
+  // The wizard's own day while it holds the page; else a `?day=` the wizard
+  // handed back, so the map opens on the evening that was just booked.
+  const [day, setDay] = useState(() => {
+    const asked = flow?.day ?? searchParams.get('day');
+    return asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : dayKey(new Date());
+  });
+
+  /**
+   * WHICH LAYOUT is on screen, and therefore which one a change lands in.
+   *
+   * The two editors are the STANDING layout — the default every day shows —
+   * so they are drawn from it and change it. Anywhere else the map is a
+   * picture of one day, drawn from that day's own layout where an area has
+   * one; and a change made there (rearranging tables while taking a booking,
+   * or while giving one its tables) belongs to that day alone — see
+   * `ownLayout`. Null = the standing layout.
+   */
+  const mapDay = editing ? null : day;
+  const { data, isLoading } = useQuery({
+    queryKey: mapKey(mapDay),
+    queryFn: () => floorMapService.get(mapDay),
+    // Keep the plan up while the other layout loads, rather than a blank frame
+    // every time an editor is opened or closed.
+    placeholderData: keepPreviousData,
+  });
+  /** The areas with a layout of their own on the day on screen. */
+  const dayLayouts = useMemo(() => data?.dayLayouts ?? [], [data]);
   const areas = useMemo(() => data?.areas ?? [], [data]);
   const tables = useMemo(() => data?.tables ?? [], [data]);
 
@@ -184,11 +222,6 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const features = useMemo(() => (current ? featuresOf(current) : []), [current]);
   const overlapping = useMemo(() => overlappingTables(areaTables), [areaTables]);
 
-  const [mode, setMode] = useState<EditMode>('view');
-  /** Nothing is drawn by the day's bookings in either editor — see renderTable. */
-  const editing = mode !== 'view';
-  const editingTables = mode === 'tables';
-  const editingZones = mode === 'zones';
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /**
    * The shape being edited, by its place in the array.
@@ -228,16 +261,6 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const [areaForm, setAreaForm] = useState<{ name: string; kind: AreaKind; capacity: string } | null>(null);
   const [scheduleShown, setScheduleShown] = useState(false);
 
-  // ── The day being looked at ──────────────────────────────────────────────
-  // The map is a picture of one DAY: which tables are taken depends entirely
-  // on which day is being asked about, so the date sits beside the tabs rather
-  // than inside a panel.
-  // The wizard's own day while it holds the page; else a `?day=` the wizard
-  // handed back, so the map opens on the evening that was just booked.
-  const [day, setDay] = useState(() => {
-    const asked = flow?.day ?? searchParams.get('day');
-    return asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : dayKey(new Date());
-  });
 
   // The schedule: a month either side of the chosen day, PAST AND FUTURE —
   // "who was at table 12 last Saturday" is exactly what it is opened for.
@@ -416,6 +439,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
    */
   const switchMode = (next: EditMode) => {
     setMode(next);
+    // An editor changes the STANDING layout, which every day without a layout
+    // of its own shows — so every cached day is stale once one closes.
+    if (editing) void queryClient.invalidateQueries({ queryKey: MAP_KEY });
     setDrag(null);
     setSelectedId(null);
     setSelectedFeature(null);
@@ -429,7 +455,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   // ── Writing ───────────────────────────────────────────────────────────────
 
   const patchCache = (fn: (map: FloorMap) => FloorMap) =>
-    queryClient.setQueryData<FloorMap>(MAP_KEY, (map) => (map ? fn(map) : map));
+    queryClient.setQueryData<FloorMap>(mapKey(mapDay), (map) => (map ? fn(map) : map));
 
   /**
    * Apply a change to the cached map at once, then send it. On failure the map
@@ -454,7 +480,70 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     }
   };
 
-  const updateTable = (table: MapTable, patch: TablePatch) => {
+  /**
+   * Every day's copy of a standing table, as `day|standingId` → copy id. Held
+   * in a ref and read through on every write, because a write can come from a
+   * closure made before the copy existed — a drag that began on the standing
+   * table, a press queued behind the first change.
+   */
+  const copies = useRef<Record<string, string>>({});
+  /** The copy being made for an area on a day, so two quick changes make one. */
+  const forking = useRef<Map<string, Promise<boolean>>>(new Map());
+
+  /**
+   * Make sure a change about to be made lands where it belongs, and say which
+   * table id to send it to.
+   *
+   * In an editor that is the standing layout, which IS the default, so there
+   * is nothing to do. On a day, the first change to an area copies its tables
+   * into that day's own layout (the server also moves that day's bookings
+   * onto the copies), and from then on the copies are what that day shows and
+   * what changes — every other day keeps the standing layout. What this page
+   * was holding by id (the selection, the tables picked for the booking, a
+   * merge being picked out) follows the tables onto their copies.
+   *
+   * Resolves to null when the copy could not be made; the change is dropped
+   * then rather than written into the standing layout by mistake.
+   */
+  const ownLayout = async (hallId: string): Promise<((id: string) => string) | null> => {
+    const follow = (id: string) => copies.current[`${day}|${id}`] ?? id;
+    if (editing || dayLayouts.includes(hallId)) return follow;
+    const key = `${day}|${hallId}`;
+    let pending = forking.current.get(key);
+    if (!pending) {
+      pending = (async () => {
+        try {
+          const { tables: dayTables, mapping } = await floorMapService.forkDay(hallId, day);
+          for (const [from, to] of Object.entries(mapping)) copies.current[`${day}|${from}`] = to;
+          patchCache((m) => ({
+            ...m,
+            tables: [...m.tables.filter((x) => x.hallId !== hallId), ...dayTables],
+            dayLayouts: [...new Set([...(m.dayLayouts ?? []), hallId])],
+          }));
+          const f = (id: string) => mapping[id] ?? id;
+          setPicked((prev) => Object.fromEntries(Object.entries(prev).map(([id, g]) => [f(id), g])));
+          setSelectedId((id) => (id ? f(id) : id));
+          setOpenTableId((id) => (id ? f(id) : id));
+          setMerging((ids) => (ids ? ids.map(f) : ids));
+          // That day's bookings moved onto the copies with them.
+          void queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
+          return true;
+        } catch (error) {
+          setNotice(t('fm_save_failed', { message: errorText(error) }));
+          return false;
+        } finally {
+          forking.current.delete(key);
+        }
+      })();
+      forking.current.set(key, pending);
+    }
+    return (await pending) ? follow : null;
+  };
+
+  const updateTable = async (original: MapTable, patch: TablePatch) => {
+    const to = await ownLayout(original.hallId);
+    if (!to) return;
+    const table: MapTable = { ...original, id: to(original.id) };
     const next: MapTable = { ...table, ...patch };
     // A resized table asked for more seats than it can take grows to take them.
     if (next.width != null && next.height != null) Object.assign(next, fitTableSize(next.shape, next.seats, next.width, next.height));
@@ -556,6 +645,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
 
   const addTable = async () => {
     if (!current) return;
+    if (!(await ownLayout(current.id))) return;
     const draft = { shape: 'RECT' as const, seats: 4, rotation: 0 };
     let spot = freeSpot(draft, stored, areaTables, features);
     if (!spot) {
@@ -567,6 +657,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     }
     const row = await commit(null, () => floorMapService.createTable({
       hallId: current.id, label: nextTableLabel(areaTables.map((x) => x.label)), ...draft, ...spot!,
+      // Outside the editors a new table belongs to the day on screen only.
+      ...(editing ? {} : { day }),
     }));
     if (row) {
       patchCache((m) => ({ ...m, tables: [...m.tables, row] }));
@@ -574,10 +666,14 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     }
   };
 
-  const deleteTable = (table: MapTable) => {
+  const deleteTable = async (table: MapTable) => {
     if (!window.confirm(t('fm_delete_table_confirm', { label: table.label }))) return;
+    const to = await ownLayout(table.hallId);
+    if (!to) return;
+    const id = to(table.id);
     setSelectedId(null);
-    void commit((m) => ({ ...m, tables: m.tables.filter((x) => x.id !== table.id) }), () => floorMapService.removeTable(table.id));
+    setPicked((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    void commit((m) => ({ ...m, tables: m.tables.filter((x) => x.id !== id) }), () => floorMapService.removeTable(id));
   };
 
   /**
@@ -625,7 +721,11 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     // Onto its own map, like every other table write: the merged table is
     // longer than any of the ones it replaces and can poke off the edge.
     const spot = clampTable(mergePreview, { ...mergePreview, seats: mergePreview.seats }, stored);
-    const ids = merging;
+    // A merge is a change to the furniture like any other: on a day it lands
+    // in that day's own layout, so the copies are what get pushed together.
+    const to = await ownLayout(current.id);
+    if (!to) return;
+    const ids = merging.map(to);
     setBusy(true);
     setFlash(null);
     const row = await commit(null, () => floorMapService.mergeTables({
@@ -677,46 +777,6 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         await queryClient.invalidateQueries({ queryKey: ['halls'] });
       },
     );
-  };
-
-  /**
-   * Remember the area as it stands now. There is ONE default per area, so
-   * saving over an existing one asks first — the old layout is not kept, and
-   * the press that replaces it is the same press that saves the first one.
-   */
-  const saveDefaultLayout = async (area: MapArea) => {
-    if (area.defaultLayoutAt && !window.confirm(t('fm_default_replace_confirm', { name: area.name }))) return;
-    setFlash(null);
-    setBusy(true);
-    const row = await commit(null, () => floorMapService.saveDefaultLayout(area.id));
-    setBusy(false);
-    if (row) {
-      patchCache((m) => ({ ...m, areas: m.areas.map((x) => (x.id === row.id ? { ...x, ...row } : x)) }));
-      setFlash(t('fm_default_saved_ok'));
-    }
-  };
-
-  /**
-   * Put the area back to its saved layout. This DELETES the tables standing in
-   * it and writes the saved ones again, so it asks first and says how many
-   * tables are there now. The reply carries the whole area, and it is written
-   * into the cache rather than merged: every table is a new row.
-   */
-  const restoreDefaultLayout = async (area: MapArea) => {
-    const count = tables.filter((x) => x.hallId === area.id).length;
-    if (!window.confirm(t('fm_restore_default_confirm', { name: area.name, count }))) return;
-    setFlash(null);
-    setSelectedId(null);
-    setBusy(true);
-    const result = await commit(null, () => floorMapService.restoreDefaultLayout(area.id));
-    setBusy(false);
-    if (result) {
-      patchCache((m) => ({
-        areas: m.areas.map((x) => (x.id === result.area.id ? { ...x, ...result.area } : x)),
-        tables: [...m.tables.filter((x) => x.hallId !== result.area.id), ...result.tables],
-      }));
-      setFlash(t('fm_default_restored', { count: result.tables.length }));
-    }
   };
 
   /** The printable plan of this area for the chosen day. */
@@ -1022,7 +1082,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
       editFeature(done.index, (f) => moveLabelTo(f, done.x, done.y));
       return;
     }
-    const table = areaTables.find((x) => x.id === done.id);
+    // By the id the drag began on, or that table's copy for the day if one was
+    // made while the drag was in flight.
+    const table = areaTables.find((x) => x.id === done.id || x.id === copies.current[`${day}|${done.id}`]);
     if (!table) return;
     if (done.type === 'move') updateTable(table, { x: Math.round(done.x), y: Math.round(done.y) });
     else updateTable(table, { width: done.width, height: done.height });
@@ -1285,7 +1347,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
             causes the overlap, and a notice appearing above the stepper would
             push it out from under the next press. */}
         {clash}
-        <label>
+        {/* Only in an editor: a table in one day's layout belongs to that day
+            of its area, and the server refuses to carry it into another. */}
+        {editing && <label>
           <span>{t('fm_area')}</span>
           <select className="adm-input" value={table.hallId}
             onChange={(e) => {
@@ -1300,8 +1364,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
             }}>
             {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-        </label>
-        <button type="button" className="adm-btn-danger" onClick={() => deleteTable(table)}>{t('fm_delete_table')}</button>
+        </label>}
+        <button type="button" className="adm-btn-danger" onClick={() => void deleteTable(table)}>{t('fm_delete_table')}</button>
       </div>
     );
   };
@@ -1394,17 +1458,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     );
   };
 
-  const savedAtText = (area: MapArea) =>
-    (area.defaultLayoutAt
-      ? new Date(area.defaultLayoutAt).toLocaleString(
-        locale === 'ru' ? 'ru-RU' : locale === 'uz' ? 'uz-UZ' : 'en-US',
-        { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' },
-      )
-      : null);
-
   const areaPanel = (area: MapArea) => {
     const stats = t('fm_area_stats', { tables: areaTables.length, seats: seatsIn(areaTables) });
-    const savedAt = savedAtText(area);
     if (mode === 'view') {
       return (
         <dl className="fm-facts">
@@ -1412,7 +1467,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           <dt>{t('capacity')}</dt><dd>{area.capacity}</dd>
           <dt>{t('fm_seats')}</dt><dd>{stats}</dd>
           <dt>{t('fm_drawing')}</dt><dd>{t('fm_features_count', { count: features.length })}</dd>
-          <dt>{t('fm_default')}</dt><dd>{savedAt ?? t('fm_default_none')}</dd>
+          <dt>{t('fm_layout')}</dt>
+          <dd>{dayLayouts.includes(area.id) ? t('fm_layout_day') : t('fm_layout_standing')}</dd>
         </dl>
       );
     }
@@ -1441,29 +1497,10 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           </div>
           <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
 
-          {/* The area's DEFAULT LAYOUT lives here, in "Edit map".
-              It began in the table-layout editor, on the reasoning that an
-              evening moves the furniture — but a default is a statement about
-              the room as a whole (the snapshot carries the drawing and the map
-              size as well as the tables), and this is the editor that changes
-              the room. It is also where somebody who has just redrawn the
-              zones needs it: the nightly sweep no longer puts the saved
-              drawing back over their work, so re-saving the default is how
-              they make the new drawing the one a revert returns to. */}
-          <div className="fm-default">
-            <span className="fm-caption">{t('fm_default')}</span>
-            <p className="fm-caption" style={{ margin: '4px 0 10px' }}>
-              {savedAt ? t('fm_default_saved_at', { at: savedAt }) : t('fm_default_none_hint')}
-            </p>
-            <button type="button" className="adm-btn-ghost" disabled={busy} onClick={() => void saveDefaultLayout(area)}>
-              {savedAt ? t('fm_default_replace') : t('fm_save_default')}
-            </button>
-            <button type="button" className="adm-btn-ghost" disabled={busy || !savedAt}
-              onClick={() => void restoreDefaultLayout(area)}>
-              {t('fm_restore_default')}
-            </button>
-            {flash && <p className="fm-flash" role="status">{flash}</p>}
-          </div>
+          {/* There is no "default layout" to save or revert to any more:
+              what the two editors change IS the default, and a booking's
+              rearrangement belongs to its own day (see ownLayout). */}
+          {flash && <p className="fm-flash" role="status">{flash}</p>}
 
           <button type="button" className="adm-btn-danger" onClick={() => deleteArea(area)}>{t('fm_delete_area')}</button>
         </div>
@@ -1948,6 +1985,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           {/* What the callout says on the plain map, said here in one line:
               the stage's tip already explains what to press, so a second
               box saying it again only pushes the plan down the screen. */}
+          {current && dayLayouts.includes(current.id) && (
+            <span className="fm-day-own">{t('fm_layout_day_note')}</span>
+          )}
           <span className="fm-flow-picked">
             {pickedList.length === 0
               ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
@@ -1982,6 +2022,11 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           <button type="button" className="adm-btn-ghost" onClick={() => setDay(dayKey(new Date()))}>
             {t('fm_today')}
           </button>
+          {/* Said, because the plan for this day is not the one the editors
+              show: its tables were rearranged for a booking on it. */}
+          {current && dayLayouts.includes(current.id) && (
+            <span className="fm-day-own">{t('fm_layout_day_note')}</span>
+          )}
           <button type="button" className="adm-btn-ghost" aria-pressed={scheduleOpen}
             onClick={() => { setScheduleOpen((v) => !v); setScheduleShown(true); }}>
             {t('fm_schedule')}
@@ -2255,6 +2300,10 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         .fm-page.is-flow .fm-daybar { margin: 10px 0; }
         .fm-page.is-flow > .fm-flash, .fm-page.is-flow > .fm-notice { margin: 0 0 10px; }
         .fm-flow-picked { font-size: 13px; font-weight: 600; color: var(--adm-accent); }
+        .fm-day-own {
+          font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+          color: #fde68a; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4);
+        }
         /* The stage strip, a size down above the plan — on a desktop only;
            a phone has its own one-row strip (BookingWizardPage). */
         @media (min-width: 761px) {

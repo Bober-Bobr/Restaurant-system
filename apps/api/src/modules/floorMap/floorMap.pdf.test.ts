@@ -15,7 +15,7 @@ import type { AreaRow, TableRow } from './floorMap.repository.js';
 const area = (over: Partial<AreaRow> = {}): AreaRow => ({
   id: 'street', name: 'Street', kind: 'OUTDOOR', capacity: 120, isActive: true,
   restaurantId: 'r1', section: 'SMALL_BANQUET',
-  mapWidth: 1600, mapHeight: 1000, mapFeatures: [], defaultLayoutAt: null, ...over,
+  mapWidth: 1600, mapHeight: 1000, mapFeatures: [], ...over,
 });
 
 const table = (id: string, label: string, over: Partial<TableRow> = {}): TableRow => ({
@@ -219,7 +219,10 @@ describe('what reaches the sheet from the request and the database', () => {
     // arm, a booking made on the Events page is nowhere on the map or the
     // sheet, which is what item 1 was.
     const repo = read('./floorMap.repository.ts');
-    const both = [...repo.matchAll(/OR: \[[^\]]*\]/g)].map((m) => m[0]);
+    // Not the per-day layout filter (`effectiveWhere`), which picks TABLES
+    // rather than bookings.
+    const both = [...repo.matchAll(/OR: \[[^\]]*\]/g)].map((m) => m[0])
+      .filter((clause) => !clause.includes('ownDayHalls'));
     expect(both.length, 'the day and schedule queries').toBe(2);
     for (const clause of both) {
       expect(clause).toContain('{ wholeHall: true }');

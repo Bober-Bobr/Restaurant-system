@@ -16,10 +16,9 @@ router.get('/schedule', controller.getSchedule.bind(controller));
 router.get('/areas/:id/print', controller.printArea.bind(controller));
 router.post('/areas', controller.createArea.bind(controller));
 router.patch('/areas/:id', controller.updateArea.bind(controller));
-// Both POST rather than PUT/PATCH: each is an action on the area ("remember
-// this", "put it back"), not a field of it somebody sends a new value for.
-router.post('/areas/:id/default', controller.saveDefaultLayout.bind(controller));
-router.post('/areas/:id/restore', controller.restoreDefaultLayout.bind(controller));
+// An action on the area ("give it a layout of its own on this day"), not a
+// field of it — the booking wizard calls it before its first change to a day.
+router.post('/areas/:id/day-layout', controller.forkDay.bind(controller));
 router.post('/tables', controller.createTable.bind(controller));
 // Before the :id routes in spirit though not in need (different method): an
 // action on several tables at once, not a field of one of them.

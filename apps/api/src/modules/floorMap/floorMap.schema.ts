@@ -33,6 +33,14 @@ export const updateAreaSchema = areaSizeSchema.partial().extend({
   mapFeatures: mapFeaturesSchema.optional(),
 });
 
+/**
+ * A day, as `YYYY-MM-DD`. The unit of occupancy — a booking holds its tables
+ * for the whole day it falls on (see utils/floorBooking.ts) — and a plain
+ * string rather than a datetime so a caller cannot ask about "half of
+ * Tuesday" and be quietly given all of it.
+ */
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD');
+
 /** Null = sized from the seat count; a number = resized by hand. */
 const tableExtent = z.number().int().min(30).max(2000).nullable();
 
@@ -46,9 +54,13 @@ export const createTableSchema = z.object({
   rotation: z.number().int().min(0).max(359).default(0),
   width: tableExtent.optional(),
   height: tableExtent.optional(),
+  // Present = the table goes into THAT day's layout of the area (made while
+  // taking a booking); absent = the standing layout every day shows.
+  day: day.optional(),
 });
 
-export const updateTableSchema = createTableSchema.partial().extend({
+// Not `day`: which layout a table belongs to is fixed when it is made.
+export const updateTableSchema = createTableSchema.omit({ day: true }).partial().extend({
   // No default on update: an absent rotation means "leave it", not "reset to 0".
   rotation: z.number().int().min(0).max(359).optional(),
 });
@@ -84,15 +96,10 @@ export const mergeTablesSchema = z.object({
 
 export const idSchema = z.object({ id: z.string().cuid() });
 
-/**
- * A day, as `YYYY-MM-DD`. The unit of occupancy — a booking holds its tables
- * for the whole day it falls on (see utils/floorBooking.ts) — and a plain
- * string rather than a datetime so a caller cannot ask about "half of
- * Tuesday" and be quietly given all of it.
- */
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date as YYYY-MM-DD');
-
 export const daySchema = z.object({ date: day.optional() });
+
+/** Which day an area's own layout is being made for. */
+export const dayLayoutSchema = z.object({ day });
 
 /**
  * What the printed sheet needs beyond the day.

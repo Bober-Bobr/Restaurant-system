@@ -1,6 +1,7 @@
 import createHttpError from 'http-errors';
 import { prisma } from '../../db/prisma.js';
 import type { Section } from '../../utils/section.js';
+import { FloorMapRepository } from '../floorMap/floorMap.repository.js';
 import {
   bookingClash, dayKey, dayRange, guestCountOf, occupancyOf, seatedGuests, seatingOverflow,
   type BookingRow, type TableSelection,
@@ -109,7 +110,7 @@ export async function resolveFloorTables(
 
   if (ids.length > 0 || wholeHall) {
     const day = dayKey(request.eventDate);
-    const [bookings, tableRows] = await Promise.all([
+    const [bookings, tablesByHall] = await Promise.all([
       prisma.event.findMany({
         where: {
           restaurantId, section,
@@ -126,11 +127,18 @@ export async function resolveFloorTables(
           floorTables: { select: { floorTableId: true, guestCount: true } },
         },
       }),
-      prisma.floorTable.findMany({ where: { hall: { restaurantId, section } }, select: { id: true, hallId: true } }),
+      // The tables THAT DAY is drawn from: an area's own layout for the day
+      // where it has one, else its standing layout.
+      new FloorMapRepository().tableIdsByHall(restaurantId, section, day),
     ]);
 
-    const tablesByHall = new Map<string, string[]>();
-    for (const row of tableRows) tablesByHall.set(row.hallId, [...(tablesByHall.get(row.hallId) ?? []), row.id]);
+    // Every chosen table must be on that day's map. A standing table on a day
+    // whose area has its own layout, or another day's copy, is furniture that
+    // is not in the room that evening.
+    const onTheDay = new Set([...tablesByHall.values()].flat());
+    if (ids.some((id) => !onTheDay.has(id))) {
+      throw createHttpError(409, 'A chosen table is not on that day\'s floor plan — reload the map and pick again');
+    }
 
     const clash = bookingClash(
       { hallId, wholeHall, selections },
@@ -175,5 +183,16 @@ export async function writeFloorTables(eventId: string, selections: TableSelecti
         })),
       });
     }
+  });
+}
+
+/**
+ * Let go of the tables a booking holds from any day's own layout other than
+ * `day` — what a booking moved to another day must do, since those tables are
+ * not on the new day's map.
+ */
+export async function releaseDayLayoutTables(eventId: string, day: string): Promise<void> {
+  await prisma.eventFloorTable.deleteMany({
+    where: { eventId, floorTable: { day: { not: null }, NOT: { day } } },
   });
 }

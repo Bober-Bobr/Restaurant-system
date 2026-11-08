@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { DEFAULT_SECTION } from '../../utils/section.js';
 import { FloorMapRepository } from './floorMap.repository.js';
 import {
-  createAreaSchema, createTableSchema, daySchema, idSchema, mergeTablesSchema, printSchema, scheduleSchema,
+  createAreaSchema, createTableSchema, dayLayoutSchema, daySchema, idSchema, mergeTablesSchema, printSchema, scheduleSchema,
   updateAreaSchema, updateTableSchema,
 } from './floorMap.schema.js';
 import { dayKey } from '../../utils/floorBooking.js';
@@ -15,8 +15,10 @@ const service = new FloorMapService(new FloorMapRepository());
 const scope = (request: Request) => [request.restaurantId!, request.section ?? DEFAULT_SECTION] as const;
 
 export class FloorMapController {
+  /** With `?date=`, the tables that day is drawn from; without, the standing layout. */
   async get(request: Request, response: Response) {
-    response.json(await service.getMap(...scope(request)));
+    const { date } = daySchema.parse(request.query);
+    response.json(await service.getMap(...scope(request), date));
   }
 
   /** What is taken on a day — today when the caller names none. */
@@ -63,14 +65,11 @@ export class FloorMapController {
     response.json(await service.updateArea(...scope(request), id, payload));
   }
 
-  async saveDefaultLayout(request: Request, response: Response) {
+  /** Give an area a layout of its own on one day (copy-on-first-change). */
+  async forkDay(request: Request, response: Response) {
     const { id } = idSchema.parse(request.params);
-    response.json(await service.saveDefaultLayout(...scope(request), id));
-  }
-
-  async restoreDefaultLayout(request: Request, response: Response) {
-    const { id } = idSchema.parse(request.params);
-    response.json(await service.restoreDefaultLayout(...scope(request), id));
+    const { day } = dayLayoutSchema.parse(request.body);
+    response.json(await service.forkDay(...scope(request), id, day));
   }
 
   async createTable(request: Request, response: Response) {

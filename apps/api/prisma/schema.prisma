@@ -647,26 +647,13 @@ model Hall {
   // (see floorMap.features.ts). Data rather than code, so a venue's plan is
   // set per restaurant — Sangizar's "Street" is the first.
   mapFeatures  Json        @default("[]")
-  // This area's SAVED DEFAULT layout — its map size, its drawing and every
-  // table on it as of the moment it was saved (see floorMap.layout.ts). An
-  // evening moves the tables about; restoring puts the room back the way it is
-  // meant to stand. Null until a default is saved. The whole snapshot is one
-  // column because it is restored as a unit — a half-applied layout is not a
-  // layout — and `defaultLayoutAt` is separate so "has a default, saved then"
-  // can be answered without reading the snapshot itself.
-  defaultLayout   Json?
-  defaultLayoutAt DateTime?
-  // The day (YYYY-MM-DD, UTC) this area was last put back to its default by
-  // the nightly reset. A day string rather than a timestamp because that is
-  // the question being asked — "has it been done for today?" — and it makes
-  // the sweep idempotent however often it runs or however many times the
-  // process restarts. Null = never reset.
-  lastLayoutResetDay String?
   restaurantId String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   events       Event[]
   floorTables  FloorTable[]
+  // The days this area has a layout of its OWN (see FloorAreaDay).
+  dayLayouts   FloorAreaDay[]
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
 
   // Scoped by section as well as by restaurant: the two sections keep separate
@@ -703,14 +690,41 @@ model FloorTable {
   x         Int
   y         Int
   rotation  Int      @default(0)
+  // Null = the area's STANDING layout, which is the default every day shows.
+  // A day (YYYY-MM-DD, the same UTC day key occupancy uses) = this table
+  // belongs to that day's own layout of its area, made when the tables were
+  // rearranged while taking a booking for that day (see FloorAreaDay).
+  day       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
 
   events    EventFloorTable[]
 
-  @@unique([hallId, label])
-  @@index([hallId])
+  // A label is unique within ONE layout of one area: the standing layout, or
+  // one day's. Prisma cannot declare that (NULL is distinct in a plain unique
+  // index), so the index is an expression index in the migration
+  // 20261108100000_floor_day_layouts — `(hallId, COALESCE(day, ''), label)`.
+  @@index([hallId, day])
+}
+
+/// An area that has a layout of its own on one day.
+///
+/// Rearranging tables while taking a booking changes THAT DAY only: the first
+/// change copies the area's standing tables into rows carrying the day, and
+/// from then on that day's map is drawn from the copies. Every other day keeps
+/// the standing layout. A row of its own rather than "has any table with this
+/// day", because a day whose every table was removed is still a day with its
+/// own (empty) layout and must not fall back to the standing one.
+model FloorAreaDay {
+  id        String   @id @default(cuid())
+  hallId    String
+  /// YYYY-MM-DD, UTC — `dayKey` in utils/floorBooking.ts.
+  day       String
+  createdAt DateTime @default(now())
+  hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@unique([hallId, day])
 }
 
 /// A floor table held by a booking, and how many guests sit at it.

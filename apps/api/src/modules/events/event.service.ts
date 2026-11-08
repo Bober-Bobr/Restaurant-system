@@ -3,7 +3,8 @@ import type { Section } from '../../utils/section.js';
 import { invoiceOutstandingCents } from '../../utils/invoice.js';
 import { EventRepository, type CreateEventData } from './event.repository.js';
 import { syncEventToLedger } from './event.ledgerSync.js';
-import { resolveFloorTables, writeFloorTables, type FloorTablesPayload } from './event.floorTables.js';
+import { releaseDayLayoutTables, resolveFloorTables, writeFloorTables, type FloorTablesPayload } from './event.floorTables.js';
+import { dayKey } from '../../utils/floorBooking.js';
 
 export class EventService {
   constructor(private readonly eventRepository: EventRepository) {}
@@ -121,6 +122,13 @@ export class EventService {
       if (floor.hallId) updateData.hallId = floor.hallId;
       if (floor.selections.length > 0) updateData.guestCount = floor.guestCount;
       await writeFloorTables(existingEvent.id, floor.selections);
+    } else if (payload.eventDate && dayKey(payload.eventDate) !== dayKey(existingEvent.eventDate)) {
+      // Moved to another DAY without saying anything about its tables. Tables
+      // from the old day's own layout do not exist on the new day's map, so
+      // they are let go — the booking keeps its area and shows on the map as
+      // "no tables yet", with Assign tables beside it. Standing-layout tables
+      // are on every day's map and stay, as before.
+      await releaseDayLayoutTables(existingEvent.id, dayKey(payload.eventDate));
     }
 
     const updatedEvent = await this.eventRepository.updateByNumber(restaurantId, section, eventId, updateData);

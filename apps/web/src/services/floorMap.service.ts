@@ -13,6 +13,8 @@ export type TablePayload = {
   /** Null = back to the size its seats call for. */
   width?: number | null;
   height?: number | null;
+  /** Create only: the day whose own layout the table joins. Absent = the standing layout. */
+  day?: string;
 };
 
 /**
@@ -20,8 +22,24 @@ export type TablePayload = {
  * from the supervisor's role, as it does for halls and events.
  */
 export const floorMapService = {
-  async get() {
-    const { data } = await httpClient.get<FloorMap>('/floor-map');
+  /**
+   * The areas and their tables. With a `day`, the tables THAT day is drawn
+   * from (an area's own layout for it where it has one); without, the
+   * standing layout — the default, which is what the two editors change.
+   */
+  async get(day?: string | null) {
+    const { data } = await httpClient.get<FloorMap>('/floor-map', { params: day ? { date: day } : undefined });
+    return data;
+  },
+  /**
+   * Give an area a layout of its own on one day — called before the first
+   * change to its tables while a booking is being taken, so the change touches
+   * that day alone. `mapping` is standing table id → that day's copy.
+   */
+  async forkDay(id: string, day: string) {
+    const { data } = await httpClient.post<{ tables: MapTable[]; mapping: Record<string, string> }>(
+      `/floor-map/areas/${id}/day-layout`, { day },
+    );
     return data;
   },
   async createArea(payload: { name: string; kind: AreaKind; capacity: number } & AreaSize) {
@@ -39,16 +57,6 @@ export const floorMapService = {
    */
   async updateArea(id: string, payload: Partial<AreaSize & { name: string; kind: AreaKind; mapFeatures: MapFeature[] }>) {
     const { data } = await httpClient.patch<MapArea>(`/floor-map/areas/${id}`, payload);
-    return data;
-  },
-  /** Remember this area exactly as it stands — tables, map size and drawing. */
-  async saveDefaultLayout(id: string) {
-    const { data } = await httpClient.post<MapArea>(`/floor-map/areas/${id}/default`, {});
-    return data;
-  },
-  /** Put the area back to that saved layout. Its current tables are replaced. */
-  async restoreDefaultLayout(id: string) {
-    const { data } = await httpClient.post<{ area: MapArea; tables: MapTable[] }>(`/floor-map/areas/${id}/restore`, {});
     return data;
   },
   /**

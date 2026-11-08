@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { FloorMapService } from './floorMap.service.js';
 import type { AreaRow, FloorMapRepository, TableData, TableRow } from './floorMap.repository.js';
 import { createTableSchema, mergeTablesSchema, updateAreaSchema, updateTableSchema } from './floorMap.schema.js';
-import { layoutSchema } from './floorMap.layout.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
 
@@ -13,25 +12,36 @@ type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
 function fakeRepo() {
   const areas: AreaRow[] = [];
   const tables: TableRow[] = [];
-  /** `Hall.defaultLayout`, kept out of AreaRow exactly as the column is. */
-  const defaults = new Map<string, unknown>();
+  /** `FloorAreaDay` rows, as `${hallId}|${day}`. */
+  const ownDays = new Set<string>();
   /** Table ids a booking from today onward holds — what `protectFrom` guards. */
   const bookedTables = new Set<string>();
+  /** A booking's held table and the day it is on — what a fork must move. */
+  const holds: { eventDay: string; floorTableId: string }[] = [];
   let seq = 0;
+  const inScope = (restaurantId: string | null, section: string) =>
+    new Set(areas.filter((a) => a.restaurantId === restaurantId && a.section === section).map((a) => a.id));
+  /** The same rule as the repository's `effectiveWhere`. */
+  const effective = (t: TableRow, day?: string | null) =>
+    (!day ? t.day === null : ownDays.has(`${t.hallId}|${day}`) ? t.day === day : t.day === null);
   const repo: Repo = {
     async listAreas(restaurantId, section) {
       return areas.filter((a) => a.restaurantId === restaurantId && a.section === section);
     },
-    async listTables(restaurantId, section) {
-      const ids = new Set(areas.filter((a) => a.restaurantId === restaurantId && a.section === section).map((a) => a.id));
-      return tables.filter((t) => ids.has(t.hallId));
+    async dayLayoutHalls(restaurantId, section, day) {
+      const ids = inScope(restaurantId, section);
+      return [...ownDays].map((k) => k.split('|')).filter(([h, d]) => d === day && ids.has(h)).map(([h]) => h);
+    },
+    async listTables(restaurantId, section, day) {
+      const ids = inScope(restaurantId, section);
+      return tables.filter((t) => ids.has(t.hallId) && effective(t, day));
     },
     async getArea(id) { return areas.find((a) => a.id === id) ?? null; },
     async areaNameTaken(restaurantId, section, name, exceptId) {
       return areas.some((a) => a.restaurantId === restaurantId && a.section === section && a.name === name && a.id !== exceptId);
     },
     async createArea(restaurantId, section, data) {
-      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, mapFeatures: [], defaultLayoutAt: null, ...data };
+      const row: AreaRow = { id: `a${++seq}`, isActive: true, restaurantId, section, mapFeatures: [], ...data };
       areas.push(row);
       return row;
     },
@@ -46,38 +56,36 @@ function fakeRepo() {
       const hall = areas.find((a) => a.id === row.hallId)!;
       return { ...row, hall: { restaurantId: hall.restaurantId, section: hall.section } };
     },
-    async tablesInArea(hallId) { return tables.filter((t) => t.hallId === hallId); },
-    async readDefaultLayout(id) { return defaults.get(id) ?? null; },
-    async saveDefaultLayout(id, layout, at) {
-      defaults.set(id, JSON.parse(JSON.stringify(layout)));
-      const row = areas.find((a) => a.id === id)!;
-      row.defaultLayoutAt = at;
-      return row;
-    },
-    async restoreLayout(hallId, layout, protectFrom) {
-      // Reconciled BY LABEL, like the real one: a table that survives keeps
-      // its ROW, so the bookings holding it survive with it.
-      const fold = (label: string) => label.trim().toLowerCase();
-      const wanted = new Set(layout.tables.map((x) => fold(x.label)));
-      for (const t of layout.tables) {
-        const match = tables.find((x) => x.hallId === hallId && fold(x.label) === fold(t.label));
-        if (match) Object.assign(match, t);
-        else tables.push({ id: `t${++seq}`, hallId, width: null, height: null, ...t });
+    async bookingsOnDay() { return []; },
+    async bookingsBetween() { return []; },
+    async restaurantName() { return null; },
+    async tableIdsByHall(restaurantId, section, day) {
+      const byHall = new Map<string, string[]>();
+      for (const t of await repo.listTables(restaurantId, section, day)) {
+        byHall.set(t.hallId, [...(byHall.get(t.hallId) ?? []), t.id]);
       }
-      const kept: string[] = [];
-      for (let i = tables.length - 1; i >= 0; i -= 1) {
-        const row = tables[i];
-        if (row.hallId !== hallId || wanted.has(fold(row.label))) continue;
-        if (protectFrom && bookedTables.has(row.id)) { kept.push(row.label); continue; }
-        tables.splice(i, 1);
-      }
-      const area = areas.find((a) => a.id === hallId)!;
-      Object.assign(area, { mapWidth: layout.mapWidth, mapHeight: layout.mapHeight, mapFeatures: layout.mapFeatures });
-      return { area, tables: tables.filter((t) => t.hallId === hallId), kept };
+      return byHall;
     },
-    async labelsInArea(hallId) { return tables.filter((t) => t.hallId === hallId).map(({ id, label }) => ({ id, label })); },
+    async tablesInArea(hallId, day) { return tables.filter((t) => t.hallId === hallId && effective(t, day)); },
+    async hasDayLayout(hallId, day) { return ownDays.has(`${hallId}|${day}`); },
+    async forkDay(hallId, day) {
+      const mapping: Record<string, string> = {};
+      if (!ownDays.has(`${hallId}|${day}`)) {
+        ownDays.add(`${hallId}|${day}`);
+        for (const t of tables.filter((x) => x.hallId === hallId && x.day === null)) {
+          const copy = { ...t, id: `t${++seq}`, day };
+          tables.push(copy);
+          mapping[t.id] = copy.id;
+        }
+        for (const h of holds) if (h.eventDay === day && mapping[h.floorTableId]) h.floorTableId = mapping[h.floorTableId];
+      }
+      return { tables: tables.filter((t) => t.hallId === hallId && t.day === day), mapping };
+    },
+    async labelsInArea(hallId, day = null) {
+      return tables.filter((t) => t.hallId === hallId && t.day === day).map(({ id, label }) => ({ id, label }));
+    },
     async createTable(data: TableData) {
-      const row: TableRow = { id: `t${++seq}`, width: null, height: null, ...data };
+      const row: TableRow = { id: `t${++seq}`, width: null, height: null, ...data, day: data.day ?? null };
       tables.push(row);
       return row;
     },
@@ -100,7 +108,7 @@ function fakeRepo() {
       return { table: row, blocked: [] };
     },
   };
-  return { repo, areas, tables, defaults, bookedTables };
+  return { repo, areas, tables, ownDays, bookedTables, holds };
 }
 
 async function statusOf(run: () => Promise<unknown>): Promise<number> {
@@ -215,159 +223,88 @@ describe('a table number is unique within its area', () => {
   });
 });
 
-describe('an area\'s saved default layout', () => {
-  /** The room as it is meant to stand: three tables, one of them resized. */
-  const arrange = async (hallId: string) => {
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId, label: '1', x: 100, y: 100 });
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId, label: '2', x: 300, y: 100, seats: 4 });
-    await service.createTable('r1', 'SMALL_BANQUET', {
-      ...TABLE, hallId, label: '3', x: 300, y: 250, shape: 'ROUND', rotation: 0, width: 140, height: 140,
-    });
-  };
-
-  it('remembers the tables, the map size and the drawing, and says when', async () => {
-    await arrange(mine.id);
-    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, {
-      mapWidth: 900, mapHeight: 700,
-      mapFeatures: [{ kind: 'stage', shape: 'rect', x: 0, y: 0, width: 200, height: 100, label: 'Сцена' }],
-    });
-
-    const saved = await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(saved.defaultLayoutAt).toBeInstanceOf(Date);
-
-    const layout = layoutSchema.parse(store.defaults.get(mine.id));
-    expect(layout.tables.map((t) => t.label).sort()).toEqual(['1', '2', '3']);
-    expect(layout.tables.find((t) => t.label === '3')).toMatchObject({ shape: 'ROUND', width: 140, height: 140 });
-    expect(layout).toMatchObject({ version: 1, mapWidth: 900, mapHeight: 700 });
-    expect(layout.mapFeatures).toHaveLength(1);
-    // No table ids: a restore makes fresh rows, because an id in the snapshot
-    // may by then belong to a table moved into ANOTHER area. Read from what
-    // was STORED, not from the parsed copy — zod strips unknown keys, so a
-    // snapshot full of ids would come back through the schema looking clean.
-    expect(JSON.stringify(store.defaults.get(mine.id))).not.toContain('"id"');
+describe('a booking\'s rearrangement belongs to its DAY', () => {
+  const D = '2026-11-20';
+  const OTHER = '2026-11-21';
+  let one: TableRow; let two: TableRow;
+  beforeEach(async () => {
+    one = await service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '1' });
+    two = await service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '2', x: 300 });
   });
 
-  it('puts the room back: tables moved, resized, added and deleted all return', async () => {
-    await arrange(mine.id);
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-
-    // An evening: table 2 shoved across the room and given two more seats,
-    // table 3 deleted, a table 9 dragged in from somewhere.
-    const two = store.tables.find((t) => t.label === '2')!;
-    const three = store.tables.find((t) => t.label === '3')!;
-    await service.updateTable('r1', 'SMALL_BANQUET', two.id, { x: 500, y: 380, seats: 6 });
-    await service.deleteTable('r1', 'SMALL_BANQUET', three.id);
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '9', x: 420, y: 60 });
-
-    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(tables.map((t) => t.label).sort()).toEqual(['1', '2', '3']);
-    expect(tables.find((t) => t.label === '2')).toMatchObject({ x: 300, y: 100, seats: 4 });
-    expect(tables.find((t) => t.label === '3')).toMatchObject({ shape: 'ROUND', width: 140, height: 140 });
-    // The table added during the evening is gone — that is what reverting means.
-    expect(store.tables.some((t) => t.label === '9')).toBe(false);
+  it('with no day the map is the STANDING layout — the default every day shows', async () => {
+    const map = await service.getMap('r1', 'SMALL_BANQUET');
+    expect(map.tables.map((t) => t.id).sort()).toEqual([one.id, two.id].sort());
+    expect(map.dayLayouts).toEqual([]);
   });
 
-  it('restores the map size and the drawing too — they are part of how the room stands', async () => {
-    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, {
-      mapWidth: 900, mapHeight: 700,
-      mapFeatures: [{ kind: 'water', shape: 'ellipse', x: 100, y: 100, width: 200, height: 120 }],
-    });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    await service.updateArea('r1', 'SMALL_BANQUET', mine.id, { mapWidth: 1400, mapHeight: 1200, mapFeatures: [] });
-
-    const { area } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(area).toMatchObject({ mapWidth: 900, mapHeight: 700 });
-    expect(area.mapFeatures).toHaveLength(1);
+  it('the first change copies the area\'s tables for that day, and maps old ids to new', async () => {
+    const { tables, mapping } = await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    expect(tables).toHaveLength(2);
+    expect(tables.every((t) => t.day === D)).toBe(true);
+    expect(Object.keys(mapping).sort()).toEqual([one.id, two.id].sort());
+    expect(Object.values(mapping)).not.toContain(one.id);
   });
 
-  it('an area with no default saved refuses to revert — it does not empty the room', async () => {
-    await arrange(mine.id);
-    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id))).toBe(409);
-    expect(store.tables).toHaveLength(3);
+  it('a change on that day is seen on that day only — every other day keeps the default', async () => {
+    const { mapping } = await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    await service.updateTable('r1', 'SMALL_BANQUET', mapping[one.id], { x: 900, seats: 10 });
+    await service.deleteTable('r1', 'SMALL_BANQUET', mapping[two.id]);
+
+    const onDay = await service.getMap('r1', 'SMALL_BANQUET', D);
+    expect(onDay.dayLayouts).toEqual([mine.id]);
+    expect(onDay.tables.map((t) => [t.label, t.x, t.seats])).toEqual([['1', 900, 10]]);
+
+    const otherDay = await service.getMap('r1', 'SMALL_BANQUET', OTHER);
+    expect(otherDay.dayLayouts).toEqual([]);
+    expect(otherDay.tables.map((t) => [t.label, t.x, t.seats]).sort()).toEqual([['1', 100, 6], ['2', 300, 6]]);
+    // And the standing layout itself is untouched.
+    expect((await service.getMap('r1', 'SMALL_BANQUET')).tables).toHaveLength(2);
   });
 
-  it('a stored layout that is not a usable one is refused, never applied', async () => {
-    await arrange(mine.id);
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    // Somebody reached the JSON column with psql. A broken snapshot must read
-    // as "no usable default", not as a map wiped by a restore.
-    store.defaults.set(mine.id, { version: 1, tables: [{ label: '1', seats: 'lots' }] });
-    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id))).toBe(409);
-    expect(store.tables).toHaveLength(3);
+  it('a table ADDED on that day joins that day\'s layout, not the default', async () => {
+    await service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '3', day: D });
+    expect((await service.getMap('r1', 'SMALL_BANQUET', D)).tables.map((t) => t.label).sort()).toEqual(['1', '2', '3']);
+    expect((await service.getMap('r1', 'SMALL_BANQUET', OTHER)).tables.map((t) => t.label).sort()).toEqual(['1', '2']);
+    expect((await service.getMap('r1', 'SMALL_BANQUET')).tables.map((t) => t.label).sort()).toEqual(['1', '2']);
   });
 
-  it('saving again replaces the default — there is one per area', async () => {
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '2', x: 300 });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-
-    await service.deleteTable('r1', 'SMALL_BANQUET', store.tables.find((t) => t.label === '2')!.id);
-    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(tables.map((t) => t.label).sort()).toEqual(['1', '2']);
+  it('a table number is unique within ONE layout — the day\'s copy of table 1 does not clash with the default\'s', async () => {
+    await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    // Table 3 on the day, then table 3 in the standing layout: two layouts.
+    await service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '3', day: D });
+    await service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '3' });
+    // But a second table 1 on the day is still refused.
+    expect(await statusOf(() => service.createTable('r1', 'SMALL_BANQUET', { hallId: mine.id, ...TABLE, label: '1', day: D }))).toBe(409);
   });
 
-  it('one area\'s default says nothing about another\'s, and a restore touches only its own room', async () => {
+  it('the bookings already on that day move onto the copies; other days\' stay put', async () => {
+    store.holds.push({ eventDay: D, floorTableId: one.id }, { eventDay: OTHER, floorTableId: one.id });
+    const { mapping } = await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    expect(store.holds).toEqual([
+      { eventDay: D, floorTableId: mapping[one.id] },
+      { eventDay: OTHER, floorTableId: one.id },
+    ]);
+  });
+
+  it('asking again for the same day copies nothing twice', async () => {
+    await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    const again = await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    expect(again.mapping).toEqual({});
+    expect(store.tables.filter((t) => t.day === D)).toHaveLength(2);
+  });
+
+  it('a day\'s table cannot walk into another area, and is merged only with its own day\'s', async () => {
     const terrace = await service.createArea('r1', 'SMALL_BANQUET', { name: 'Terrace', kind: 'OUTDOOR', capacity: 40, ...LAYOUT });
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: terrace.id, label: 'T1' });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-
-    expect(store.defaults.has(terrace.id)).toBe(false);
-    expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', terrace.id))).toBe(409);
-
-    await service.updateTable('r1', 'SMALL_BANQUET', store.tables.find((t) => t.label === 'T1')!.id, { x: 500 });
-    await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    // The terrace's own table was neither moved back nor deleted.
-    expect(store.tables.find((t) => t.hallId === terrace.id)).toMatchObject({ label: 'T1', x: 500 });
+    const { mapping } = await service.forkDay('r1', 'SMALL_BANQUET', mine.id, D);
+    expect(await statusOf(() => service.updateTable('r1', 'SMALL_BANQUET', mapping[one.id], { hallId: terrace.id }))).toBe(400);
+    const mixed = { tableIds: [mapping[one.id], two.id], seats: 12, x: 200, y: 100, width: 300, height: 60, rotation: 0 };
+    expect(await statusOf(() => service.mergeTables('r1', 'SMALL_BANQUET', mixed))).toBe(400);
   });
 
-  it('is scoped like every other id: the other section\'s area and another restaurant\'s are 404', async () => {
-    for (const id of [banquet.id, foreign.id]) {
-      expect(await statusOf(() => service.saveDefaultLayout('r1', 'SMALL_BANQUET', id))).toBe(404);
-      expect(await statusOf(() => service.restoreDefaultLayout('r1', 'SMALL_BANQUET', id))).toBe(404);
-    }
-    expect(store.defaults.size).toBe(0);
-  });
-});
-
-describe('putting a room back must not cancel an evening', () => {
-  it('a table that survives keeps its ROW, so the bookings on it survive', async () => {
-    // The reason this is reconciled by label rather than rewritten:
-    // EventFloorTable cascades on the table, so a fresh id silently releases
-    // every booking sitting on it.
-    const before = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    await service.updateTable('r1', 'SMALL_BANQUET', before.id, { x: 400, seats: 2 });
-
-    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(tables).toHaveLength(1);
-    expect(tables[0].id).toBe(before.id);
-    expect(tables[0]).toMatchObject({ x: 100, seats: 6 });
-  });
-
-  it('a table added since is removed — unless a booking still holds it', async () => {
-    await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '1' });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    const extra = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '9', x: 300 });
-    const alsoExtra = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: '10', x: 400 });
-    // Somebody is booked on table 9 tonight.
-    store.bookedTables.add(extra.id);
-
-    const { tables, kept } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(kept).toEqual(['9']);
-    expect(tables.map((x) => x.label).sort()).toEqual(['1', '9']);
-    expect(store.tables.some((x) => x.id === alsoExtra.id)).toBe(false);
-  });
-
-  it('matches labels case-insensitively, as the uniqueness rule does', async () => {
-    const vip = await service.createTable('r1', 'SMALL_BANQUET', { ...TABLE, hallId: mine.id, label: 'VIP 1' });
-    await service.saveDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    await service.updateTable('r1', 'SMALL_BANQUET', vip.id, { label: 'vip 1', x: 500 });
-
-    const { tables } = await service.restoreDefaultLayout('r1', 'SMALL_BANQUET', mine.id);
-    expect(tables).toHaveLength(1);
-    expect(tables[0].id).toBe(vip.id);
+  it('is scoped like every other id: another section\'s or restaurant\'s area is 404', async () => {
+    expect(await statusOf(() => service.forkDay('r1', 'SMALL_BANQUET', banquet.id, D))).toBe(404);
+    expect(await statusOf(() => service.forkDay('r1', 'SMALL_BANQUET', foreign.id, D))).toBe(404);
   });
 });
 
@@ -427,40 +364,49 @@ describe('the wiring', () => {
     expect(areas).toMatch(/where:\s*\{\s*restaurantId,\s*section\s*\}/);
   });
 
-  it('a restore reconciles the tables BY LABEL in one transaction, and the snapshot never leaves the server', () => {
+  it('the default layout and its nightly reset are gone — the standing tables ARE the default', () => {
     const repo = read('src/modules/floorMap/floorMap.repository.ts');
-    const restore = repo.slice(repo.indexOf('async restoreLayout('), repo.indexOf('async labelsInArea('));
-    // Half a layout is not a layout: the writes and the area's own size and
-    // drawing either all land or none do.
-    expect(restore).toContain('prisma.$transaction');
-    // Matched by label and UPDATED, never deleted and rewritten. Rewriting
-    // gives table 5 a fresh id, and EventFloorTable cascades on the table —
-    // so every booking sitting on it was silently released, the nightly reset
-    // included.
-    expect(restore).toContain('tx.floorTable.update(');
-    expect(restore).toContain('byLabel.get(fold(table.label))');
-    expect(restore).not.toMatch(/deleteMany\(\{\s*where:\s*\{\s*hallId\s*\}\s*\}\)/);
-    // A table the layout does not have is removed only when no booking from
-    // the cutoff onward holds it.
-    expect(restore).toContain('status: { not: \'CANCELLED\' }');
-    expect(restore).toContain('removable.map((x) => x.id)');
-    // The map is told a default exists and when — never handed the layout.
-    const select = repo.slice(repo.indexOf('const AREA_SELECT'), repo.indexOf('const TABLE_SELECT'));
-    expect(select).toContain('defaultLayoutAt: true');
-    expect(select).not.toContain('defaultLayout: true');
+    for (const gone of ['restoreLayout', 'saveDefaultLayout', 'readDefaultLayout', 'defaultLayoutAt']) {
+      expect(repo, gone).not.toContain(gone);
+    }
+    expect(read('src/server.ts')).not.toContain('startFloorLayoutResetSweep');
+    expect(fs.existsSync(path.join(API_ROOT, 'src/modules/floorMap/floorMap.dailyReset.ts'))).toBe(false);
+    const routes = read('src/modules/floorMap/floorMap.routes.ts');
+    expect(routes).not.toContain('/default');
+    expect(routes).not.toContain('/restore');
+    expect(routes).toContain("'/areas/:id/day-layout'");
   });
 
-  it('the migration adds both columns nullable, so nothing has a default until one is saved', () => {
+  it('copying a day\'s layout is ONE transaction that also moves that day\'s bookings', () => {
+    const repo = read('src/modules/floorMap/floorMap.repository.ts');
+    const fork = repo.slice(repo.indexOf('async forkDay('), repo.indexOf('async labelsInArea('));
+    expect(fork).toContain('prisma.$transaction');
+    expect(fork).toContain('tx.floorAreaDay.create(');
+    // Only that day's bookings: the others stay on the standing tables.
+    expect(fork).toContain('event: { eventDate: dayRange(day) }');
+    expect(fork).toContain('tx.eventFloorTable.update(');
+  });
+
+  it('the migration adds the day, makes labels unique per LAYOUT, and drops the default layout', () => {
     const sql = fs.readFileSync(
-      path.join(API_ROOT, 'prisma/migrations/20260922100000_floor_map_default_layout/migration.sql'), 'utf8',
+      path.join(API_ROOT, 'prisma/migrations/20261108100000_floor_day_layouts/migration.sql'), 'utf8',
     );
-    expect(sql).toContain('ADD COLUMN "defaultLayout" JSONB;');
-    expect(sql).toContain('ADD COLUMN "defaultLayoutAt" TIMESTAMP(3);');
-    expect(sql).not.toMatch(/defaultLayout[^;]*NOT NULL/);
+    expect(sql).toContain('ADD COLUMN "day" TEXT;');
+    expect(sql).toContain('DROP INDEX IF EXISTS "FloorTable_hallId_label_key";');
+    expect(sql).toContain('("hallId", COALESCE("day", \'\'), "label")');
+    expect(sql).toContain('CREATE TABLE "FloorAreaDay"');
+    expect(sql).toContain('DROP COLUMN IF EXISTS "defaultLayout"');
     const schema = read('prisma/schema.prisma');
     const hall = schema.slice(schema.indexOf('model Hall {'), schema.indexOf('model FloorTable {'));
-    expect(hall).toMatch(/defaultLayout\s+Json\?/);
-    expect(hall).toMatch(/defaultLayoutAt\s+DateTime\?/);
+    expect(hall).not.toMatch(/defaultLayout/);
+  });
+
+  it('a booking may hold only tables on its own day\'s map', () => {
+    const src = read('src/modules/events/event.floorTables.ts');
+    expect(src).toContain('new FloorMapRepository().tableIdsByHall(restaurantId, section, day)');
+    expect(src).toContain('ids.some((id) => !onTheDay.has(id))');
+    // And one moved to another day lets go of its old day's own tables.
+    expect(read('src/modules/events/event.service.ts')).toContain('releaseDayLayoutTables(existingEvent.id, dayKey(payload.eventDate))');
   });
 
   it('is mounted behind the restaurant scope and a role guard that excludes the kitchens and banquet staff', () => {
@@ -474,11 +420,12 @@ describe('the wiring', () => {
     }
   });
 
-  it('the schema cascades a hall\'s tables and keeps numbers unique per hall', () => {
+  it('the schema cascades a hall\'s tables, and the table carries no scope of its own', () => {
     const schema = read('prisma/schema.prisma');
     const model = schema.slice(schema.indexOf('model FloorTable {'), schema.indexOf('model MenuItem {'));
     expect(model).toContain('onDelete: Cascade');
-    expect(model).toContain('@@unique([hallId, label])');
+    // Unique per LAYOUT now — an expression index the migration creates.
+    expect(model).toMatch(/day\s+String\?/);
     // No second copy of the scope on the table itself.
     expect(model).not.toMatch(/^\s*(restaurantId|section)\s/m);
     const migration = fs.readFileSync(path.join(API_ROOT, 'prisma/migrations/20260917100000_floor_map/migration.sql'), 'utf8');
@@ -646,7 +593,7 @@ describe('the real merge, as the repository writes it', () => {
     expect(merge).toMatch(/new Set\(held\.map\(\(row\) => row\.floorTable\.label\)\)/);
   });
 
-  it('and the service protects from the start of today, like a revert does', () => {
+  it('and the service protects from the start of today', () => {
     const service = read('src/modules/floorMap/floorMap.service.ts');
     const fn = service.slice(service.indexOf('async mergeTables('));
     expect(fn).toContain('startOfDay(new Date())');

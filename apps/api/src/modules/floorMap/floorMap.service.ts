@@ -1,13 +1,14 @@
 import createHttpError from 'http-errors';
 import type { Section } from '../../utils/section.js';
-import { readLayout, snapshotOf } from './floorMap.layout.js';
 import { occupancyOf, wholeAreaAvailable } from '../../utils/floorBooking.js';
-import { startOfDay } from './floorMap.dailyReset.js';
 import type {
   AreaKind, AreaPatch, AreaRow, AreaSize, FloorMapRepository, TableData, TableRow,
 } from './floorMap.repository.js';
 
 type Repo = Pick<FloorMapRepository, keyof FloorMapRepository>;
+
+/** Midnight UTC at the start of the day `now` falls in — where "from today onward" begins. */
+export const startOfDay = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
 /**
  * The floor map: a section's halls and outdoor areas, and the tables in them.
@@ -40,20 +41,38 @@ export class FloorMapService {
     return table;
   }
 
-  private async assertLabelFree(hallId: string, label: string, exceptId?: string) {
-    const taken = (await this.repo.labelsInArea(hallId))
+  /** Unique within ONE layout of the area — the standing one, or one day's. */
+  private async assertLabelFree(hallId: string, day: string | null, label: string, exceptId?: string) {
+    const taken = (await this.repo.labelsInArea(hallId, day))
       .some((row) => row.id !== exceptId && row.label.toLowerCase() === label.toLowerCase());
     // Case-folded: "vip 1" and "VIP 1" are the same table when read aloud, and
     // the database's unique index would let both in.
     if (taken) throw createHttpError(409, 'A table with this number already exists in this area');
   }
 
-  async getMap(restaurantId: string, section: Section) {
-    const [areas, tables] = await Promise.all([
+  /**
+   * The areas and the tables a day is drawn from. With no day, the STANDING
+   * layout — the default every day shows, and what the two layout editors
+   * change. With a day, each area's own layout for that day where it has one
+   * (`dayLayouts` names those areas), else the standing one.
+   */
+  async getMap(restaurantId: string, section: Section, day?: string) {
+    const [areas, tables, dayLayouts] = await Promise.all([
       this.repo.listAreas(restaurantId, section),
-      this.repo.listTables(restaurantId, section),
+      this.repo.listTables(restaurantId, section, day),
+      day ? this.repo.dayLayoutHalls(restaurantId, section, day) : Promise.resolve([] as string[]),
     ]);
-    return { areas, tables };
+    return { areas, tables, dayLayouts };
+  }
+
+  /**
+   * Give an area a layout of its own on one day — what the booking wizard
+   * asks for before its first change to the tables, so the change touches that
+   * day alone. See `FloorMapRepository.forkDay`.
+   */
+  async forkDay(restaurantId: string, section: Section, hallId: string, day: string) {
+    await this.areaInScope(restaurantId, section, hallId);
+    return this.repo.forkDay(hallId, day);
   }
 
   // ── Bookings on the map ───────────────────────────────────────────────────
@@ -72,7 +91,7 @@ export class FloorMapService {
    */
   async getDay(restaurantId: string, section: Section, day: string) {
     const bookings = await this.repo.bookingsOnDay(restaurantId, section, day);
-    const tablesByHall = await this.repo.tableIdsByHall(restaurantId, section);
+    const tablesByHall = await this.repo.tableIdsByHall(restaurantId, section, day);
     // Which areas could still be taken whole, so the map does not offer a
     // button that the save would then refuse. Built by the shared reader, not
     // by hand here, so "what is taken" cannot mean two things.
@@ -99,7 +118,7 @@ export class FloorMapService {
   async getPrintablePlan(restaurantId: string, section: Section, id: string, day: string) {
     const area = await this.areaInScope(restaurantId, section, id);
     const [tables, bookings, restaurantName] = await Promise.all([
-      this.repo.tablesInArea(id),
+      this.repo.tablesInArea(id, day),
       this.repo.bookingsOnDay(restaurantId, section, day),
       this.repo.restaurantName(restaurantId),
     ]);
@@ -131,51 +150,29 @@ export class FloorMapService {
     return this.repo.updateArea(id, payload);
   }
 
-  /**
-   * Remember the area exactly as it stands now — its tables, its map size and
-   * its drawing — as the layout "revert" puts it back to. Saving again simply
-   * replaces it: there is one default per area, and a second one would be a
-   * list nobody asked for.
-   */
-  async saveDefaultLayout(restaurantId: string, section: Section, id: string): Promise<AreaRow> {
-    const area = await this.areaInScope(restaurantId, section, id);
-    const layout = snapshotOf(area, await this.repo.tablesInArea(id));
-    return this.repo.saveDefaultLayout(id, layout, new Date());
-  }
-
-  /**
-   * Put the area back to its saved default. The area's CURRENT tables are
-   * replaced by the saved ones, so anything added since is gone — which is
-   * what reverting a room means, and why the page asks first.
-   *
-   * With no default saved this is a 409 rather than a restore of nothing: an
-   * area that has never been saved has no "default state" to go back to, and
-   * emptying the room would be the worst possible reading of the button.
-   */
-  async restoreDefaultLayout(restaurantId: string, section: Section, id: string): Promise<{ area: AreaRow; tables: TableRow[] }> {
-    await this.areaInScope(restaurantId, section, id);
-    const layout = readLayout(await this.repo.readDefaultLayout(id));
-    if (!layout) throw createHttpError(409, 'This area has no saved default layout');
-    // Bookings from the start of today onward keep their tables: reverting a
-    // room must never cancel somebody's evening, whether it is the nightly
-    // sweep doing it or an admin pressing the button.
-    return this.repo.restoreLayout(id, layout, startOfDay(new Date()));
-  }
-
   async createTable(restaurantId: string, section: Section, payload: TableData): Promise<TableRow> {
     await this.areaInScope(restaurantId, section, payload.hallId);
-    await this.assertLabelFree(payload.hallId, payload.label);
-    return this.repo.createTable(payload);
+    const day = payload.day ?? null;
+    // A table added on one day's layout needs that layout to exist first, or
+    // the day would show this one table and none of the standing ones.
+    if (day) await this.repo.forkDay(payload.hallId, day);
+    await this.assertLabelFree(payload.hallId, day, payload.label);
+    return this.repo.createTable({ ...payload, day });
   }
 
   async updateTable(restaurantId: string, section: Section, id: string, payload: Partial<TableData>): Promise<TableRow> {
     const table = await this.tableInScope(restaurantId, section, id);
     const hallId = payload.hallId ?? table.hallId;
+    // A table in one day's layout belongs to that day of THAT area; carrying it
+    // into another area would put it in a layout the other area may not have.
+    if (hallId !== table.hallId && table.day) {
+      throw createHttpError(400, 'A table in one day\'s layout cannot be moved to another area');
+    }
     // Moving to another area names a second id, and it is checked like the first.
     if (hallId !== table.hallId) await this.areaInScope(restaurantId, section, hallId);
-    // A label is unique within its area, so both a rename and a move can collide.
+    // A label is unique within its layout, so both a rename and a move can collide.
     if (payload.label !== undefined || hallId !== table.hallId) {
-      await this.assertLabelFree(hallId, payload.label ?? table.label, id);
+      await this.assertLabelFree(hallId, table.day, payload.label ?? table.label, id);
     }
     return this.repo.updateTable(id, payload);
   }
@@ -217,6 +214,11 @@ export class FloorMapService {
     const hallId = rows[0].hallId;
     if (rows.some((row) => row.hallId !== hallId)) {
       throw createHttpError(400, 'All the tables being merged must be in the same area');
+    }
+    // And in the same LAYOUT of it: a standing table and one day's copy are
+    // two different pieces of furniture as far as any day is concerned.
+    if (rows.some((row) => row.day !== rows[0].day)) {
+      throw createHttpError(400, 'All the tables being merged must be in the same day\'s layout');
     }
     const { table, blocked } = await this.repo.mergeTables(
       keepId,

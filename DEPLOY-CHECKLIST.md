@@ -4467,3 +4467,31 @@ No migration, no API change. Web only.
 - Check after deploy, signed in as a supervisor: press "+ New booking", take
   each of the three types through to the end; in stage 3 merge two tables and
   see the merged one reserved; on a phone, the header button shows "+" only.
+
+## §95 — Small Banquets: per-day table layouts; the saved "default layout" is gone
+
+**Migration: `20261108100000_floor_day_layouts`** (runs in `deploy.sh`). API + web.
+
+- **The default layout is simply the tables as they stand.** "Save this layout
+  as the default" and "Revert to the default" are removed, and so is the
+  nightly sweep that put areas back to their saved default. Whatever
+  "Change table layout" / "Edit map" changes IS the default from then on.
+- **Rearranging tables while taking a booking changes that date only.** The
+  first change to an area on a date (move, add, remove, re-seat, merge) copies
+  the area's tables for that date; the change lands on the copy; the bookings
+  already on that date move onto the copies. Every other date keeps the
+  default. The map marks such a date: "Tables rearranged for this day only".
+- The kiosk shows the booking date's layout too. A booking moved to another
+  date lets go of tables from its old date's own layout and shows under
+  "no tables yet" with Assign tables.
+- **The migration drops `Hall.defaultLayout`, `defaultLayoutAt` and
+  `lastLayoutResetDay`** — any saved default snapshots are discarded. The
+  tables standing in each area at deploy time become its default. If a room
+  should start from its old saved default, put it back with "Revert to the
+  default" BEFORE deploying.
+- The table-number uniqueness index is replaced by one per layout
+  (`FloorTable_hallId_day_label_key`); existing numbers are unaffected.
+- Check after deploy: take a booking in the wizard on a date, merge two
+  tables, save; the map for that date shows the merged table and the note;
+  any other date and the "Change table layout" editor show the original
+  tables.

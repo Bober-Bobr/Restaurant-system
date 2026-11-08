@@ -150,24 +150,10 @@ describe('each control belongs to one editor', () => {
     expect(page).toMatch(/\{editingZones && \(\s*<button type="button" className="fm-tab fm-tab-add"/);
   });
 
-  it('the default layout sits with "Edit map" — a default is about the ROOM', () => {
-    // It used to be the table layout's, on the reasoning that an evening moves
-    // the furniture. But the snapshot carries the drawing and the map size as
-    // well as the tables, so a default is a statement about the whole room —
-    // and since the nightly sweep stopped putting the saved drawing back,
-    // re-saving the default is how somebody who has just redrawn the zones
-    // makes them the thing a revert returns to. That is this editor.
-    const panel = page.slice(page.indexOf('const areaPanel'), page.indexOf('const drawingPalette'));
-    const zones = panel.indexOf('if (editingZones)');
-    expect(zones).toBeGreaterThan(-1);
-    const zonesBranch = panel.slice(zones, panel.indexOf("t('fm_delete_area')", zones));
-    expect(zonesBranch).toContain("t('fm_save_default')");
-    expect(zonesBranch).toContain("t('fm_restore_default')");
-    // And the table layout's own branch no longer offers it — two places to
-    // save one default is two answers to "where is it?".
-    const tableBranch = panel.slice(panel.indexOf("t('fm_add_table_here')"));
-    expect(tableBranch).not.toContain('fm_save_default');
-    expect(tableBranch).not.toContain('fm_restore_default');
+  it('there is no default layout to save or revert to — the editors\' layout IS the default', () => {
+    for (const gone of ['fm_save_default', 'fm_restore_default', 'saveDefaultLayout', 'restoreDefaultLayout', 'defaultLayoutAt']) {
+      expect(page, gone).not.toContain(gone);
+    }
   });
 
   it('MERGING tables belongs to taking a BOOKING, not to the layout editor', () => {
@@ -278,7 +264,7 @@ describe('writing the drawing', () => {
     const featureName = page.slice(page.indexOf("t('fm_feature_name')"));
     expect(featureName.slice(0, 400)).toContain('allowEmpty');
     // The table's own number field must not carry it.
-    const tableName = page.slice(page.indexOf('const tablePanel'), page.indexOf('const savedAtText'));
+    const tableName = page.slice(page.indexOf('const tablePanel'), page.indexOf('const mergeForm'));
     expect(tableName).toContain('<LabelField');
     expect(tableName).not.toContain('allowEmpty');
   });

@@ -20,8 +20,6 @@ export type AreaRow = {
   mapWidth: number | null;
   mapHeight: number | null;
   mapFeatures: Prisma.JsonValue;
-  /** When this area's default layout was saved; null = it has none. */
-  defaultLayoutAt: Date | null;
 };
 
 export type TableRow = {
@@ -35,6 +33,8 @@ export type TableRow = {
   rotation: number;
   width: number | null;
   height: number | null;
+  /** Null = the standing layout; a day = that day's own layout of the area. */
+  day: string | null;
 };
 
 export type TableData = {
@@ -47,6 +47,7 @@ export type TableData = {
   rotation: number;
   width?: number | null;
   height?: number | null;
+  day?: string | null;
 };
 
 export type AreaPatch = Partial<AreaSize & { name: string; kind: AreaKind; mapFeatures: unknown[] }>;
@@ -55,10 +56,6 @@ const AREA_SELECT = {
   id: true, name: true, kind: true, capacity: true, isActive: true,
   restaurantId: true, section: true,
   mapWidth: true, mapHeight: true, mapFeatures: true,
-  // The saved default's DATE, never the snapshot itself: the map only needs to
-  // know there is one and when it was taken, and a whole venue's layout on
-  // every page load is a payload nothing reads.
-  defaultLayoutAt: true,
 } as const;
 
 /** A booking as the map needs it: enough to draw it and to name who holds it. */
@@ -71,7 +68,18 @@ const BOOKING_SELECT = {
 
 const TABLE_SELECT = {
   id: true, hallId: true, label: true, seats: true, shape: true, x: true, y: true, rotation: true, width: true, height: true,
+  day: true,
 } as const;
+
+/**
+ * Which tables a day is drawn from: per area, that day's own layout when the
+ * area has one, else the standing layout. With no day, the standing layout —
+ * which is what the two editors change and every other day shows.
+ */
+const effectiveWhere = (day: string | null | undefined, ownDayHalls: string[]): Prisma.FloorTableWhereInput =>
+  (!day
+    ? { day: null }
+    : { OR: [{ day, hallId: { in: ownDayHalls } }, { day: null, hallId: { notIn: ownDayHalls } }] });
 
 /**
  * The floor map's storage. Areas ARE halls (see `Hall.kind`); tables hang off
@@ -87,9 +95,20 @@ export class FloorMapRepository {
     return prisma.hall.findMany({ where: { restaurantId, section }, orderBy: { name: 'asc' }, select: AREA_SELECT });
   }
 
-  async listTables(restaurantId: string, section: Section): Promise<TableRow[]> {
+  /** The areas that have a layout of their own on this day. */
+  async dayLayoutHalls(restaurantId: string, section: Section, day: string): Promise<string[]> {
+    const rows = await prisma.floorAreaDay.findMany({
+      where: { day, hall: { restaurantId, section } },
+      select: { hallId: true },
+    });
+    return rows.map((row) => row.hallId);
+  }
+
+  /** The tables a day is drawn from — the standing layout when `day` is absent. */
+  async listTables(restaurantId: string, section: Section, day?: string | null): Promise<TableRow[]> {
+    const own = day ? await this.dayLayoutHalls(restaurantId, section, day) : [];
     return prisma.floorTable.findMany({
-      where: { hall: { restaurantId, section } },
+      where: { hall: { restaurantId, section }, ...effectiveWhere(day, own) },
       orderBy: [{ hallId: 'asc' }, { label: 'asc' }],
       select: TABLE_SELECT,
     });
@@ -179,10 +198,11 @@ export class FloorMapRepository {
     return row?.name ?? null;
   }
 
-  /** Every table id in the section, grouped by the area it stands in. */
-  async tableIdsByHall(restaurantId: string, section: Section): Promise<Map<string, string[]>> {
+  /** The table ids a day is drawn from, grouped by the area they stand in. */
+  async tableIdsByHall(restaurantId: string, section: Section, day?: string | null): Promise<Map<string, string[]>> {
+    const own = day ? await this.dayLayoutHalls(restaurantId, section, day) : [];
     const rows = await prisma.floorTable.findMany({
-      where: { hall: { restaurantId, section } },
+      where: { hall: { restaurantId, section }, ...effectiveWhere(day, own) },
       select: { id: true, hallId: true },
     });
     const byHall = new Map<string, string[]>();
@@ -190,112 +210,65 @@ export class FloorMapRepository {
     return byHall;
   }
 
-  async tablesInArea(hallId: string): Promise<TableRow[]> {
-    return prisma.floorTable.findMany({ where: { hallId }, orderBy: { label: 'asc' }, select: TABLE_SELECT });
-  }
-
-  /** The stored snapshot, unparsed — the service validates it. */
-  async readDefaultLayout(id: string): Promise<unknown> {
-    const row = await prisma.hall.findUnique({ where: { id }, select: { defaultLayout: true } });
-    return row?.defaultLayout ?? null;
-  }
-
-  async saveDefaultLayout(id: string, layout: unknown, at: Date): Promise<AreaRow> {
-    return prisma.hall.update({
-      where: { id },
-      data: { defaultLayout: layout as Prisma.InputJsonValue, defaultLayoutAt: at },
-      select: AREA_SELECT,
+  /** One area's tables as a day is drawn from them (the standing layout with no day). */
+  async tablesInArea(hallId: string, day?: string | null): Promise<TableRow[]> {
+    const own = day && await this.hasDayLayout(hallId, day) ? [hallId] : [];
+    return prisma.floorTable.findMany({
+      where: { hallId, ...effectiveWhere(day, own) },
+      orderBy: { label: 'asc' },
+      select: TABLE_SELECT,
     });
+  }
+
+  async hasDayLayout(hallId: string, day: string): Promise<boolean> {
+    return !!(await prisma.floorAreaDay.findUnique({ where: { hallId_day: { hallId, day } }, select: { id: true } }));
   }
 
   /**
-   * Put the area back the way the layout describes it: its map size, its
-   * drawing and its tables, all in ONE transaction.
+   * Give an area a layout of its own on one day, by COPYING its standing
+   * tables into rows carrying that day — and move that day's bookings onto
+   * the copies, all in one transaction.
    *
-   * **Tables are reconciled BY LABEL, not deleted and rewritten.** They used
-   * to be replaced wholesale, which was harmless until bookings began holding
-   * them: `EventFloorTable` cascades on the table, so recreating table 5 with
-   * a fresh id silently released every booking sitting on it — including
-   * future ones, and including the nightly reset. Matching on the label keeps
-   * the row, so the booking keeps its table.
+   * The move is what keeps the bookings already taken for that day where they
+   * were: they held the standing tables, and from now on that day is drawn
+   * from the copies, so a booking left on a standing table would be holding a
+   * table that is not on that day's map. Bookings on every other day stay on
+   * the standing tables.
    *
-   * A table in the area but NOT in the layout is removed, unless a booking
-   * from `protectFrom` onward holds it. Putting the room back must never
-   * cancel somebody's evening, so such a table is kept and named in `kept`.
+   * `mapping` is standing id → copy id, so the caller can follow what it was
+   * holding (a selection, a booking being drafted). Doing it again for a day
+   * that already has its own layout changes nothing and maps nothing.
    */
-  async restoreLayout(
-    hallId: string,
-    layout: { mapWidth: number | null; mapHeight: number | null; mapFeatures: unknown[]; tables: (Omit<TableData, 'hallId'> & { label: string })[] },
-    protectFrom?: Date,
-    /**
-     * Whether the saved DRAWING is put back too — the zones, the pool, the
-     * stage, the standing labels.
-     *
-     * False for the nightly sweep. An evening moves the furniture, which is
-     * what a layout reset is for; the drawing is the room itself, edited
-     * deliberately in "Edit map", and putting last week's zones back over it
-     * every morning threw that work away with nothing on the screen to say so.
-     * An admin pressing "Revert to the default" means all of it, and gets all
-     * of it — that is a confirmed press, not housekeeping.
-     *
-     * The map's SIZE goes with the tables either way: the saved table
-     * positions were measured against it, so restoring one without the other
-     * can put a table off the edge of its own map.
-     */
-    drawing = true,
-  ): Promise<{ area: AreaRow; tables: TableRow[]; kept: string[] }> {
+  async forkDay(hallId: string, day: string): Promise<{ tables: TableRow[]; mapping: Record<string, string> }> {
     return prisma.$transaction(async (tx) => {
-      const existing = await tx.floorTable.findMany({ where: { hallId }, select: { id: true, label: true } });
-      // Case-folded, like the label uniqueness rule itself: "vip 1" and
-      // "VIP 1" are the same table when read aloud.
-      const fold = (label: string) => label.trim().toLowerCase();
-      const byLabel = new Map(existing.map((row) => [fold(row.label), row]));
-
-      const wanted = new Set(layout.tables.map((tb) => fold(tb.label)));
-      for (const table of layout.tables) {
-        const match = byLabel.get(fold(table.label));
-        if (match) await tx.floorTable.update({ where: { id: match.id }, data: { ...table, hallId } });
-        else await tx.floorTable.create({ data: { ...table, hallId } });
-      }
-
-      const extras = existing.filter((row) => !wanted.has(fold(row.label)));
-      const kept: string[] = [];
-      if (extras.length > 0) {
-        // Which of them a booking still needs. Cancelled bookings hold
-        // nothing, so they do not protect a table.
-        const booked = protectFrom
-          ? await tx.eventFloorTable.findMany({
-            where: {
-              floorTableId: { in: extras.map((x) => x.id) },
-              event: { eventDate: { gte: protectFrom }, status: { not: 'CANCELLED' } },
-            },
-            select: { floorTableId: true },
-          })
-          : [];
-        const protectedIds = new Set(booked.map((x) => x.floorTableId));
-        const removable = extras.filter((x) => !protectedIds.has(x.id));
-        for (const row of extras) if (protectedIds.has(row.id)) kept.push(row.label);
-        if (removable.length > 0) {
-          await tx.floorTable.deleteMany({ where: { id: { in: removable.map((x) => x.id) } } });
+      const mapping: Record<string, string> = {};
+      const already = await tx.floorAreaDay.findUnique({ where: { hallId_day: { hallId, day } }, select: { id: true } });
+      if (!already) {
+        await tx.floorAreaDay.create({ data: { hallId, day } });
+        const standing = await tx.floorTable.findMany({ where: { hallId, day: null }, select: TABLE_SELECT });
+        for (const { id, ...table } of standing) {
+          const copy = await tx.floorTable.create({ data: { ...table, day }, select: { id: true } });
+          mapping[id] = copy.id;
+        }
+        const ids = Object.keys(mapping);
+        if (ids.length > 0) {
+          const holds = await tx.eventFloorTable.findMany({
+            where: { floorTableId: { in: ids }, event: { eventDate: dayRange(day) } },
+            select: { id: true, floorTableId: true },
+          });
+          for (const hold of holds) {
+            await tx.eventFloorTable.update({ where: { id: hold.id }, data: { floorTableId: mapping[hold.floorTableId] } });
+          }
         }
       }
-
-      const area = await tx.hall.update({
-        where: { id: hallId },
-        data: {
-          mapWidth: layout.mapWidth,
-          mapHeight: layout.mapHeight,
-          ...(drawing ? { mapFeatures: layout.mapFeatures as Prisma.InputJsonValue } : {}),
-        },
-        select: AREA_SELECT,
-      });
-      const tables = await tx.floorTable.findMany({ where: { hallId }, orderBy: { label: 'asc' }, select: TABLE_SELECT });
-      return { area, tables, kept };
+      const tables = await tx.floorTable.findMany({ where: { hallId, day }, orderBy: { label: 'asc' }, select: TABLE_SELECT });
+      return { tables, mapping };
     });
   }
 
-  async labelsInArea(hallId: string): Promise<{ id: string; label: string }[]> {
-    return prisma.floorTable.findMany({ where: { hallId }, select: { id: true, label: true } });
+  /** The labels in ONE layout of an area — the standing one, or one day's. */
+  async labelsInArea(hallId: string, day: string | null = null): Promise<{ id: string; label: string }[]> {
+    return prisma.floorTable.findMany({ where: { hallId, day }, select: { id: true, label: true } });
   }
 
   async createTable(data: TableData): Promise<TableRow> {
@@ -316,8 +289,7 @@ export class FloorMapRepository {
    *
    * In ONE transaction, and the booking check is INSIDE it — `EventFloorTable`
    * cascades on the table, so deleting one silently releases every booking
-   * sitting on it. (That is the trap the nightly reset was fixed for; this is
-   * the same cascade reached by a different button.) A table a booking from
+   * sitting on it. A table a booking from
    * `protectFrom` onward still holds therefore blocks the merge: nothing is
    * written and its label comes back so the supervisor is told which one and
    * can look it up.

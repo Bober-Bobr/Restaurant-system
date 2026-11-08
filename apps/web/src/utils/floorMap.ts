@@ -41,12 +41,6 @@ export type MapArea = {
   mapWidth: number | null;
   mapHeight: number | null;
   mapFeatures?: MapFeature[] | null;
-  /**
-   * When this area's default layout was saved, or null when it has none. The
-   * snapshot itself stays on the server — the map never needs to read it, only
-   * to know there is one to go back to.
-   */
-  defaultLayoutAt?: string | null;
 };
 
 export type MapTable = {
@@ -61,12 +55,23 @@ export type MapTable = {
   /** Null = sized from the seats; set = resized by hand. */
   width?: number | null;
   height?: number | null;
+  /**
+   * Null = the area's STANDING layout, the default every day shows; a day
+   * (YYYY-MM-DD) = that day's own layout of the area, made by rearranging the
+   * tables while taking a booking for it.
+   */
+  day?: string | null;
 };
 
 /** What decides a table's footprint. */
 export type TableGeometry = Pick<MapTable, 'shape' | 'seats' | 'rotation' | 'width' | 'height'>;
 
-export type FloorMap = { areas: MapArea[]; tables: MapTable[] };
+/**
+ * The areas, and the tables a day is drawn from. Asked for with no day, the
+ * tables are the standing layout; with a day, each area's own layout for it
+ * where it has one — `dayLayouts` names those areas.
+ */
+export type FloorMap = { areas: MapArea[]; tables: MapTable[]; dayLayouts?: string[] };
 
 export type Chair = { x: number; y: number; angle: number };
 

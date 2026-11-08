@@ -54,10 +54,12 @@ export const KioskFloorSection = ({ date, large = false, guestCount = 0, t }: Pr
   const [areaId, setAreaId] = useState<string | null>(null);
   const [kind, setKind] = useState<KindFilter>('ALL');
 
-  const { data: map } = useQuery({ queryKey: ['kiosk-floor-map'], queryFn: () => floorMapService.get() });
   // Keyed on the DAY: a booking holds its tables for the whole of the one it
   // falls on, so this is re-read whenever the guest moves the date.
   const day = date || dayKey(new Date());
+  // The tables are the DAY's too: an area rearranged for a booking on that day
+  // has a layout of its own then, and every other day shows the standing one.
+  const { data: map } = useQuery({ queryKey: ['kiosk-floor-map', day], queryFn: () => floorMapService.get(day) });
   const { data: occupancy } = useQuery({
     queryKey: ['kiosk-floor-day', day],
     queryFn: () => floorMapService.day(day),
