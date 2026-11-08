@@ -7,7 +7,7 @@ import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
 import {
   CHAIR_DEPTH, CHAIR_WIDTH, MAX_SEATS, MIN_SEATS, areaSize, chairsFor, clampSeats, clampTable, defaultAreaSize,
-  featureLabelAt, featuresOf, fitTableSize, freeSpot, mergeTables, minAreaSize, nextRotation, nextTableLabel,
+  featureLabelAt, featuresOf, fitTableSize, freeSpot, mergeTables, spotNear, minAreaSize, nextRotation, nextTableLabel,
   overlappingTables, seatsIn, tableSize,
   type AreaKind, type FloorMap, type MapArea, type MapFeature, type MapTable, type TableShape,
 } from '../utils/floorMap';
@@ -663,6 +663,38 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     if (row) {
       patchCache((m) => ({ ...m, tables: [...m.tables, row] }));
       setSelectedId(row.id);
+    }
+  };
+
+  /**
+   * Another table exactly like this one — same seats, shape, size and angle —
+   * placed right beside it (`spotNear`) under the next free number, and
+   * selected, so the next press can move it or duplicate it again. In an
+   * editor it joins the standing layout; outside one, like every other change
+   * to the furniture, the day's own (`ownLayout`).
+   */
+  const duplicateTable = async (table: MapTable) => {
+    if (!current) return;
+    if (!(await ownLayout(current.id))) return;
+    const like = {
+      shape: table.shape as TableShape, seats: table.seats, rotation: table.rotation,
+      width: table.width ?? null, height: table.height ?? null,
+    };
+    let spot = spotNear({ ...like, x: table.x, y: table.y }, stored, areaTables, features);
+    if (!spot) {
+      // Full: next to the original anyway, and said — the same as "Add table".
+      spot = clampTable({ x: table.x + 40, y: table.y + 40 }, like, stored);
+      setNotice(t('fm_area_full'));
+    }
+    setFlash(null);
+    const row = await commit(null, () => floorMapService.createTable({
+      hallId: current.id, label: nextTableLabel(areaTables.map((x) => x.label)), ...like, ...spot!,
+      ...(editing ? {} : { day }),
+    }));
+    if (row) {
+      patchCache((m) => ({ ...m, tables: [...m.tables, row] }));
+      setSelectedId(row.id);
+      setFlash(t('fm_duplicated', { label: table.label, copy: row.label }));
     }
   };
 
@@ -1365,6 +1397,11 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
             {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </label>}
+        <button type="button" className="adm-btn-ghost" onClick={() => void duplicateTable(table)}>
+          ⧉ {t('fm_duplicate_table')}
+        </button>
+        {/* In the booking wizard the panel says it at its top already. */}
+        {flash && !flow && <p className="fm-flash" role="status" style={{ margin: 0 }}>{flash}</p>}
         <button type="button" className="adm-btn-danger" onClick={() => void deleteTable(table)}>{t('fm_delete_table')}</button>
       </div>
     );

@@ -473,6 +473,48 @@ export function freeSpot(
 }
 
 /**
+ * Where a DUPLICATE of a table goes: right beside it.
+ *
+ * "Duplicate" is asked for when a row is being laid out — another four-top
+ * like this one, next to it — so the copy is tried immediately to the right,
+ * then below, left and above, one table's width (chairs included) plus a gap
+ * away, and then further out in the same order. Only when nothing near is
+ * free does it fall back to the first free spot anywhere on the map, which is
+ * where a plain "Add table" puts one. Null when the map is full; the caller
+ * decides what to do then, as with `freeSpot`.
+ */
+export function spotNear(
+  table: Pick<MapTable, 'x' | 'y'> & Pick<TableGeometry, 'shape' | 'seats' | 'rotation'> & Partial<TableGeometry>,
+  area: { width: number; height: number },
+  others: MapTable[],
+  features: MapFeature[] = [],
+): { x: number; y: number } | null {
+  const { hx, hy } = tableHalfExtents(table);
+  const boxes = others.map((o) => ({ x: o.x, y: o.y, ...tableHalfExtents(o) }));
+  const MARGIN = 12;
+  const GAP = 24;
+  const fits = (x: number, y: number) => {
+    if (x - hx < AREA_PADDING || y - hy < AREA_PADDING) return false;
+    if (x + hx > area.width - AREA_PADDING || y + hy > area.height - AREA_PADDING) return false;
+    const me = { x, y, hx, hy };
+    return !boxes.some((b) => overlaps(me, b, MARGIN)) && !hitsBlockingFeature(me, features);
+  };
+  const dx = 2 * hx + GAP;
+  const dy = 2 * hy + GAP;
+  for (let ring = 1; ring <= 4; ring += 1) {
+    const candidates: [number, number][] = [
+      [table.x + dx * ring, table.y], [table.x, table.y + dy * ring],
+      [table.x - dx * ring, table.y], [table.x, table.y - dy * ring],
+    ];
+    for (const [x, y] of candidates) {
+      const at = { x: Math.round(x), y: Math.round(y) };
+      if (fits(at.x, at.y)) return at;
+    }
+  }
+  return freeSpot(table, area, others, features);
+}
+
+/**
  * Tables whose footprints — chairs included — overlap another table in the
  * same area.
  *

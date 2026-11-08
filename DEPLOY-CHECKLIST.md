@@ -4495,3 +4495,16 @@ No migration, no API change. Web only.
   tables, save; the map for that date shows the merged table and the note;
   any other date and the "Change table layout" editor show the original
   tables.
+
+## §96 — Small Banquets: "Duplicate table" in the layout editor
+
+No migration. Web only (it uses the existing create-table endpoint).
+
+- A selected table's panel in "Change table layout" has **Duplicate table**:
+  a copy with the same seats, shape, size and angle, the next free number,
+  placed right beside the original (then below, left, above), never overlapping
+  another table, off the map or in the pool/stage. The copy is selected, so
+  pressing again lays out a row. In the booking wizard the same button adds the
+  copy to that date's layout only.
+- Check after deploy: open "Change table layout", select a table, press
+  Duplicate twice — two new tables appear next to it with new numbers.
