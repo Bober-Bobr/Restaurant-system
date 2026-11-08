@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { floorMapService } from '../services/floorMap.service';
@@ -214,7 +214,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const [drag, setDrag] = useState<Drag | null>(null);
   // A phone opens zoomed in: a whole venue fitted to 390px draws table numbers
   // a few pixels high. The map scrolls inside its own frame.
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 700 ? 2 : 1));
+  // Not in the booking wizard, where the whole plan is fitted to the screen.
+  const [zoom, setZoom] = useState(() => (!flow && typeof window !== 'undefined' && window.innerWidth < 700 ? 2 : 1));
   const [notice, setNotice] = useState<string | null>(null);
   /** A confirmation of something that WORKED — the red notice is for failures. */
   // Seeded from the navigation that brought us here: the wizard returns to the
@@ -285,6 +286,30 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.role);
   const svgRef = useRef<SVGSVGElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  /**
+   * In the booking wizard the WHOLE plan is on screen, with no scrolling to
+   * find a table: the frame is given exactly the height left below the stage
+   * list, tabs and day row, and at "Fit" the drawing is contained in it in
+   * both directions (the SVG's own `meet`) rather than fitted to the width
+   * alone, which on a wide screen left the bottom of a venue below the fold.
+   * Measured rather than a calc(), because what sits above it changes — a
+   * tip wraps to another line, a flash appears after a merge.
+   */
+  const [fitHeight, setFitHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!flow) return undefined;
+    const measure = () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      // The card's own padding (12px) and the page's bottom padding below it.
+      setFitHeight(Math.max(200, Math.floor(window.innerHeight - top - 34)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  });
 
   const stored = current ? areaSize(current, areaTables) : { width: 0, height: 0 };
   const size = drag?.type === 'resize-area' ? { width: drag.width, height: drag.height } : stored;
@@ -2025,7 +2050,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
             : t('fm_hint_view')}
         </p>
       )}
-      {flash && <p className="fm-flash" role="status" style={{ margin: '0 0 10px' }}>{flash}</p>}
+      {/* In the wizard the flash is said in the booking's panel instead: every
+          line above the plan is a line taken off the plan's height. */}
+      {flash && !flow && <p className="fm-flash" role="status" style={{ margin: '0 0 10px' }}>{flash}</p>}
       {notice && <p className="fm-notice" role="alert">{notice}</p>}
 
       {areaForm && (
@@ -2110,13 +2137,13 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           {isLoading ? null : !current ? (
             <p className="adm-empty" style={{ margin: 0 }}>{t('fm_empty')}</p>
           ) : (
-            <div className="fm-scroll">
+            <div className="fm-scroll" ref={scrollRef} style={flow && fitHeight ? { height: fitHeight } : undefined}>
               <svg
                 ref={svgRef}
                 key={current.id}
                 className={`fm-svg${editing ? ' is-editing' : ''}${editingZones ? ' is-drawing' : ''}${current.kind === 'OUTDOOR' ? ' is-outdoor' : ''}${booking || assigning ? ' is-booking' : ''}`}
                 viewBox={`0 0 ${size.width} ${size.height}`}
-                style={{ width: `${zoom * 100}%` }}
+                style={flow && fitHeight && zoom === 1 ? { width: '100%', height: '100%' } : { width: `${zoom * 100}%` }}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={() => setDrag(null)}
@@ -2185,6 +2212,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           {/* The drawing's palette and layer list, up for as long as the
               drawing is being edited. */}
           {editingZones && drawingPalette()}
+          {/* The wizard's flash lives here, above whatever the panel shows —
+              after a merge that is the merged table, not the booking form. */}
+          {flow && flash && <p className="fm-flash" role="status" style={{ margin: '0 0 12px' }}>{flash}</p>}
           {/* What the panel is about, in order of what the admin just did:
               a booking being drafted, one being given its tables, a booking
               they clicked, then the map. */}
@@ -2231,10 +2261,14 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           .fm-page.is-flow .bw-title { font-size: 20px; }
           .fm-page.is-flow .bw-stage { padding: 6px 10px; }
           .fm-page.is-flow .bw-stage-num { flex-basis: 24px; height: 24px; font-size: 12px; }
-          .fm-page.is-flow .bw-tip { padding: 7px 12px; }
+          .fm-page.is-flow .bw-tip { padding: 10px 16px; font-size: 15px; }
         }
         .fm-page.is-flow .bw-stages-wrap { gap: 8px; }
-        .fm-page.is-flow .fm-scroll { height: calc(100vh - 330px); max-height: none; min-height: 340px; }
+        .fm-page.is-flow .fm-scroll { max-height: none; }
+        /* The zoom buttons float over the plan's corner rather than taking a
+           row of the height the plan is fitted into. */
+        .fm-page.is-flow .fm-canvas-card { position: relative; }
+        .fm-page.is-flow .fm-zoom { position: absolute; top: 20px; right: 20px; z-index: 2; margin: 0; }
         .fm-page.is-flow .fm-layout { grid-template-columns: minmax(0, 1fr) 340px; }
         .fm-page.is-flow .fm-panel { top: 14px; max-height: calc(100vh - 28px); overflow-y: auto; }
         .fm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -2544,7 +2578,6 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         @media (max-width: 1100px) {
           .fm-layout, .fm-page.is-flow .fm-layout { grid-template-columns: minmax(0, 1fr); }
           .fm-panel { position: static; }
-          .fm-page.is-flow .fm-scroll { height: auto; max-height: 70vh; min-height: 0; }
           .fm-page.is-flow .fm-panel { max-height: none; overflow: visible; }
         }
         @media (max-width: 640px) {

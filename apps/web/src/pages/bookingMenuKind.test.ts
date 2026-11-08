@@ -284,13 +284,34 @@ describe('taking a booking is what the section is for', () => {
     for (const key of ['bw_stage_menu_banquet', 'bw_stage_menu_dining', 'bw_stage_menu_skip']) expect(title).toContain(key);
   });
 
-  it('the plan is FULL SCREEN, portalled above the layout, in the section\'s own look', () => {
-    // The layout's <main> is a stacking context of z-index 1, so a fixed layer
-    // inside it would sit under the sticky masthead.
-    expect(wiz).toMatch(/createPortal\(\(\s*<div className="adm-bg svr-theme bw-full"/);
-    expect(wiz).toContain('position: fixed; inset: 0;');
+  it('the wizard is FULL SCREEN — outside the layout, so no masthead and no rail', () => {
+    const app = src('app/App.tsx');
+    const book = app.indexOf('<Route path="/book" element={<BookingWizardPage />} />');
+    const layout = app.indexOf('<Route element={<SupervisorLayout />}>');
+    expect(book).toBeGreaterThan(-1);
+    // Before the layout's route opens, i.e. not one of its children.
+    expect(book).toBeLessThan(layout);
+    // It wears the section's look itself, on every stage, and has its own way out.
+    expect((wiz.match(/className="adm-bg svr-theme bw-root"/g) ?? []).length).toBe(3);
+    expect(wiz).toContain('className="adm-btn-ghost bw-close" onClick={onClose}');
+    const raw = readFileSync(join(WEB, 'pages/FloorMapPage.tsx'), 'utf8');
     const flowRule = raw.slice(raw.indexOf('.fm-page.is-flow {'), raw.indexOf('}', raw.indexOf('.fm-page.is-flow {')));
     expect(flowRule).toContain('max-width: none; min-height: 100vh;');
+  });
+
+  it('the WHOLE plan is on screen — the frame is measured, and the drawing contained in it', () => {
+    expect(map).toContain('setFitHeight(Math.max(200, Math.floor(window.innerHeight - top - 34)))');
+    expect(map).toContain("style={flow && fitHeight ? { height: fitHeight } : undefined}");
+    // Contained in BOTH directions at "Fit", not fitted to the width alone.
+    expect(map).toContain("style={flow && fitHeight && zoom === 1 ? { width: '100%', height: '100%' } : { width: `${zoom * 100}%` }}");
+    // And the wizard does not open zoomed in on a phone.
+    expect(map).toMatch(/useState\(\(\) => \(!flow && typeof window/);
+  });
+
+  it('the tips are set to be READ — body-size type and a solid accent spine', () => {
+    const css = wiz.slice(wiz.indexOf('.bw-tip {'));
+    expect(css.slice(0, 400)).toContain('font-size: 16px');
+    expect(css.slice(0, 400)).toContain('border-left: 5px solid var(--adm-accent)');
   });
 
   it('in the plan the details are FACTS with one way back, not fields typed twice', () => {

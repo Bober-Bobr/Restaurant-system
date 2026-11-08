@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { floorMapService } from '../services/floorMap.service';
 import { eventService } from '../services/event.service';
@@ -35,11 +34,15 @@ import { SmallBanquetOrderSheet, type OrderDraft } from './SmallBanquetOrderShee
  * menu is optional at all. So nothing typed in stages 1–2 reaches the server,
  * and leaving before stage 3's button writes nothing.
  *
+ * **The whole wizard is a FULL-SCREEN page**: it is mounted OUTSIDE the
+ * section's layout (App.tsx), so neither the masthead nor the rail of admin
+ * pages is on screen while a booking is taken — those are a dozen ways out of
+ * a job half done. The page wears the section's look itself (`adm-bg
+ * svr-theme` on its root), and the way out is its own close button.
+ *
  * **Stage 3 is the real floor map**, handed a `flow` (see `BookingFlow` in
- * FloorMapPage.tsx) rather than a copy of its table tools. It is portalled
- * into a full-screen layer carrying the section's own token scope, because
- * the layout's `<main>` is a stacking context of z-index 1 and a fixed layer
- * inside it would sit under the sticky masthead.
+ * FloorMapPage.tsx) rather than a copy of its table tools, and it fits the
+ * whole plan to the screen.
  *
  * **Every stage shows the numbered stage list and a tip**, including the last
  * one: the basket takes the `steps` slot of the order sheet, and the banquet
@@ -113,11 +116,17 @@ const stageTip = (stage: Stage, kind: WizardKind, t: TFn) =>
  * the stage being done. One component for all four, so the list cannot read
  * differently on the plan from how it reads on the form before it.
  */
-export const BookingStages = ({ stage, kind, t }: { stage: Stage; kind: WizardKind; t: TFn }) => (
+export const BookingStages = ({ stage, kind, t, onClose }: { stage: Stage; kind: WizardKind; t: TFn; onClose?: () => void }) => (
   <div className="bw-stages-wrap">
     <div className="bw-stages-top">
       <h1 className="adm-title bw-title">{t('bw_title')}</h1>
       <span className="bw-step-of">{t('bw_step_of', { n: stage, total: STAGES.length })}</span>
+      {/* The page has no header, so this is the way out. */}
+      {onClose && (
+        <button type="button" className="adm-btn-ghost bw-close" onClick={onClose} aria-label={t('bw_close')}>
+          ✕ <span>{t('bw_close')}</span>
+        </button>
+      )}
     </div>
     <ol className="bw-stages" aria-label={t('bw_stages')} lang={t('bw_lang')}>
       {STAGES.map((n) => {
@@ -134,8 +143,11 @@ export const BookingStages = ({ stage, kind, t }: { stage: Stage; kind: WizardKi
       })}
     </ol>
     <p className="bw-tip" role="note">
-      <strong>{t('bw_tip')}</strong>
-      <span>{stageTip(stage, kind, t)}</span>
+      <span className="bw-tip-icon" aria-hidden="true">💡</span>
+      <span className="bw-tip-body">
+        <strong>{t('bw_tip')}</strong>
+        <span>{stageTip(stage, kind, t)}</span>
+      </span>
     </p>
     <style>{BW_CSS}</style>
   </div>
@@ -265,16 +277,6 @@ export const BookingWizardPage = () => {
     }
   };
 
-  // The full-screen plan holds the page behind it still; a scroll running off
-  // its end must not move the page underneath. Restores the PREVIOUS value.
-  const fullScreen = draft.stage === 3;
-  useEffect(() => {
-    if (!fullScreen) return undefined;
-    const before = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = before; };
-  }, [fullScreen]);
-
   // A stage-4 draft for a banquet has already been handed to the kiosk; one
   // with no booking behind it is a draft nothing can finish. Either way,
   // start again rather than show a dead stage.
@@ -283,12 +285,14 @@ export const BookingWizardPage = () => {
     if (draft.stage >= 2 && kind === null) setDraft(freshDraft());
   }, [draft.stage, kind, draft.created, setDraft]);
 
-  const stages = <BookingStages stage={draft.stage} kind={kind} t={t} />;
+  // The basket has its own Cancel; everywhere else the close button is the way out.
+  const stages = <BookingStages stage={draft.stage} kind={kind} t={t} onClose={draft.stage === 4 ? undefined : () => leave()} />;
 
   // ── Stage 4: the service-order basket ─────────────────────────────────────
   if (draft.stage === 4 && kind === 'dining' && draft.created) {
     const created = draft.created;
     return (
+      <div className="adm-bg svr-theme bw-root">
       <SmallBanquetOrderSheet
         booking={{
           eventNumber: created.eventNumber,
@@ -306,13 +310,14 @@ export const BookingWizardPage = () => {
         onCancel={() => leave(t('bw_saved_order_later', { number: created.eventNumber }), created.hallId)}
         onPlace={(order) => void placeOrder(order)}
       />
+      </div>
     );
   }
 
   // ── Stage 3: the plan, full screen ────────────────────────────────────────
   if (draft.stage === 3 && kind) {
-    return createPortal((
-      <div className="adm-bg svr-theme bw-full" role="dialog" aria-modal="true" aria-label={t('bw_stage_tables')}>
+    return (
+      <div className="adm-bg svr-theme bw-root">
         <FloorMapPage
           flow={{
             kind: toMenuKind(kind),
@@ -329,12 +334,13 @@ export const BookingWizardPage = () => {
           }}
         />
       </div>
-    ), document.body);
+    );
   }
 
   // ── Stages 1 and 2: a page inside the section's layout ────────────────────
   const nameMissing = !draft.name.trim();
   return (
+    <div className="adm-bg svr-theme bw-root">
     <main className="bw-page">
       {stages}
 
@@ -427,6 +433,7 @@ export const BookingWizardPage = () => {
         </form>
       )}
     </main>
+    </div>
   );
 };
 
@@ -468,14 +475,25 @@ const BW_CSS = `
   .bw-stage.is-current .bw-stage-num { background: var(--adm-accent); border-color: var(--adm-accent); color: var(--adm-accent-ink); }
   .bw-stage.is-current .bw-stage-name { color: var(--adm-text); }
   .bw-stage.is-done .bw-stage-num { border-color: rgba(var(--adm-accent-rgb), 0.6); color: var(--adm-accent); }
+  /* The tip is meant to be READ, so it is set as a callout rather than a
+     caption: body-size type, full-strength ink, a solid accent spine and a
+     tinted ground. */
   .bw-tip {
-    margin: 0; display: flex; gap: 10px; align-items: flex-start;
-    padding: 10px 14px; border-radius: 4px; font-size: 13px; line-height: 1.45;
-    border: 1px dashed rgba(var(--adm-accent-rgb), 0.45);
-    background: rgba(var(--adm-accent-rgb), 0.06);
-    color: rgba(var(--adm-text-rgb), 0.82);
+    margin: 0; display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 18px; border-radius: 6px; font-size: 16px; line-height: 1.5;
+    border: 1px solid rgba(var(--adm-accent-rgb), 0.55);
+    border-left: 5px solid var(--adm-accent);
+    background: rgba(var(--adm-accent-rgb), 0.14);
+    color: var(--adm-text);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.25);
   }
-  .bw-tip strong { color: var(--adm-accent); flex: 0 0 auto; }
+  .bw-tip-icon { font-size: 22px; line-height: 1.2; flex: 0 0 auto; }
+  .bw-tip-body { display: grid; gap: 2px; min-width: 0; }
+  .bw-tip strong { color: var(--adm-accent); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .bw-root { min-height: 100vh; }
+  .bw-close { margin-left: auto; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; }
+  .bw-stages-top .bw-step-of { margin-left: auto; }
+  .bw-stages-top .bw-step-of + .bw-close { margin-left: 4px; }
   .bw-card { padding: 22px !important; display: grid; gap: 14px; min-width: 0; }
   .bw-heading { margin: 0; font-size: 20px; color: var(--adm-title); }
   .bw-sub { font-size: 13px; color: rgba(var(--adm-text-rgb), 0.62); margin: 0; }
@@ -498,10 +516,6 @@ const BW_CSS = `
   .bw-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   .bw-actions button { min-height: 44px; }
   .bw-actions .adm-btn-primary { min-width: 160px; }
-  .adm-bg.bw-full {
-    position: fixed; inset: 0; z-index: 60;
-    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
-  }
   /* A phone: still all four stages, numbered and named, but as ONE row with
      the number above the name. A 2 x 2 grid took a third of the screen, and
      inside the service-order basket that third came out of the menu. The
@@ -513,7 +527,9 @@ const BW_CSS = `
     .bw-stage-name { font-size: 11px; }
     .bw-stage-state { display: none; }
     .bw-title { font-size: 20px; }
-    .bw-tip { font-size: 12.5px; padding: 8px 10px; }
+    .bw-tip { font-size: 14.5px; padding: 10px 12px; border-left-width: 4px; }
+    .bw-tip-icon { font-size: 18px; }
+    .bw-close span { display: none; }
     .bw-kinds, .bw-grid { grid-template-columns: minmax(0, 1fr); }
     .bw-kind { min-height: 0; }
     .bw-page { padding: 18px 16px 40px; }

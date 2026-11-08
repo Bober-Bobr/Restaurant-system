@@ -523,6 +523,7 @@ const resources = {
     menu_kind_optional: 'Optional — the booking is saved either way.',
     // ── The booking wizard (Small Banquets, "+ New booking") ──
     bw_new_booking: 'New booking',
+    bw_close: 'Close',
     /** The language tag, so the browser hyphenates the stage names correctly. */
     bw_lang: 'en',
     bw_title: 'New booking',
@@ -2038,6 +2039,7 @@ const resources = {
     menu_kind_optional: 'Необязательно — броня сохранится в любом случае.',
     // ── Мастер брони (Малые банкеты, «+ Новая бронь») ──
     bw_new_booking: 'Новая бронь',
+    bw_close: 'Закрыть',
     /** The language tag, so the browser hyphenates the stage names correctly. */
     bw_lang: 'ru',
     bw_title: 'Новая бронь',
@@ -3548,6 +3550,7 @@ const resources = {
     menu_kind_optional: 'Majburiy emas — bron har holda saqlanadi.',
     // ── Bron ustasi (Kichik banketlar, «+ Yangi bron») ──
     bw_new_booking: 'Yangi bron',
+    bw_close: 'Yopish',
     /** The language tag, so the browser hyphenates the stage names correctly. */
     bw_lang: 'uz',
     bw_title: 'Yangi bron',

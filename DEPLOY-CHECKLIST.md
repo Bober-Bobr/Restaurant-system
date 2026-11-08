@@ -4449,6 +4449,10 @@ No migration, no API change. Web only.
   The booking is created at the end of stage 3, exactly as before; leaving
   earlier writes nothing. The draft survives a reload (session storage), and a
   reload on stage 4 reopens the basket for the booking already made.
+- **The wizard is a full-screen page**: no header and no left panel of admin
+  pages on any stage (a ✕ Close returns to the map). On the table stage the
+  whole plan is fitted to the screen — nothing to scroll to see it all — and
+  each stage's tip is a large, high-contrast callout.
 - **Merging tables left "Change table layout"** and lives in stage 3, in the
   toolbar and the booking panel. A table merged there is **reserved for the
   booking at once**, and the tables it replaced drop out of the reservation.

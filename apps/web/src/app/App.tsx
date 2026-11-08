@@ -477,14 +477,16 @@ const SupervisorRoutes = () => (
       <Route path="/tablet/summary" element={<TabletSummaryPage />} />
       <Route path="/tablet/additional-services" element={<AdditionalServicesPage />} />
     </Route>
+    {/* "+ New booking" in the header opens this: type → details → the plan →
+        the menu. OUTSIDE the layout on purpose — a booking is taken full
+        screen, with no masthead and no rail of admin pages to wander off
+        into. The host branch above has already checked the role. */}
+    <Route path="/book" element={<BookingWizardPage />} />
     <Route element={<SupervisorLayout />}>
       {/* The floor map is the section's main page — the first place it differs
           from the banquet app instead of mounting the same page. Events moved
           to /events; utils/eventsPath.ts is what shared pages ask. */}
       <Route path="/" element={<FloorMapPage />} />
-      {/* "+ New booking" in the header: type → details → the plan, full
-          screen → the menu. See BookingWizardPage.tsx. */}
-      <Route path="/book" element={<BookingWizardPage />} />
       <Route path="/events" element={<AdminEventsPage />} />
       <Route path="/calendar" element={<CalendarPage />} />
       <Route path="/devices" element={<DevicesPage />} />
