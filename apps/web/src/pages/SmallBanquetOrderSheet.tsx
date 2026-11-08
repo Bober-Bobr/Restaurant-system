@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { menuService } from '../services/menu.service';
@@ -146,9 +147,17 @@ const PortionField = ({ value, onChange, label }: { value: number; onChange: (ne
 );
 
 export const SmallBanquetOrderSheet = ({
-  booking, t, locale, busy, error, onCancel, onPlace,
+  booking, t, locale, busy, error, onCancel, onPlace, steps,
 }: {
   booking: OrderSheetBooking;
+  /**
+   * The booking wizard's stage list and tip, shown across the top of the
+   * sheet. The sheet IS the wizard's last stage for a service order, and a
+   * stage list that vanished at the last step would leave nobody knowing
+   * whether the booking was already saved. Inside the header, so the sheet's
+   * three grid rows (head · menu · footer) stay three.
+   */
+  steps?: ReactNode;
   t: TFn;
   locale: Locale;
   busy: boolean;
@@ -312,6 +321,7 @@ export const SmallBanquetOrderSheet = ({
     <div className="sb-floor sbo-root" role="dialog" aria-modal="true" aria-label={t('sbo_title')}>
       <div className="sbo-sheet adm-card">
         <header className="sbo-head">
+          {steps && <div className="sbo-steps">{steps}</div>}
           <div>
             <h2 className="adm-title" style={{ margin: 0, fontSize: 22 }}>{t('sbo_title')}</h2>
             <p className="sbo-caption" style={{ margin: '4px 0 0' }}>
@@ -473,6 +483,7 @@ export const SmallBanquetOrderSheet = ({
           display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 14px;
         }
         .sbo-head { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+        .sbo-steps { flex: 1 0 100%; min-width: 0; }
         .sbo-count {
           margin-left: auto; font-size: 13px; font-weight: 700; white-space: nowrap;
           color: var(--adm-accent);

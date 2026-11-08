@@ -52,15 +52,19 @@ describe('there are two editors and they are one at a time', () => {
     expect(page).toMatch(/switchMode\(editingZones \? 'view' : 'zones'\)/);
     const switcher = fn('switchMode');
     for (const call of ['setDrag(null)', 'setSelectedId(null)', 'setSelectedFeature(null)',
-      'setBooking(null)', 'setAssigning(null)', 'setPicked({})']) {
+      'setAssigning(null)', 'setPicked({})']) {
       expect(switcher).toContain(call);
     }
   });
 
   it('the day view is still the only place a booking is drafted', () => {
-    // The day bar carries the date, the schedule and "New booking"; in either
-    // editor the map is not a picture of a day at all.
-    expect(page).toMatch(/\{!editing && \(\s*<div className="fm-daybar">/);
+    // In either editor the map is not a picture of a day at all. The day bar
+    // carries the date and the schedule — except in the booking wizard, where
+    // the day was chosen on the details stage and only the legend stays.
+    expect(page).toMatch(/\{!editing && !flow && \(\s*<div className="fm-daybar">/);
+    expect(page).toMatch(/\{!editing && flow && \(\s*<div className="fm-daybar" role="status">/);
+    // And neither editor is offered while a booking is being taken.
+    expect(page).toMatch(/\{!flow && \(\s*<>\s*<button type="button" className=\{editingTables/);
   });
 });
 
@@ -132,7 +136,7 @@ describe('the day\'s bookings are not drawn in either editor', () => {
 
   it('the whole-area overlay and the pending strip stay on the day view', () => {
     expect(page).toContain('{!editing && wholeAreaBooking && (');
-    expect(page).toContain('{!editing && pendingHere.length > 0 && (');
+    expect(page).toContain('{!editing && !flow && pendingHere.length > 0 && (');
   });
 });
 
@@ -166,12 +170,26 @@ describe('each control belongs to one editor', () => {
     expect(tableBranch).not.toContain('fm_restore_default');
   });
 
-  it('MERGING tables is the layout editor\'s — it is furniture being moved', () => {
+  it('MERGING tables belongs to taking a BOOKING, not to the layout editor', () => {
+    // Tables are pushed together for a party — the moment somebody knows the
+    // party is ten is the moment the booking is being taken.
     const panel = page.slice(page.indexOf('const areaPanel'), page.indexOf('const drawingPalette'));
     const tableBranch = panel.slice(panel.indexOf("t('fm_add_table_here')"));
-    expect(tableBranch).toContain("t('fm_merge')");
+    expect(tableBranch).not.toContain("t('fm_merge')");
+    const form = page.slice(page.indexOf('const bookingForm = ()'), page.indexOf("className={`fm-page"));
+    expect(form).toContain("t('fm_merge')");
     // And it cannot be started on an area with nothing to merge.
-    expect(tableBranch).toMatch(/disabled=\{areaTables\.length < 2\}/);
+    expect(form).toMatch(/disabled=\{areaTables\.length < 2\}/);
+    // The toolbar copy is the booking's too, not the layout editor's.
+    expect(page).toMatch(/\{booking && !merging && \(/);
+    expect(page).not.toMatch(/\{editingTables && !merging && \(/);
+  });
+
+  it('a table merged during a booking is RESERVED for it, and the ones it replaced let go', () => {
+    const merge = page.slice(page.indexOf('const mergeChosen = async'), page.indexOf('const deleteArea'));
+    expect(merge).toMatch(/if \(booking\) \{/);
+    expect(merge).toContain('if (!ids.includes(id)) next[id] = g;');
+    expect(merge).toContain("t('fm_merged_reserved'");
   });
 
   it('the shape palette is up throughout the drawing editor, not only when nothing is selected', () => {

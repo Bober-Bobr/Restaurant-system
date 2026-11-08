@@ -20,13 +20,15 @@ const map = src('pages/FloorMapPage.tsx');
 const store = src('store/tablet.store.ts');
 const summary = src('pages/TabletSummaryPage.tsx');
 const sheet = src('pages/SmallBanquetOrderSheet.tsx');
+/** The kiosk hand-over moved from the map into the booking wizard. */
+const wiz = src('pages/BookingWizardPage.tsx');
 
 describe('the kiosk is not asked what the map already knows', () => {
   it('the session is handed over, so the "which evening?" chooser never opens', () => {
     // A guest shown "Banquet or General Dining?" one press after the
     // supervisor answered it is the kiosk contradicting the screen it was
     // opened from.
-    expect(map).toMatch(/sessionKind: 'banquet',/);
+    expect(wiz).toMatch(/sessionKind: 'banquet',/);
     expect(store).toMatch(/sessionKind: d\.sessionKind \?\? null,/);
     // Still "not asked yet" when nobody has answered — the Events page's own
     // hand-over passes none, and the chooser must still appear there.
@@ -36,7 +38,7 @@ describe('the kiosk is not asked what the map already knows', () => {
   });
 
   it('the tables are already held, so the summary shows no plan', () => {
-    expect(map).toMatch(/floorLocked: true,/);
+    expect(wiz).toMatch(/floorLocked: true,/);
     expect(store).toMatch(/floorLocked: !!d\.floorLocked,/);
     expect(summary).toMatch(/\{!floorLocked && \(\s*<KioskFloorSection/);
   });
@@ -53,7 +55,7 @@ describe('the kiosk is not asked what the map already knows', () => {
   it('the fields it does ask for are prefilled from the booking', () => {
     // Who, when, how many and which room were all typed on the map; the
     // summary is left with the menu and the money.
-    const handover = map.slice(map.indexOf('loadEventDraft({'), map.indexOf('floorLocked: true'));
+    const handover = wiz.slice(wiz.indexOf('loadEventDraft({'), wiz.indexOf('floorLocked: true'));
     for (const field of ['customerName', 'customerPhone', 'guestCount', 'hallId', 'eventDate', 'eventTime']) {
       expect(handover, field).toContain(field);
     }
@@ -114,13 +116,13 @@ describe('a booking is taken WITH the layout editor, not instead of it', () => {
     expect(panel).toContain("t('fm_seats_left_none')");
   });
 
-  it('the primary act is separated from the tools in the toolbar', () => {
-    expect(map).toContain('className="fm-toolbar-sep"');
-    const raw = readFileSync(join(WEB, 'pages/FloorMapPage.tsx'), 'utf8');
-    expect(raw).toMatch(/\.fm-toolbar-sep \{/);
-    // Hidden on a phone, where the buttons stack and a vertical rule would be
-    // a 1px tick in the middle of nowhere.
-    expect(raw).toMatch(/@media \(max-width: 640px\) \{ \.fm-toolbar-sep \{ display: none; \} \}/);
+  it('the primary act is the booking panel\'s highlighted button, named for what follows', () => {
+    // The toolbar no longer carries "+ New booking" (it is in the header), so
+    // there is no act left there to separate from the tools.
+    expect(map).not.toContain('fm-toolbar-sep"');
+    const form = map.slice(map.indexOf('const bookingForm = ()'), map.indexOf("className={`fm-page"));
+    expect(form).toContain('className="adm-btn-primary fm-book-btn"');
+    for (const key of ['bw_next_banquet', 'bw_next_dining', 'bw_next_skip']) expect(form).toContain(key);
   });
 });
 

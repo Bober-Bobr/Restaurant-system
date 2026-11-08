@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { floorMapService } from '../services/floorMap.service';
 import { hallService } from '../services/hall.service';
 import { useAdminStore } from '../store/admin.store';
@@ -24,9 +24,6 @@ import {
   type MapBooking,
 } from '../utils/floorBooking';
 import { eventService } from '../services/event.service';
-import { orderService } from '../services/order.service';
-import { useTabletStore } from '../store/tablet.store';
-import { SmallBanquetOrderSheet, type OrderDraft } from './SmallBanquetOrderSheet';
 import { eventsPath } from '../utils/eventsPath';
 import { useAuthStore } from '../store/auth.store';
 import { useNavigate } from 'react-router-dom';
@@ -85,7 +82,42 @@ type EditMode = 'view' | 'tables' | 'zones';
  * party eating a la carte. Null is "not decided yet", which the Events page
  * shows as "Menu not selected" — see `menuKindOf` in utils/eventMenuKind.ts.
  */
-type MenuKind = 'banquet' | 'dining' | null;
+export type MenuKind = 'banquet' | 'dining' | null;
+
+/**
+ * The booking wizard's hold on this page (pages/BookingWizardPage.tsx).
+ *
+ * A booking is no longer drafted from a panel beside the plan: "+ New booking"
+ * in the header opens a page of its own — the kind of evening, then the
+ * details, then THIS map, full screen, for the tables. The wizard owns
+ * everything typed before the plan and everything that happens after it (the
+ * kiosk's banquet planner, the service-order basket); the map owns the tables,
+ * because it already holds every table tool there is — reserving, moving,
+ * adding, deleting, merging — and a second copy of those for the wizard would
+ * drift from this one within a release.
+ *
+ * Present means "this page IS stage 3": the booking is drafted from the
+ * moment it mounts, the day is the one the details stage chose, the two
+ * editors are not offered, and saving hands the new booking back through
+ * `onCreated` instead of deciding what happens next itself.
+ */
+export type BookingFlow = {
+  kind: MenuKind;
+  name: string;
+  phone: string;
+  /** `YYYY-MM-DD`, chosen on the details stage — the day the plan is drawn for. */
+  day: string;
+  time: string;
+  /** A typed head count CAPS the seating (utils/floorBooking.ts); null = the tables decide. */
+  guestCount: number | null;
+  /** The area to open on, when the details stage named one. */
+  hallId: string | null;
+  /** The stage list and the stage's tip, drawn where the page title would be. */
+  header: ReactNode;
+  onBack: () => void;
+  onCancel: () => void;
+  onCreated: (created: { eventNumber: number; hallId: string; guests: number }) => void;
+};
 
 type Drag =
   | { type: 'move'; id: string; dx: number; dy: number; x: number; y: number; moved: boolean }
@@ -133,7 +165,7 @@ const clockOf = (value: string | Date) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-export const FloorMapPage = () => {
+export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const { locale } = useAdminStore();
   const t = (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => translate(key, locale, params);
   const queryClient = useQueryClient();
@@ -145,7 +177,9 @@ export const FloorMapPage = () => {
 
   // The area on screen: the one in the URL, else the first. A stale or foreign
   // id in a shared link falls back rather than showing an empty page.
-  const current = areas.find((a) => a.id === searchParams.get('area')) ?? areas[0] ?? null;
+  const current = areas.find((a) => a.id === searchParams.get('area'))
+    ?? (flow?.hallId ? areas.find((a) => a.id === flow.hallId) : undefined)
+    ?? areas[0] ?? null;
   const areaTables = useMemo(() => (current ? tables.filter((x) => x.hallId === current.id) : []), [tables, current]);
   const features = useMemo(() => (current ? featuresOf(current) : []), [current]);
   const overlapping = useMemo(() => overlappingTables(areaTables), [areaTables]);
@@ -183,7 +217,12 @@ export const FloorMapPage = () => {
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 700 ? 2 : 1));
   const [notice, setNotice] = useState<string | null>(null);
   /** A confirmation of something that WORKED — the red notice is for failures. */
-  const [flash, setFlash] = useState<string | null>(null);
+  // Seeded from the navigation that brought us here: the wizard returns to the
+  // map after a "decide later" or a sent order, and says what it saved.
+  const location = useLocation();
+  const [flash, setFlash] = useState<string | null>(
+    () => (location.state as { flash?: string } | null)?.flash ?? null,
+  );
   const [busy, setBusy] = useState(false);
   const [areaForm, setAreaForm] = useState<{ name: string; kind: AreaKind; capacity: string } | null>(null);
   const [scheduleShown, setScheduleShown] = useState(false);
@@ -192,7 +231,12 @@ export const FloorMapPage = () => {
   // The map is a picture of one DAY: which tables are taken depends entirely
   // on which day is being asked about, so the date sits beside the tabs rather
   // than inside a panel.
-  const [day, setDay] = useState(() => dayKey(new Date()));
+  // The wizard's own day while it holds the page; else a `?day=` the wizard
+  // handed back, so the map opens on the evening that was just booked.
+  const [day, setDay] = useState(() => {
+    const asked = flow?.day ?? searchParams.get('day');
+    return asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : dayKey(new Date());
+  });
 
   // The schedule: a month either side of the chosen day, PAST AND FUTURE —
   // "who was at table 12 last Saturday" is exactly what it is opened for.
@@ -222,27 +266,12 @@ export const FloorMapPage = () => {
   const [openTableId, setOpenTableId] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   /**
-   * The booking being drafted from the map, and WHICH KIND OF EVENING it is.
-   *
-   * `menuKind` is null by default and may stay null: choosing is optional, and
-   * a booking saved without it is recorded as "menu not selected" rather than
-   * quietly filed as a banquet. That matters because the two kinds are priced
-   * in completely different ways, and guessing would put a table package on a
-   * party that is eating a la carte.
+   * The booking being drafted, and WHICH KIND OF EVENING it is — the wizard's,
+   * read straight off it. Derived rather than held: only the wizard drafts a
+   * booking now, and a copy in state here is a second place for the name to
+   * be typed into and disagree with the first.
    */
-  const [booking, setBooking] = useState<{ name: string; phone: string; time: string; menuKind: MenuKind } | null>(null);
-  /**
-   * The booking whose food order is being composed, once it exists.
-   *
-   * The event is CREATED FIRST and the order is built against it, rather than
-   * both being assembled and sent together: an order has to belong to a
-   * booking (that is its `eventId`), and a party with food but no booking is
-   * not a thing this product can hold. It also means a supervisor who abandons
-   * the dish basket still has the evening in the book — which is the whole
-   * reason the menu is optional.
-   */
-  const [ordering, setOrdering] = useState<{ eventNumber: number; customerName: string; when: string; guestCount: number } | null>(null);
-  const [orderError, setOrderError] = useState<string | null>(null);
+  const booking = flow ? { name: flow.name, phone: flow.phone, time: flow.time, menuKind: flow.kind } : null;
   /**
    * The existing booking whose tables are being filled in.
    *
@@ -255,16 +284,6 @@ export const FloorMapPage = () => {
   const [busyBooking, setBusyBooking] = useState(false);
   const navigate = useNavigate();
   const role = useAuthStore((s) => s.role);
-  /**
-   * The restaurant the kiosk is opened FOR.
-   *
-   * The banquet chooser is a kiosk page, and the kiosk loads its menu, halls
-   * and packages from `?restaurantId=` — with none it renders its chrome and no
-   * data at all, which is what "no restaurant data loads when selecting a
-   * banquet" was. The Events page's own hand-over has always passed it; this
-   * one did not.
-   */
-  const restaurantId = useAuthStore((s) => s.restaurantId) ?? '';
   const svgRef = useRef<SVGSVGElement>(null);
 
   const stored = current ? areaSize(current, areaTables) : { width: 0, height: 0 };
@@ -314,6 +333,13 @@ export const FloorMapPage = () => {
     () => Object.entries(picked).map(([floorTableId, guestCount]) => ({ floorTableId, guestCount })),
     [picked],
   );
+  /**
+   * The head count the seating must fit inside, or null when the tables decide
+   * it. An existing booking is priced on its own figure; a new one is capped
+   * only if the wizard's details stage was given one — the same rule the kiosk
+   * applies, and the server refuses an over-seated booking either way.
+   */
+  const seatCap = assigning ? assigning.guestCount : (flow?.guestCount ?? null) || null;
 
   /**
    * Whether tables can be ARRANGED right now — moved, resized, re-seated.
@@ -371,7 +397,6 @@ export const FloorMapPage = () => {
     setMerging(null);
     setOpenBooking(null);
     setOpenTableId(null);
-    setBooking(null);
     setAssigning(null);
     setPicked({});
   };
@@ -544,8 +569,8 @@ export const FloorMapPage = () => {
     setPicked((prev) => {
       const next = { ...prev };
       if (table.id in next) { delete next[table.id]; return next; }
-      const left = assigning
-        ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), assigning.guestCount)
+      const left = seatCap
+        ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), seatCap)
         : null;
       if (left === 0) return next;
       next[table.id] = left === null ? table.seats : Math.min(table.seats, left);
@@ -593,6 +618,24 @@ export const FloorMapPage = () => {
     patchCache((m) => ({ ...m, tables: [...m.tables.filter((x) => !ids.includes(x.id)), row] }));
     setMerging(null);
     setSelectedId(row.id);
+    if (booking) {
+      // Merging happens while a booking is being taken now, and the reason
+      // somebody pushes tables together there is to seat THIS party at them —
+      // so the merged table is reserved for it at once. The tables it replaced
+      // no longer exist, so their reservations go with them (a booking naming
+      // a deleted table would be refused by the server).
+      setPicked((prev) => {
+        const next: Record<string, number> = {};
+        for (const [id, g] of Object.entries(prev)) if (!ids.includes(id)) next[id] = g;
+        const left = seatCap
+          ? seatsRemaining(Object.entries(next).map(([id, g]) => ({ floorTableId: id, guestCount: g })), seatCap)
+          : null;
+        if (left !== 0) next[row.id] = left === null ? row.seats : Math.min(row.seats, left);
+        return next;
+      });
+      setFlash(t('fm_merged_reserved', { label: row.label, seats: row.seats }));
+      return;
+    }
     setFlash(t('fm_merged', { label: row.label, seats: row.seats }));
   };
 
@@ -677,15 +720,21 @@ export const FloorMapPage = () => {
   };
 
   /**
-   * Create a booking from the map — the admin's own path, beside the kiosk's.
+   * Create the booking — stage 3's last act, the wizard's step to the next.
    * The tables are what was picked on the plan; the server re-checks them
-   * against the day and derives the head count from them.
+   * against the day. A typed head count WINS (it is what a banquet is priced
+   * on); without one the tables supply the figure.
+   *
+   * What happens next — the banquet planner, the service-order basket, or back
+   * to the map — is the wizard's, so it is handed the new booking rather than
+   * this page navigating anywhere.
    */
   const saveBooking = async () => {
-    if (!booking || !current) return;
+    if (!booking || !flow || !current) return;
     const wholeArea = pickedList.length === 0;
     const kind = booking.menuKind;
-    const guests = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    const seated = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    const guests = seatCap ?? seated;
     const time = booking.time || '19:00';
     setBusyBooking(true);
     setFlash(null);
@@ -697,121 +746,26 @@ export const FloorMapPage = () => {
         guestCount: guests,
         // "Menu not selected" is an EVENT STATUS this product already has, and
         // is the Events page's own default for a booking nobody has chosen a
-        // menu for — so a map booking with no kind lands in exactly the state
-        // the rest of the app already understands, rather than in a second
-        // notion of the same thing. It still holds its tables: only a
-        // CANCELLED booking holds nothing (utils/floorBooking.ts).
+        // menu for — so a booking with no kind lands in exactly the state the
+        // rest of the app already understands, rather than in a second notion
+        // of the same thing. It still holds its tables: only a CANCELLED
+        // booking holds nothing (utils/floorBooking.ts).
         status: kind ? 'CONFIRMED' : 'MENU_NOT_SELECTED',
         hallId: current.id,
         floorTables: pickedList,
         wholeHall: wholeArea,
         // The kind is recorded on the BOOKING at the moment it is taken, even
         // though the menu itself is chosen next: a party whose supervisor
-        // walked away from the dish basket is still a food-service evening,
+        // walked away from the dish basket is still a service-order evening,
         // and an evening with no kind at all reads as "not decided" rather
         // than defaulting to a banquet nobody priced.
         ...(kind ? { menuConfig: { sessionKind: kind } as never } : {}),
       });
-      setBooking(null);
       setPicked({});
       await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
-      setFlash(kind
-        ? t('fm_booking_saved', { number: String(created.id) })
-        // Said plainly, because nothing else on the screen would: the booking
-        // is in the book and its menu is still outstanding.
-        : `${t('fm_booking_saved', { number: String(created.id) })} ${t('status_menu_not_selected')}`);
-
-      if (kind === 'banquet') {
-        // The banquet chooser is the kiosk's, and it is the SAME flow the
-        // Events page hands over to — halls, table packages, courses. Handing
-        // it a draft that names the event means the menu is saved back onto
-        // this booking rather than creating a second one.
-        useTabletStore.getState().loadEventDraft({
-          editingEventId: created.id,
-          hallId: current.id,
-          tableCategoryId: '',
-          guestCount: guests,
-          customerName: booking.name.trim(),
-          customerPhone: booking.phone.trim(),
-          secondCustomerName: '',
-          secondCustomerPhone: '',
-          eventDate: day,
-          eventTime: time,
-          config: null,
-          // The question has been answered on this screen — the kiosk must not
-          // ask the guest "Banquet or General Dining?" one press later.
-          sessionKind: 'banquet',
-          // And the tables are already reserved: the kiosk shows no plan and
-          // sends no `floorTables`, so confirming a menu cannot release them.
-          floorLocked: true,
-        });
-        navigate(`/tablet?restaurantId=${encodeURIComponent(restaurantId)}&prefill=1`);
-        return;
-      }
-      if (kind === 'dining') {
-        setOrderError(null);
-        setOrdering({
-          eventNumber: created.id,
-          customerName: booking.name.trim(),
-          when: `${day} ${time}`,
-          guestCount: guests,
-        });
-      }
+      flow.onCreated({ eventNumber: created.id, hallId: current.id, guests });
     } catch (error) {
       setNotice(t('fm_booking_failed', { message: errorText(error) }));
-    } finally {
-      setBusyBooking(false);
-    }
-  };
-
-  /**
-   * Place the party's food order, and record it on the booking.
-   *
-   * TWO writes, in this order and not the other way round: the order is what
-   * the kitchen and the waiter work from, so it is created first and the
-   * booking's own copy of the menu follows. If the second one fails the party
-   * still gets fed — the Events page would be missing the summary, which is a
-   * reporting gap rather than a missing meal. The reverse would be a booking
-   * that claims food nobody was ever asked to cook.
-   */
-  const placeOrder = async (draft: OrderDraft) => {
-    if (!ordering) return;
-    const items = Object.entries(draft.lines)
-      .filter(([, quantity]) => quantity > 0)
-      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
-    if (items.length === 0) return;
-    setBusyBooking(true);
-    setOrderError(null);
-    try {
-      const order = await orderService.placeForBooking({
-        eventNumber: ordering.eventNumber,
-        comment: draft.comment.trim() || null,
-        items,
-      });
-      const lines = order.items.map((line) => ({
-        menuItemId: line.menuItemId,
-        name: line.nameSnapshot,
-        quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents,
-      }));
-      const portions = lines.reduce((sum, line) => sum + line.quantity, 0);
-      await eventService.update(ordering.eventNumber, {
-        menuConfig: {
-          sessionKind: 'dining',
-          diningOrder: {
-            orderId: order.id,
-            placedAt: order.createdAt,
-            lines,
-            portions,
-            totalCents: lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0),
-          },
-        } as never,
-      });
-      setOrdering(null);
-      setFlash(t('sbo_sent', { number: String(ordering.eventNumber), portions }));
-      await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
-    } catch (error) {
-      setOrderError(t('sbo_failed', { message: errorText(error) }));
     } finally {
       setBusyBooking(false);
     }
@@ -821,7 +775,6 @@ export const FloorMapPage = () => {
   const startAssigning = (b: MapBooking) => {
     setOpenBooking(null);
     setOpenTableId(null);
-    setBooking(null);
     setPicked({});
     setFlash(null);
     // Its own area, so the tables being picked are the ones it was booked into.
@@ -1383,8 +1336,8 @@ export const FloorMapPage = () => {
   const bookingTablePanel = (table: MapTable) => {
     const holder = holders.get(table.id);
     const reserved = table.id in picked;
-    const left = assigning
-      ? seatsRemaining(pickedList.filter((s) => s.floorTableId !== table.id), assigning.guestCount)
+    const left = seatCap
+      ? seatsRemaining(pickedList.filter((s) => s.floorTableId !== table.id), seatCap)
       : null;
     const full = !reserved && left === 0;
     return (
@@ -1402,10 +1355,10 @@ export const FloorMapPage = () => {
           </p>
         )}
         {full && <p className="fm-notice" style={{ margin: 0 }}>{t('fm_seats_left_none')}</p>}
-        {reserved && tableSteppers(assigning ? assigning.guestCount : null).filter(Boolean).length > 0 && (
+        {reserved && tableSteppers(seatCap).filter(Boolean).length > 0 && (
           <div className="fm-default">
             <span className="fm-caption">{t('guest_count')}</span>
-            {tableSteppers(assigning ? assigning.guestCount : null)}
+            {tableSteppers(seatCap)}
           </div>
         )}
         {tablePanel(table)}
@@ -1498,13 +1451,9 @@ export const FloorMapPage = () => {
         <p className="fm-caption" style={{ margin: 0 }}>{stats}</p>
         <p className="fm-caption" style={{ margin: 0 }}>{t('fm_map_size')}: {stored.width} × {stored.height}</p>
         <button type="button" className="adm-btn-primary" onClick={() => void addTable()}>{t('fm_add_table_here')}</button>
-        {/* Merging is furniture being pushed together, so it belongs to this
-            editor — and it starts here rather than from a selected table,
-            because it is a question about SEVERAL of them. */}
-        <button type="button" className="adm-btn-ghost" disabled={areaTables.length < 2}
-          onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
-          {t('fm_merge')}
-        </button>
+        {/* Merging is NOT here any more: it moved into taking a booking
+            (BookingWizardPage, stage 3), because tables are pushed together
+            for a party — the moment somebody knows the party is ten. */}
         {flash && <p className="fm-flash" role="status">{flash}</p>}
       </div>
     );
@@ -1825,83 +1774,61 @@ export const FloorMapPage = () => {
     );
   };
 
-  /** The booking being drafted from the map. */
+  /**
+   * The booking being taken — stage 3 of the wizard.
+   *
+   * What was typed on the stages before is shown as FACTS with one way back to
+   * change it, not as fields again: a second copy of the name field here is a
+   * second place to type it, and the two would disagree. What this stage asks
+   * for is the tables — reserve, re-seat, merge — and the one primary button
+   * says what pressing it leads to.
+   */
   const bookingForm = () => {
-    const guests = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
+    if (!flow || !booking) return null;
+    const seated = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
     const wholeArea = pickedList.length === 0;
+    const kindText = booking.menuKind === 'banquet' ? t('menu_kind_banquet')
+      : booking.menuKind === 'dining' ? t('menu_kind_dining')
+      : t('menu_kind_skip');
+    const next = booking.menuKind === 'banquet' ? t('bw_next_banquet')
+      : booking.menuKind === 'dining' ? t('bw_next_dining')
+      : t('bw_next_skip');
     return (
       <div className="fm-form">
+        <dl className="fm-facts">
+          <dt>{t('bw_stage_type')}</dt><dd>{kindText}</dd>
+          <dt>{t('fm_booked_by')}</dt><dd>{booking.name}</dd>
+          {booking.phone && (<><dt>{t('customer_phone')}</dt><dd>{booking.phone}</dd></>)}
+          <dt>{t('fm_day')}</dt><dd>{day} · {booking.time}</dd>
+          {seatCap !== null && (<><dt>{t('guest_count')}</dt><dd>{seatCap}</dd></>)}
+        </dl>
+        <button type="button" className="adm-btn-ghost" onClick={flow.onBack}>‹ {t('bw_edit_details')}</button>
+
         <p className="fm-caption" style={{ margin: 0 }}>
           {wholeArea
             ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
-            : t('fm_total_guests', { count: guests })}
+            : seatCap !== null
+              ? t('fm_seated_of', { seated, of: seatCap })
+              : t('fm_total_guests', { count: seated })}
         </p>
-        <label>
-          <span>{t('customer_name')}</span>
-          <input className="adm-input" value={booking!.name} autoFocus
-            onChange={(e) => setBooking({ ...booking!, name: e.target.value })} />
-        </label>
-        <label>
-          <span>{t('customer_phone')}</span>
-          <input className="adm-input" type="tel" value={booking!.phone}
-            onChange={(e) => setBooking({ ...booking!, phone: e.target.value })} />
-        </label>
-        {/* The DAY, here with the rest of the booking's details rather than
-            only up beside the tabs.
-            It is the SAME value the map is drawn for — not a second date that
-            could disagree with the plan underneath it — so changing it here
-            moves the map, and what is free changes with it. Which is also why
-            it drops the tables picked so far: they were picked from another
-            day's plan, where a table that is free today may be taken. */}
-        <label>
-          <span>{t('fm_day')}</span>
-          <input className="adm-input" type="date" value={day}
-            onChange={(e) => {
-              setDay(e.target.value || dayKey(new Date()));
-              setPicked({});
-              setOpenBooking(null);
-              setOpenTableId(null);
-            }} />
-        </label>
-        <label>
-          <span>{t('event_time')}</span>
-          <input className="adm-input" type="time" value={booking!.time}
-            onChange={(e) => setBooking({ ...booking!, time: e.target.value })} />
-        </label>
-        {tableSteppers(null)}
+        {tableSteppers(seatCap)}
 
-        {/* WHICH KIND OF EVENING. Optional, and the three options are shown
-            together rather than as a tick-box plus a hidden branch: "banquet"
-            and "food service" are priced in entirely different ways, so the
-            choice is a fork in the booking and reads as one. "Decide later"
-            is a real option with its own line, because leaving a question
-            unanswered by pressing nothing is how people answer it by
-            accident. */}
-        <div className="fm-kind">
-          <span className="fm-caption">{t('menu_kind_question')}</span>
-          {([
-            ['banquet', 'menu_kind_banquet', 'menu_kind_banquet_hint'],
-            ['dining', 'menu_kind_dining', 'menu_kind_dining_hint'],
-            [null, 'menu_kind_skip', 'menu_kind_skip_hint'],
-          ] as const).map(([kind, label, hint]) => (
-            <button key={label} type="button"
-              className={`fm-kind-option${booking!.menuKind === kind ? ' is-on' : ''}`}
-              aria-pressed={booking!.menuKind === kind}
-              onClick={() => setBooking({ ...booking!, menuKind: kind })}>
-              <strong>{t(label)}</strong>
-              <span className="fm-caption">{t(hint)}</span>
-            </button>
-          ))}
-          <p className="fm-caption" style={{ margin: 0 }}>{t('menu_kind_optional')}</p>
-        </div>
-
-        <button type="button" className="adm-btn-primary"
-          disabled={busyBooking || !booking!.name.trim() || (wholeArea && !canTakeWholeArea)}
-          onClick={() => void saveBooking()}>
-          {t('fm_create')}
+        {/* Merging lives HERE now, not in the layout editor: tables are pushed
+            together for a party, and this is the moment somebody knows the
+            party is ten. The merged table is reserved for the booking at once
+            (see mergeChosen). */}
+        <button type="button" className="adm-btn-ghost" disabled={areaTables.length < 2}
+          onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
+          {t('fm_merge')}
         </button>
-        <button type="button" className="adm-btn-ghost" onClick={() => { setBooking(null); setPicked({}); }}>
-          {t('cancel')}
+
+        <button type="button" className="adm-btn-primary fm-book-btn"
+          disabled={busyBooking || !booking.name.trim() || (wholeArea && !canTakeWholeArea)}
+          onClick={() => void saveBooking()}>
+          {busyBooking ? t('loading') : next}
+        </button>
+        <button type="button" className="adm-btn-ghost" onClick={flow.onCancel}>
+          {t('bw_cancel')}
         </button>
       </div>
     );
@@ -1910,52 +1837,30 @@ export const FloorMapPage = () => {
   // ── Page ──────────────────────────────────────────────────────────────────
 
   return (
-    <main className="fm-page" style={{ maxWidth: 1600, margin: '0 auto', padding: '28px 20px', position: 'relative', zIndex: 1 }}>
+    <main className={`fm-page${flow ? ' is-flow' : ''}`}>
+      {/* In the wizard the stage list and its tip take the title's place. */}
+      {flow && flow.header}
       <div className="fm-head">
-        <div>
-          <h1 className="adm-title" style={{ margin: 0 }}>{t('fm_title')}</h1>
-          <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_subtitle')}</p>
-        </div>
+        {!flow && (
+          <div>
+            <h1 className="adm-title" style={{ margin: 0 }}>{t('fm_title')}</h1>
+            <p className="fm-caption" style={{ margin: '6px 0 0' }}>{t('fm_subtitle')}</p>
+          </div>
+        )}
         <div className="fm-toolbar">
-          {/* Taking a booking is what this page is FOR, so it sits with the two
-              editors rather than among the day's utilities, and it is the one
-              highlighted control up here. It was in the day bar beside "Print
-              map", which read as another thing you might do to the day. */}
-          {!editing && (
-            <button type="button"
-              className={booking ? 'adm-btn-ghost' : 'adm-btn-primary fm-book-btn'}
-              disabled={!current}
-              title={booking ? undefined : t('fm_new_booking_hint')}
-              onClick={() => {
-                setBooking(booking ? null : { name: '', phone: '', time: '19:00', menuKind: null });
-                setPicked({});
-                setOpenBooking(null);
-                setOpenTableId(null);
-                setAssigning(null);
-              }}>
-              {booking ? t('cancel') : `+ ${t('fm_new_booking')}`}
-            </button>
-          )}
-          {/* A rule between the ACT and the tools. Taking a booking and
-              rearranging the furniture are different kinds of thing, and in one
-              flat row of four buttons the highlighted one read as merely the
-              first of them. The separator is hidden when it would be the first
-              or last thing in the row — a stray vertical tick against the edge
-              — which `:first-child`/`:last-child` cannot express here because
-              the row's contents change with the mode. */}
-          {!editing && current && <span aria-hidden="true" className="fm-toolbar-sep" />}
+          {/* "+ New booking" is not here any more: it is in the section's
+              header beside the Tablet link (SupervisorLayout), and opens the
+              booking wizard as a page of its own. */}
           {arranging && (
             <button type="button" className="adm-btn-ghost" disabled={!current} onClick={() => void addTable()}>
               {t('fm_add_table')}
             </button>
           )}
-          {/* Merging is up here as well as in the area's panel, for the reason
-              the shape palette is always up in the drawing editor: the panel
-              belongs to whatever is SELECTED, so with a table selected — which
-              is what tapping a table does — the panel's own button is not on
-              the screen, and nothing says that deselecting would bring it
-              back. Found in a browser. */}
-          {editingTables && !merging && (
+          {/* Merging belongs to taking a booking. Up here as well as in the
+              booking's panel because the panel belongs to whatever is
+              SELECTED — with a table selected the panel's own button is off
+              the screen, and nothing says deselecting would bring it back. */}
+          {booking && !merging && (
             <button type="button" className="adm-btn-ghost" disabled={!current || areaTables.length < 2}
               onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
               {t('fm_merge')}
@@ -1965,16 +1870,22 @@ export const FloorMapPage = () => {
               off, and `switchMode` is the one place that drops the selections
               and any drag in flight — a table selected in the layout editor
               means nothing to the drawing editor. */}
-          <button type="button" className={editingTables ? 'adm-btn-primary' : 'adm-btn-ghost'}
-            aria-pressed={editingTables} disabled={!current}
-            onClick={() => switchMode(editingTables ? 'view' : 'tables')}>
-            {editingTables ? t('fm_done') : t('fm_edit_tables')}
-          </button>
-          <button type="button" className={editingZones ? 'adm-btn-primary' : 'adm-btn-ghost'}
-            aria-pressed={editingZones} disabled={!current}
-            onClick={() => switchMode(editingZones ? 'view' : 'zones')}>
-            {editingZones ? t('fm_done') : t('fm_edit')}
-          </button>
+          {/* Not while a booking is being taken: the wizard's stage 3 already
+              arranges tables, and the drawing is not what a booking is about. */}
+          {!flow && (
+            <>
+              <button type="button" className={editingTables ? 'adm-btn-primary' : 'adm-btn-ghost'}
+                aria-pressed={editingTables} disabled={!current}
+                onClick={() => switchMode(editingTables ? 'view' : 'tables')}>
+                {editingTables ? t('fm_done') : t('fm_edit_tables')}
+              </button>
+              <button type="button" className={editingZones ? 'adm-btn-primary' : 'adm-btn-ghost'}
+                aria-pressed={editingZones} disabled={!current}
+                onClick={() => switchMode(editingZones ? 'view' : 'zones')}>
+                {editingZones ? t('fm_done') : t('fm_edit')}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -2003,7 +1914,34 @@ export const FloorMapPage = () => {
 
       {/* The day the map is a picture OF. Which tables are taken depends
           entirely on it, so it sits with the tabs rather than in a panel. */}
-      {!editing && (
+      {/* In the wizard the DAY was chosen on the details stage, and the way to
+          change it is "Change details" — two date fields for one booking
+          would be two answers to one question. Only the legend stays. */}
+      {!editing && flow && (
+        <div className="fm-daybar" role="status">
+          <span className="fm-caption">{t('fm_day')}: <strong>{day}</strong></span>
+          {/* What the callout says on the plain map, said here in one line:
+              the stage's tip already explains what to press, so a second
+              box saying it again only pushes the plan down the screen. */}
+          <span className="fm-flow-picked">
+            {pickedList.length === 0
+              ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
+              : t('fm_picked_tables', {
+                count: pickedList.length,
+                labels: pickedList
+                  .map((s) => areaTables.find((x) => x.id === s.floorTableId)?.label)
+                  .filter(Boolean).join(', '),
+              })}
+          </span>
+          <span className="fm-legend">
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-free)' }} />{t('fm_free')}</span>
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-partly)' }} />{t('fm_partly')}</span>
+            <span><i className="fm-swatch" style={{ background: 'var(--fm-taken)' }} />{t('fm_taken')}</span>
+            <span>{t('fm_occupancy_summary', { taken: takenHere, total: areaTables.length })}</span>
+          </span>
+        </div>
+      )}
+      {!editing && !flow && (
         <div className="fm-daybar">
           <label className="fm-caption" htmlFor="fm-day">{t('fm_day')}</label>
           <input id="fm-day" type="date" className="adm-input" value={day}
@@ -2042,14 +1980,14 @@ export const FloorMapPage = () => {
           page makes, which the map used to leave out entirely. Drawn as a
           notice rather than on the plan: they take no table, and picking one
           for them would invent an arrangement nobody made. */}
-      {!editing && pendingHere.length > 0 && (
+      {!editing && !flow && pendingHere.length > 0 && (
         <section className="fm-pending">
           <p className="fm-pending-head">{t('fm_pending_head', { count: pendingHere.length })}</p>
           <p className="fm-caption" style={{ margin: 0 }}>{t('fm_pending_hint')}</p>
           <div className="fm-pending-list">
             {pendingHere.map((b) => (
               <button key={b.id} type="button" className="fm-sched-row"
-                onClick={() => { setBooking(null); setAssigning(null); setPicked({}); setOpenBooking(b); }}>
+                onClick={() => { setAssigning(null); setPicked({}); setOpenBooking(b); }}>
                 <span className="fm-sched-when">{clockOf(b.eventDate)}</span>
                 <span className="fm-sched-who">#{b.eventNumber} {b.customerName}</span>
                 <span className="fm-sched-what">{t('guest_count')}: {b.guestCount}</span>
@@ -2064,7 +2002,7 @@ export const FloorMapPage = () => {
           the plan, and nothing else on the screen asks for it. It also carries
           the count, so "I have picked three" is answerable without counting
           the steppers in the panel. */}
-      {booking ? (
+      {flow ? null : booking ? (
         <div className="fm-callout" role="status">
           <strong>{t('fm_new_booking_hint')}</strong>
           <span>
@@ -2271,46 +2209,36 @@ export const FloorMapPage = () => {
         </aside>
       </div>
 
-      {/* The dish basket, once the booking exists. A full-screen overlay
-          rather than a panel: it is the whole job for as long as it is open,
-          and the map underneath has nothing to contribute to it. */}
-      {ordering && (
-        <SmallBanquetOrderSheet
-          booking={ordering}
-          t={t}
-          locale={locale}
-          busy={busyBooking}
-          error={orderError}
-          // Leaving it does NOT undo the booking: the evening is in the book
-          // and its menu is outstanding, which is exactly the state "decide
-          // later" produces and the Events page already shows.
-          onCancel={() => { setOrdering(null); setOrderError(null); }}
-          onPlace={(draft) => void placeOrder(draft)}
-        />
-      )}
-
       <style>{`
-        .fm-kind { display: grid; gap: 8px; }
-        .fm-kind-option {
-          display: grid; gap: 2px; text-align: left; cursor: pointer;
-          padding: 10px 12px; border-radius: 4px;
-          border: 1px solid var(--adm-line); background: rgba(var(--adm-text-rgb), 0.03);
-          color: inherit;
+        /* Stage 3 of the booking wizard: the plan takes the whole screen. The
+           wizard puts this page in a full-screen layer of its own; here it
+           drops the reading width and gives the plan the height. */
+        .fm-page.is-flow {
+          max-width: none; min-height: 100vh; padding: 14px 20px 20px;
+          display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-content: start;
         }
-        .fm-kind-option.is-on {
-          border-color: var(--adm-accent); background: rgba(var(--adm-accent-rgb), 0.12);
+        /* Everything spans the page except the area tabs and the toolbar,
+           which share one row — on the plain map they are two. */
+        .fm-page.is-flow > * { grid-column: 1 / -1; min-width: 0; }
+        .fm-page.is-flow > .fm-tabs { grid-column: 1; grid-row: 2; margin-top: 10px; }
+        .fm-page.is-flow > .fm-head { grid-column: 2; grid-row: 2; align-self: end; margin-top: 10px; }
+        .fm-page.is-flow .fm-daybar { margin: 10px 0; }
+        .fm-page.is-flow > .fm-flash, .fm-page.is-flow > .fm-notice { margin: 0 0 10px; }
+        .fm-flow-picked { font-size: 13px; font-weight: 600; color: var(--adm-accent); }
+        /* The stage strip, a size down above the plan — on a desktop only;
+           a phone has its own one-row strip (BookingWizardPage). */
+        @media (min-width: 761px) {
+          .fm-page.is-flow .bw-title { font-size: 20px; }
+          .fm-page.is-flow .bw-stage { padding: 6px 10px; }
+          .fm-page.is-flow .bw-stage-num { flex-basis: 24px; height: 24px; font-size: 12px; }
+          .fm-page.is-flow .bw-tip { padding: 7px 12px; }
         }
-        .fm-kind-option strong { font-size: 14px; }
+        .fm-page.is-flow .bw-stages-wrap { gap: 8px; }
+        .fm-page.is-flow .fm-scroll { height: calc(100vh - 330px); max-height: none; min-height: 340px; }
+        .fm-page.is-flow .fm-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+        .fm-page.is-flow .fm-panel { top: 14px; max-height: calc(100vh - 28px); overflow-y: auto; }
         .fm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
         .fm-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
-        .fm-toolbar-sep {
-          width: 1px; align-self: stretch; margin: 2px 4px;
-          background: linear-gradient(180deg, transparent, var(--adm-line) 20%, var(--adm-line) 80%, transparent);
-          flex: 0 0 1px;
-        }
-        /* On a phone the toolbar's buttons each take a full row, so a vertical
-           rule between them would be a 1px tick in the middle of nowhere. */
-        @media (max-width: 640px) { .fm-toolbar-sep { display: none; } }
         .fm-caption { font-size: 13px; color: rgba(var(--adm-text-rgb), 0.6); }
         .fm-notice {
           margin: 0 0 14px; padding: 10px 14px; border-radius: 4px; font-size: 13px;
@@ -2418,6 +2346,7 @@ export const FloorMapPage = () => {
            these as literals beside the rules, so changing a fill changed the
            plan and left the legend describing the old one. */
         .fm-page {
+          max-width: 1600px; margin: 0 auto; padding: 28px 20px; position: relative; z-index: 1;
           --fm-free: rgb(var(--adm-surface-rgb));
           --fm-taken: rgba(239, 68, 68, 0.92);
           --fm-taken-line: #ef4444;
@@ -2613,11 +2542,17 @@ export const FloorMapPage = () => {
         .fm-area-form-actions { display: flex; gap: 8px; }
 
         @media (max-width: 1100px) {
-          .fm-layout { grid-template-columns: minmax(0, 1fr); }
+          .fm-layout, .fm-page.is-flow .fm-layout { grid-template-columns: minmax(0, 1fr); }
           .fm-panel { position: static; }
+          .fm-page.is-flow .fm-scroll { height: auto; max-height: 70vh; min-height: 0; }
+          .fm-page.is-flow .fm-panel { max-height: none; overflow: visible; }
         }
         @media (max-width: 640px) {
-          .fm-page { padding: 20px 16px !important; }
+          .fm-page, .fm-page.is-flow { padding: 16px; }
+          /* One column on a phone: the tools go under the tabs again. */
+          .fm-page.is-flow { grid-template-columns: minmax(0, 1fr); }
+          .fm-page.is-flow > .fm-head { grid-column: 1; grid-row: auto; }
+          .fm-page.is-flow > .fm-tabs { grid-row: auto; }
           .fm-area-form { grid-template-columns: 1fr; }
           .fm-toolbar { width: 100%; }
           .fm-toolbar button { flex: 1; }

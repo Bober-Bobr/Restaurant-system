@@ -10,7 +10,7 @@ import type { Event } from '../types/domain';
  *
  * The pure half is `utils/eventMenuKind.ts`; the chain around it is read from
  * the source, the house style where there is no DOM. What matters here is that
- * the three answers stay three — banquet, food service, and nobody has chosen —
+ * the three answers stay three — banquet, service order, and nobody has chosen —
  * because the first two are priced in completely different ways and the third
  * must not quietly become one of them.
  */
@@ -19,6 +19,8 @@ const strip = (code: string) => code.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')
 const src = (rel: string) => strip(readFileSync(join(WEB, rel), 'utf8'));
 
 const map = src('pages/FloorMapPage.tsx');
+const wiz = src('pages/BookingWizardPage.tsx');
+const layout = src('app/SupervisorLayout.tsx');
 const sheet = src('pages/SmallBanquetOrderSheet.tsx');
 const list = src('components/events/EventList.tsx');
 
@@ -77,14 +79,23 @@ describe('which kind a booking is', () => {
   });
 });
 
-describe('the map asks, and the answer is optional', () => {
+describe('the wizard asks FIRST, and the answer is optional', () => {
   it('all three options are offered together, including "decide later"', () => {
     // Leaving a question unanswered by pressing nothing is how people answer
-    // it by accident, so the third option is a row of its own.
+    // it by accident, so the third option is a card of its own.
+    const kinds = wiz.slice(wiz.indexOf("draft.stage === 1 && ("), wiz.indexOf("draft.stage === 2 && ("));
     for (const key of ['menu_kind_banquet', 'menu_kind_dining', 'menu_kind_skip']) {
-      expect(map, key).toContain(key);
+      expect(kinds, key).toContain(key);
     }
-    expect(map).toContain("t('menu_kind_optional')");
+  });
+
+  it('choosing a type IS the step — it moves straight to the details', () => {
+    expect(wiz).toMatch(/onClick=\{\(\) => patch\(\{ kind: value, stage: 2 \}\)\}/);
+  });
+
+  it('"decide later" reaches the map as NO kind, never as a banquet', () => {
+    expect(wiz).toMatch(/const toMenuKind = \(kind: WizardKind\): MenuKind => \(kind === 'banquet' \|\| kind === 'dining' \? kind : null\)/);
+    expect(wiz).toContain('kind: toMenuKind(kind)');
   });
 
   it('nothing chosen creates the booking with the MENU_NOT_SELECTED status', () => {
@@ -93,38 +104,57 @@ describe('the map asks, and the answer is optional', () => {
 
   it('and the kind is written onto the booking as it is taken', () => {
     // A party whose supervisor walked away from the dish basket is still a
-    // food-service evening.
+    // service-order evening.
     expect(map).toMatch(/\.\.\.\(kind \? \{ menuConfig: \{ sessionKind: kind \}/);
+  });
+
+  it('the map hands the new booking BACK rather than deciding what comes next', () => {
+    const save = map.slice(map.indexOf('const saveBooking = async'), map.indexOf('const startAssigning'));
+    expect(save).toMatch(/flow\.onCreated\(\{ eventNumber: created\.id, hallId: current\.id, guests \}\)/);
+    expect(save).not.toContain('navigate(');
+    expect(save).not.toContain('loadEventDraft');
   });
 
   it('"banquet" hands over to the KIOSK\'s own chooser, naming the booking', () => {
     // The same flow the Events page hands over to. Without `editingEventId`
     // the kiosk would create a second booking on confirm.
-    expect(map).toContain('loadEventDraft({');
-    expect(map).toMatch(/editingEventId: created\.id/);
+    const created = wiz.slice(wiz.indexOf('const onCreated = '), wiz.indexOf('const placeOrder = async'));
+    expect(created).toContain('loadEventDraft({');
+    expect(created).toMatch(/editingEventId: created\.eventNumber/);
+    expect(created).toContain("sessionKind: 'banquet'");
+    expect(created).toContain('floorLocked: true');
     // WITH THE RESTAURANT. The kiosk loads its menu, halls and packages from
-    // `?restaurantId=`; without it the page rendered its chrome and no data at
-    // all, which is what "no restaurant data loads when selecting a banquet"
-    // was. The Events page's own hand-over has always passed it.
-    expect(map).toMatch(/navigate\(`\/tablet\?restaurantId=\$\{encodeURIComponent\(restaurantId\)\}&prefill=1`\)/);
+    // `?restaurantId=`; without it the page rendered its chrome and no data.
+    expect(created).toMatch(/navigate\(`\/tablet\?restaurantId=\$\{encodeURIComponent\(restaurantId\)\}&prefill=1`\)/);
   });
 
-  it('"food service" opens the dish basket for the booking just created', () => {
-    expect(map).toMatch(/if \(kind === 'dining'\) \{[\s\S]{0,200}setOrdering\(\{/);
-    expect(map).toMatch(/eventNumber: created\.id/);
+  it('"service order" opens the dish basket for the booking just created', () => {
+    const created = wiz.slice(wiz.indexOf('const onCreated = '), wiz.indexOf('const placeOrder = async'));
+    expect(created).toMatch(/if \(kind === 'dining'\) \{[\s\S]{0,120}stage: 4, created/);
+    expect(wiz).toMatch(/draft\.stage === 4 && kind === 'dining' && draft\.created/);
+  });
+
+  it('"decide later" goes straight back to the map, saying what it saved', () => {
+    const created = wiz.slice(wiz.indexOf('const onCreated = '), wiz.indexOf('const placeOrder = async'));
+    expect(created).toMatch(/leave\(t\('bw_saved_no_menu'/);
   });
 
   it('leaving the basket does not undo the booking', () => {
     // Which is exactly the state "decide later" produces, and the Events page
     // already shows it.
-    const cancel = map.slice(map.indexOf('onCancel={() => { setOrdering(null)'));
-    expect(cancel.slice(0, 120)).toContain('setOrderError(null)');
-    expect(cancel.slice(0, 120)).not.toContain('eventService');
+    const cancel = wiz.slice(wiz.indexOf('onCancel={() => leave('));
+    expect(cancel.slice(0, 160)).toContain('bw_saved_order_later');
+    expect(cancel.slice(0, 160)).not.toContain('eventService');
+  });
+
+  it('a booking is never created twice — a reload on stage 4 reopens the basket', () => {
+    expect(wiz).toMatch(/created: \{ eventNumber: number; hallId: string; guests: number \} \| null/);
+    expect(wiz).toContain('useSessionDraft<Draft>(DRAFT_KEY');
   });
 });
 
 describe('placing the party\'s order', () => {
-  const place = map.slice(map.indexOf('const placeOrder = async'), map.indexOf('const startAssigning'));
+  const place = wiz.slice(wiz.indexOf('const placeOrder = async'), wiz.indexOf('const fullScreen'));
 
   it('sends ids and quantities only — the price is the server\'s', () => {
     expect(place).toMatch(/\.map\(\(\[menuItemId, quantity\]\) => \(\{ menuItemId, quantity \}\)\)/);
@@ -213,35 +243,76 @@ describe('the Events page shows the type AND the menu', () => {
   });
 });
 
-describe('taking a booking is what the page is for', () => {
+describe('taking a booking is what the section is for', () => {
   const raw = readFileSync(join(WEB, 'pages/FloorMapPage.tsx'), 'utf8');
 
-  it('the button sits with the two editors, and is the highlighted one', () => {
-    // It was in the day bar beside "Print map", which read as another thing
-    // you might do to the day rather than the point of the page.
-    const toolbar = map.slice(map.indexOf('<div className="fm-toolbar">'), map.indexOf('</div>', map.indexOf('fm_edit\')}')));
-    expect(toolbar).toContain("t('fm_new_booking')");
-    expect(toolbar).toContain('fm-book-btn');
-    // And before both editors in the row.
-    expect(toolbar.indexOf("t('fm_new_booking')")).toBeLessThan(toolbar.indexOf("t('fm_edit_tables')"));
-    // Not in the day bar any more.
-    const daybar = map.slice(map.indexOf('className="fm-daybar"'), map.indexOf('fm-legend'));
-    expect(daybar).not.toContain('fm_new_booking');
+  it('"+ New booking" is in the HEADER, beside the tablet, and opens the wizard', () => {
+    const book = layout.indexOf('to="/book"');
+    const tablet = layout.indexOf('to={`/tablet?restaurantId=');
+    expect(book).toBeGreaterThan(-1);
+    // Next to the Tablet link, before it.
+    expect(book).toBeLessThan(tablet);
+    expect(layout.slice(book, tablet)).toContain("t('bw_new_booking')");
   });
 
-  it('it only exists on the day view — an editor is not where a booking is taken', () => {
-    expect(map).toMatch(/\{!editing && \(\s*<button type="button"\s*className=\{booking \?/);
+  it('and is gone from the floor map\'s own toolbar', () => {
+    const toolbar = map.slice(map.indexOf('<div className="fm-toolbar">'), map.indexOf('className="fm-tabs"'));
+    expect(toolbar).not.toContain("t('fm_new_booking')");
+    expect(map).not.toContain('setBooking(');
   });
 
-  it('pressing it asks for tables, in a callout rather than grey caption', () => {
-    // The next thing that has to happen is a press on the plan, and nothing
-    // else on the screen asked for it.
-    expect(map).toMatch(/\{booking \? \(\s*<div className="fm-callout" role="status">/);
-    expect(map).toContain("<strong>{t('fm_new_booking_hint')}</strong>");
-    // With the running count, so "I have picked three" needs no counting.
-    expect(map).toContain("t('fm_picked_tables', {");
-    // And the button itself carries the same sentence as a tooltip.
-    expect(map).toMatch(/title=\{booking \? undefined : t\('fm_new_booking_hint'\)\}/);
+  it('the wizard is its own route', () => {
+    expect(src('app/App.tsx')).toMatch(/<Route path="\/book" element=\{<BookingWizardPage \/>\} \/>/);
+  });
+
+  it('every stage shows the numbered stages, named as headings, and a tip', () => {
+    const stages = wiz.slice(wiz.indexOf('export const BookingStages'), wiz.indexOf('export const BookingWizardPage'));
+    expect(stages).toContain('<ol className="bw-stages"');
+    expect(stages).toContain('<h3 className="bw-stage-name">');
+    expect(stages).toContain("aria-current={n === stage ? 'step' : undefined}");
+    expect(stages).toContain('{stageTip(stage, kind, t)}');
+    // Stages 1–2, the full-screen plan, and the basket all carry it.
+    expect(wiz).toContain('{stages}');
+    expect(wiz).toContain('header: stages,');
+    expect(wiz).toContain('steps={stages}');
+    expect(map).toContain('{flow && flow.header}');
+    expect(sheet).toContain('{steps && <div className="sbo-steps">{steps}</div>}');
+  });
+
+  it('stage 4 is NAMED by the type — it is the banquet planner, the order, or the map', () => {
+    const title = wiz.slice(wiz.indexOf('const stageTitle'), wiz.indexOf('const stageTip'));
+    for (const key of ['bw_stage_menu_banquet', 'bw_stage_menu_dining', 'bw_stage_menu_skip']) expect(title).toContain(key);
+  });
+
+  it('the plan is FULL SCREEN, portalled above the layout, in the section\'s own look', () => {
+    // The layout's <main> is a stacking context of z-index 1, so a fixed layer
+    // inside it would sit under the sticky masthead.
+    expect(wiz).toMatch(/createPortal\(\(\s*<div className="adm-bg svr-theme bw-full"/);
+    expect(wiz).toContain('position: fixed; inset: 0;');
+    const flowRule = raw.slice(raw.indexOf('.fm-page.is-flow {'), raw.indexOf('}', raw.indexOf('.fm-page.is-flow {')));
+    expect(flowRule).toContain('max-width: none; min-height: 100vh;');
+  });
+
+  it('in the plan the details are FACTS with one way back, not fields typed twice', () => {
+    const form = map.slice(map.indexOf('const bookingForm = ()'), map.indexOf("className={`fm-page"));
+    expect(form).not.toMatch(/<input/);
+    expect(form).toContain('onClick={flow.onBack}');
+    // And the day is the wizard's — the plan has no date field of its own then.
+    expect(map).toMatch(/\{!editing && !flow && \(\s*<div className="fm-daybar">/);
+  });
+
+  it('the head count typed on the details CAPS the seating', () => {
+    expect(map).toMatch(/const seatCap = assigning \? assigning\.guestCount : \(flow\?\.guestCount \?\? null\) \|\| null;/);
+    expect(map).toContain('const guests = seatCap ?? seated;');
+  });
+
+  it('the running count of picked tables rides the day row, not a second box above the plan', () => {
+    // The stage's tip already says what to press; a callout saying it again
+    // only pushed the plan down a screen that is meant to be the plan's.
+    expect(map).toMatch(/\{flow \? null : booking \? \(\s*<div className="fm-callout" role="status">/);
+    const row = map.slice(map.indexOf('{!editing && flow && ('), map.indexOf('{!editing && !flow && ('));
+    expect(row).toContain('className="fm-flow-picked"');
+    expect(row).toContain("t('fm_picked_tables', {");
   });
 
   it('and the PLAN beckons — the free tables, never the taken ones', () => {
@@ -249,28 +320,15 @@ describe('taking a booking is what the page is for', () => {
     expect(map).toMatch(/\$\{booking \|\| assigning \? ' is-booking' : ''\}/);
     expect(raw).toMatch(/\.fm-svg\.is-booking \.fm-table-group:not\(\.is-taken\):not\(\.is-partly\):not\(\.is-picked\) \.fm-top/);
     expect(raw).toContain('@keyframes fm-beckon');
-    // Switched off under reduced motion, with the ring left in place — that is
-    // the half that carries the meaning.
     const reduced = raw.slice(raw.indexOf('@media (prefers-reduced-motion: reduce) {\n          .fm-svg.is-booking'));
     expect(reduced.slice(0, 160)).toContain('animation: none');
     expect(reduced.slice(0, 160)).toContain('stroke-opacity');
   });
 
-  it('the DAY is a field on the booking form, and it is the map\'s own day', () => {
-    // Not a second date that could disagree with the plan underneath it.
-    const form = map.slice(map.indexOf('const bookingForm = ()'), map.indexOf('{tableSteppers(null)}', map.indexOf('const bookingForm = ()')));
-    expect(form).toMatch(/type="date" value=\{day\}/);
-    expect(form).toContain("t('fm_day')");
-    // Above the time, and both before the table steppers.
-    expect(form.indexOf("t('fm_day')")).toBeLessThan(form.indexOf("t('event_time')"));
-  });
-
-  it('and changing it drops the tables picked from the other day\'s plan', () => {
-    // A table that is free today may be taken tomorrow; keeping the picks
-    // would offer a booking the server then refuses.
-    const form = map.slice(map.indexOf('const bookingForm = ()'));
-    const onChange = form.slice(form.indexOf('type="date" value={day}'), form.indexOf("t('event_time')"));
-    expect(onChange).toContain('setDay(');
-    expect(onChange).toContain('setPicked({})');
+  it('the DAY is asked on the details, before the plan it is drawn for', () => {
+    const details = wiz.slice(wiz.indexOf('draft.stage === 2 && ('));
+    expect(details).toMatch(/type="date" value=\{draft\.day\}/);
+    expect(details.indexOf("t('fm_day')")).toBeLessThan(details.indexOf("t('event_time')"));
+    expect(map).toContain('const asked = flow?.day ??');
   });
 });

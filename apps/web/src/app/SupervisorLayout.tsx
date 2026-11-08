@@ -201,7 +201,9 @@ export const SupervisorLayout = () => {
             alt={restaurantName ?? 'Logo'}
             style={{ height: 36, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
-          <div style={{ minWidth: 0 }}>
+          {/* Clips rather than spills: on a phone the header also carries the
+              booking button, and the section badge used to slide under it. */}
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <p style={{
               margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--adm-title)',
               textTransform: 'uppercase', letterSpacing: '0.08em',
@@ -209,7 +211,7 @@ export const SupervisorLayout = () => {
             }}>
               {restaurantName ?? PLATFORM_TITLE}
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(var(--adm-text-rgb),0.5)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(var(--adm-text-rgb),0.5)', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
               {username}
               <span className="adm-badge" style={{
                 background: 'rgba(var(--adm-accent-rgb),0.14)',
@@ -222,6 +224,26 @@ export const SupervisorLayout = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            {/* Taking a booking is what this section is FOR, so it is in the
+                header on every page, beside the tablet — not a button on the
+                floor map's own toolbar, where it read as one tool among four.
+                It opens the booking wizard, a page of its own. */}
+            <Link
+              to="/book"
+              className="svr-book"
+              aria-current={isActive('/book') ? 'page' : undefined}
+              title={t('bw_new_booking')}
+              style={{
+                padding: '7px 14px', borderRadius: 3, fontSize: 13, fontWeight: 700,
+                textDecoration: 'none', color: 'var(--adm-accent-ink)',
+                background: 'var(--adm-accent)',
+                boxShadow: '0 0 0 2px rgba(var(--adm-accent-rgb),0.25)',
+                display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+              }}
+            >
+              <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+              <span className="svr-book-label">{t('bw_new_booking')}</span>
+            </Link>
             <Link
               to={`/tablet?restaurantId=${tabletRestaurantId}`}
               style={{
@@ -365,6 +387,11 @@ export const SupervisorLayout = () => {
           .svr-rail { display: none !important; }
           .svr-nav-toggle { display: inline-flex !important; align-items: center; justify-content: center; }
           .svr-locale, .svr-logout { display: none !important; }
+        }
+        /* On a phone the header carries a logo, the name, three buttons and
+           the bell; the booking button keeps its "+" and loses its words. */
+        @media (max-width: 520px) {
+          .svr-book-label { display: none; }
         }
       `}</style>
     </div>

@@ -260,7 +260,7 @@ describe('the admin map', () => {
     // picker and no table picker — and they were nowhere on the map at all,
     // which is what "events created for a hall do not appear" was.
     expect(admin).toContain('unassignedBookings(occupancy, current.id)');
-    expect(admin).toContain('!editing && pendingHere.length > 0 && (');
+    expect(admin).toContain('!editing && !flow && pendingHere.length > 0 && (');
     expect(admin).toContain("t('fm_pending_head', { count: pendingHere.length })");
   });
 

@@ -4426,3 +4426,40 @@ No migration. Web only (plus the bundled photos and film).
   marketing card). New builder label: `sec_film`.
 - Check after deploy: open it from the template chooser, tap the seal on a
   phone, press "Continue" and see the film play, switch RU/UZ/EN.
+
+## §94 — Small Banquets: the booking wizard; merging moves into it; "Service order"
+
+No migration, no API change. Web only.
+
+- **"+ New booking" is in the section's header**, beside "Tablet", on every
+  page — not on the floor map's toolbar any more. It opens a page of its own,
+  `supervisor.v-menu.uz/<slug>/book` ([BookingWizardPage.tsx](apps/web/src/pages/BookingWizardPage.tsx)), in four
+  numbered stages, each with a tip:
+  1. **Type of event** — Banquet · Service order · Decide later (asked FIRST
+     now; a press moves straight on).
+  2. **Booking details** — name (required), phone, guest count (optional — it
+     caps the seating), day, time, and the area when there is more than one.
+  3. **Tables** — the real floor map, full screen: reserve, re-seat, move,
+     add, delete and **merge** tables. The details show as facts with a
+     "Change details" link back.
+  4. **Menu** — what the type chose: Banquet opens the kiosk's banquet planner
+     prefilled (as before); Service order opens the dish basket with the stage
+     list across its top; Decide later goes back to the map, which says what
+     was saved.
+  The booking is created at the end of stage 3, exactly as before; leaving
+  earlier writes nothing. The draft survives a reload (session storage), and a
+  reload on stage 4 reopens the basket for the booking already made.
+- **Merging tables left "Change table layout"** and lives in stage 3, in the
+  toolbar and the booking panel. A table merged there is **reserved for the
+  booking at once**, and the tables it replaced drop out of the reservation.
+  The server-side merge (and its refusal when a later booking holds one of the
+  tables) is unchanged.
+- **"Food service" is now "Service order"** for this booking kind wherever it
+  shows — the wizard, the dish basket's title, the Events list and its search
+  card (`menu_kind_dining*`, `sbo_title`, en/ru/uz). Left as they were: the
+  waiter's work-area name (`wa_dining`), the Catering admin's settings note,
+  the owner's report labels, and the kiosk's own "General dining" session —
+  those are the catering product, not this booking kind.
+- Check after deploy, signed in as a supervisor: press "+ New booking", take
+  each of the three types through to the end; in stage 3 merge two tables and
+  see the merged one reserved; on a phone, the header button shows "+" only.
