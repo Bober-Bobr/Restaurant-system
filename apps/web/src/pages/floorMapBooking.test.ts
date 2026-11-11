@@ -32,7 +32,12 @@ describe('the kiosk is not asked what the map already knows', () => {
     expect(store).toMatch(/sessionKind: d\.sessionKind \?\? null,/);
     // Still "not asked yet" when nobody has answered — the Events page's own
     // hand-over passes none, and the chooser must still appear there.
-    expect(src('pages/AdminEventsPage.tsx')).not.toContain('sessionKind');
+    // The banquet app's own hand-over still names none. (Small Banquets' menu
+    // button names 'banquet' — but only for a booking that HAS a banquet
+    // menu, which answered the question already.)
+    const events = src('pages/AdminEventsPage.tsx');
+    const plain = events.slice(events.indexOf('const goToTabletWithDraft'), events.indexOf('const smallBanquet ='));
+    expect(plain).not.toContain('sessionKind');
     // And the chooser is the thing that reads it.
     expect(src('pages/TabletMenuPage.tsx')).toContain('sessionKind === null');
   });

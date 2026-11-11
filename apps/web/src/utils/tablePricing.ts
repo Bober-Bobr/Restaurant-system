@@ -40,3 +40,32 @@ export function effectiveRatePerPerson(
   const off = removedDishesCents(tableCategory.packageItems, removedPackageItemIds);
   return Math.max(0, tableCategory.ratePerPerson - off);
 }
+
+/**
+ * How many portions of each paid Additional dish are CHARGED.
+ *
+ * Two rules, by section:
+ *
+ * - **Banquet**: an extra is a tick, and a ticked dish is served to every
+ *   guest — charged × the head count.
+ * - **Small Banquets**: an extra is ordered by the PORTION (a host orders six
+ *   plov for a table of twenty), so it is charged × the quantity ordered. Spread
+ *   over the party that is `price × quantity ÷ guests` on top of the per-person
+ *   rate, which is exactly what `usePriceCalculator` produces once it is handed
+ *   the quantities: per-person = (rate × guests + Σ price × qty) ÷ guests.
+ *
+ * One function, so the menu page's running total, the summary and the PDF
+ * cannot charge a party two different ways.
+ */
+export function chargedExtras(
+  selected: Readonly<Record<string, number>>,
+  guestCount: number,
+  byQuantity: boolean,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [id, quantity] of Object.entries(selected)) {
+    if (!(quantity > 0)) continue;
+    out[id] = byQuantity ? quantity : Math.max(guestCount, 0);
+  }
+  return out;
+}

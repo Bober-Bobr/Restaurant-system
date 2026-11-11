@@ -144,6 +144,7 @@ export class OrderService {
     eventNumber: number,
     lines: OrderLineInput[],
     comment: string | null,
+    replace = false,
   ) {
     const event = await prisma.event.findFirst({
       where: { restaurantId, eventNumber, section },
@@ -164,24 +165,45 @@ export class OrderService {
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .join(', ');
 
+    // Editing the menu replaces the order — but only one nobody is serving
+    // yet. An OPEN order is a party already being fed, and swapping its dishes
+    // under the waiter is not something this screen should do silently.
+    if (replace) {
+      const serving = await prisma.order.count({
+        where: { eventId: event.id, workArea: 'SMALL_BANQUET', status: ORDER_STATUS.open },
+      });
+      if (serving > 0) throw createHttpError(409, 'A waiter is already serving this order, so its dishes can no longer be changed here.');
+    }
+
+    const write = (db: Prisma.TransactionClient | typeof prisma) => db.order.create({
+      data: {
+        restaurantId,
+        eventId: event.id,
+        workArea: 'SMALL_BANQUET',
+        code: generateCode(),
+        // Generated although nobody holds it: every order has one by
+        // schema, and a nullable secret would be a second shape for every
+        // guest-side path to allow for. Nothing displays it here.
+        guestToken: generateGuestToken(),
+        status: ORDER_STATUS.pending,
+        tableNumber: tables || null,
+        comment: comment?.trim() || null,
+        items: { create: items },
+      },
+      include: ORDER_INCLUDE,
+    });
+
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
-        return await prisma.order.create({
-          data: {
-            restaurantId,
-            eventId: event.id,
-            workArea: 'SMALL_BANQUET',
-            code: generateCode(),
-            // Generated although nobody holds it: every order has one by
-            // schema, and a nullable secret would be a second shape for every
-            // guest-side path to allow for. Nothing displays it here.
-            guestToken: generateGuestToken(),
-            status: ORDER_STATUS.pending,
-            tableNumber: tables || null,
-            comment: comment?.trim() || null,
-            items: { create: items },
-          },
-          include: ORDER_INCLUDE,
+        if (!replace) return await write(prisma);
+        // The old order is cancelled in the SAME transaction the new one is
+        // written in, so the kitchen never sees two orders for one party.
+        return await prisma.$transaction(async (tx) => {
+          await tx.order.updateMany({
+            where: { eventId: event.id, workArea: 'SMALL_BANQUET', status: ORDER_STATUS.pending },
+            data: { status: ORDER_STATUS.cancelled },
+          });
+          return write(tx);
         });
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') continue;

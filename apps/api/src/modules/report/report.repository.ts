@@ -85,6 +85,8 @@ export async function bookings(restaurantIds: string[], from: Date, to: Date) {
       hallId: true, restaurantId: true,
       tableCategory: { select: { ratePerPerson: true } },
       selections: { select: { quantity: true, unitPriceCents: true } },
+      // The agreed kiosk total and a service order's total live here (utils/invoice.ts).
+      menuConfig: true,
       payments: { select: { amountCents: true } },
     },
   });
@@ -112,6 +114,8 @@ export async function calendarBookings(restaurantIds: string[], from: Date, to: 
       depositCents: true, hallId: true, restaurantId: true, wholeHall: true,
       tableCategory: { select: { ratePerPerson: true } },
       selections: { select: { quantity: true, unitPriceCents: true } },
+      // The agreed kiosk total and a service order's total live here (utils/invoice.ts).
+      menuConfig: true,
       payments: { select: { amountCents: true } },
       floorTables: { select: { floorTable: { select: { label: true } } } },
     },

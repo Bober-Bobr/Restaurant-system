@@ -51,6 +51,27 @@ const CASES: { name: string; event: Event }[] = [
     event: { guestCount: 0, depositCents: 0, tableCategory: { ratePerPerson: 250_000_00 }, selections: [], payments: [] } as unknown as Event,
   },
   {
+    name: 'a kiosk booking — the AGREED total replaces the package rate',
+    event: {
+      guestCount: 20, depositCents: 0, tableCategory: { ratePerPerson: 100_000_00 }, selections: [], payments: [],
+      menuConfig: { invoiceTotalCents: 2_450_000_00 },
+    } as unknown as Event,
+  },
+  {
+    name: 'a service order — its own total, with no package at all',
+    event: {
+      guestCount: 12, depositCents: 0, tableCategory: null, selections: [], payments: [{ amountCents: 100_000_00 }],
+      menuConfig: { sessionKind: 'dining', diningOrder: { totalCents: 780_000_00, lines: [] } },
+    } as unknown as Event,
+  },
+  {
+    name: 'a nonsense stored figure is ignored, not believed',
+    event: {
+      guestCount: 10, depositCents: 0, tableCategory: { ratePerPerson: 50_000_00 }, selections: [], payments: [],
+      menuConfig: { invoiceTotalCents: '9999', diningOrder: { totalCents: -5 } },
+    } as unknown as Event,
+  },
+  {
     name: 'nulls where the API hands back nulls',
     event: { guestCount: 5, depositCents: null, tableCategory: null, selections: [], payments: [] } as unknown as Event,
   },
@@ -75,5 +96,32 @@ describe('the two invoice implementations agree', () => {
       menuConfig: { extras: { dish: 1 } } } as unknown as Event;
     expect(web.invoiceTotalCents(withConfig)).toBe(100);
     expect(api.invoiceTotalCents(withConfig as unknown as api.InvoiceEvent)).toBe(100);
+  });
+});
+
+describe('what an invoice is made of', () => {
+  it('a service-order booking is owed its order, not zero', () => {
+    const event = {
+      guestCount: 12, depositCents: 0, tableCategory: null, selections: [], payments: [],
+      menuConfig: { diningOrder: { totalCents: 780_000_00, lines: [] } },
+    } as unknown as Event;
+    expect(web.invoiceTotalCents(event)).toBe(780_000_00);
+    expect(web.invoiceOutstandingCents(event)).toBe(780_000_00);
+  });
+
+  it('a kiosk booking is owed what the kiosk confirmed, extras and discount included', () => {
+    const event = {
+      guestCount: 20, depositCents: 0, tableCategory: { ratePerPerson: 100_000_00 }, selections: [], payments: [],
+      menuConfig: { invoiceTotalCents: 2_450_000_00 },
+    } as unknown as Event;
+    expect(web.invoiceTotalCents(event)).toBe(2_450_000_00);
+  });
+
+  it('a booking from before the stored total falls back to the package rate', () => {
+    const event = {
+      guestCount: 20, depositCents: 0, tableCategory: { ratePerPerson: 100_000_00 }, selections: [], payments: [],
+      menuConfig: { firstCourseId: 'x' },
+    } as unknown as Event;
+    expect(web.invoiceTotalCents(event)).toBe(2_000_000_00);
   });
 });

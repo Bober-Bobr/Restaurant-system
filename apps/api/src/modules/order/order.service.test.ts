@@ -490,6 +490,33 @@ describe('a party\'s food order', () => {
   it('a dish that is off the menu now is refused, not silently dropped', async () => {
     expect(await statusOf(() => service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'ghost', quantity: 1 }], null))).toBe(409);
   });
+  describe('editing it from the Events page REPLACES it', () => {
+    it('the waiting order is cancelled in the same transaction the new one is written in', async () => {
+      prismaMock.order.count.mockResolvedValue(0);
+      const tx = { order: { updateMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: 'o-new' }) } };
+      prismaMock.$transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+      const placed = await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 3 }], null, true);
+      expect(placed).toEqual({ id: 'o-new' });
+      expect(tx.order.updateMany).toHaveBeenCalledWith({
+        where: { eventId: 'ev-cuid', workArea: 'SMALL_BANQUET', status: ORDER_STATUS.pending },
+        data: { status: ORDER_STATUS.cancelled },
+      });
+      // Nothing written outside the transaction.
+      expect(prismaMock.order.create).not.toHaveBeenCalled();
+    });
+
+    it('but an order a waiter is already serving is not swapped out from under them', async () => {
+      prismaMock.order.count.mockResolvedValue(1);
+      expect(await statusOf(() => service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 3 }], null, true))).toBe(409);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('a first order is still a plain create — nothing is cancelled', async () => {
+      await service.placeForBooking(RESTAURANT, 'SMALL_BANQUET', 42, [{ menuItemId: 'm1', quantity: 3 }], null);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+      expect(prismaMock.order.create).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe('the floor a waiter is working decides what they see', () => {

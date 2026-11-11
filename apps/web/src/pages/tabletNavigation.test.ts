@@ -96,7 +96,9 @@ describe('a paid dish is offered where its course is chosen', () => {
 
   it('it toggles as a paid extra, leaving the free course alone', () => {
     expect(menu).toContain('if (option.paid) { onTogglePaid?.(item.id); return; }');
-    expect(menu).toContain('const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : 1);');
+    // One portion per tick in the banquet kiosk; one per GUEST to start with
+    // in Small Banquets, which sells an extra by the portion (chargedExtras).
+    expect(menu).toContain('const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : (extrasByQuantity ? Math.max(guestCount, 1) : 1));');
     // A checkbox, not a radio, even inside a single-select course: it is an
     // addition, not an alternative.
     expect(menu).toContain('const checkbox = option.paid || group.multi;');

@@ -117,8 +117,17 @@ export type BookingFlow = {
   /** The stage list and the stage's tip, drawn where the page title would be. */
   header: ReactNode;
   onBack: () => void;
-  onCancel: () => void;
   onCreated: (created: { eventNumber: number; hallId: string; guests: number }) => void;
+  /**
+   * The booking already exists (its menu is being created from the Events
+   * page): stage 3 UPDATES it rather than creating a second one, and its own
+   * tables are free for it to keep, drop or swap — they are not "taken".
+   */
+  editingEventNumber?: number | null;
+  /** The tables that booking already holds, picked on arrival. */
+  initialTables?: { floorTableId: string; guestCount: number }[];
+  /** That booking holds the whole area. */
+  initialWhole?: boolean;
 };
 
 type Drag =
@@ -270,10 +279,19 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
 
   // What is taken on the chosen day. Its own query, keyed on the day, so
   // moving the date re-reads occupancy without re-reading the whole map.
-  const { data: occupancy } = useQuery({
+  const { data: dayData } = useQuery({
     queryKey: DAY_KEY(day),
     queryFn: () => floorMapService.day(day),
   });
+  // A booking being re-done in the wizard does not stand in its own way: its
+  // tables are the ones being chosen again, so they are read as free here.
+  const editingNo = flow?.editingEventNumber ?? null;
+  const occupancy = useMemo(
+    () => (dayData && editingNo !== null
+      ? { ...dayData, bookings: dayData.bookings.filter((b) => b.eventNumber !== editingNo) }
+      : dayData),
+    [dayData, editingNo],
+  );
   const { data: schedule } = useQuery({
     queryKey: SCHEDULE_KEY(schedFrom, schedTo),
     queryFn: () => floorMapService.schedule(schedFrom, schedTo),
@@ -376,11 +394,20 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     [occupancy, current],
   );
   /** The booking the admin is drafting, as table id → guests. */
-  const [picked, setPicked] = useState<Record<string, number>>({});
+  const [picked, setPicked] = useState<Record<string, number>>(() =>
+    Object.fromEntries((flow?.initialTables ?? []).map((s) => [s.floorTableId, s.guestCount])));
+  /**
+   * The whole area, chosen ON PURPOSE with its own button. A booking used to
+   * take the whole area simply by having no table picked, so pressing on with
+   * nothing chosen let out an entire venue by accident.
+   */
+  const [wholeChosen, setWholeChosen] = useState(!!flow?.initialWhole && !(flow?.initialTables?.length));
   const pickedList = useMemo(
     () => Object.entries(picked).map(([floorTableId, guestCount]) => ({ floorTableId, guestCount })),
     [picked],
   );
+  // Reserving a table is choosing NOT to take the whole area.
+  useEffect(() => { if (pickedList.length > 0) setWholeChosen(false); }, [pickedList.length]);
   /**
    * The head count the seating must fit inside, or null when the tables decide
    * it. An existing booking is priced on its own figure; a new one is capped
@@ -416,6 +443,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     // A booking is given tables in ONE area, so moving to another ends it.
     setAssigning(null);
     setPicked({});
+    setWholeChosen(false);
     // The flash names what happened to the area being left; it would read as a
     // statement about the new one.
     setFlash(null);
@@ -848,7 +876,8 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
    */
   const saveBooking = async () => {
     if (!booking || !flow || !current) return;
-    const wholeArea = pickedList.length === 0;
+    const wholeArea = pickedList.length === 0 && wholeChosen;
+    if (pickedList.length === 0 && !wholeArea) return;
     const kind = booking.menuKind;
     const seated = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
     const guests = seatCap ?? seated;
@@ -856,7 +885,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
     setBusyBooking(true);
     setFlash(null);
     try {
-      const created = await eventService.create({
+      const fields = {
         customerName: booking.name.trim(),
         customerPhone: booking.phone.trim() || undefined,
         eventDate: new Date(`${day}T${time}`).toISOString(),
@@ -867,7 +896,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         // rest of the app already understands, rather than in a second notion
         // of the same thing. It still holds its tables: only a CANCELLED
         // booking holds nothing (utils/floorBooking.ts).
-        status: kind ? 'CONFIRMED' : 'MENU_NOT_SELECTED',
+        status: (kind ? 'CONFIRMED' : 'MENU_NOT_SELECTED') as 'CONFIRMED' | 'MENU_NOT_SELECTED',
         hallId: current.id,
         floorTables: pickedList,
         wholeHall: wholeArea,
@@ -877,7 +906,16 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         // and an evening with no kind at all reads as "not decided" rather
         // than defaulting to a banquet nobody priced.
         ...(kind ? { menuConfig: { sessionKind: kind } as never } : {}),
-      });
+      };
+      // An existing booking (its menu created from the Events page) is
+      // updated in place. Its menuConfig is left alone unless a kind was
+      // chosen, and the status only moves on from "menu not selected".
+      const created = editingNo !== null
+        ? await eventService.update(editingNo, {
+          ...fields,
+          ...(kind ? {} : { status: undefined }),
+        })
+        : await eventService.create(fields);
       setPicked({});
       await queryClient.invalidateQueries({ queryKey: DAY_KEY(day) });
       flow.onCreated({ eventNumber: created.id, hallId: current.id, guests });
@@ -1885,7 +1923,7 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
   const bookingForm = () => {
     if (!flow || !booking) return null;
     const seated = pickedList.reduce((sum, s) => sum + s.guestCount, 0);
-    const wholeArea = pickedList.length === 0;
+    const nothing = pickedList.length === 0 && !wholeChosen;
     const kindText = booking.menuKind === 'banquet' ? t('menu_kind_banquet')
       : booking.menuKind === 'dining' ? t('menu_kind_dining')
       : t('menu_kind_skip');
@@ -1904,7 +1942,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         <button type="button" className="adm-btn-ghost" onClick={flow.onBack}>‹ {t('bw_edit_details')}</button>
 
         <p className="fm-caption" style={{ margin: 0 }}>
-          {wholeArea
+          {nothing
+            ? t('fm_pick_or_whole')
+            : wholeChosen
             ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
             : seatCap !== null
               ? t('fm_seated_of', { seated, of: seatCap })
@@ -1922,13 +1962,13 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         </button>
 
         <button type="button" className="adm-btn-primary fm-book-btn"
-          disabled={busyBooking || !booking.name.trim() || (wholeArea && !canTakeWholeArea)}
+          disabled={busyBooking || !booking.name.trim() || nothing || (wholeChosen && !canTakeWholeArea)}
           onClick={() => void saveBooking()}>
           {busyBooking ? t('loading') : next}
         </button>
-        <button type="button" className="adm-btn-ghost" onClick={flow.onCancel}>
-          {t('bw_cancel')}
-        </button>
+        {/* Nothing chosen is not "the whole area" any more — it says what is
+            missing instead of letting an entire venue out by default. */}
+        {nothing && <p className="fm-caption fm-need-tables" role="status" style={{ margin: 0 }}>{t('fm_need_tables')}</p>}
       </div>
     );
   };
@@ -1959,6 +1999,24 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
               booking's panel because the panel belongs to whatever is
               SELECTED — with a table selected the panel's own button is off
               the screen, and nothing says deselecting would bring it back. */}
+          {/* The whole area is its OWN, clearly marked choice beside the plan —
+              never what an empty selection silently means. Choosing it drops
+              any picked tables; picking a table drops it again. */}
+          {booking && !merging && (
+            <button type="button"
+              className={`fm-whole-btn ${wholeChosen ? 'adm-btn-primary is-on' : 'adm-btn-ghost'}`}
+              aria-pressed={wholeChosen}
+              disabled={!current || (!wholeChosen && !canTakeWholeArea)}
+              title={!canTakeWholeArea ? t('fm_whole_area_unavailable') : undefined}
+              onClick={() => {
+                if (wholeChosen) { setWholeChosen(false); return; }
+                setPicked({});
+                setSelectedId(null);
+                setWholeChosen(true);
+              }}>
+              {wholeChosen ? `✓ ${t('fm_whole_area_chosen')}` : `▣ ${t('fm_book_whole_area')}`}
+            </button>
+          )}
           {booking && !merging && (
             <button type="button" className="adm-btn-ghost" disabled={!current || areaTables.length < 2}
               onClick={() => { setSelectedId(null); setFlash(null); setMerging([]); }}>
@@ -2027,7 +2085,9 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
           )}
           <span className="fm-flow-picked">
             {pickedList.length === 0
-              ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
+              ? (wholeChosen
+                ? (canTakeWholeArea ? t('fm_whole_area') : t('fm_whole_area_unavailable'))
+                : t('fm_pick_or_whole'))
               : t('fm_picked_tables', {
                 count: pickedList.length,
                 labels: pickedList
@@ -2337,6 +2397,12 @@ export const FloorMapPage = ({ flow }: { flow?: BookingFlow } = {}) => {
         .fm-page.is-flow .fm-daybar { margin: 10px 0; }
         .fm-page.is-flow > .fm-flash, .fm-page.is-flow > .fm-notice { margin: 0 0 10px; }
         .fm-flow-picked { font-size: 13px; font-weight: 600; color: var(--adm-accent); }
+        /* The whole area is a deliberate choice, so it is a button nobody can
+           miss: an accent outline while it is on offer, filled once chosen. */
+        .fm-whole-btn { font-weight: 700; border: 2px solid var(--adm-accent) !important; }
+        .fm-whole-btn.is-on { box-shadow: 0 0 0 3px rgba(var(--adm-accent-rgb), 0.3); }
+        .fm-whole-btn:disabled { border-style: dashed !important; opacity: 0.55; }
+        .fm-need-tables { color: #fcd34d; font-weight: 600; }
         .fm-day-own {
           font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
           color: #fde68a; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4);

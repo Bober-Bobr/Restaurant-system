@@ -20,7 +20,9 @@ import { Select } from '../components/ui/select';
 import { Button } from '../components/ui/button';
 import { formatSum, parseSumToTiyin } from '../utils/currency';
 import { soleHallId } from '../utils/soleHall';
-import { banquetMenuOf, diningOrderOf } from '../utils/eventMenuKind';
+import { banquetMenuOf, diningOrderOf, existingMenuOf } from '../utils/eventMenuKind';
+import { sectionOfRole } from '../utils/section';
+import { seedBookingWizard } from './BookingWizardPage';
 import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../hooks/useSessionDraft';
 
 /**
@@ -494,6 +496,87 @@ export const AdminEventsPage = () => {
     navigate(`/tablet?restaurantId=${encodeURIComponent(tabletRestaurantId)}&prefill=1`);
   };
 
+  /**
+   * Small Banquets' menu button: the SAME screens the booking wizard's last
+   * stage shows, never the bare kiosk Summary.
+   *
+   * - a banquet menu → the kiosk's banquet planner, with every dish already
+   *   chosen, told it is a banquet (no "which evening?" question) and that the
+   *   tables are held (confirming must not release them);
+   * - a service order → the wizard's dish basket with the order's portions in
+   *   it; placing replaces that order instead of adding a second;
+   * - no menu yet → the wizard from its first stage, the details from this
+   *   form filled in and the booking's tables picked on the plan. A booking
+   *   that exists is updated there, never duplicated.
+   */
+  const smallBanquet = sectionOfRole(useAuthStore.getState().role) === 'SMALL_BANQUET';
+  const editingEvent = editingId ? (events ?? []).find((e) => e.id === editingId) : undefined;
+  const hasMenu = existingMenuOf(editingEvent);
+  const openSmallBanquetMenu = () => {
+    const guests = parsePositiveInt(guestCountText) ?? 0;
+    if (editingEvent && hasMenu === 'banquet') {
+      useTabletStore.getState().loadEventDraft({
+        editingEventId: editingEvent.id,
+        hallId,
+        tableCategoryId,
+        guestCount: guests,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        secondCustomerName: secondCustomerName.trim(),
+        secondCustomerPhone: secondCustomerPhone.trim(),
+        depositCents: parseSumToTiyin(depositText) ?? 0,
+        eventDate,
+        eventTime,
+        childrenCount: editingEvent.childrenCount ?? 0,
+        config: editingEvent.menuConfig ?? null,
+        sessionKind: 'banquet',
+        floorLocked: true,
+      });
+      navigate(`/tablet?restaurantId=${encodeURIComponent(tabletRestaurantId)}&prefill=1`);
+      return;
+    }
+    const tables = (editingEvent?.floorTables ?? []).map((row) => ({ floorTableId: row.floorTableId, guestCount: row.guestCount }));
+    const area = editingEvent?.floorTables?.[0]?.floorTable?.hallId ?? hallId ?? '';
+    const details = {
+      name: customerName.trim(),
+      phone: customerPhone.trim(),
+      day: eventDate,
+      time: eventTime || '19:00',
+      guests: guests > 0 ? String(guests) : '',
+      hallId: area,
+      depositCents: parseSumToTiyin(depositText) ?? 0,
+      returnTo: '/events',
+    };
+    if (editingEvent && hasMenu === 'dining') {
+      const order = diningOrderOf(editingEvent)!;
+      seedBookingWizard({
+        ...details,
+        stage: 4,
+        kind: 'dining',
+        created: { eventNumber: editingEvent.id, hallId: area, guests: editingEvent.guestCount },
+        orderInitial: {
+          lines: Object.fromEntries(order.lines
+            .filter((line) => line.menuItemId)
+            .map((line) => [line.menuItemId as string, line.quantity])),
+          comment: order.comment ?? '',
+        },
+        replaceOrder: true,
+      });
+    } else {
+      seedBookingWizard({
+        ...details,
+        stage: 1,
+        editing: editingEvent ? editingEvent.id : null,
+        tables,
+        whole: !!editingEvent?.wholeHall,
+      });
+    }
+    // The form's details have gone to the wizard; left here as well they
+    // would be a second, stale copy waiting to be saved as another booking.
+    clearSessionDraft(EVENT_FORM_DRAFT_KEY);
+    navigate('/book');
+  };
+
   // Deep link from the calendar: /?editEventId=<id> opens that event in the
   // editor once the events have loaded, then clears the param so it doesn't
   // re-trigger on later renders.
@@ -778,11 +861,15 @@ export const AdminEventsPage = () => {
               type="button"
               variant="accent"
               size="lg"
-              onClick={goToTabletWithDraft}
+              onClick={smallBanquet ? openSmallBanquetMenu : goToTabletWithDraft}
               disabled={!tabletRestaurantId}
               style={{
-                background: 'linear-gradient(135deg, var(--rg-accent, var(--adm-accent)), var(--rg-accent-soft, #d9b84a))',
-                color: '#1a1205',
+                // The SECTION's accent — jade in Small Banquets, gold in the
+                // banquet app. It read the KIOSK's accent token first, which no
+                // admin theme redeclares, so it came out banquet gold
+                // everywhere.
+                background: 'linear-gradient(135deg, var(--adm-accent), rgba(var(--adm-accent-rgb), 0.78))',
+                color: 'var(--adm-accent-ink)',
                 fontWeight: 700,
                 fontSize: '1rem',
                 padding: '12px 28px',
@@ -791,7 +878,7 @@ export const AdminEventsPage = () => {
                 animation: 'menuCtaPulse 2.4s ease-in-out infinite',
               }}
             >
-              🍽 {editingId ? t('edit_menu') : t('create_menu')} →
+              🍽 {(smallBanquet ? !!hasMenu : !!editingId) ? t('edit_menu') : t('create_menu')} →
             </Button>
           </div>
         </form>

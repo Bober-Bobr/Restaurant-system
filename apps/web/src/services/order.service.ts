@@ -116,7 +116,7 @@ export const orderService = {
    * Place a booking's food order, from the floor map. Ids and quantities only
    * — the server prices it at the Small Banquets price and snapshots the names.
    */
-  async placeForBooking(payload: { eventNumber: number; comment?: string | null; items: OrderLineInput[] }): Promise<WaiterOrder> {
+  async placeForBooking(payload: { eventNumber: number; comment?: string | null; items: OrderLineInput[]; replace?: boolean }): Promise<WaiterOrder> {
     const { data } = await httpClient.post('/orders/booking', payload);
     return data;
   },

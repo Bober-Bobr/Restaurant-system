@@ -88,6 +88,7 @@ export class OrderController {
       payload.eventNumber,
       payload.items,
       payload.comment ?? null,
+      payload.replace === true,
     );
     response.status(201).json(order);
   }

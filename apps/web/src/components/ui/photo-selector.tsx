@@ -238,6 +238,8 @@ export const PhotoSelector = (props: PhotoSelectorProps) => {
                     style={{ display: 'block', width: '100%', height: '100%', padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in' }}
                   >
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={getPhotoUrl(photoUrl)}
                       alt=""
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -330,6 +332,8 @@ export const PhotoSelector = (props: PhotoSelectorProps) => {
                 style={{ flexShrink: 0, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer' }}
               >
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={getPhotoUrl(selectedPhotoUrl)}
                   alt="Selected"
                   style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }}
@@ -385,6 +389,8 @@ export const PhotoSelector = (props: PhotoSelectorProps) => {
                   onClick={() => handlePhotoClick(photoUrl)}
                 >
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={getPhotoUrl(photoUrl)}
                     alt=""
                     style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block' }}

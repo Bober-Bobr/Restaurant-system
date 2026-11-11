@@ -25,6 +25,12 @@ export const bookingOrderSchema = z.object({
   eventNumber: z.number().int().positive(),
   comment: z.string().max(500).optional().nullable(),
   items: z.array(orderLineSchema).min(1).max(60),
+  /**
+   * The menu is being EDITED (from the Events page): the booking's order that
+   * nobody has started serving is cancelled in the same transaction, so the
+   * kitchen never sees two orders for one party.
+   */
+  replace: z.boolean().optional(),
 });
 
 export const guestTokenSchema = z.object({

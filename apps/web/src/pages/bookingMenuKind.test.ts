@@ -99,7 +99,7 @@ describe('the wizard asks FIRST, and the answer is optional', () => {
   });
 
   it('nothing chosen creates the booking with the MENU_NOT_SELECTED status', () => {
-    expect(map).toMatch(/status: kind \? 'CONFIRMED' : 'MENU_NOT_SELECTED'/);
+    expect(map).toMatch(/status: \(?kind \? 'CONFIRMED' : 'MENU_NOT_SELECTED'/);
   });
 
   it('and the kind is written onto the booking as it is taken', () => {

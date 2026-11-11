@@ -3,11 +3,32 @@ import type { Event } from '../types/domain';
 // ── Shared invoice math ─────────────────────────────────────────────────────
 // Used by the Invoices page and the debt notifications so both always agree.
 
-/** Total billable price of an event: table package (rate × guests) + dishes. */
+/** A stored money figure, or null — a hand-edited JSON row must not be able to invent one. */
+const centsIn = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+
+/**
+ * Total billable price of an event, in three parts (mirrored in the API's
+ * utils/invoice.ts, held together by invoiceAgreement.test.ts):
+ *
+ *   1. the AGREED total the kiosk confirmed (`menuConfig.invoiceTotalCents`:
+ *      package, extras, children, services, discount or manual figure already
+ *      applied) — or, with none stored, the package rate × guests;
+ *   2. the dishes typed on the Events page (`selections`);
+ *   3. a service order's total (`menuConfig.diningOrder.totalCents`).
+ *
+ * Part 1 used to be the package rate alone, so every booking priced in the
+ * kiosk or by a service order showed a total of zero, and every payment on it
+ * was refused as more than the balance.
+ */
 export function invoiceTotalCents(event: Event): number {
-  const tableRate = (event.tableCategory?.ratePerPerson ?? 0) * event.guestCount;
+  const config = (event.menuConfig ?? null) as
+    { invoiceTotalCents?: unknown; diningOrder?: { totalCents?: unknown } | null } | null;
+  const agreed = centsIn(config?.invoiceTotalCents);
+  const tableRate = agreed ?? (event.tableCategory?.ratePerPerson ?? 0) * event.guestCount;
   const dishes = (event.selections ?? []).reduce((sum, s) => sum + s.quantity * s.unitPriceCents, 0);
-  return tableRate + dishes;
+  const served = centsIn(config?.diningOrder?.totalCents) ?? 0;
+  return tableRate + dishes + served;
 }
 
 /** Everything already paid: the deposit plus all partial payments. */

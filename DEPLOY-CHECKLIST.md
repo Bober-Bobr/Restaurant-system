@@ -4508,3 +4508,42 @@ No migration. Web only (it uses the existing create-table endpoint).
   copy to that date's layout only.
 - Check after deploy: open "Change table layout", select a table, press
   Duplicate twice — two new tables appear next to it with new numbers.
+
+## §97 — Small Banquets fixes: tables required, menu button, invoices, pricing, photos
+
+No migration. API + web (the API change is the `replace` flag on
+`POST /orders/booking`; the invoice total is changed on BOTH sides).
+
+- **Wizard stage 3**: the "Cancel booking" button is gone (✕ Close is the way
+  out). Continuing needs at least one table, or the new **"Book the whole
+  area"** button in the toolbar beside the plan — an empty selection no longer
+  silently books the whole area.
+- **Events page "Create/Edit menu"** (Small Banquets only) is the section's
+  green, and opens the wizard's stage-4 screens:
+  - a booking with a banquet menu → the banquet planner with its dishes chosen
+    (no "which evening?" question; its tables are not released on confirm);
+  - a booking with a service order → the dish basket with the order's
+    portions; placing it **cancels the old order** (only if no waiter has
+    started it — otherwise 409) and writes the new one in one transaction;
+  - no menu yet → "Create menu" opens the wizard at stage 1 with the details
+    filled in and the booking's own tables picked on the plan; stage 3 then
+    UPDATES that booking instead of creating another. A new, unsaved event is
+    created there.
+- **Tablet link** hidden from the Small Banquets header (`SHOW_TABLET_LINK` in
+  SupervisorLayout.tsx). The route still works.
+- **Additional dishes in Small Banquets** are ordered by the portion and
+  charged price × quantity ÷ guests on top of the per-person rate
+  (`chargedExtras`). The banquet kiosk is unchanged (a tick × every guest).
+- **Invoices**: the total now reads the kiosk's confirmed total
+  (`menuConfig.invoiceTotalCents`, written on confirm from now on) and a
+  service order's total (`menuConfig.diningOrder.totalCents`), so those
+  bookings no longer show 0 and can take payments. Banquet bookings confirmed
+  BEFORE this deploy have no stored total and still bill the package rate ×
+  guests until their menu is confirmed again. The owner's reports bill the
+  same total.
+- **Photos page**: draws 48 photos at a time ("Show more"), lazy-loads every
+  image, lighter tiles. The photo picker's images are lazy too.
+- Check after deploy: wizard → stage 3 → Continue is disabled until a table or
+  "Book the whole area" is chosen; Events → edit a service-order booking →
+  "Edit menu" shows its dishes; Invoices shows a non-zero total for it and
+  accepts a payment.

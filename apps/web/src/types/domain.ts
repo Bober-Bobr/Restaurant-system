@@ -51,6 +51,12 @@ export type EventMenuConfig = {
   // column, so recording it needed no migration.
   sessionKind?: 'banquet' | 'dining';
   /**
+   * The total the kiosk CONFIRMED, in tiyin — package, extras, children's
+   * table, services and any discount or manual figure already applied. The
+   * Invoices page bills this rather than re-deriving it (utils/invoice.ts).
+   */
+  invoiceTotalCents?: number;
+  /**
    * The food-service order placed for this booking, as a SNAPSHOT.
    *
    * Written when the supervisor composes the order from the floor map, and
@@ -66,6 +72,8 @@ export type EventMenuConfig = {
   diningOrder?: {
     orderId: string;
     placedAt: string;
+    /** The note for the kitchen, so editing the order later starts from it. */
+    comment?: string;
     /** Snapshotted like OrderItem, for the same reason: this is a record. */
     lines: { menuItemId: string | null; name: string; quantity: number; unitPriceCents: number }[];
     portions: number;

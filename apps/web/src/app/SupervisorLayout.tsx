@@ -41,6 +41,9 @@ const LOCALE_LABELS: Record<Locale, string> = { en: 'EN', ru: 'RU', uz: 'UZ' };
 
 const RAIL_WIDTH = 232;
 
+/** The header's Tablet link — switched off until the owner asks for it back. */
+const SHOW_TABLET_LINK = false;
+
 export const SupervisorLayout = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const username = useAuthStore((state) => state.username);
@@ -244,6 +247,10 @@ export const SupervisorLayout = () => {
               <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>+</span>
               <span className="svr-book-label">{t('bw_new_booking')}</span>
             </Link>
+            {/* Hidden FOR NOW at the owner's request — the route itself and the
+                banquet "Menu" hand-over still reach the kiosk. Flip the flag to
+                bring the link back. */}
+            {SHOW_TABLET_LINK && (
             <Link
               to={`/tablet?restaurantId=${tabletRestaurantId}`}
               style={{
@@ -260,6 +267,7 @@ export const SupervisorLayout = () => {
               </svg>
               {t('tablet')}
             </Link>
+            )}
 
             {/* Overdue small-banquet debts only — see the query above. */}
             <Link

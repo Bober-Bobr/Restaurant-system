@@ -7,7 +7,7 @@ import { orderService } from '../services/order.service';
 import { useAdminStore } from '../store/admin.store';
 import { useAuthStore } from '../store/auth.store';
 import { useTabletStore } from '../store/tablet.store';
-import { useSessionDraft } from '../hooks/useSessionDraft';
+import { useSessionDraft, writeSessionDraft } from '../hooks/useSessionDraft';
 import { dayKey } from '../utils/floorBooking';
 import { translate } from '../utils/translate';
 import { FloorMapPage, type MenuKind } from './FloorMapPage';
@@ -70,6 +70,24 @@ type Draft = {
   hallId: string;
   /** Set once stage 3 has created the booking — never create it twice. */
   created: { eventNumber: number; hallId: string; guests: number } | null;
+  /**
+   * The booking ALREADY EXISTS — its menu is being created from the Events
+   * page. Stage 3 then updates it rather than creating a second one. Optional
+   * so a draft saved before these fields existed still reads.
+   */
+  editing?: number | null;
+  /** The tables that booking holds, picked on the plan when stage 3 opens. */
+  tables?: { floorTableId: string; guestCount: number }[];
+  /** That booking holds the whole area. */
+  whole?: boolean;
+  /** Its deposit, carried to the banquet planner so confirming does not zero it. */
+  depositCents?: number;
+  /** The service order already placed, when that order is being EDITED. */
+  orderInitial?: OrderDraft | null;
+  /** Placing replaces the booking's existing (not yet served) order. */
+  replaceOrder?: boolean;
+  /** Where leaving goes — the Events page when it was opened from there. */
+  returnTo?: string | null;
 };
 
 const DRAFT_KEY = 'vmenu-booking-wizard';
@@ -78,6 +96,17 @@ const STAGES: Stage[] = [1, 2, 3, 4];
 const freshDraft = (): Draft => ({
   stage: 1, kind: null, name: '', phone: '', day: dayKey(new Date()), time: '19:00', guests: '', hallId: '', created: null,
 });
+
+/**
+ * Open the wizard on a booking that already exists, or on details typed
+ * elsewhere — the Events page's "Create menu" / "Edit menu". Written to the
+ * same session draft the wizard restores from, so the caller just navigates
+ * to /book afterwards.
+ */
+export function seedBookingWizard(seed: Partial<Draft>): void {
+  writeSessionDraft(DRAFT_KEY, { ...freshDraft(), ...seed });
+}
+export type WizardSeed = Partial<Draft>;
 
 const toMenuKind = (kind: WizardKind): MenuKind => (kind === 'banquet' || kind === 'dining' ? kind : null);
 
@@ -180,6 +209,7 @@ export const BookingWizardPage = () => {
     if (area) params.set('area', area);
     if (flash) params.set('day', draft.day);
     const qs = params.toString();
+    if (draft.returnTo) { navigate(draft.returnTo); return; }
     navigate(`/${qs ? `?${qs}` : ''}`, { state: flash ? { flash } : null });
   };
 
@@ -204,6 +234,7 @@ export const BookingWizardPage = () => {
         customerPhone: draft.phone.trim(),
         secondCustomerName: '',
         secondCustomerPhone: '',
+        depositCents: draft.depositCents ?? 0,
         eventDate: draft.day,
         eventTime: draft.time || '19:00',
         config: null,
@@ -248,6 +279,9 @@ export const BookingWizardPage = () => {
         eventNumber: created.eventNumber,
         comment: order.comment.trim() || null,
         items,
+        // Editing the menu: the order nobody is serving yet is replaced, in
+        // one transaction on the server, rather than joined by a second.
+        ...(draft.replaceOrder ? { replace: true } : {}),
       });
       const lines = placed.items.map((line) => ({
         menuItemId: line.menuItemId,
@@ -262,6 +296,7 @@ export const BookingWizardPage = () => {
           diningOrder: {
             orderId: placed.id,
             placedAt: placed.createdAt,
+            comment: order.comment.trim() || undefined,
             lines,
             portions,
             totalCents: lines.reduce((sum, line) => sum + line.unitPriceCents * line.quantity, 0),
@@ -305,6 +340,7 @@ export const BookingWizardPage = () => {
         locale={locale}
         busy={busy}
         error={orderError}
+        initial={draft.orderInitial ?? null}
         // Leaving does NOT undo the booking: the evening is in the book and
         // its menu is outstanding — the state "decide later" produces.
         onCancel={() => leave(t('bw_saved_order_later', { number: created.eventNumber }), created.hallId)}
@@ -327,9 +363,11 @@ export const BookingWizardPage = () => {
             time: draft.time || '19:00',
             guestCount: guestCap,
             hallId: draft.hallId || null,
+            editingEventNumber: draft.editing ?? null,
+            initialTables: draft.tables ?? [],
+            initialWhole: !!draft.whole,
             header: stages,
             onBack: () => patch({ stage: 2 }),
-            onCancel: () => leave(),
             onCreated,
           }}
         />
@@ -344,6 +382,9 @@ export const BookingWizardPage = () => {
     <main className="bw-page">
       {stages}
 
+      {draft.editing != null && draft.stage < 3 && (
+        <p className="bw-editing" role="status">{t('bw_editing', { number: draft.editing })}</p>
+      )}
       {draft.stage === 1 && (
         <section className="adm-card bw-card">
           <h2 className="bw-heading">{t('bw_type_heading')}</h2>
@@ -491,6 +532,7 @@ const BW_CSS = `
   .bw-tip-body { display: grid; gap: 2px; min-width: 0; }
   .bw-tip strong { color: var(--adm-accent); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
   .bw-root { min-height: 100vh; }
+  .bw-editing { margin: 0; font-size: 14px; font-weight: 700; color: var(--adm-accent); }
   .bw-close { margin-left: auto; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; }
   .bw-stages-top .bw-step-of { margin-left: auto; }
   .bw-stages-top .bw-step-of + .bw-close { margin-left: 4px; }

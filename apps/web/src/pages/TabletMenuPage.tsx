@@ -1,3 +1,5 @@
+import { chargedExtras } from '../utils/tablePricing';
+import { sectionOfRole } from '../utils/section';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -1954,19 +1956,20 @@ export const TabletMenuPage = () => {
     (item) => COURSE_CATEGORIES.includes(item.category) && isSelectableAdditional(item),
   );
   const paidSelectedIds = Object.keys(selectedItems).filter((id) => (selectedItems[id] ?? 0) > 0);
-  const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : 1);
+  // Small Banquets sells an extra by the PORTION; the banquet kiosk by the tick
+  // (see chargedExtras). A paid course dish ticked here starts at one per guest
+  // in the former, and the Additional section's stepper adjusts it.
+  const extrasByQuantity = sectionOfRole(role) === 'SMALL_BANQUET';
+  const togglePaid = (id: string) => setQuantity(id, (selectedItems[id] ?? 0) > 0 ? 0 : (extrasByQuantity ? Math.max(guestCount, 1) : 1));
 
   // The running total, shown at the foot of the screen while the guest chooses.
   // Extras are served to every guest, so each is priced × the head count — the
   // same rule the Summary and the exports use. With no head count entered the
   // table rate is still a per-person figure, so the panel shows that alone.
-  const pricedSelections = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const id of Object.keys(selectedItems)) {
-      if ((selectedItems[id] ?? 0) > 0) out[id] = Math.max(guestCount, 1);
-    }
-    return out;
-  }, [selectedItems, guestCount]);
+  const pricedSelections = useMemo(
+    () => chargedExtras(selectedItems, Math.max(guestCount, 1), extrasByQuantity),
+    [selectedItems, guestCount, extrasByQuantity],
+  );
   const pricing = usePriceCalculator(
     menuItems ?? [], pricedSelections, selectedTableCategory, Math.max(guestCount, 1), removedPackageItemIds,
   );
@@ -2440,7 +2443,7 @@ export const TabletMenuPage = () => {
                     return (
                     <div key={item.id} className="tablet-fade-up h-full" style={{ animationDelay: `${i * 45}ms` }}>
                       <MenuItemCard item={item} quantity={selectedItems[item.id] ?? 0}
-                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark locale={locale} toggleMode
+                        onQuantityChange={(qty) => setQuantity(item.id, qty)} dark locale={locale} toggleMode={!extrasByQuantity}
                         replace={selectedTableCategory ? {
                           canReplace: candidates.length > 0,
                           activeTargetName: replacedPi ? dishName(replacedPi.menuItem, locale) : null,

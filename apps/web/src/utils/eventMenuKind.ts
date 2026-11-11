@@ -128,3 +128,22 @@ export function banquetMenuOf(
   }
   return lines;
 }
+
+/**
+ * Which menu a booking ALREADY HAS — not which kind it was booked as.
+ *
+ * The Events page's menu button asks this. A booking that has one is opened
+ * on that menu, with what was chosen already chosen: the banquet planner for
+ * a banquet, the service-order basket for a service order. One with none —
+ * including a booking typed as a banquet whose planner was abandoned — is a
+ * booking whose menu is still to be CREATED, and goes through the booking
+ * wizard from its type, with its details and tables carried in.
+ */
+export function existingMenuOf(
+  event: Pick<Event, 'menuConfig' | 'tableCategoryId'> | null | undefined,
+): MenuKind {
+  if (!event) return null;
+  if ((diningOrderOf(event)?.lines?.length ?? 0) > 0) return 'dining';
+  if (event.tableCategoryId || hasAnyCourse(event.menuConfig)) return 'banquet';
+  return null;
+}

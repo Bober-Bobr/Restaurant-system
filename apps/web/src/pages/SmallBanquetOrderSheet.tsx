@@ -147,9 +147,11 @@ const PortionField = ({ value, onChange, label }: { value: number; onChange: (ne
 );
 
 export const SmallBanquetOrderSheet = ({
-  booking, t, locale, busy, error, onCancel, onPlace, steps,
+  booking, t, locale, busy, error, onCancel, onPlace, steps, initial,
 }: {
   booking: OrderSheetBooking;
+  /** The order already placed for this booking, when its menu is being EDITED. */
+  initial?: OrderDraft | null;
   /**
    * The booking wizard's stage list and tip, shown across the top of the
    * sheet. The sheet IS the wizard's last stage for a service order, and a
@@ -165,8 +167,8 @@ export const SmallBanquetOrderSheet = ({
   onCancel: () => void;
   onPlace: (draft: OrderDraft) => void;
 }) => {
-  const [lines, setLines] = useState<Record<string, number>>({});
-  const [comment, setComment] = useState('');
+  const [lines, setLines] = useState<Record<string, number>>(() => ({ ...(initial?.lines ?? {}) }));
+  const [comment, setComment] = useState(initial?.comment ?? '');
   const [search, setSearch] = useState('');
   /** A dish photograph, full size. The thumbnail is a reminder, not a look. */
   const [zoom, setZoom] = useState<string | null>(null);

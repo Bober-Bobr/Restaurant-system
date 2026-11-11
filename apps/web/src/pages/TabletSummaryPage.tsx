@@ -1,3 +1,5 @@
+import { chargedExtras } from '../utils/tablePricing';
+import { sectionOfRole } from '../utils/section';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePriceCalculator } from '../hooks/usePriceCalculator';
@@ -326,13 +328,12 @@ export const TabletSummaryPage = () => {
   // Each selected Extra is served to every guest, so it's priced as
   // price × guestCount. The store only records selection (1/0); the per-guest
   // quantity is derived here from the live guest count for pricing + exports.
-  const pricedSelections = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const id of Object.keys(selectedItems)) {
-      if (selectedItems[id] > 0) out[id] = guestCount;
-    }
-    return out;
-  }, [selectedItems, guestCount]);
+  // In Small Banquets an extra is charged by the portions ordered instead
+  // (price × quantity ÷ guests on the per-person rate) — see chargedExtras.
+  const pricedSelections = useMemo(
+    () => chargedExtras(selectedItems, guestCount, sectionOfRole(role) === 'SMALL_BANQUET'),
+    [selectedItems, guestCount, role],
+  );
 
   const pricing        = usePriceCalculator(menuItems ?? [], pricedSelections, selectedTableCategory, guestCount, removedPackageItemIds);
   // Who the booking is for, when it is, where it is, what package, and for how
@@ -516,6 +517,10 @@ export const TabletSummaryPage = () => {
     // dining booking has no package and no dishes, which otherwise looks
     // exactly like a banquet booking somebody abandoned half-filled.
     sessionKind: session,
+    // What the guest agreed to pay, as confirmed here. The Invoices page bills
+    // this figure: re-deriving it there from the package rate alone left out
+    // the extras, the children's table, the services and any discount.
+    invoiceTotalCents: finalTotalCents,
   });
 
   const handleConfirm = async () => {
@@ -1066,12 +1071,12 @@ export const TabletSummaryPage = () => {
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-xs font-bold"
                           style={{ background: 'var(--rg-accent)', color: 'var(--rg-bg)' }}>
-                          ×{guestCount}
+                          ×{pricedSelections[item.id] ?? guestCount}
                         </span>
                         <p className="text-sm font-medium text-white truncate">{dishName(item, locale)}</p>
                       </div>
                       <p className="text-sm font-semibold whitespace-nowrap" style={{ color: 'var(--rg-accent)' }}>
-                        {formatSum(item.priceCents * guestCount)}
+                        {formatSum(item.priceCents * (pricedSelections[item.id] ?? guestCount))}
                       </p>
                     </div>
                   ))}
