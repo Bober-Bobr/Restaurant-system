@@ -4547,3 +4547,9 @@ No migration. API + web (the API change is the `replace` flag on
   "Book the whole area" is chosen; Events → edit a service-order booking →
   "Edit menu" shows its dishes; Invoices shows a non-zero total for it and
   accepts a payment.
+- **Bills, service orders**: a service-order (à la carte) booking's bill lists
+  its dishes — quantity × price and the line total — with the total under
+  them; no "Table package" / "Additional dishes" rows. Banquet bills unchanged.
+- **Additional-dish cards** (kiosk, quantity mode): the stepper is a
+  full-width row that fits the narrowest card, with a styled, translated
+  "Remove" under it; "Add" is translated too.

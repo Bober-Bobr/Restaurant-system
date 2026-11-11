@@ -115,3 +115,23 @@ describe('temporary removals and the Photos page', () => {
     expect(page).not.toMatch(/className="adm-card adm-card-hover tablet-fade-up"/);
   });
 });
+
+describe('the bill and the Additional cards', () => {
+  it('a service-order bill lists its dishes, with no package or "additional" rows', () => {
+    const page = src('pages/AdminInvoicesPage.tsx');
+    expect(page).toContain("menuKindOf(event) === 'dining' ? (");
+    expect(page).toContain('<DiningLines event={event} t={t} locale={locale} />');
+    // The package rows are the banquet branch only.
+    const dining = page.slice(page.indexOf('const DiningLines'), page.indexOf('const Row ='));
+    expect(dining).not.toContain('table_package');
+    expect(dining).not.toContain('additional_dishes');
+  });
+
+  it('the stepper fits the narrowest card, and Remove is styled and translated', () => {
+    const card = src('components/menu/MenuItemCard.tsx');
+    expect(card).toContain("gridTemplateColumns: '32px minmax(0, 1fr) 32px'");
+    expect(card).toContain("translate('item_remove', locale)");
+    expect(card).not.toMatch(/>\s*Remove\s*</);
+    expect(card).not.toMatch(/>\s*Add\s*</);
+  });
+});

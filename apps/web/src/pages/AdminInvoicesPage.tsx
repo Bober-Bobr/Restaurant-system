@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '../services/event.service';
 import { useAdminStore } from '../store/admin.store';
-import { translate } from '../utils/translate';
+import { translate, type Locale } from '../utils/translate';
 import { formatSum, groupDigits, parseSumToTiyin } from '../utils/currency';
 import { MoneyInput } from '../components/ui/MoneyInput';
 import { invoiceOutstandingCents, invoiceTotalCents, isDebt, isFullyPaid, isOverdueDebt, isPendingDebt } from '../utils/invoice';
 import type { Event } from '../types/domain';
+import { diningOrderOf, menuKindOf } from '../utils/eventMenuKind';
+import { dishName } from '../utils/menuI18n';
 
 // 1,000,000 so'm expressed in tiyin (amounts are stored as tiyin = 1/100 so'm).
 const MILLION_TIYIN = 100_000_000;
@@ -295,8 +297,17 @@ export const AdminInvoicesPage = () => {
 
               {/* Breakdown + total */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, display: 'grid', gap: 6 }}>
-                <Row label={`${t('table_package')}${event.tableCategory ? ` — ${event.tableCategory.name}` : ''} (${event.guestCount} × ${formatSum(event.tableCategory?.ratePerPerson ?? 0)})`} value={formatSum(tableRate)} muted />
-                <Row label={`${t('additional_dishes')} (${(event.selections ?? []).length})`} value={formatSum(dishes)} muted />
+                {menuKindOf(event) === 'dining' ? (
+                  // A service order (à la carte) has no table package and no
+                  // "additional" dishes — it IS its dishes. So the bill lists
+                  // them, each with its price, and the total below adds up.
+                  <DiningLines event={event} t={t} locale={locale} />
+                ) : (
+                  <>
+                    <Row label={`${t('table_package')}${event.tableCategory ? ` — ${event.tableCategory.name}` : ''} (${event.guestCount} × ${formatSum(event.tableCategory?.ratePerPerson ?? 0)})`} value={formatSum(tableRate)} muted />
+                    <Row label={`${t('additional_dishes')} (${(event.selections ?? []).length})`} value={formatSum(dishes)} muted />
+                  </>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8, marginTop: 2 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>{t('billable_total')}</span>
@@ -499,6 +510,50 @@ export const AdminInvoicesPage = () => {
         )}
       </div>
     </main>
+  );
+};
+
+/**
+ * The dishes on a service-order bill: the order's own snapshot (names and
+ * prices as agreed when it was placed), plus anything typed on the Events
+ * page. Read from the same two places the total is (utils/invoice.ts), so the
+ * lines always add up to the figure under them.
+ */
+const DiningLines = ({ event, t, locale }: {
+  event: Event;
+  t: (key: Parameters<typeof translate>[0], params?: Record<string, string | number>) => string;
+  locale: Locale;
+}) => {
+  const lines = [
+    ...(diningOrderOf(event)?.lines ?? []).map((line, i) => ({
+      key: `o${i}`, name: line.name, quantity: line.quantity, unit: line.unitPriceCents,
+    })),
+    ...(event.selections ?? []).map((sel, i) => ({
+      key: `s${i}`,
+      name: sel.menuItem ? dishName(sel.menuItem, locale) : '—',
+      quantity: sel.quantity, unit: sel.unitPriceCents,
+    })),
+  ];
+  if (lines.length === 0) {
+    return <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.55)' }}>{t('inv_no_dishes')}</p>;
+  }
+  return (
+    <div style={{ display: 'grid', gap: 4 }}>
+      <p className="adm-label" style={{ margin: '0 0 2px' }}>{t('inv_ordered_dishes')}</p>
+      {lines.map((line) => (
+        <div key={line.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13 }}>
+          <span style={{ color: '#e2e8f0', minWidth: 0, overflowWrap: 'anywhere' }}>
+            {line.name}
+            <span style={{ color: 'rgba(226,232,240,0.55)', marginLeft: 6, whiteSpace: 'nowrap' }}>
+              {line.quantity} × {formatSum(line.unit)}
+            </span>
+          </span>
+          <span style={{ color: 'rgba(226,232,240,0.85)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {formatSum(line.quantity * line.unit)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 };
 

@@ -55,7 +55,7 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, l
   const Wrapper = dark ? 'div' : Card;
   const wrapperProps = dark
     ? {
-        className: 'group flex h-full flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
+        className: 'group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5',
         style: {
           background: selected
             ? 'linear-gradient(160deg, rgba(var(--rg-accent-rgb),0.16) 0%, rgba(255,255,255,0.05) 60%)'
@@ -193,26 +193,23 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, l
                 ? { background: 'rgba(var(--rg-accent-rgb),0.15)', color: 'var(--rg-accent)', border: '1px solid rgba(var(--rg-accent-rgb),0.35)' }
                 : { background: '#1c1917', color: 'white' }}
             >
-              Add
+              {translate('add', locale)}
             </button>
           ) : (
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => onQuantityChange(0)}
-                className="text-xs transition-colors hover:underline underline-offset-2"
-                style={{ color: dark ? 'rgba(255,255,255,0.4)' : '#a8a29e' }}
-              >
-                Remove
-              </button>
-              <div className="flex items-center gap-1 rounded-xl p-1"
-                style={{ background: dark ? 'rgba(255,255,255,0.1)' : '#f5f5f4' }}>
+            // Stacked, not one row: "Remove" beside a 112px stepper needed
+            // ~170px, and the narrowest card is 150, so the + button was cut
+            // off. The stepper is a three-column grid whose FIELD gives (min
+            // width 0), so it fits any card; Remove sits under it, styled and
+            // translated like the card's other buttons.
+            <div className="flex flex-col gap-1.5">
+              <div className="grid items-center gap-1 rounded-xl p-1"
+                style={{ gridTemplateColumns: '32px minmax(0, 1fr) 32px', background: dark ? 'rgba(255,255,255,0.1)' : '#f5f5f4' }}>
                 <button
                   type="button"
                   onClick={() => onQuantityChange(Math.max(0, quantity - 1))}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
-                  style={{ color: dark ? 'rgba(255,255,255,0.8)' : '#44403c' }}
-                  aria-label="Decrease"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
+                  style={{ color: dark ? 'rgba(255,255,255,0.85)' : '#44403c', background: dark ? 'rgba(255,255,255,0.08)' : 'white' }}
+                  aria-label={translate('qty_decrease', locale)}
                 >
                   −
                 </button>
@@ -223,20 +220,30 @@ export const MenuItemCard = ({ item, quantity, onQuantityChange, dark = false, l
                   onChange={(e) => commitQty(e.target.value)}
                   onFocus={(e) => e.currentTarget.select()}
                   onBlur={() => { if (qtyStr === '') setQtyStr(String(quantity)); }}
-                  className="w-10 bg-transparent text-center text-sm font-semibold outline-none"
+                  className="w-full min-w-0 bg-transparent text-center text-sm font-semibold outline-none"
                   style={{ color: dark ? 'white' : '#1c1917' }}
-                  aria-label="Quantity"
+                  aria-label={translate('quantity', locale)}
                 />
                 <button
                   type="button"
                   onClick={() => onQuantityChange(quantity + 1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-lg font-medium transition-all active:scale-90"
                   style={dark ? { background: 'var(--rg-accent)', color: 'var(--rg-bg)' } : { background: '#1c1917', color: 'white' }}
-                  aria-label="Increase"
+                  aria-label={translate('qty_increase', locale)}
                 >
                   +
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => onQuantityChange(0)}
+                className="w-full rounded-lg py-1.5 text-xs font-semibold transition-all duration-200 active:scale-[0.98]"
+                style={dark
+                  ? { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.72)', border: '1px solid rgba(255,255,255,0.16)' }
+                  : { background: '#f5f5f4', color: '#44403c', border: '1px solid #e7e5e4' }}
+              >
+                ✕ {translate('item_remove', locale)}
+              </button>
             </div>
           )}
         </div>
